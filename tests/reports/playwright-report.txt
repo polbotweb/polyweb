@@ -1,13 +1,14 @@
 ════════════════════════════════════════════════════════════════════════════════
   PLAYWRIGHT E2E TEST REPORT
-  Generated: 2026-10-18 12:32:07
+  Generated: 2026-10-18 12:52:13
 ════════════════════════════════════════════════════════════════════════════════
 
-  ✅ a11y.spec.ts  (7/7 tests passed)
+  ✅ a11y.spec.ts  (11/11 tests passed)
   ✅ app.spec.ts  (14/14 tests passed)
   ✅ auth.spec.ts  (15/15 tests passed)
   ✅ blog.spec.ts  (14/14 tests passed)
   ✅ cms-admin.spec.ts  (8/8 tests passed)
+  ✅ csp.spec.ts  (6/6 tests passed)
   ✅ platform-api.spec.ts  (1/1 tests passed)
   ✅ platform-content.spec.ts  (1/1 tests passed)
   ✅ platform-forms.spec.ts  (1/1 tests passed)
@@ -24,11 +25,11 @@
   SUMMARY
 ════════════════════════════════════════════════════════════════════════════════
 
-  Total tests:   84
-  Passed:        84  ✅
+  Total tests:   94
+  Passed:        94  ✅
   Failed:        0  
-  Duration:      192.0s
+  Duration:      204.6s
 
 ════════════════════════════════════════════════════════════════════════════════
-  END OF REPORT — 84/84 passed
+  END OF REPORT — 94/94 passed
 ════════════════════════════════════════════════════════════════════════════════
