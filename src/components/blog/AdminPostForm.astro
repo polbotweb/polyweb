@@ -86,7 +86,18 @@ function buildLocaleHref(targetLocale: Locale): string { const currentPath = Ast
     const titleInput = form.querySelector<HTMLInputElement>("#post-title"); const slugInput = form.querySelector<HTMLInputElement>("#post-slug"); slugInput?.addEventListener("input", () => { manualSlug = true; markDirty(); }); titleInput?.addEventListener("input", () => { if (!manualSlug && slugInput) slugInput.value = slugify(titleInput.value); });
     const wireMedia = (pickerId: string, inputId: string) => { const picker = document.getElementById(pickerId); const input = document.getElementById(inputId) as HTMLInputElement | null; picker?.addEventListener("media-select", (event) => { const detail = (event as CustomEvent).detail ?? {}; if (input) input.value = String(detail.fileId ?? ""); markDirty(); }); };
     wireMedia("blog-featured-picker", "featured-image-id"); wireMedia("blog-og-picker", "og-image-id");
-    const refreshLock = async () => { if (mode !== "edit" || !postId) return; const { error } = await actions.lockBlogPost({ id: postId, organizationId }); if (error) toast.error(error.message ?? errorText); };
+    // Verrou générique : déjà édité par soi dans une autre session → confirmation explicite avant reprise (auditée côté serveur).
+    let lockDeclined = false;
+    const refreshLock = async () => {
+      if (mode !== "edit" || !postId || lockDeclined) return;
+      const first = await actions.lockBlogPost({ id: postId, organizationId });
+      if (first.error) { toast.error(first.error.message ?? errorText); return; }
+      const prompt = first.data && "takeOverPrompt" in first.data ? first.data.takeOverPrompt : undefined;
+      if (!prompt) return;
+      if (!window.confirm(prompt)) { lockDeclined = true; toast.error(prompt); return; }
+      const { error } = await actions.lockBlogPost({ id: postId, organizationId, takeOver: true });
+      if (error) toast.error(error.message ?? errorText);
+    };
     const releaseLock = async () => { if (mode !== "edit" || !postId) return; window.clearInterval(lockTimer); await actions.unlockBlogPost({ id: postId, organizationId }); };
     if (mode === "edit" && postId) { void refreshLock(); lockTimer = window.setInterval(() => void refreshLock(), 60_000); window.addEventListener("pagehide", () => void releaseLock(), { once: true }); }
     form.addEventListener("submit", async (event) => { event.preventDefault(); const data = new FormData(form); const categoryIds = data.getAll("categoryIds").map(String); const tagIds = data.getAll("tagIds").map(String); const focusKeyword = String(data.get("focusKeyword") ?? "").trim(); const common: Omit<BlogPostFormInput, "status"> = { locale: String(data.get("locale") ?? localeFromForm(form)) as BlogPostFormInput["locale"], title: String(data.get("title") ?? ""), slug: String(data.get("slug") ?? ""), content: String(data.get("content") ?? ""), excerpt: String(data.get("excerpt") ?? "").trim() || undefined, metaTitle: String(data.get("metaTitle") ?? "").trim() || undefined, metaDescription: String(data.get("metaDescription") ?? "").trim() || undefined, metaKeywords: String(data.get("metaKeywords") ?? "").trim() || undefined, canonicalUrl: String(data.get("canonicalUrl") ?? "").trim() || undefined, ogTitle: String(data.get("ogTitle") ?? "").trim() || undefined, ogDescription: String(data.get("ogDescription") ?? "").trim() || undefined, categoryIds, tagIds, featuredImageId: String(data.get("featuredImageId") ?? "").trim() || undefined, ogImageId: String(data.get("ogImageId") ?? "").trim() || undefined, isFeatured: data.get("isFeatured") === "on", isSticky: data.get("isSticky") === "on", commentStatus: String(data.get("commentStatus") ?? "OPEN") as BlogPostFormInput["commentStatus"], allowReviews: data.get("allowReviews") === "on", seo: focusKeyword ? { focusKeyword } : undefined };

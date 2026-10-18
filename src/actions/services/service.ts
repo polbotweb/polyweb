@@ -1,4 +1,7 @@
 import { Effect } from "effect";
+import { serviceLock } from "@/modules/services/locks";
+import { lockOwnerFrom } from "@/core/locks/service";
+import { lockLocaleFrom } from "@/core/locks/errors";
 import { defineAction, ActionError } from "astro:actions";
 import { and, eq } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
@@ -9,7 +12,7 @@ import { serviceFormSchema, serviceUpdateSchema, calculateServiceSeoScore } from
 import { resolveServiceTenant } from "@/modules/services/permissions";
 import { auditService, invalidateServicesCache } from "./_helpers";
 import { actionTry, effectHandler } from "@/lib/effect/action";
-import { requireServicePermission, serviceCategoryInTenant, serviceInTenant, serviceLockOwner, serviceMediaInTenant, serviceRateLimitEffect, serviceTagInTenant } from "@/modules/services/permissions";
+import { requireServicePermission, serviceCategoryInTenant, serviceInTenant, serviceMediaInTenant, serviceRateLimitEffect, serviceTagInTenant } from "@/modules/services/permissions";
 
 export const createService = defineAction({
   input: serviceFormSchema,
@@ -58,7 +61,7 @@ export const updateService = defineAction({
     const user = yield* requireServicePermission(context, tenant, { service: ["update"] });
     yield* serviceRateLimitEffect(user.id, "update");
     const existing = yield* serviceInTenant(input.id, tenant);
-    yield* serviceLockOwner(input.id, user.id, context.locals.session?.id);
+    yield* serviceLock.ensureNotLockedByOther(input.id, lockOwnerFrom(user.id, context.locals.session?.id), lockLocaleFrom(context.request.headers));
     if (input.categoryIds) yield* Effect.all(input.categoryIds.map((id) => serviceCategoryInTenant(id, tenant)), { concurrency: "unbounded" });
     if (input.tagIds) yield* Effect.all(input.tagIds.map((id) => serviceTagInTenant(id, tenant)), { concurrency: "unbounded" });
     if (input.coverImageId) yield* serviceMediaInTenant(input.coverImageId, tenant);

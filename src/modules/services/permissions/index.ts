@@ -3,7 +3,7 @@ import type { ActionAPIContext } from "astro:actions";
 import { eq } from "drizzle-orm";
 import { z } from "astro/zod";
 import { getDrizzle } from "@database/drizzle";
-import { mediaFiles, serviceCategories, serviceLocks, serviceTags, services } from "@database/schemas";
+import { mediaFiles, serviceCategories, serviceTags, services } from "@database/schemas";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { actionTry, fail, toActionError, type ActionFailure } from "@/lib/effect/action";
 import type { OperationError } from "@/lib/effect/errors";
@@ -71,13 +71,6 @@ export const publishedServiceInTenant = (serviceId: string, tenant: ServiceTenan
     Effect.flatMap((service) => (service.status === "PUBLISHED" ? Effect.succeed(service) : fail("NOT_FOUND", "Service introuvable."))),
   );
 
-export const serviceLockOwner = (serviceId: string, userId: string, sessionId: string | null | undefined) =>
-  Effect.gen(function* () {
-    const lock = yield* row("services.lock", () => getDrizzle().select({ userId: serviceLocks.userId, sessionId: serviceLocks.sessionId, expiresAt: serviceLocks.expiresAt }).from(serviceLocks).where(eq(serviceLocks.serviceId, serviceId)).limit(1));
-    if (!lock || lock.expiresAt <= new Date()) return;
-    if (lock.userId !== userId || (sessionId && lock.sessionId !== sessionId)) return yield* fail("CONFLICT", "Ce service est actuellement verrouillé par un autre éditeur.");
-  });
-
 const ownedBy = <T extends { organizationId: string | null }>(label: { op: string; missing: string; foreign: string }, load: () => Promise<T[]>, tenant: ServiceTenantContext) =>
   Effect.gen(function* () {
     const item = yield* row(label.op, load);
@@ -109,7 +102,6 @@ export const hasServicePermission = (context: Pick<ActionAPIContext, "locals" | 
 export const assertServicePermission = (context: ActionAPIContext, tenant: ServiceTenantContext, permissions: ServicePermissions) => runGuard(requireServicePermission(context, tenant, permissions));
 export const assertServiceInTenant = (serviceId: string, tenant: ServiceTenantContext) => runGuard(serviceInTenant(serviceId, tenant));
 export const assertPublishedServiceInTenant = (serviceId: string, tenant: ServiceTenantContext) => runGuard(publishedServiceInTenant(serviceId, tenant));
-export const assertServiceLockOwner = (serviceId: string, userId: string, sessionId: string | null | undefined) => runGuard(serviceLockOwner(serviceId, userId, sessionId));
 export const assertServiceCategoryInTenant = (categoryId: string, tenant: ServiceTenantContext) => runGuard(serviceCategoryInTenant(categoryId, tenant));
 export const assertServiceTagInTenant = (tagId: string, tenant: ServiceTenantContext) => runGuard(serviceTagInTenant(tagId, tenant));
 export const assertServiceMediaInTenant = (mediaId: string, tenant: ServiceTenantContext) => runGuard(serviceMediaInTenant(mediaId, tenant));

@@ -12,34 +12,8 @@ export {
 } from "@/modules/services/permissions";
 
 import type { ActionAPIContext } from "astro:actions";
-import { Effect } from "effect";
-import { actionTry, fail, runGuard } from "@/lib/effect/action";
-import { eq } from "drizzle-orm";
-import { getDrizzle } from "@database/drizzle";
-import { serviceLocks } from "@database/schemas";
 import { logAuditEvent, extractIp, type AuditAction } from "@/lib/audit";
 import { invalidateCache } from "@database/cache";
-
-/**
- * Verrou d'édition (variante actions) : un verrou expiré est supprimé ; un verrou
- * actif d'un autre utilisateur — ou d'une autre session si la session est connue —
- * échoue en `CONFLICT`. Effect natif ; `assertServiceLockOwner` en est l'adaptateur.
- */
-export const requireServiceLockOwner = (serviceId: string, userId: string, sessionId?: string | null) =>
-  Effect.gen(function* () {
-    const [lock] = yield* actionTry("services.lock.read", () => getDrizzle().select().from(serviceLocks).where(eq(serviceLocks.serviceId, serviceId)).limit(1));
-    if (!lock) return;
-    if (lock.expiresAt <= new Date()) {
-      yield* actionTry("services.lock.purgeExpired", () => getDrizzle().delete(serviceLocks).where(eq(serviceLocks.serviceId, serviceId)));
-      return;
-    }
-    if (lock.userId !== userId || (sessionId != null && lock.sessionId !== sessionId)) {
-      return yield* fail("CONFLICT", "Ce service est verrouillé par un autre éditeur.");
-    }
-  });
-
-export const assertServiceLockOwner = (serviceId: string, userId: string, sessionId?: string | null): Promise<void> =>
-  runGuard(requireServiceLockOwner(serviceId, userId, sessionId));
 
 export function auditService(context: ActionAPIContext, userId: string, action: AuditAction, opts?: { resource?: string; resourceId?: string; metadata?: Record<string, unknown> }) {
   void logAuditEvent({ userId, action, resource: opts?.resource ?? null, resourceId: opts?.resourceId ?? null, metadata: opts?.metadata ?? null, ipAddress: extractIp(context.request.headers, context.clientAddress), userAgent: context.request.headers.get("user-agent") }).catch(() => {});

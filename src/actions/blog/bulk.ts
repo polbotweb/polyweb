@@ -1,12 +1,15 @@
 import { Effect } from "effect";
+import { blogPostLock } from "@/modules/blog/locks";
+import { lockOwnerFrom } from "@/core/locks/service";
+import { lockLocaleFrom } from "@/core/locks/errors";
 import { ActionError, defineAction } from "astro:actions";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "astro/zod";
 import { getDrizzle } from "@database/drizzle";
-import { blogPostLocks, blogPostRevisions, blogPostTranslations, blogPosts } from "@database/schemas";
+import { blogPostRevisions, blogPostTranslations, blogPosts } from "@database/schemas";
 import { BLOG_POST_TRANSITIONS, type BlogPostStatus } from "@/lib/blog/constants";
 import { blogOrganizationIdSchema, resolveBlogTenant, invalidateBlogCache, auditBlog, requireBlogPermission } from "./_helpers";
-import { actionTry, effectHandler } from "@/lib/effect/action";
+import { actionTry, effectHandler, fail } from "@/lib/effect/action";
 
 const bulkInput = z.object({ ids: z.array(z.uuid()).min(1).max(100), organizationId: blogOrganizationIdSchema, operation: z.enum(["publish", "archive", "restore", "delete"]) });
 type BulkOperation = z.infer<typeof bulkInput>["operation"];
@@ -24,13 +27,12 @@ export const bulkBlogPostLifecycle = defineAction({
   handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
     const user = yield* requireBlogPermission(context, tenant, { blog: [permissionFor[input.operation]] });
-    return yield* actionTry("blog/bulk.bulkBlogPostLifecycle", async () => {
     const db = getDrizzle();
-    const rows = await db.select().from(blogPosts).where(and(tenantPredicate(tenant.organizationId), inArray(blogPosts.id, input.ids)));
-    if (rows.length !== input.ids.length) throw new ActionError({ code: "FORBIDDEN", message: "Un ou plusieurs articles ne sont pas accessibles dans ce tenant." });
-    const locks = await db.select().from(blogPostLocks).where(inArray(blogPostLocks.postId, input.ids));
-    const sessionId = context.locals.session?.id ?? ""; const now = new Date();
-    for (const lock of locks) if (lock.expiresAt > now && (lock.userId !== user.id || lock.sessionId !== sessionId)) throw new ActionError({ code: "CONFLICT", message: "Un des articles sélectionnés est actuellement verrouillé par un autre éditeur." });
+    const rows = yield* actionTry("blog/bulk.bulkBlogPostLifecycle.load", () => db.select().from(blogPosts).where(and(tenantPredicate(tenant.organizationId), inArray(blogPosts.id, input.ids))));
+    if (rows.length !== input.ids.length) return yield* fail("FORBIDDEN", "Un ou plusieurs articles ne sont pas accessibles dans ce tenant.");
+    // Aucun article ne doit être verrouillé par un autre propriétaire (utilisateur + session) — verrou générique.
+    yield* blogPostLock.ensureNoneLockedByOther(input.ids, lockOwnerFrom(user.id, context.locals.session?.id), lockLocaleFrom(context.request.headers));
+    return yield* actionTry("blog/bulk.bulkBlogPostLifecycle", async () => {
     const to = targetStatus[input.operation];
     for (const row of rows) assertTransition(row.status as BlogPostStatus, to);
     await db.transaction(async (tx) => {

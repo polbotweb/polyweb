@@ -1,11 +1,14 @@
 import { Effect } from "effect";
+import { serviceLock } from "@/modules/services/locks";
+import { lockOwnerFrom } from "@/core/locks/service";
+import { lockLocaleFrom } from "@/core/locks/errors";
 import { ActionError, defineAction, type ActionAPIContext } from "astro:actions";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { z } from "astro/zod";
 import { getDrizzle } from "@database/drizzle";
-import { services, serviceTranslations, serviceRevisions, serviceCategoryLinks, serviceTagLinks, serviceMedia, serviceAvailability, serviceSeo, serviceLocks, serviceAttributeValues } from "@database/schemas";
+import { services, serviceTranslations, serviceRevisions, serviceCategoryLinks, serviceTagLinks, serviceMedia, serviceAvailability, serviceSeo, serviceAttributeValues } from "@database/schemas";
 import { LOCALES, type Locale } from "@i18n/config";
-import { resolveServiceTenant, serviceOrganizationIdSchema, serviceLockOwner } from "@/modules/services/permissions";
+import { resolveServiceTenant, serviceOrganizationIdSchema } from "@/modules/services/permissions";
 import { assertServiceRevisionRestore, assertValidServiceTransition } from "@/modules/services/workflow";
 import type { ServiceStatus } from "@/modules/services/domain";
 import { auditService, invalidateServicesCache } from "./_helpers";
@@ -33,7 +36,7 @@ const transitionService = (id: string, organizationId: string | null | undefined
   const user = yield* requireServicePermission(context, tenant, { service: [permission] });
   const current = yield* serviceInTenant(id, tenant);
   yield* actionTry(`services/lifecycle.${auditAction}.validate`, async () => assertValidServiceTransition(current.status as ServiceStatus, to));
-  yield* serviceLockOwner(id, user.id, context.locals.session?.id);
+  yield* serviceLock.ensureNotLockedByOther(id, lockOwnerFrom(user.id, context.locals.session?.id), lockLocaleFrom(context.request.headers));
   return yield* actionTry(`services/lifecycle.${auditAction}`, async () => {
   await getDrizzle().transaction(async (tx) => { await tx.update(services).set({ status: to, publishedAt: to === "PUBLISHED" ? new Date() : null, updatedBy: user.id }).where(eq(services.id, id)); });
   if (to === "PUBLISHED") { const locale = requestLocale(context.request.headers); const t = getServiceNotificationTranslations(locale); await createServiceNotification({ recipientId: current.providerId, serviceId: id, actorId: user.id, type: "SERVICE_PUBLISHED", title: t.publishedTitle, message: t.publishedMessage, locale }); }
@@ -50,7 +53,7 @@ export const restoreService = defineAction({ input: lifecycleInput, handler: eff
 export const deleteService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => transitionService(input.id, input.organizationId, "DELETED", context, "delete", "SERVICE_DELETE")) });
 
 export const duplicateService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => Effect.gen(function* () {
-  const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["create"] }); const source = yield* serviceInTenant(input.id, tenant); yield* serviceLockOwner(input.id, user.id, context.locals.session?.id); return yield* actionTry("services/lifecycle.duplicateService", async () => { const db = getDrizzle();
+  const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["create"] }); const source = yield* serviceInTenant(input.id, tenant); yield* serviceLock.ensureNotLockedByOther(input.id, lockOwnerFrom(user.id, context.locals.session?.id), lockLocaleFrom(context.request.headers)); return yield* actionTry("services/lifecycle.duplicateService", async () => { const db = getDrizzle();
   const [translations, categories, tags, media, availability, seo, attributes] = await Promise.all([
     db.select().from(serviceTranslations).where(eq(serviceTranslations.serviceId, source.id)).orderBy(asc(serviceTranslations.locale)),
     db.select().from(serviceCategoryLinks).where(eq(serviceCategoryLinks.serviceId, source.id)), db.select().from(serviceTagLinks).where(eq(serviceTagLinks.serviceId, source.id)), db.select().from(serviceMedia).where(eq(serviceMedia.serviceId, source.id)), db.select().from(serviceAvailability).where(eq(serviceAvailability.serviceId, source.id)), db.select().from(serviceSeo).where(eq(serviceSeo.serviceId, source.id)), db.select().from(serviceAttributeValues).where(eq(serviceAttributeValues.serviceId, source.id)),
@@ -74,13 +77,30 @@ export const duplicateService = defineAction({ input: lifecycleInput, handler: e
   auditService(context, user.id, "SERVICE_DUPLICATE", { resource: "services", resourceId: duplicateId, metadata: { organizationId: tenant.organizationId, duplicatedFrom: source.id } }); invalidateServicesCache(); return { id: duplicateId };
 }); })) });
 
-export const lockService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => Effect.gen(function* () { const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["update"] }); yield* serviceInTenant(input.id, tenant); return yield* actionTry("services/lifecycle.lockService", async () => { const db = getDrizzle(); const existing = (await db.select().from(serviceLocks).where(eq(serviceLocks.serviceId, input.id)).limit(1))[0]; const now = new Date(); const sessionId = context.locals.session?.id ?? ""; if (existing && existing.expiresAt > now && (existing.userId !== user.id || existing.sessionId !== sessionId)) throw new ActionError({ code: "CONFLICT", message: getServiceTranslations(requestLocale(context.request.headers)).admin.errors.conflict }); const expiresAt = new Date(Date.now() + 30 * 60 * 1000); await db.insert(serviceLocks).values({ serviceId: input.id, userId: user.id, sessionId, expiresAt }).onConflictDoUpdate({ target: serviceLocks.serviceId, set: { userId: user.id, sessionId, lockedAt: now, expiresAt } }); auditService(context, user.id, "SERVICE_LOCK", { resource: "services", resourceId: input.id }); return { success: true, expiresAt }; }); })) });
-export const unlockService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => Effect.gen(function* () { const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["update"] }); yield* serviceInTenant(input.id, tenant); return yield* actionTry("services/lifecycle.unlockService", async () => { await getDrizzle().delete(serviceLocks).where(and(eq(serviceLocks.serviceId, input.id), eq(serviceLocks.userId, user.id), eq(serviceLocks.sessionId, context.locals.session?.id ?? ""))); auditService(context, user.id, "SERVICE_UNLOCK", { resource: "services", resourceId: input.id }); return { success: true }; }); })) });
+export const lockService = defineAction({ input: lifecycleInput.extend({ takeOver: z.boolean().optional() }), handler: effectHandler((input, context) => Effect.gen(function* () {
+  const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["update"] }); yield* serviceInTenant(input.id, tenant);
+  const sessionId = context.locals.session?.id;
+  // Verrou générique (src/core/locks) : même utilisateur dans une autre session → confirmation « reprendre ici ? » ;
+  // un autre utilisateur reste bloqué (CONFLICT) jusqu'à expiration ou libération administrative.
+  const outcome = yield* serviceLock.acquire(input.id, lockOwnerFrom(user.id, sessionId), { takeOver: input.takeOver, locale: lockLocaleFrom(context.request.headers) }).pipe(
+    Effect.map((acquired) => ({ ok: true as const, ...acquired })),
+    Effect.catchTag("LockHeldError", (error) => (error.sameUser ? Effect.succeed({ ok: false as const, takeOverPrompt: error.message }) : Effect.fail(error))),
+  );
+  if (!outcome.ok) return { success: false, takeOverPrompt: outcome.takeOverPrompt };
+  if (outcome.tookOverFrom !== null) auditService(context, user.id, "SERVICE_LOCK_TAKEOVER", { resource: "services", resourceId: input.id, metadata: { previousSessionId: outcome.tookOverFrom } });
+  else auditService(context, user.id, "SERVICE_LOCK", { resource: "services", resourceId: input.id });
+  return { success: true, expiresAt: outcome.expiresAt };
+})) });
+export const unlockService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => Effect.gen(function* () {
+  const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["update"] }); yield* serviceInTenant(input.id, tenant);
+  yield* serviceLock.release(input.id, lockOwnerFrom(user.id, context.locals.session?.id));
+  auditService(context, user.id, "SERVICE_UNLOCK", { resource: "services", resourceId: input.id }); return { success: true };
+})) });
 export const listServiceRevisions = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => Effect.gen(function* () { const tenant = resolveServiceTenant(input); yield* requireServicePermission(context, tenant, { service: ["read"] }); yield* serviceInTenant(input.id, tenant); return yield* actionTry("services/lifecycle.listServiceRevisions", () => getDrizzle().select().from(serviceRevisions).where(eq(serviceRevisions.serviceId, input.id)).orderBy(desc(serviceRevisions.createdAt)).limit(50)); })) });
 export const restoreServiceRevision = defineAction({ input: z.object({ revisionId: z.uuid(), serviceId: z.uuid(), organizationId: serviceOrganizationIdSchema }), handler: effectHandler((input, context) => Effect.gen(function* () {
   const tenant = resolveServiceTenant(input); const current = yield* serviceInTenant(input.serviceId, tenant); const db = getDrizzle(); const [revision] = yield* actionTry("services/lifecycle.restoreServiceRevision.load", () => db.select().from(serviceRevisions).where(and(eq(serviceRevisions.id, input.revisionId), eq(serviceRevisions.serviceId, input.serviceId))).limit(1)); const locale = requestLocale(context.request.headers);
   if (!revision) return yield* fail("NOT_FOUND", getServiceTranslations(locale).admin.errors.notFound); const user = yield* requireServicePermission(context, tenant, { service: [revision.status === "PUBLISHED" ? "publish" : "update"] });
-  yield* serviceLockOwner(input.serviceId, user.id, context.locals.session?.id); return yield* actionTry("services/lifecycle.restoreServiceRevision", async () => { assertServiceRevisionRestore(current.status as ServiceStatus, revision.status as ServiceStatus);
+  yield* serviceLock.ensureNotLockedByOther(input.serviceId, lockOwnerFrom(user.id, context.locals.session?.id), lockLocaleFrom(context.request.headers)); return yield* actionTry("services/lifecycle.restoreServiceRevision", async () => { assertServiceRevisionRestore(current.status as ServiceStatus, revision.status as ServiceStatus);
   await db.transaction(async (tx) => { await tx.update(services).set({ status: revision.status, publishedAt: revision.status === "PUBLISHED" ? (current.status === "PUBLISHED" ? current.publishedAt : new Date()) : null, updatedBy: user.id }).where(eq(services.id, input.serviceId)); await tx.insert(serviceTranslations).values({ serviceId: input.serviceId, organizationId: tenant.organizationId, locale: revision.locale, title: revision.title, slug: revision.slug, content: revision.content, excerpt: revision.excerpt, metaTitle: revision.title }).onConflictDoUpdate({ target: [serviceTranslations.serviceId, serviceTranslations.locale], set: { title: revision.title, slug: revision.slug, content: revision.content, excerpt: revision.excerpt, metaTitle: revision.title, organizationId: tenant.organizationId } }); await tx.insert(serviceRevisions).values({ serviceId: input.serviceId, authorId: user.id, locale: revision.locale, title: revision.title, slug: revision.slug, content: revision.content, excerpt: revision.excerpt, status: revision.status, revisionNote: "Revision restore" }); });
   if (revision.status === "PUBLISHED") { const t = getServiceNotificationTranslations(locale); await createServiceNotification({ recipientId: current.providerId, serviceId: input.serviceId, actorId: user.id, type: "SERVICE_PUBLISHED", title: t.publishedTitle, message: t.publishedMessage, locale }); }
   auditService(context, user.id, "SERVICE_REVISION_RESTORE", { resource: "services", resourceId: input.serviceId, metadata: { organizationId: tenant.organizationId, restoredRevisionId: input.revisionId } }); invalidateServicesCache(); return { success: true };

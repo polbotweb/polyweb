@@ -1,9 +1,12 @@
 import { Effect } from "effect";
+import { blogPostLock } from "@/modules/blog/locks";
+import { lockOwnerFrom } from "@/core/locks/service";
+import { lockLocaleFrom } from "@/core/locks/errors";
 import { defineAction, ActionError, type ActionAPIContext } from "astro:actions";
 import { z } from "astro/zod";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
-import { blogPosts, blogPostTranslations, blogPostCategories, blogPostTags, blogPostRevisions, blogPostSeo, blogPostGalleries, blogPostGalleryMedia, blogPostLinks, blogPostLocks } from "@database/schemas";
+import { blogPosts, blogPostTranslations, blogPostCategories, blogPostTags, blogPostRevisions, blogPostSeo, blogPostGalleries, blogPostGalleryMedia, blogPostLinks } from "@database/schemas";
 import { LOCALES, type Locale } from "@i18n/config";
 import { BLOG_POST_TRANSITIONS, type BlogPostStatus } from "@/lib/blog/constants";
 import { auditBlog, blogOrganizationIdSchema, invalidateBlogCache, resolveBlogTenant, blogRateLimitEffect, postInTenant, requireBlogPermission } from "./_helpers";
@@ -76,9 +79,8 @@ export const restoreBlogPostRevision = defineAction({ input: z.object({ postId: 
   if (!revision) return yield* fail("NOT_FOUND", "Révision introuvable.");
   const targetStatus = revision.status as BlogPostStatus; const requiredPermission = targetStatus === "PUBLISHED" ? "publish" : "update";
   const user = yield* requireBlogPermission(context, tenant, { blog: [requiredPermission] });
-  const [lock] = yield* actionTry("blog/lifecycle.restoreBlogPostRevision.lock", () => db.select().from(blogPostLocks).where(eq(blogPostLocks.postId, input.postId)).limit(1));
-  const sessionId = context.locals.session?.id ?? "";
-  if (!lock || lock.expiresAt <= new Date() || lock.userId !== user.id || lock.sessionId !== sessionId) return yield* fail("CONFLICT", "Le verrou de modification est requis pour restaurer une révision.");
+  // Restauration : le verrou actif de l'appelant (utilisateur + session) est exigé → LockExpiredError / LockHeldError (CONFLICT).
+  yield* blogPostLock.requireOwn(input.postId, lockOwnerFrom(user.id, context.locals.session?.id), lockLocaleFrom(context.request.headers));
   return yield* actionTry("blog/lifecycle.restoreBlogPostRevision", async () => { assertRevisionRestoreStatus(post.status as BlogPostStatus, targetStatus);
   await db.transaction(async (tx) => { const [translation] = await tx.select().from(blogPostTranslations).where(and(eq(blogPostTranslations.postId, input.postId), eq(blogPostTranslations.locale, revision.locale))).limit(1); if (translation) await tx.update(blogPostTranslations).set({ title: revision.title, slug: revision.slug, content: revision.content, excerpt: revision.excerpt }).where(eq(blogPostTranslations.id, translation.id)); else await tx.insert(blogPostTranslations).values({ postId: input.postId, organizationId: tenant.organizationId, locale: revision.locale, title: revision.title, slug: revision.slug, content: revision.content, excerpt: revision.excerpt }); await tx.update(blogPosts).set({ slug: revision.slug, status: targetStatus, publishedAt: targetStatus === "PUBLISHED" ? (post.status === "PUBLISHED" ? post.publishedAt : new Date()) : null, updatedBy: user.id }).where(eq(blogPosts.id, input.postId)); await appendRevision(tx, input.postId, user.id, targetStatus, `Restauration de la révision ${revision.id}`, revision.locale); }); auditBlog(context, user.id, "BLOG_POST_UPDATE", { resource: "blog_posts", resourceId: input.postId, metadata: { organizationId: tenant.organizationId, restoredRevisionId: input.revisionId } }); invalidateBlogCache(); return { success: true }; }); })) });
 

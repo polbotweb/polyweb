@@ -41,6 +41,16 @@ const { permission, assertInTenant, assertLockOwner } = vi.hoisted(() => ({
   assertInTenant: vi.fn(async () => ({ id: "service-1", organizationId: null, status: "DRAFT", providerId: "user-1" })),
   assertLockOwner: vi.fn(async () => undefined),
 }));
+// Verrou générique (src/core/locks) : délégation au double pour vérifier identifiant, utilisateur et session.
+vi.mock("@/modules/services/locks", async () => {
+  const { actionTry } = await import("@/lib/effect/action");
+  return {
+    serviceLock: {
+      ensureNotLockedByOther: (id: string, owner: { userId: string; sessionId: string | null }) =>
+        actionTry("test.lock", () => (assertLockOwner as (...a: unknown[]) => Promise<unknown>)(id, owner.userId, owner.sessionId)),
+    },
+  };
+});
 vi.mock("@/modules/services/permissions", async () => {
   const { Effect } = await import("effect");
   const { actionTry } = await import("@/lib/effect/action");
@@ -50,14 +60,12 @@ vi.mock("@/modules/services/permissions", async () => {
   serviceInTenant: (...args: unknown[]) => actionTry("test.inTenant", () => (assertInTenant as (...a: unknown[]) => Promise<unknown>)(...args)),
   publishedServiceInTenant: (...args: unknown[]) => actionTry("test.published", () => (assertInTenant as (...a: unknown[]) => Promise<unknown>)(...args)),
   serviceRateLimitEffect: () => Effect.void,
-  serviceLockOwner: (...args: unknown[]) => actionTry("test.lock", () => (assertLockOwner as (...a: unknown[]) => Promise<unknown>)(...args)),
   serviceCategoryInTenant: () => Effect.void,
   serviceTagInTenant: () => Effect.void,
   serviceMediaInTenant: () => Effect.void,
   assertServicePermission: permission,
   resolveServiceTenant: (input: { organizationId?: string | null }) => ({ organizationId: input.organizationId ?? null, isOrgContext: Boolean(input.organizationId) }),
   assertServiceInTenant: assertInTenant,
-  assertServiceLockOwner: assertLockOwner,
   assertServiceCategoryInTenant: vi.fn(async () => undefined),
   assertServiceTagInTenant: vi.fn(async () => undefined),
   assertServiceMediaInTenant: vi.fn(async () => undefined),
