@@ -18,12 +18,12 @@ const t = getBulkUiTranslations(locale);
 ---
 <div data-bulk-root data-bulk-action={action} data-organization-id={organizationId ?? ""} data-max={max} data-t={JSON.stringify(t)} class="space-y-3">
   {operations.length > 0 && (
-    <section role="region" aria-label={t.region} class="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/30 p-3" data-bulk-bar>
+    <section aria-label={t.region} class="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/30 p-3" data-bulk-bar>
       <p class="text-sm font-medium" aria-live="polite" aria-atomic="true" data-bulk-count>{t.none}</p>
-      <div class="flex flex-wrap gap-2" role="group" aria-label={t.region}>
+      <div class="flex flex-wrap gap-2">
         {operations.map((op) => (
           <button type="button" disabled data-bulk-op={op.id} data-confirm={op.requiresConfirmation ? "true" : "false"} data-label={op.label}
-            class:list={["min-h-11 rounded-md border px-3 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60", op.destructive ? "text-destructive" : ""]}>{op.label}</button>
+            class:list={["min-h-11 rounded-md border px-3 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60", { "text-destructive": op.destructive }]}>{op.label}</button>
         ))}
         <button type="button" disabled data-bulk-clear class="min-h-11 rounded-md px-3 text-sm underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60">{t.clear}</button>
       </div>
