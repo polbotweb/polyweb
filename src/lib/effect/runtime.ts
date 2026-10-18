@@ -9,10 +9,13 @@
 import { Layer, ManagedRuntime } from 'effect';
 import { AppConfig, AppConfigLive } from './config';
 import { Db, DbLive } from './db';
+import { WebhookHttp, WebhookHttpLive } from '@/modules/webhooks/domain/http';
 
-export const AppLayer = Layer.mergeAll(DbLive, AppConfigLive);
+const BaseLayer = Layer.mergeAll(DbLive, AppConfigLive);
 
-export type AppServices = Db | AppConfig;
+export const AppLayer = Layer.mergeAll(WebhookHttpLive).pipe(Layer.provideMerge(BaseLayer));
+
+export type AppServices = Db | AppConfig | WebhookHttp;
 
 type Runtime = ManagedRuntime.ManagedRuntime<AppServices, never>;
 const globalKey = Symbol.for('polyweb.effect.runtime');

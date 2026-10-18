@@ -13,10 +13,21 @@ export interface AppConfigShape {
   /** Secret used to sign preview links, webhook ids… (falls back to BETTER_AUTH_SECRET). */
   readonly signingSecret: string;
   readonly trustProxy: boolean;
+  readonly webhooks: {
+    /** Autorise les URL vers des IP privées/loopback (dev/tests uniquement). */
+    readonly allowPrivateUrls: boolean;
+    readonly timeoutMs: number;
+    readonly maxAttempts: number;
+  };
   readonly env: Readonly<Record<string, string | undefined>>;
 }
 
 export class AppConfig extends Context.Service<AppConfig, AppConfigShape>()('polyweb/AppConfig') {}
+
+function intOr(raw: string | undefined, fallback: number): number {
+  const n = Number(raw);
+  return Number.isInteger(n) && n > 0 ? n : fallback;
+}
 
 export function appConfigFrom(env: Record<string, string | undefined>): AppConfigShape {
   const nodeEnv = env.NODE_ENV === 'production' ? 'production' : env.NODE_ENV === 'test' ? 'test' : 'development';
@@ -32,6 +43,11 @@ export function appConfigFrom(env: Record<string, string | undefined>): AppConfi
     siteName: env.SITE_NAME || 'Polyweb',
     signingSecret: signingSecret || 'polyweb-dev-insecure-secret',
     trustProxy: env.TRUST_PROXY === 'true' || env.TRUST_PROXY === '1',
+    webhooks: {
+      allowPrivateUrls: env.WEBHOOKS_ALLOW_PRIVATE_URLS === 'true',
+      timeoutMs: intOr(env.WEBHOOKS_TIMEOUT_MS, 10_000),
+      maxAttempts: intOr(env.WEBHOOKS_MAX_ATTEMPTS, 8),
+    },
     env,
   };
 }

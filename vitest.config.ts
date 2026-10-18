@@ -18,6 +18,9 @@ export default defineConfig({
     environment: 'node',
     env: {
       NODE_ENV: 'test',
+      // Les tests de webhooks livrent vers un serveur HTTP local (127.0.0.1).
+      WEBHOOKS_ALLOW_PRIVATE_URLS: 'true',
+      WEBHOOKS_TIMEOUT_MS: '3000',
     },
     testTimeout: 15_000,
     reporters: ['default', 'json'],

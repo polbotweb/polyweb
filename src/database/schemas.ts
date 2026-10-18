@@ -15,3 +15,4 @@ export * from "./schemas/services-engagement.schema";
 export * from "./schemas/payments.schema";
 export * from "./schemas/content.schema";
 export * from "./schemas/api.schema";
+export * from "./schemas/webhooks.schema";
