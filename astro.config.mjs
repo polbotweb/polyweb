@@ -26,6 +26,14 @@ const mediaOrigin = (() => {
 })();
 
 // https://astro.build/config
+const isLoopbackSite = (() => {
+  try {
+    return ['localhost', '127.0.0.1', '[::1]'].includes(new URL(process.env.SITE_URL || 'http://localhost:4321').hostname);
+  } catch {
+    return false;
+  }
+})();
+
 export default defineConfig({
   output: 'server',
   vite: {
@@ -100,7 +108,9 @@ export default defineConfig({
         "base-uri 'self'",
         "form-action 'self'",
         "object-src 'none'",
-        'upgrade-insecure-requests',
+        // Pas sur une origine de bouclage (dev/preview/e2e) : WebKit l'applique à
+        // http://localhost et passe les soumissions de formulaire en https (échec TLS).
+        ...(isLoopbackSite ? [] : ['upgrade-insecure-requests']),
       ],
     },
   },
