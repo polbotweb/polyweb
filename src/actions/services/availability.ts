@@ -7,24 +7,25 @@ import { serviceAvailability } from "@database/schemas";
 import { resolveServiceTenant, serviceOrganizationIdSchema, requireServiceLockOwner } from "./_helpers";
 import { serviceAvailabilitySchema } from "@/modules/services/validation";
 import { auditService, invalidateServicesCache } from "./_helpers";
-import { actionTry, effectHandler } from "@/lib/effect/action";
+import { actionTry, effectHandler, fail } from "@/lib/effect/action";
 import { requireServicePermission, serviceInTenant } from "@/modules/services/permissions";
 
-async function assertNoAvailabilityOverlap(input: { serviceId: string; id?: string; dayOfWeek: number; startTime: string; endTime: string; timezone: string }) {
-  const db = getDrizzle();
-  const conditions = [eq(serviceAvailability.serviceId, input.serviceId), eq(serviceAvailability.dayOfWeek, input.dayOfWeek), eq(serviceAvailability.timezone, input.timezone), lt(serviceAvailability.startTime, input.endTime), gt(serviceAvailability.endTime, input.startTime)];
-  if (input.id) conditions.push(ne(serviceAvailability.id, input.id));
-  const [overlap] = await db.select({ id: serviceAvailability.id }).from(serviceAvailability).where(and(...conditions)).limit(1);
-  if (overlap) throw new ActionError({ code: "CONFLICT", message: "Ce créneau chevauche une disponibilité existante." });
-}
+/** Créneau sans chevauchement (Effect natif : lecture via actionTry, CONFLICT via fail). */
+const noAvailabilityOverlap = (input: { serviceId: string; id?: string; dayOfWeek: number; startTime: string; endTime: string; timezone: string }) =>
+  Effect.gen(function* () {
+    const conditions = [eq(serviceAvailability.serviceId, input.serviceId), eq(serviceAvailability.dayOfWeek, input.dayOfWeek), eq(serviceAvailability.timezone, input.timezone), lt(serviceAvailability.startTime, input.endTime), gt(serviceAvailability.endTime, input.startTime)];
+    if (input.id) conditions.push(ne(serviceAvailability.id, input.id));
+    const [overlap] = yield* actionTry("services/availability.overlap", () => getDrizzle().select({ id: serviceAvailability.id }).from(serviceAvailability).where(and(...conditions)).limit(1));
+    if (overlap) return yield* fail("CONFLICT", "Ce créneau chevauche une disponibilité existante.");
+  });
 
 export const createServiceAvailability = defineAction({ input: serviceAvailabilitySchema.extend({ organizationId: serviceOrganizationIdSchema }), handler: effectHandler((input, context) => Effect.gen(function* () {
-  const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["update"] }); yield* serviceInTenant(input.serviceId, tenant); yield* requireServiceLockOwner(input.serviceId, user.id, context.locals.session?.id); return yield* actionTry("services/availability.createServiceAvailability", async () => { await assertNoAvailabilityOverlap(input);
+  const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["update"] }); yield* serviceInTenant(input.serviceId, tenant); yield* requireServiceLockOwner(input.serviceId, user.id, context.locals.session?.id); yield* noAvailabilityOverlap(input); return yield* actionTry("services/availability.createServiceAvailability", async () => {
   const [row] = await getDrizzle().insert(serviceAvailability).values({ serviceId: input.serviceId, dayOfWeek: input.dayOfWeek, startTime: input.startTime, endTime: input.endTime, timezone: input.timezone, maxParticipants: input.maxParticipants ?? null }).returning(); auditService(context, user.id, "SERVICE_UPDATE", { resource: "serviceAvailability", resourceId: row.id, metadata: { serviceId: input.serviceId, action: "CREATE" } }); invalidateServicesCache(); return row;
 }); })) });
 
 export const updateServiceAvailability = defineAction({ input: serviceAvailabilitySchema.extend({ id: z.uuid(), organizationId: serviceOrganizationIdSchema }), handler: effectHandler((input, context) => Effect.gen(function* () {
-  const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["update"] }); yield* serviceInTenant(input.serviceId, tenant); yield* requireServiceLockOwner(input.serviceId, user.id, context.locals.session?.id); return yield* actionTry("services/availability.updateServiceAvailability", async () => { await assertNoAvailabilityOverlap(input);
+  const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["update"] }); yield* serviceInTenant(input.serviceId, tenant); yield* requireServiceLockOwner(input.serviceId, user.id, context.locals.session?.id); yield* noAvailabilityOverlap(input); return yield* actionTry("services/availability.updateServiceAvailability", async () => {
   const [row] = await getDrizzle().update(serviceAvailability).set({ dayOfWeek: input.dayOfWeek, startTime: input.startTime, endTime: input.endTime, timezone: input.timezone, maxParticipants: input.maxParticipants ?? null }).where(and(eq(serviceAvailability.id, input.id), eq(serviceAvailability.serviceId, input.serviceId))).returning(); if (!row) throw new ActionError({ code: "NOT_FOUND", message: "Disponibilité introuvable." }); auditService(context, user.id, "SERVICE_UPDATE", { resource: "serviceAvailability", resourceId: row.id, metadata: { serviceId: input.serviceId, action: "UPDATE" } }); invalidateServicesCache(); return row;
 }); })) });
 

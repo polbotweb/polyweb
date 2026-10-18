@@ -6,17 +6,19 @@ import { getDrizzle } from "@database/drizzle";
 import { serviceAttributeDefinitions, serviceAttributeValues } from "@database/schemas";
 import { resolveServiceTenant, serviceOrganizationIdSchema, requireServiceLockOwner } from "./_helpers";
 import { auditService, invalidateServicesCache } from "./_helpers";
-import { actionTry, effectHandler } from "@/lib/effect/action";
+import { actionTry, effectHandler, fail } from "@/lib/effect/action";
 import { requireServicePermission, serviceInTenant } from "@/modules/services/permissions";
 
 const attributeDefinitionInput = z.object({ organizationId: serviceOrganizationIdSchema, key: z.string().trim().regex(/^[a-z][a-z0-9_]*$/), label: z.string().trim().min(1).max(120), type: z.enum(["STRING", "NUMBER", "BOOLEAN", "SELECT"]), options: z.array(z.string().trim().min(1).max(120)).max(100).default([]), required: z.boolean().default(false), sortOrder: z.coerce.number().int().min(0).max(100_000).default(0) }).superRefine((value, ctx) => { if (value.type !== "SELECT" && value.options.length) ctx.addIssue({ code: "custom", path: ["options"], message: "Options are only valid for SELECT attributes." }); if (value.type === "SELECT" && value.options.length === 0) ctx.addIssue({ code: "custom", path: ["options"], message: "SELECT attributes require at least one option." }); });
 
-async function assertAttributeDefinitionInTenant(definitionId: string, tenant: ReturnType<typeof resolveServiceTenant>) {
-  const tenantPredicate = tenant.organizationId === null ? isNull(serviceAttributeDefinitions.organizationId) : eq(serviceAttributeDefinitions.organizationId, tenant.organizationId);
-  const [definition] = await getDrizzle().select().from(serviceAttributeDefinitions).where(and(eq(serviceAttributeDefinitions.id, definitionId), tenantPredicate)).limit(1);
-  if (!definition) throw new ActionError({ code: "FORBIDDEN", message: "Cet attribut n'appartient pas à ce tenant." });
-  return definition;
-}
+/** Définition d'attribut du tenant (Effect natif : FORBIDDEN typé si étrangère ou absente). */
+const attributeDefinitionInTenant = (definitionId: string, tenant: ReturnType<typeof resolveServiceTenant>) =>
+  Effect.gen(function* () {
+    const tenantPredicate = tenant.organizationId === null ? isNull(serviceAttributeDefinitions.organizationId) : eq(serviceAttributeDefinitions.organizationId, tenant.organizationId);
+    const [definition] = yield* actionTry("services/attributes.definition", () => getDrizzle().select().from(serviceAttributeDefinitions).where(and(eq(serviceAttributeDefinitions.id, definitionId), tenantPredicate)).limit(1));
+    if (!definition) return yield* fail("FORBIDDEN", "Cet attribut n'appartient pas à ce tenant.");
+    return definition;
+  });
 
 export const createServiceAttributeDefinition = defineAction({
   input: attributeDefinitionInput,
@@ -33,7 +35,7 @@ export const createServiceAttributeDefinition = defineAction({
 export const setServiceAttributeValue = defineAction({
   input: z.object({ serviceId: z.uuid(), organizationId: serviceOrganizationIdSchema, definitionId: z.uuid(), stringValue: z.string().max(5000).optional().nullable(), numberValue: z.coerce.number().int().optional().nullable(), booleanValue: z.boolean().optional().nullable(), selectedValue: z.string().max(5000).optional().nullable() }),
   handler: effectHandler((input, context) => Effect.gen(function* () {
-    const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["update"] }); yield* serviceInTenant(input.serviceId, tenant); yield* requireServiceLockOwner(input.serviceId, user.id, context.locals.session?.id); return yield* actionTry("services/attributes.setServiceAttributeValue", async () => { const definition = await assertAttributeDefinitionInTenant(input.definitionId, tenant);
+    const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["update"] }); yield* serviceInTenant(input.serviceId, tenant); yield* requireServiceLockOwner(input.serviceId, user.id, context.locals.session?.id); const definition = yield* attributeDefinitionInTenant(input.definitionId, tenant); return yield* actionTry("services/attributes.setServiceAttributeValue", async () => {
     const supplied = [input.stringValue != null, input.numberValue != null, input.booleanValue != null, input.selectedValue != null].filter(Boolean).length;
     if (supplied !== 1) throw new ActionError({ code: "BAD_REQUEST", message: "Une seule valeur non nulle doit être fournie." });
     if (definition.type === "STRING" && input.stringValue == null) throw new ActionError({ code: "BAD_REQUEST", message: "Une valeur texte est requise." });
