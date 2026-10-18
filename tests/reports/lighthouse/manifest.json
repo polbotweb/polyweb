@@ -1,0 +1,242 @@
+[
+  {
+    "url": "http://localhost:4321/fr/admin/stats",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-fr_admin_stats-2026_10_18_11_32_18.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-fr_admin_stats-2026_10_18_11_32_18.report.json",
+    "summary": {
+      "performance": 0.98,
+      "accessibility": 1,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://localhost:4321/fr/admin/site",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-fr_admin_site-2026_10_18_11_32_31.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-fr_admin_site-2026_10_18_11_32_31.report.json",
+    "summary": {
+      "performance": 0.96,
+      "accessibility": 1,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://localhost:4321/fr/admin/navigation",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-fr_admin_navigation-2026_10_18_11_32_47.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-fr_admin_navigation-2026_10_18_11_32_47.report.json",
+    "summary": {
+      "performance": 0.98,
+      "accessibility": 0.97,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://localhost:4321/fr/admin/theme",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-fr_admin_theme-2026_10_18_11_32_59.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-fr_admin_theme-2026_10_18_11_32_59.report.json",
+    "summary": {
+      "performance": 0.97,
+      "accessibility": 1,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://localhost:4321/fr/admin/blog",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-fr_admin_blog-2026_10_18_11_33_12.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-fr_admin_blog-2026_10_18_11_33_12.report.json",
+    "summary": {
+      "performance": 0.97,
+      "accessibility": 1,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://localhost:4321/en/admin/stats",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-en_admin_stats-2026_10_18_11_33_25.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-en_admin_stats-2026_10_18_11_33_25.report.json",
+    "summary": {
+      "performance": 0.98,
+      "accessibility": 1,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://localhost:4321/en/admin/site",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-en_admin_site-2026_10_18_11_33_37.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-en_admin_site-2026_10_18_11_33_37.report.json",
+    "summary": {
+      "performance": 0.97,
+      "accessibility": 1,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://localhost:4321/en/admin/navigation",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-en_admin_navigation-2026_10_18_11_33_53.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-en_admin_navigation-2026_10_18_11_33_53.report.json",
+    "summary": {
+      "performance": 0.98,
+      "accessibility": 0.97,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://localhost:4321/en/admin/theme",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-en_admin_theme-2026_10_18_11_34_05.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-en_admin_theme-2026_10_18_11_34_05.report.json",
+    "summary": {
+      "performance": 0.97,
+      "accessibility": 1,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://localhost:4321/en/admin/blog",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-en_admin_blog-2026_10_18_11_34_18.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-en_admin_blog-2026_10_18_11_34_18.report.json",
+    "summary": {
+      "performance": 0.97,
+      "accessibility": 1,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://localhost:4321/es/admin/stats",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-es_admin_stats-2026_10_18_11_34_31.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-es_admin_stats-2026_10_18_11_34_31.report.json",
+    "summary": {
+      "performance": 0.98,
+      "accessibility": 1,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://localhost:4321/es/admin/site",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-es_admin_site-2026_10_18_11_34_43.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-es_admin_site-2026_10_18_11_34_43.report.json",
+    "summary": {
+      "performance": 0.96,
+      "accessibility": 1,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://localhost:4321/es/admin/navigation",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-es_admin_navigation-2026_10_18_11_34_59.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-es_admin_navigation-2026_10_18_11_34_59.report.json",
+    "summary": {
+      "performance": 0.98,
+      "accessibility": 0.97,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://localhost:4321/es/admin/theme",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-es_admin_theme-2026_10_18_11_35_11.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-es_admin_theme-2026_10_18_11_35_11.report.json",
+    "summary": {
+      "performance": 0.96,
+      "accessibility": 1,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://localhost:4321/es/admin/blog",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-es_admin_blog-2026_10_18_11_35_24.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-es_admin_blog-2026_10_18_11_35_24.report.json",
+    "summary": {
+      "performance": 0.97,
+      "accessibility": 1,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://localhost:4321/ar/admin/stats",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-ar_admin_stats-2026_10_18_11_35_37.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-ar_admin_stats-2026_10_18_11_35_37.report.json",
+    "summary": {
+      "performance": 0.98,
+      "accessibility": 1,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://localhost:4321/ar/admin/site",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-ar_admin_site-2026_10_18_11_35_49.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-ar_admin_site-2026_10_18_11_35_49.report.json",
+    "summary": {
+      "performance": 0.97,
+      "accessibility": 1,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://localhost:4321/ar/admin/navigation",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-ar_admin_navigation-2026_10_18_11_36_04.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-ar_admin_navigation-2026_10_18_11_36_04.report.json",
+    "summary": {
+      "performance": 0.98,
+      "accessibility": 0.97,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://localhost:4321/ar/admin/theme",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-ar_admin_theme-2026_10_18_11_36_17.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-ar_admin_theme-2026_10_18_11_36_17.report.json",
+    "summary": {
+      "performance": 0.97,
+      "accessibility": 1,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://localhost:4321/ar/admin/blog",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-ar_admin_blog-2026_10_18_11_36_30.report.html",
+    "jsonPath": "/workspace/polyweb/tests/reports/lighthouse/localhost-ar_admin_blog-2026_10_18_11_36_30.report.json",
+    "summary": {
+      "performance": 0.97,
+      "accessibility": 1,
+      "best-practices": 0.93,
+      "seo": 0.61
+    }
+  }
+]
