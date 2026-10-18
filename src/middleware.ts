@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { LOCALES } from "@/i18n/config";
 import { bootstrapModules } from "@/lib/cms/bootstrap";
 import { ensurePluginsSynced } from "@/core/plugins/host";
+import { observeRequest } from "@/lib/observability/request";
 import "@/plugins";
 import { resolveSiteForHost } from "@/modules/sites/domain/sites";
 import { defineMiddleware } from "astro:middleware";
@@ -71,7 +72,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     context.locals.site = null;
   }
 
-  const response = await next();
+  const response = await observeRequest(context, next);
   const url = new URL(context.request.url);
   const lowerPath = url.pathname.toLowerCase();
   if (lowerPath.startsWith('/uploads/') && (lowerPath.endsWith('.svg') || lowerPath.endsWith('.svgz'))) {

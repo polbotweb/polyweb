@@ -8,6 +8,7 @@ import type { APIContext, APIRoute } from 'astro';
 import { Cause, Effect, Exit } from 'effect';
 import { appRuntime, type AppServices } from './runtime';
 import type { AppError } from './errors';
+import { captureError } from '@/lib/observability/errors';
 
 export function json(data: unknown, init: ResponseInit = {}): Response {
   const headers = new Headers(init.headers);
@@ -61,7 +62,9 @@ export async function runAppResult<A, E>(effect: Effect.Effect<A, E, AppServices
   if (Exit.isSuccess(exit)) return { ok: true, value: exit.value };
   const failure = Cause.findErrorOption(exit.cause);
   if (failure._tag === 'Some') return { ok: false, error: failure.value };
-  throw Cause.squash(exit.cause);
+  const defect = Cause.squash(exit.cause);
+  await appRuntime.runPromise(captureError(defect, { tags: { kind: 'defect', boundary: 'page' }, level: 'fatal' }));
+  throw defect;
 }
 
 /**
@@ -75,12 +78,21 @@ export function apiRoute<E>(
     const program = handler(context).pipe(
       Effect.catchCause((cause) => {
         const failure = Cause.findErrorOption(cause);
-        if (failure._tag === 'Some') return Effect.succeed(errorResponse(failure.value));
+        const request = { method: context.request.method, url: context.request.url };
+        const route = context.routePattern ?? context.url.pathname;
+        if (failure._tag === 'Some') {
+          const response = errorResponse(failure.value);
+          // Erreurs typées 5xx (DbError, ConfigError, UpstreamError) : remontées aussi.
+          return response.status >= 500
+            ? captureError(failure.value, { request, tags: { route }, userId: context.locals.user?.id }).pipe(Effect.as(response))
+            : Effect.succeed(response);
+        }
         return Effect.logError('Unhandled defect in API route', context.url.pathname, cause).pipe(
+          Effect.andThen(captureError(Cause.squash(cause), { request, tags: { route, kind: 'defect' }, userId: context.locals.user?.id, level: 'fatal' })),
           Effect.as(errorResponse(null)),
         );
       }),
-      Effect.withSpan(`http ${context.request.method} ${context.url.pathname}`),
+      Effect.withSpan(`http ${context.request.method} ${context.routePattern ?? context.url.pathname}`, { attributes: { 'http.method': context.request.method, 'url.path': context.url.pathname } }),
     );
     return appRuntime.runPromise(program as Effect.Effect<Response, never, AppServices>);
   };

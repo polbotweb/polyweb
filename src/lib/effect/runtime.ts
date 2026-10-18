@@ -13,12 +13,14 @@ import { WebhookHttp, WebhookHttpLive } from '@/modules/webhooks/domain/http';
 import { Storage, StorageLive } from '@/lib/storage';
 import { Mailer, MailerLive } from '@/smtp/mailer';
 import { SearchIndex, SearchIndexLive } from '@/lib/search';
+import { ErrorReporter, ErrorReporterLive } from '@/lib/observability/errors';
+import { TelemetryLive } from '@/lib/observability/telemetry';
 
 const BaseLayer = Layer.mergeAll(DbLive, AppConfigLive);
 
-export const AppLayer = Layer.mergeAll(WebhookHttpLive, StorageLive, MailerLive, SearchIndexLive).pipe(Layer.provideMerge(BaseLayer));
+export const AppLayer = Layer.mergeAll(WebhookHttpLive, StorageLive, MailerLive, SearchIndexLive, ErrorReporterLive, TelemetryLive).pipe(Layer.provideMerge(BaseLayer));
 
-export type AppServices = Db | AppConfig | WebhookHttp | Storage | Mailer | SearchIndex;
+export type AppServices = Db | AppConfig | WebhookHttp | Storage | Mailer | SearchIndex | ErrorReporter;
 
 type Runtime = ManagedRuntime.ManagedRuntime<AppServices, never>;
 const globalKey = Symbol.for('polyweb.effect.runtime');
