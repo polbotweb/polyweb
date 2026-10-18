@@ -106,12 +106,20 @@ Le code antérieur est migré **par zones**, chaque zone gardant typecheck/tests
 
 | Zone | État |
 | --- | --- |
-| `src/pages/api/**` (26/27) | Toutes les routes passent par `apiRoute` ; seule `auth/[...all].ts` délègue directement à better-auth (adaptateur imposé par la lib). |
+| `src/pages/api/**` | Toutes les routes passent par `apiRoute` ; seule `auth/[...all].ts` délègue directement à better-auth (adaptateur imposé par la lib). |
+| `src/middleware.ts` | Effect via `src/lib/http/request-context.ts` (session avec timeout 5 s, hôte, site, 503). |
 | Briques plateforme (contenu, API v1, webhooks, formulaires, plugins, sites, recherche, observabilité, sauvegarde, CLI) | Effect natif. |
-| `src/modules/content/domain/entries.ts`, `revisions.ts` | Effect natif + adaptateurs Promise (`runContent`). `content-types.ts` reste en Promise derrière la façade `content.effect.ts`. |
-| `src/modules/payments/domain/payment-service.ts` | Effect natif (timeout fournisseur 20 s, compensation) + adaptateurs. `providers.ts` (Stripe/mock) reste en Promise. |
-| `src/modules/sites` | Façade Effect (`sites.effect.ts`) sur des fonctions Promise. |
-| `src/smtp/send.ts`, `src/core/events`, `src/lib/audit.ts` | Effect natif + adaptateurs Promise. |
-| `src/database/commands` (8/23) | `db:wait`, `db:cleanup-audit`, `db:backup`, `db:restore` sur `runScript` ; les autres (`migrate`, `seed`, `sync`, `compare`…) restent en Promise. |
-| `src/actions` (3/49) | Adaptateur `effectHandler` prêt ; migrées : `admin/social`, `admin/contact`, `admin/hours`. **Les ~46 autres fichiers d'actions restent en Promise.** |
-| `src/database/loaders`, `src/lib/auth*.ts`, `src/media/variants.ts`, `src/core/*` (hors events), modules historiques blog/services | **Non migrés** (Promise). |
+| `src/modules/content/domain/entries.ts`, `revisions.ts`, `content-types.ts` | Effect natif + adaptateurs Promise (`runContent`). |
+| `src/modules/sites/domain/sites.ts`, `src/lib/platform/admin.ts` | Effect natif + adaptateurs (`runSites`, `getAdminSiteEffect`, `userCanEffect`). |
+| `src/modules/payments/domain/payment-service.ts` | Effect natif (timeout fournisseur 20 s, compensation) + adaptateurs. `providers.ts` (SDK Stripe/mock) reste en Promise, appelé sous timeout. |
+| `src/smtp/send.ts`, `src/core/events`, `src/lib/audit.ts` | Effect natif + adaptateurs Promise. Fournisseurs SMTP (Brevo/Resend/Nodemailer) : frontières SDK en Promise, enveloppées par `sendEmailEffect`. |
+| `src/core/crud/engine.ts` | `handleCrudEffect` natif ; `handleCrud` adaptateur (page admin CRUD). |
+| `src/lib/auth-guards.ts` | `requireAuthEffect` / `requireAdminEffect` / `requirePermissionEffect` natifs ; versions `async` = adaptateurs pour les pages `.astro`. |
+| `src/media/variants.ts`, `src/media/upload.ts` | Effect natif (`decodeAndValidateEffect`, `renderResponsiveVariantsEffect`, `generateResponsiveVariantsEffect`, `uploadFile`). |
+| `src/lib/newsletter/blog-newsletter-service.ts` | Effect natif (`blogNewsletterServiceEffect`) + adaptateur `blogNewsletterService`. La transaction Drizzle reste un callback Promise. |
+| `src/database/commands`, `src/smtp/commands` | Toutes les commandes `db:*` / `smtp:*` / `logs:rotate` s'exécutent via `runScript` (codes de sortie, `ScriptError`) ; `search.*` et `storage.push` sont Effect. **Partiel :** l'intérieur de `migrate`, `seed`, `sync`, `compare`… reste en Promise sous un `step` unique. |
+| `src/actions` (49 fichiers, 142 handlers) | Tous les handlers passent par `effectHandler` + `actionTry` (span `action <fichier.export>`, `ActionError` préservée, sinon `OperationError`). Natifs : `admin/social`, `admin/contact`, `admin/hours`. **Partiel :** l'intérieur des autres handlers reste en Promise. |
+| `src/database/loaders`, `src/modules/services/loaders`, `src/modules/services/admin/loader.ts`, `src/lib/auth-data.ts` | **Partiel :** façade `src/database/loaders/effect.ts` (`liftLoader` → `Effect<R, DbError>` + span) ; l'intérieur (requêtes Drizzle + cache TTL `cached()` partagé avec les pages) reste en Promise. |
+| `src/lib/content/internal-link-resolver.ts` | Vue Effect du registre (`resolveInternalLinkEffect`, `listInternalLinkTargetsEffect`, `searchInternalLinksEffect` : timeout 10 s, `NotFoundError`/`DbError`). **Partiel :** les résolveurs blog/services restent des objets Promise (contrat ouvert aux modules). |
+| `src/lib/auth.ts` (config + hooks better-auth), `src/modules/services/permissions` | Promise (callbacks imposés par better-auth ; assertions appelées à l'intérieur des actions déjà enveloppées). |
+| Code client (`markdown-editor`, `media-picker-client`, `admin/confirmation`) | Hors périmètre (navigateur). |

@@ -1,5 +1,6 @@
 /**
- * Façade Effect des loaders de lecture (src/database/loaders, services).
+ * Façade Effect des loaders de lecture (src/database/loaders, services,
+ * admin services, données d'administration better-auth `auth-data`).
  *
  * Chaque loader Promise (requêtes Drizzle + cache TTL `cached()`) est exposé en
  * `Effect<R, DbError>` avec un span `loader <nom>` : les pipelines Effect
@@ -23,6 +24,8 @@ import * as navigationLoader from './navigation.loader';
 import * as pageLoader from './page.loader';
 import * as siteLoader from './site.loader';
 import * as servicesLoader from '@/modules/services/loaders';
+import * as servicesAdminLoader from '@/modules/services/admin/loader';
+import * as authData from '@/lib/auth-data';
 
 /** Élève un loader Promise en Effect typé (`DbError` avec la cause d'origine). */
 export const liftLoader =
@@ -113,4 +116,23 @@ export const ServicesLoaderEffect = {
   getServiceCategories: liftLoader('services.getServiceCategories', servicesLoader.getServiceCategories),
   getServiceTags: liftLoader('services.getServiceTags', servicesLoader.getServiceTags),
   getServiceProviders: liftLoader('services.getServiceProviders', servicesLoader.getServiceProviders),
+};
+export const ServicesAdminLoaderEffect = {
+  getServiceAdminData: liftLoader('services-admin.getServiceAdminData', servicesAdminLoader.getServiceAdminData),
+  getServiceAdminById: liftLoader('services-admin.getServiceAdminById', servicesAdminLoader.getServiceAdminById),
+  getServiceAdminStats: liftLoader('services-admin.getServiceAdminStats', servicesAdminLoader.getServiceAdminStats),
+  getServiceAdminTaxonomy: liftLoader('services-admin.getServiceAdminTaxonomy', servicesAdminLoader.getServiceAdminTaxonomy),
+  getServiceModerationQueue: liftLoader('services-admin.getServiceModerationQueue', servicesAdminLoader.getServiceModerationQueue),
+};
+
+/** Données d'administration better-auth (utilisateurs, organisations, audit). */
+export const AuthDataEffect = {
+  fetchAdminUsers: liftLoader('auth-data.fetchAdminUsers', authData.fetchAdminUsers),
+  fetchAdminOrgs: liftLoader('auth-data.fetchAdminOrgs', authData.fetchAdminOrgs),
+  fetchAdminAuditLogs: liftLoader('auth-data.fetchAdminAuditLogs', authData.fetchAdminAuditLogs),
+  fetchAdminStats: liftLoader('auth-data.fetchAdminStats', authData.fetchAdminStats),
+  fetchOrgData: liftLoader('auth-data.fetchOrgData', authData.fetchOrgData),
+  fetchOrgInvitations: liftLoader('auth-data.fetchOrgInvitations', authData.fetchOrgInvitations),
+  fetchUserOrganizations: liftLoader('auth-data.fetchUserOrganizations', authData.fetchUserOrganizations),
+  fetchUserInvitations: liftLoader('auth-data.fetchUserInvitations', authData.fetchUserInvitations),
 };
