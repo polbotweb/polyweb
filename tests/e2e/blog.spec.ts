@@ -278,6 +278,8 @@ test.describe.serial('Blog surfaces', () => {
       },
       {
         postId: orgPostId,
+        // Le trigger de tenant exige l'organization_id du parent sur la traduction.
+        organizationId: org.id,
         locale: 'fr',
         title: orgPostTitle,
         slug: orgPostSlug,
@@ -310,6 +312,7 @@ test.describe.serial('Blog surfaces', () => {
       },
       {
         categoryId: orgCategoryId,
+        organizationId: org.id,
         locale: 'fr',
         name: orgCategoryName,
         slug: orgCategorySlug,
