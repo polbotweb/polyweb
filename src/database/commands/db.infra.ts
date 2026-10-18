@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync } from 'fs';
 import { getPgClient, shutdownDb } from '../drizzle';
 import { c, logTarget, confirmProd } from './_utils';
 import { splitSqlStatements } from './_migration-sql';
+import { runScript, step } from './_effect';
 
 const INFRA_DIR = path.resolve(process.cwd(), 'src/database/infra');
 const isDryRun = process.argv.includes('--dry-run');
@@ -92,7 +93,6 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(c.red('[infra] Échec:'), error);
-  process.exit(1);
-});
+
+// Entrée Effect : erreurs typées (ScriptError), code de sortie et journalisation communs.
+runScript('db:infra', step('db:infra', main));

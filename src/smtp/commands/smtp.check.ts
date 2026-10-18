@@ -1,6 +1,7 @@
 import { getSmtpProvider, getSmtpFrom, getProviderLabel } from '../env';
 import { sendEmail } from '../send';
 import { c, logSmtpTarget } from './_utils';
+import { runScript, step } from '../../database/commands/_effect';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -159,7 +160,6 @@ async function main() {
   console.log(c.cyan(c.bold(`\n═══════════════════════════════════════════════════════\n`)));
 }
 
-main().catch((err) => {
-  console.error(c.red('[smtp:check] Échec:'), err);
-  process.exit(1);
-});
+
+// Entrée Effect : erreurs typées (ScriptError), code de sortie et journalisation communs.
+runScript('smtp:check', step('smtp:check', main));

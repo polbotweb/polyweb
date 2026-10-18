@@ -11,6 +11,7 @@ import path from 'path';
 import { readdirSync } from 'fs';
 import { getPgClient, shutdownDb } from '../drizzle';
 import { c, logTarget, confirmProd } from './_utils';
+import { runScript, step } from './_effect';
 
 const MIGRATIONS_DIR = path.resolve(process.cwd(), 'src/database/migrations');
 
@@ -42,4 +43,6 @@ async function main() {
   }
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+
+// Entrée Effect : erreurs typées (ScriptError), code de sortie et journalisation communs.
+runScript('db:baseline', step('db:baseline', main));

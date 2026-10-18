@@ -1,8 +1,9 @@
 import { checkConnection, getPgClient, shutdownDb } from '../drizzle';
 import { getDbUrl, getConnectionLabel, maskUrl } from '../env';
 import { c, logTarget, formatPgError } from './_utils';
+import { runScript, step } from './_effect';
 
-(async () => {
+const main = async () => {
   const dbUrl = getDbUrl();
 
   // --- Config summary ---
@@ -91,4 +92,7 @@ import { c, logTarget, formatPgError } from './_utils';
     client.release();
     await shutdownDb();
   }
-})();
+};
+
+// Entrée Effect : erreurs typées (ScriptError), code de sortie et journalisation communs.
+runScript('db:check', step('db:check', main));

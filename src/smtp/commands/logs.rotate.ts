@@ -6,6 +6,7 @@
  */
 import { readdir, stat, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
+import { runScript, step } from '../../database/commands/_effect';
 
 const DEFAULT_RETENTION_DAYS = 30;
 
@@ -47,7 +48,6 @@ async function main() {
   console.log(`\n✅ ${deleted} fichier(s) supprimé(s) sur ${jsonlFiles.length} fichier(s) JSONL.\n`);
 }
 
-main().catch((err) => {
-  console.error('❌ Rotation échouée:', err);
-  process.exit(1);
-});
+
+// Entrée Effect : erreurs typées (ScriptError), code de sortie et journalisation communs.
+runScript('logs:rotate', step('logs:rotate', main));

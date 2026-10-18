@@ -1,6 +1,7 @@
 import { Client } from 'pg';
 import { type DbEnv, getDbUrl, maskUrl } from '../env';
 import { c, confirmDestructive, safeConnect } from './_utils';
+import { runScript, step } from './_effect';
 
 // ─── Environnements valides ──────────────────────────────────────────
 const VALID_ENVS: DbEnv[] = ['LOCAL', 'PROD', 'TEST'];
@@ -163,7 +164,6 @@ async function sync() {
   }
 }
 
-sync().catch(e => {
-  console.error(c.red('[sync] Échec inattendu:'), e?.message || e);
-  process.exit(1);
-});
+
+// Entrée Effect : erreurs typées (ScriptError), code de sortie et journalisation communs.
+runScript('db:sync', step('db:sync', sync));

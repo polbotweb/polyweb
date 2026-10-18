@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import fs from 'fs';
 import { c, logTarget } from './_utils';
+import { runScript, step } from './_effect';
 
 const schemaDir = path.resolve(process.cwd(), 'src', 'database');
 const schemaFile = path.resolve(schemaDir, 'schemas.ts');
@@ -86,7 +87,7 @@ function run(cmd: string, args: string[]): Promise<void> {
 }
 
 // ─── Main ────────────────────────────────────────────────────────────
-(async () => {
+const main = async () => {
   validateSchemaStructure();
 
   const schemasFiles = getSchemaFiles();
@@ -143,11 +144,7 @@ function run(cmd: string, args: string[]): Promise<void> {
     console.log(c.yellow('\nAucun changement de schéma détecté.'));
     console.log(`Éditez vos schémas dans ${c.cyan('src/database/schemas/')} puis relancez ${c.cyan('npm run db:generate')}`);
   }
-})().catch((err) => {
-  console.error(c.red('[génération] Échec :'), err);
-  process.exit(1);
-});
+};
 
-
-
-
+// Entrée Effect : erreurs typées (ScriptError), code de sortie et journalisation communs.
+runScript('db:generate', step('db:generate', main));

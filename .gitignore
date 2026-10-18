@@ -36,8 +36,6 @@ test-results/
 playwright-report/
 tests/reports/lighthouse/*
 tests/reports/playwright/*
-tests/reports/*.json
-tests/reports/*.xml
 tmp*
 
 # coverage reports

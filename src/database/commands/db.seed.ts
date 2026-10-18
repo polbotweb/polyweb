@@ -4,6 +4,7 @@ import { getPgClient, getDrizzle, shutdownDb } from '../drizzle';
 import * as allSchemas from '../schemas';
 import { seedManifest } from '../data/manifest';
 import { c, logTarget, confirmProd, confirmDestructive, truncateAllTables } from './_utils';
+import { runScript, step } from './_effect';
 
 async function seed() {
   console.log(c.cyan(c.bold(`\n═══════════════════════════════════════════════════════`)));
@@ -92,7 +93,6 @@ function normalizeRow(row: Record<string, unknown>): Record<string, unknown> {
   return out;
 }
 
-seed().catch(e => {
-  console.error(c.red('[seed] Échec:'), e);
-  process.exit(1);
-});
+
+// Entrée Effect : erreurs typées (ScriptError), code de sortie et journalisation communs.
+runScript('db:seed', step('db:seed', seed));

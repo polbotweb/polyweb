@@ -12,6 +12,7 @@ import { getDrizzle, shutdownDb } from '../drizzle';
 import { mediaFolders, mediaFiles } from '../schemas';
 import { eq } from 'drizzle-orm';
 import { c, logTarget, confirmProd } from './_utils';
+import { runScript, step } from './_effect';
 
 // ─── MIME detection from extension ───────────────────────────────────
 const EXT_TO_MIME: Record<string, string> = {
@@ -213,7 +214,6 @@ async function seedMedia() {
   await shutdownDb();
 }
 
-seedMedia().catch((err) => {
-  console.error(c.red(`[ERREUR] ${err.message}`));
-  process.exit(1);
-});
+
+// Entrée Effect : erreurs typées (ScriptError), code de sortie et journalisation communs.
+runScript('db:seed-media', step('db:seed-media', seedMedia));

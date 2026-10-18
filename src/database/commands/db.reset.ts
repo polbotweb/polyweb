@@ -1,8 +1,9 @@
 import { getPgClient, shutdownDb } from '../drizzle';
 import { dbNameFromUrl, getDbUrl } from '../env';
 import { c, logTarget, confirmDestructive, resetAllTables } from './_utils';
+import { runScript, step } from './_effect';
 
-(async () => {
+const main = async () => {
   const dbName = dbNameFromUrl(getDbUrl());
 
   console.log(c.cyan(c.bold(`\n═══════════════════════════════════════════════════════`)));
@@ -29,7 +30,7 @@ import { c, logTarget, confirmDestructive, resetAllTables } from './_utils';
     client.release();
     await shutdownDb();
   }
-})().catch(e => {
-  console.error(c.red('[reset] Échec:'), e);
-  process.exit(1);
-});
+};
+
+// Entrée Effect : erreurs typées (ScriptError), code de sortie et journalisation communs.
+runScript('db:reset', step('db:reset', main));

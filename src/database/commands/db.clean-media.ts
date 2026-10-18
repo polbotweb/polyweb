@@ -5,6 +5,7 @@
 import { getDrizzle, shutdownDb } from '../drizzle';
 import { mediaFiles, mediaFolders } from '../schemas';
 import { c, logTarget, confirmProd } from './_utils';
+import { runScript, step } from './_effect';
 
 async function cleanMedia() {
   console.log(c.cyan(c.bold(`\n  🗑️  Clean Media — Suppression des entrées media\n`)));
@@ -18,7 +19,6 @@ async function cleanMedia() {
   await shutdownDb();
 }
 
-cleanMedia().catch((err) => {
-  console.error(c.red(`[ERREUR] ${err.message}`));
-  process.exit(1);
-});
+
+// Entrée Effect : erreurs typées (ScriptError), code de sortie et journalisation communs.
+runScript('db:clean-media', step('db:clean-media', cleanMedia));

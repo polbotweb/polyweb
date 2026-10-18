@@ -5,6 +5,7 @@ import { getConnectionLabel, dbNameFromUrl, getDbUrl } from '../env';
 import { c, logTarget, confirmProd, confirmDestructive, resetAllTables } from './_utils';
 import { splitSqlStatements, DDL_ALREADY_EXISTS_CODES } from './_migration-sql';
 import type { PoolClient } from 'pg';
+import { runScript, step } from './_effect';
 
 type MigrationRecord = { id: string; sql: string };
 
@@ -143,7 +144,6 @@ async function loadAppliedMigrations(client: PoolClient): Promise<Set<string>> {
   }
 }
 
-main().catch((error) => {
-  console.error(c.red('[migrate] Échec:'), error);
-  process.exit(1);
-});
+
+// Entrée Effect : erreurs typées (ScriptError), code de sortie et journalisation communs.
+runScript('db:migrate', step('db:migrate', main));

@@ -1,6 +1,7 @@
 import { Client } from 'pg';
 import { type DbEnv, getDbUrl, maskUrl, dbNameFromUrl } from '../env';
 import { c, safeConnect } from './_utils';
+import { runScript, step } from './_effect';
 
 // ─── Environnements valides ──────────────────────────────────────────
 const VALID_ENVS: DbEnv[] = ['LOCAL', 'PROD', 'TEST'];
@@ -235,7 +236,6 @@ async function compare() {
   for (const client of connections.values()) await client.end();
 }
 
-compare().catch(e => {
-  console.error(c.red('[compare] Échec inattendu:'), e?.message || e);
-  process.exit(1);
-});
+
+// Entrée Effect : erreurs typées (ScriptError), code de sortie et journalisation communs.
+runScript('db:compare', step('db:compare', compare));

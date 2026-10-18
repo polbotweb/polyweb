@@ -23,6 +23,7 @@ import { getDrizzle, shutdownDb } from '../drizzle';
 import { mediaFiles } from '../schemas';
 import { generateResponsiveVariants, serializeVariants } from '@/media/variants';
 import { c, logTarget } from './_utils';
+import { runScript, step } from './_effect';
 
 const force = process.argv.includes('--force');
 
@@ -124,7 +125,6 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MiB`;
 }
 
-backfillVariants().catch((err) => {
-  console.error(c.red(`[ERREUR] ${err.message}`));
-  process.exit(1);
-});
+
+// Entrée Effect : erreurs typées (ScriptError), code de sortie et journalisation communs.
+runScript('db:backfill-variants', step('db:backfill-variants', backfillVariants));

@@ -15,6 +15,7 @@ import { z } from 'astro/zod';
 import { auth } from '@/lib/auth';
 import { getDrizzle, shutdownDb, schema } from '../drizzle';
 import { c, logTarget, confirmProd } from './_utils';
+import { runScript, step } from './_effect';
 
 const MIN = 12;
 /** Better Auth 1.7 : issuer des comptes credential (createLocalAccountIssuer('credential')). */
@@ -69,6 +70,6 @@ async function main() {
   console.log(c.green(`✅ Administrateur créé : ${email}`));
 }
 
-main()
-  .catch((e) => { console.error(c.red(`❌ ${(e as Error).message}`)); process.exitCode = 1; })
-  .finally(() => shutdownDb());
+
+// Entrée Effect : erreurs typées (ScriptError), code de sortie ; pool fermé dans tous les cas.
+runScript('admin:create', step('admin:create', main), { dispose: shutdownDb });

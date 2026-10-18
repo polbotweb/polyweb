@@ -4,7 +4,8 @@ import { bootstrapModules } from "@/lib/cms/bootstrap";
 import { ensurePluginsSynced } from "@/core/plugins/host";
 import { observeRequest } from "@/lib/observability/request";
 import "@/plugins";
-import { resolveSiteForHost } from "@/modules/sites/domain/sites";
+import { Effect } from "effect";
+import { requestHost, resolveSession, resolveSite, serviceUnavailable } from "@/lib/http/request-context";
 import { defineMiddleware } from "astro:middleware";
 import { isForbiddenCrossOriginRequest } from "@/lib/security/origin-check";
 
@@ -24,53 +25,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return new Response('Not Found', { status: 404 });
   }
 
-  let timedOut = false;
-  let isAuthed: Awaited<ReturnType<typeof auth.api.getSession>> | null = null;
-  const sessionPromise = auth.api.getSession({ headers: context.request.headers });
-
-  try {
-    isAuthed = await Promise.race([
-      sessionPromise,
-      new Promise<null>((resolve) => setTimeout(() => { timedOut = true; resolve(null); }, 5000)),
-    ]);
-  } catch (err) {
-    console.error('[middleware] Session check failed:', err);
-    isAuthed = null;
-  }
-
-  // Prevent unhandled rejection from the orphaned getSession promise.
-  // The pool-level statement_timeout (30s) bounds how long the leaked query can run.
-  // NOTE: When better-auth supports AbortController signal, use it to cancel the
-  // orphaned promise instead of letting it run in the background.
-  sessionPromise.catch((err) => {
-    if (timedOut) console.warn('[middleware] Orphaned session check failed after timeout:', err);
-  });
-
-  if (timedOut) {
-    console.warn('[middleware] Session check timed out (5s) — returning 503');
-    return new Response(JSON.stringify({ error: 'Service temporarily unavailable' }), {
-      status: 503,
-      headers: { 'Retry-After': '5', 'Content-Type': 'application/json' },
-    });
-  }
-
-  if (isAuthed) {
-    context.locals.user = isAuthed.user;
-    context.locals.session = isAuthed.session;
-  } else {
-    context.locals.user = null;
-    context.locals.session = null;
-  }
+  // Session (timeout 5 s → 503) et site courant : programme Effect (src/lib/http/request-context.ts).
+  const session = await Effect.runPromise(resolveSession(() => auth.api.getSession({ headers: context.request.headers })));
+  if (session._tag === 'TimedOut') return serviceUnavailable();
+  context.locals.user = session.session?.user ?? null;
+  context.locals.session = session.session?.session ?? null;
 
   // ─── Multi-site : site courant d'après le Host (cache 30 s) ─────
-  try {
-    context.locals.site = await resolveSiteForHost(context.request.headers.get("x-forwarded-host") && process.env.TRUST_PROXY === "true"
-      ? context.request.headers.get("x-forwarded-host")
-      : context.request.headers.get("host"));
-  } catch (err) {
-    console.error("[middleware] Site resolution failed:", err);
-    context.locals.site = null;
-  }
+  context.locals.site = await Effect.runPromise(resolveSite(requestHost(context.request.headers, process.env.TRUST_PROXY === "true")));
 
   const response = await observeRequest(context, next);
   const url = new URL(context.request.url);
