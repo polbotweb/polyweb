@@ -14,6 +14,7 @@
     "lint": "eslint \"src/**/*.{js,ts,astro}\"",
     "lint:fix": "eslint \"src/**/*.{js,ts,astro}\" --fix",
     "check": "astro check",
+    "readme:generate": "tsx readme-builder/readme-generate.ts",
     "db:check": "npx tsx src/database/commands/db.check.ts",
     "db:compare": "npx tsx src/database/commands/db.compare.ts",
     "db:generate": "npx tsx src/database/commands/db.generate.ts",
