@@ -60,6 +60,14 @@ export function effectHandler<I, A, E>(program: (input: I, context: ActionAPICon
   };
 }
 
+/** Exécute une garde Effect côté appelant Promise : relève l'échec en `ActionError` (ou la cause d'infrastructure brute). */
+export async function runGuard<A, E>(effect: Effect.Effect<A, E>): Promise<A> {
+  const exit = await Effect.runPromiseExit(effect);
+  if (Exit.isSuccess(exit)) return exit.value;
+  const reason = exit.cause.reasons.find((r) => r._tag === 'Fail' || r._tag === 'Die');
+  throw toActionError(reason?._tag === 'Fail' ? reason.error : reason?._tag === 'Die' ? reason.defect : exit.cause);
+}
+
 // --- Gardes communes (équivalents Effect de src/actions/admin/_helpers.ts) ---
 
 type Permissions = Record<string, string[]>;

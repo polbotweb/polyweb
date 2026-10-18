@@ -1,3 +1,5 @@
+import { Effect } from "effect";
+import { actionTry, fail, runGuard } from "@/lib/effect/action";
 import { ActionError } from "astro:actions";
 import type { ActionAPIContext } from "astro:actions";
 import { eq } from "drizzle-orm";
@@ -20,10 +22,14 @@ export function resolveBlogTenant(input: { organizationId?: string | null }): Bl
   return { organizationId: input.organizationId ?? null, isOrgContext: Boolean(input.organizationId) };
 }
 
-export async function hasBlogPermission(context: BlogPermissionContext, tenant: BlogTenantContext, permissions: BlogPermissions): Promise<boolean> {
+// Gardes tenant/RBAC du blog en Effect (échecs `ActionFailure`, infrastructure `OperationError`) ;
+// les `assert*` / `has*` historiques sont des adaptateurs Promise via `runGuard`.
+
+/** RBAC organisation (better-auth `hasPermission`) ou global (`userHasPermission`) ; toute erreur → refus. */
+export const hasBlogPermissionEffect = (context: BlogPermissionContext, tenant: BlogTenantContext, permissions: BlogPermissions): Effect.Effect<boolean> => {
   const user = context.locals.user;
-  if (!user || user.banned) return false;
-  try {
+  if (!user || user.banned) return Effect.succeed(false);
+  return Effect.tryPromise(async () => {
     const { auth } = await import("@/lib/auth");
     if (tenant.isOrgContext) {
       const result = await auth.api.hasPermission({ headers: context.request.headers, body: { organizationId: tenant.organizationId!, permissions: permissions as Record<string, string[]> } });
@@ -31,57 +37,59 @@ export async function hasBlogPermission(context: BlogPermissionContext, tenant: 
     }
     const result = await auth.api.userHasPermission({ body: { userId: user.id, permissions: permissions as Record<string, string[]> } });
     return result.success;
-  } catch {
-    return false;
-  }
-}
+  }).pipe(Effect.orElseSucceed(() => false));
+};
 
-export async function assertBlogPermission(context: ActionAPIContext, tenant: BlogTenantContext, permissions: BlogPermissions) {
-  const user = context.locals.user;
-  if (!user) throw new ActionError({ code: "UNAUTHORIZED", message: "Vous devez être connecté pour effectuer cette action." });
-  if (user.banned) throw new ActionError({ code: "FORBIDDEN", message: "Compte suspendu." });
-  if (!(await hasBlogPermission(context, tenant, permissions))) throw new ActionError({ code: "FORBIDDEN", message: "Permissions insuffisantes." });
-  return user;
-}
+export const requireBlogPermission = (context: BlogPermissionContext, tenant: BlogTenantContext, permissions: BlogPermissions) =>
+  Effect.gen(function* () {
+    const user = context.locals.user;
+    if (!user) return yield* fail("UNAUTHORIZED", "Vous devez être connecté pour effectuer cette action.");
+    if (user.banned) return yield* fail("FORBIDDEN", "Compte suspendu.");
+    if (!(yield* hasBlogPermissionEffect(context, tenant, permissions))) return yield* fail("FORBIDDEN", "Permissions insuffisantes.");
+    return user;
+  });
 
-export async function assertPostInTenant(postId: string, tenant: BlogTenantContext) {
-  const [post] = await getDrizzle().select().from(blogPosts).where(eq(blogPosts.id, postId)).limit(1);
-  if (!post) throw new ActionError({ code: "NOT_FOUND", message: "Article introuvable." });
-  if ((post.organizationId ?? null) !== tenant.organizationId) throw new ActionError({ code: "FORBIDDEN", message: "Cet article n'appartient pas à ce tenant." });
-  return post;
-}
+const ownedBy = <T extends { organizationId: string | null }>(op: string, missing: string, foreign: string, load: () => Promise<T[]>, tenant: BlogTenantContext) =>
+  Effect.gen(function* () {
+    const [item] = yield* actionTry(op, load);
+    if (!item) return yield* fail("NOT_FOUND", missing);
+    if ((item.organizationId ?? null) !== tenant.organizationId) return yield* fail("FORBIDDEN", foreign);
+    return item;
+  });
 
-export async function assertCategoryInTenant(categoryId: string, tenant: BlogTenantContext) {
-  const [category] = await getDrizzle().select({ id: blogCategories.id, organizationId: blogCategories.organizationId }).from(blogCategories).where(eq(blogCategories.id, categoryId)).limit(1);
-  if (!category) throw new ActionError({ code: "NOT_FOUND", message: "Catégorie introuvable." });
-  if ((category.organizationId ?? null) !== tenant.organizationId) throw new ActionError({ code: "FORBIDDEN", message: "Cette catégorie n'appartient pas à ce tenant." });
-  return category;
-}
+export const postInTenant = (postId: string, tenant: BlogTenantContext) =>
+  ownedBy("blog.post.tenant", "Article introuvable.", "Cet article n'appartient pas à ce tenant.", () => getDrizzle().select().from(blogPosts).where(eq(blogPosts.id, postId)).limit(1), tenant);
+export const categoryInTenant = (categoryId: string, tenant: BlogTenantContext) =>
+  ownedBy("blog.category.tenant", "Catégorie introuvable.", "Cette catégorie n'appartient pas à ce tenant.", () => getDrizzle().select({ id: blogCategories.id, organizationId: blogCategories.organizationId }).from(blogCategories).where(eq(blogCategories.id, categoryId)).limit(1), tenant);
+export const tagInTenant = (tagId: string, tenant: BlogTenantContext) =>
+  ownedBy("blog.tag.tenant", "Tag introuvable.", "Ce tag n'appartient pas à ce tenant.", () => getDrizzle().select({ id: blogTags.id, organizationId: blogTags.organizationId }).from(blogTags).where(eq(blogTags.id, tagId)).limit(1), tenant);
+export const mediaInTenant = (mediaId: string, tenant: BlogTenantContext) =>
+  ownedBy("blog.media.tenant", "Média introuvable.", "Ce média n'appartient pas à ce tenant.", () => getDrizzle().select({ id: mediaFiles.id, organizationId: mediaFiles.organizationId }).from(mediaFiles).where(eq(mediaFiles.id, mediaId)).limit(1), tenant);
 
-export async function assertTagInTenant(tagId: string, tenant: BlogTenantContext) {
-  const [tag] = await getDrizzle().select({ id: blogTags.id, organizationId: blogTags.organizationId }).from(blogTags).where(eq(blogTags.id, tagId)).limit(1);
-  if (!tag) throw new ActionError({ code: "NOT_FOUND", message: "Tag introuvable." });
-  if ((tag.organizationId ?? null) !== tenant.organizationId) throw new ActionError({ code: "FORBIDDEN", message: "Ce tag n'appartient pas à ce tenant." });
-  return tag;
-}
+const TOO_MANY = "Trop de requêtes. Veuillez réessayer dans quelques instants.";
+export const blogRateLimitEffect = (userId: string, scope: string, opts = { window: 60, max: 30 }) =>
+  Effect.suspend(() => (checkRateLimit(`blog-${scope.replace(/:/g, "_")}:${userId}`, opts).allowed ? Effect.void : fail("TOO_MANY_REQUESTS", TOO_MANY)));
+export const blogPublicRateLimitEffect = (context: Pick<ActionAPIContext, "request" | "clientAddress">, scope: string, opts = { window: 300, max: 5 }) =>
+  Effect.suspend(() => {
+    const ip = extractIp(context.request.headers, context.clientAddress);
+    const key = ip ? `blog-${scope.replace(/:/g, "_")}:${ip}` : `blog-${scope.replace(/:/g, "_")}:__global__`;
+    return checkRateLimit(key, ip ? opts : { window: opts.window, max: Math.max(1, Math.floor(opts.max / 3)) }).allowed ? Effect.void : fail("TOO_MANY_REQUESTS", TOO_MANY);
+  });
 
-export async function assertMediaInTenant(mediaId: string, tenant: BlogTenantContext) {
-  const [media] = await getDrizzle().select({ id: mediaFiles.id, organizationId: mediaFiles.organizationId }).from(mediaFiles).where(eq(mediaFiles.id, mediaId)).limit(1);
-  if (!media) throw new ActionError({ code: "NOT_FOUND", message: "Média introuvable." });
-  if ((media.organizationId ?? null) !== tenant.organizationId) throw new ActionError({ code: "FORBIDDEN", message: "Ce média n'appartient pas à ce tenant." });
-  return media;
-}
-
+// ─── Adaptateurs Promise ──────────────────────────────────────────────────────
+export const hasBlogPermission = (context: BlogPermissionContext, tenant: BlogTenantContext, permissions: BlogPermissions): Promise<boolean> => Effect.runPromise(hasBlogPermissionEffect(context, tenant, permissions));
+export const assertBlogPermission = (context: ActionAPIContext, tenant: BlogTenantContext, permissions: BlogPermissions) => runGuard(requireBlogPermission(context, tenant, permissions));
+export const assertPostInTenant = (postId: string, tenant: BlogTenantContext) => runGuard(postInTenant(postId, tenant));
+export const assertCategoryInTenant = (categoryId: string, tenant: BlogTenantContext) => runGuard(categoryInTenant(categoryId, tenant));
+export const assertTagInTenant = (tagId: string, tenant: BlogTenantContext) => runGuard(tagInTenant(tagId, tenant));
+export const assertMediaInTenant = (mediaId: string, tenant: BlogTenantContext) => runGuard(mediaInTenant(mediaId, tenant));
 export function blogRateLimit(_context: ActionAPIContext, userId: string, scope: string, opts = { window: 60, max: 30 }) {
-  const rl = checkRateLimit(`blog-${scope.replace(/:/g, "_")}:${userId}`, opts);
-  if (!rl.allowed) throw new ActionError({ code: "TOO_MANY_REQUESTS", message: "Trop de requêtes. Veuillez réessayer dans quelques instants." });
+  if (!checkRateLimit(`blog-${scope.replace(/:/g, "_")}:${userId}`, opts).allowed) throw new ActionError({ code: "TOO_MANY_REQUESTS", message: TOO_MANY });
 }
-
 export function blogPublicRateLimit(context: ActionAPIContext, scope: string, opts = { window: 300, max: 5 }) {
   const ip = extractIp(context.request.headers, context.clientAddress);
   const key = ip ? `blog-${scope.replace(/:/g, "_")}:${ip}` : `blog-${scope.replace(/:/g, "_")}:__global__`;
-  const rl = checkRateLimit(key, ip ? opts : { window: opts.window, max: Math.max(1, Math.floor(opts.max / 3)) });
-  if (!rl.allowed) throw new ActionError({ code: "TOO_MANY_REQUESTS", message: "Trop de requêtes. Veuillez réessayer dans quelques instants." });
+  if (!checkRateLimit(key, ip ? opts : { window: opts.window, max: Math.max(1, Math.floor(opts.max / 3)) }).allowed) throw new ActionError({ code: "TOO_MANY_REQUESTS", message: TOO_MANY });
 }
 
 export function auditBlog(context: ActionAPIContext, userId: string, action: AuditAction, opts?: { resource?: string; resourceId?: string; metadata?: Record<string, unknown> }) {
