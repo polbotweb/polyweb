@@ -54,6 +54,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
     'Cross-Origin-Embedder-Policy': 'credentialless',
   };
 
+  // HSTS jamais sur une origine de bouclage : WebKit l'applique à http://localhost et force
+  // ensuite https sur le port de dev/preview (échec TLS). Inchangé pour tout autre hôte.
+  if (['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) delete securityHeaders['Strict-Transport-Security'];
+
   // API publique (brique c) : consommable cross-origin (lecture sans cookies).
   if (lowerPath.startsWith('/api/v1/')) securityHeaders['Cross-Origin-Resource-Policy'] = 'cross-origin';
 
