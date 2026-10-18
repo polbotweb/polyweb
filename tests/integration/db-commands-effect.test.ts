@@ -4,6 +4,8 @@
  *  - db:baseline : base créée hors migrations → toutes les migrations marquées ; relance sans effet.
  *  - db:reset : confirmation « oui » → tables et historique supprimés ; « non » → annulé, rien touché.
  *  - db:migrate : base vide → toutes les migrations appliquées (une transaction chacune) ; relance sans effet.
+ *  - db:infra : --dry-run n'exécute rien ; puis application (une transaction par fichier).
+ *  - db:seed : manifest inséré dans une transaction ; relance idempotente (onConflictDoNothing).
  *  - db:check : connexion OK sur la base migrée ; URL invalide → code de sortie 1.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -23,8 +25,8 @@ const scratch = async <T>(f: (c: pg.Client) => Promise<T>) => {
   await c.connect();
   try { return await f(c); } finally { await c.end(); }
 };
-const cmd = (file: string, input = '') =>
-  execFileSync(process.execPath, ['node_modules/tsx/dist/cli.mjs', `src/database/commands/${file}`], {
+const cmd = (file: string, input = '', args: string[] = []) =>
+  execFileSync(process.execPath, ['node_modules/tsx/dist/cli.mjs', `src/database/commands/${file}`, ...args], {
     env: { ...process.env, DB_ENV: 'LOCAL', DATABASE_URL_LOCAL: scratchUrl, DATABASE_URL_TEST: scratchUrl, NODE_ENV: 'test' },
     input,
     encoding: 'utf8',
@@ -68,6 +70,17 @@ describe('commandes db:* Effect (base jetable)', () => {
     expect(await scratch(async (c) => (await c.query(`SELECT to_regclass('public.pages') AS t`)).rows[0].t)).toBe('pages');
     expect(cmd('db.migrate.ts')).toContain('Aucune migration en attente');
   }, 120_000);
+
+  it('db:infra : dry run puis application', () => {
+    const strip = (t: string) => t.replace(/\x1b\[[0-9;]*m/g, '');
+    expect(strip(cmd('db.infra.ts', '', ['--dry-run']))).toContain('Dry run terminé');
+    expect(strip(cmd('db.infra.ts'))).toContain('statements appliqués');
+  }, 120_000);
+
+  it('db:seed : insère le manifest, relance idempotente', async () => {
+    expect(cmd('db.seed.ts')).toContain('Seed terminé');
+    expect(cmd('db.seed.ts')).toContain('Seed terminé');
+  }, 180_000);
 
   it('db:check : OK sur la base migrée ; URL invalide → échec (code 1)', () => {
     // db:check refuse (inchangé) toute URL contenant un mot « placeholder » (ex. un mot de passe
