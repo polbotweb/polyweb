@@ -26,6 +26,13 @@ vi.mock('@database/drizzle', () => ({
   })),
 }));
 
+// Verrou des pages (core/locks) : couvert par content-locking.test.ts ; ici toujours libre.
+const { ensureNotLockedByOther } = vi.hoisted(() => ({ ensureNotLockedByOther: vi.fn() }));
+vi.mock('@/lib/pages/locks', async () => {
+  const { Effect } = await import('effect');
+  ensureNotLockedByOther.mockImplementation(() => Effect.void);
+  return { PAGE_LOCK_TTL_MS: 300000, pageLock: { ensureNotLockedByOther } };
+});
 vi.mock('@database/schemas', () => ({
   pages: { id: 'id', updatedAt: 'updatedAt', locale: 'locale', sortOrder: 'sortOrder', deletedAt: 'deletedAt' },
   pageSections: { id: 'id', pageId: 'pageId', sortOrder: 'sortOrder' },
@@ -169,8 +176,7 @@ describe('createPage', () => {
 describe('updatePage', () => {
   it('updates a page', async () => {
     const updated = { id: 'p1', title: 'Updated' };
-    // Lock check select
-    mockSelect.mockReturnValueOnce(selectChain([{ lockedBy: null, lockedAt: null }]));
+    // Verrou : core/locks (double ci-dessous), plus de requête ad hoc.
     mockUpdate.mockReturnValue(updateChain([updated]));
 
     const result = await updatePage.handler(
@@ -181,8 +187,7 @@ describe('updatePage', () => {
   });
 
   it('throws NOT_FOUND when page missing', async () => {
-    // Lock check select
-    mockSelect.mockReturnValueOnce(selectChain([]));
+    // Verrou : core/locks (double ci-dessous), plus de requête ad hoc.
     mockUpdate.mockReturnValue(updateChain([]));
     mockSelect.mockReturnValueOnce(selectChain([]));
 
@@ -192,8 +197,7 @@ describe('updatePage', () => {
   });
 
   it('throws CONFLICT on optimistic lock failure', async () => {
-    // Lock check select
-    mockSelect.mockReturnValueOnce(selectChain([{ lockedBy: null, lockedAt: null }]));
+    // Verrou : core/locks (double ci-dessous), plus de requête ad hoc.
     mockUpdate.mockReturnValue(updateChain([]));
     mockSelect.mockReturnValueOnce(selectChain([{ id: 'p1' }]));
 
@@ -208,8 +212,7 @@ describe('updatePage', () => {
   it('throws CONFLICT on duplicate slug during update', async () => {
     const dbError = new Error('dup') as any;
     dbError.code = '23505';
-    // Lock check select
-    mockSelect.mockReturnValueOnce(selectChain([{ lockedBy: null, lockedAt: null }]));
+    // Verrou : core/locks (double ci-dessous), plus de requête ad hoc.
     mockUpdate.mockReturnValue({
       set: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({ returning: vi.fn().mockRejectedValue(dbError) }),

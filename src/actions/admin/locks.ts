@@ -15,6 +15,8 @@ import { extractIp, logAuditEvent } from "@/lib/audit";
 // Enregistrement automatique de tous les verrous de modules (`src/modules/*/locks.ts`, effet de bord
 // de `defineLockResource`) : un module généré par `pnpm module:new` est couvert sans modification ici.
 import.meta.glob("/src/modules/*/locks.ts", { eager: true });
+// Pages CMS (hors modules).
+import "@/lib/pages/locks";
 
 export const forceReleaseLock = defineAction({
   input: z.object({ resourceType: z.string().regex(/^[a-z][a-z0-9-]{0,63}$/), resourceId: z.string().min(1).max(128) }),

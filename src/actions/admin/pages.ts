@@ -7,7 +7,10 @@ import { pages, pageSections, pageVersions } from "@database/schemas";
 import { invalidateCache } from "@database/cache";
 import { auditAdmin } from "./_helpers";
 import { LOCALES } from "@i18n/config";
-import { actionRateLimit, actionTry, effectHandler, requireActionPermission } from "@/lib/effect/action";
+import { actionRateLimit, actionTry, effectHandler, fail, requireActionPermission } from "@/lib/effect/action";
+import { lockOwnerFrom } from "@/core/locks/service";
+import { lockLocaleFrom } from "@/core/locks/errors";
+import { pageLock, PAGE_LOCK_TTL_MS } from "@/lib/pages/locks";
 
 const localeEnum = z.enum(LOCALES, {
   message: `La locale doit être l'une des suivantes : ${LOCALES.join(", ")}.`,
@@ -121,20 +124,14 @@ export const updatePage = defineAction({
   handler: effectHandler((input, context) => Effect.gen(function* () {
     const user = yield* requireActionPermission(context, { page: ["update"] });
     yield* actionRateLimit(user.id, "pages");
+    // Verrou générique (src/core/locks) : refus si un autre propriétaire (utilisateur + session) détient la page.
+    yield* pageLock.ensureNotLockedByOther(input.id, lockOwnerFrom(user.id, context.locals.session?.id), lockLocaleFrom(context.request.headers));
     return yield* actionTry("admin/pages.updatePage", async () => {
 
     const { id, expectedUpdatedAt, ...data } = input;
     if (data.slug) assertSlugNotReserved(data.slug);
 
     const db = getDrizzle();
-
-    // Check content lock before updating
-    const [lockCheck] = await db
-      .select({ lockedBy: pages.lockedBy, lockedAt: pages.lockedAt })
-      .from(pages)
-      .where(eq(pages.id, id))
-      .limit(1);
-    if (lockCheck) assertNotLockedByOther(lockCheck, user.id);
 
     const whereClause = expectedUpdatedAt
       ? and(eq(pages.id, id), eq(pages.updatedAt, new Date(expectedUpdatedAt)))
@@ -763,51 +760,27 @@ export const clonePage = defineAction({
 // Content Locking
 // ═══════════════════════════════════════════════════════════════════════
 
-/** Lock expires after 5 minutes of inactivity. */
-const LOCK_TTL_MS = 5 * 60 * 1000;
-
 export const lockPage = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
+    takeOver: z.boolean().optional(),
   }),
   handler: effectHandler((input, context) => Effect.gen(function* () {
     const user = yield* requireActionPermission(context, { page: ["update"] });
     yield* actionRateLimit(user.id, "pages");
-    return yield* actionTry("admin/pages.lockPage", async () => {
-
-    const db = getDrizzle();
-    const now = new Date();
-
-    // Check current lock status
-    const [page] = await db
-      .select({ lockedBy: pages.lockedBy, lockedAt: pages.lockedAt })
-      .from(pages)
-      .where(eq(pages.id, input.id))
-      .limit(1);
-
-    if (!page) {
-      throw new ActionError({ code: "NOT_FOUND", message: "Page introuvable." });
-    }
-
-    // If locked by another user and lock is still fresh, reject
-    if (page.lockedBy && page.lockedBy !== user.id && page.lockedAt) {
-      const lockAge = now.getTime() - page.lockedAt.getTime();
-      if (lockAge < LOCK_TTL_MS) {
-        throw new ActionError({
-          code: "CONFLICT",
-          message: "Cette page est en cours de modification par un autre utilisateur.",
-        });
-      }
-    }
-
-    // Acquire or refresh lock
-    await db
-      .update(pages)
-      .set({ lockedBy: user.id, lockedAt: now })
-      .where(eq(pages.id, input.id));
-
-    return { success: true as const, lockedBy: user.id, lockedAt: now.toISOString() };
-    });
+    const [page] = yield* actionTry("admin/pages.lockPage.load", () => getDrizzle().select({ id: pages.id }).from(pages).where(eq(pages.id, input.id)).limit(1));
+    if (!page) return yield* fail("NOT_FOUND", "Page introuvable.");
+    const sessionId = context.locals.session?.id;
+    // Verrou générique (src/core/locks) : même utilisateur dans une autre session → confirmation
+    // « reprendre ici ? » puis reprise auditée ; un autre utilisateur reste bloqué (CONFLICT).
+    const outcome = yield* pageLock.acquire(input.id, lockOwnerFrom(user.id, sessionId), { takeOver: input.takeOver, locale: lockLocaleFrom(context.request.headers) }).pipe(
+      Effect.map((acquired) => ({ ok: true as const, ...acquired })),
+      Effect.catchTag("LockHeldError", (error) => (error.sameUser ? Effect.succeed({ ok: false as const, takeOverPrompt: error.message }) : Effect.fail(error))),
+    );
+    if (!outcome.ok) return { success: false as const, takeOverPrompt: outcome.takeOverPrompt };
+    if (outcome.tookOverFrom !== null) auditAdmin(context, user.id, "PAGE_LOCK_TAKEOVER", { resource: "page", resourceId: input.id, metadata: { previousSessionId: outcome.tookOverFrom } });
+    const lockedAt = new Date(outcome.expiresAt.getTime() - PAGE_LOCK_TTL_MS);
+    return { success: true as const, lockedBy: user.id, lockedAt: lockedAt.toISOString(), expiresAt: outcome.expiresAt.toISOString() };
   })),
 });
 
@@ -816,33 +789,9 @@ export const unlockPage = defineAction({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
   handler: effectHandler((input, context) => Effect.gen(function* () {
-    yield* requireActionPermission(context, { page: ["update"] });
-    return yield* actionTry("admin/pages.unlockPage", async () => {
-    const db = getDrizzle();
-
-    // Only the lock owner (or any admin via force) can unlock
-    await db
-      .update(pages)
-      .set({ lockedBy: null, lockedAt: null })
-      .where(eq(pages.id, input.id));
-
+    const user = yield* requireActionPermission(context, { page: ["update"] });
+    // Seul le propriétaire (utilisateur + session) libère ; libération d'un autre : forceReleaseLock (admin, auditée).
+    yield* pageLock.release(input.id, lockOwnerFrom(user.id, context.locals.session?.id));
     return { success: true as const };
-    });
   })),
 });
-
-/** Helper: check if page is locked by another user. Throws on conflict. */
-function assertNotLockedByOther(
-  page: { lockedBy: string | null; lockedAt: Date | null },
-  userId: string,
-) {
-  if (page.lockedBy && page.lockedBy !== userId && page.lockedAt) {
-    const lockAge = Date.now() - page.lockedAt.getTime();
-    if (lockAge < LOCK_TTL_MS) {
-      throw new ActionError({
-        code: "CONFLICT",
-        message: "Cette page est verrouillée par un autre utilisateur.",
-      });
-    }
-  }
-}

@@ -7,7 +7,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Effect } from 'effect';
 import { eq, inArray } from 'drizzle-orm';
 import { getDrizzle } from '@database/drizzle';
-import { member, organization, serviceLocks, services, user } from '@database/schemas';
+import { member, organization, pageLocks, pages, serviceLocks, services, user } from '@database/schemas';
+import { pageLock } from '@/lib/pages/locks';
 import { serviceLock } from '@/modules/services/locks';
 import { LockExpiredError, LockHeldError, LockReleaseForbiddenError, LockResourceNotFoundError } from '@/core/locks/errors';
 
@@ -142,5 +143,36 @@ describe('libération administrative contrôlée par tenant (Postgres)', () => {
 
   it('ressource inconnue → LockResourceNotFoundError', async () => {
     expect(await flip(serviceLock.adminRelease(crypto.randomUUID(), actor(ids.global, 'admin')))).toBeInstanceOf(LockResourceNotFoundError);
+  });
+});
+
+describe('verrou des pages CMS (page_locks)', () => {
+  const t = `pglock-${crypto.randomUUID().slice(0, 8)}`;
+  const editor = `${t}-editor`;
+  const global = `${t}-global`;
+  const pageId = crypto.randomUUID();
+
+  beforeAll(async () => {
+    const db = getDrizzle();
+    await db.insert(user).values([
+      { id: editor, name: 'E', email: `${editor}@example.test` },
+      { id: global, name: 'G', email: `${global}@example.test`, role: 'admin' },
+    ]);
+    await db.insert(pages).values({ id: pageId, locale: 'fr', title: t, slug: t } as never);
+  });
+
+  afterAll(async () => {
+    const db = getDrizzle();
+    await db.delete(pages).where(eq(pages.id, pageId));
+    await db.delete(user).where(inArray(user.id, [editor, global]));
+  });
+
+  it('même politique : autre utilisateur bloqué, reprise par soi, libération réservée à l’admin global (page plateforme)', async () => {
+    await run(pageLock.acquire(pageId, { userId: editor, sessionId: 'e1' }));
+    expect(await flip(pageLock.ensureNotLockedByOther(pageId, { userId: global, sessionId: 'g1' }))).toBeInstanceOf(LockHeldError);
+    expect((await run(pageLock.acquire(pageId, { userId: editor, sessionId: 'e2' }, { takeOver: true }))).tookOverFrom).toBe('e1');
+    expect(await flip(pageLock.adminRelease(pageId, { id: editor, role: 'user' }))).toBeInstanceOf(LockReleaseForbiddenError);
+    expect((await run(pageLock.adminRelease(pageId, { id: global, role: 'admin' }))).previousOwner?.sessionId).toBe('e2');
+    expect(await getDrizzle().select().from(pageLocks).where(eq(pageLocks.pageId, pageId))).toHaveLength(0);
   });
 });

@@ -155,6 +155,8 @@ Abstraction core, indépendante de l'entité, utilisable par tout module :
 - `defineLockResource(type, store, { ttlMs })` : déclaration par module (`src/modules/services/locks.ts`,
   `src/modules/blog/locks.ts`, modules générés par `pnpm module:new`) ; `lockLocaleFrom(headers)` pour l'i18n.
 
+Pages CMS : `src/lib/pages/locks.ts` (table `page_locks`, migration `0019_page_locks`, TTL 5 min) — `lockPage`/`unlockPage`/`updatePage` passent par le verrou générique (reprise auditée `PAGE_LOCK_TAKEOVER`, libération administrative réservée aux admins globaux : les pages n'ont pas d'organisation) ; les colonnes `pages.locked_by/locked_at` ne sont plus écrites (conservées, suppression à décider).
+
 État : services et blog migrés (actions, mise à jour/restauration/actions groupées, UI de confirmation) ; les deux
 anciennes implémentations sont supprimées. Le blog passe de « propriétaire = utilisateur » à « utilisateur +
 session » (même politique partout). Tests : `tests/unit/core-locks.test.ts` (politique, expiration, propriétaire,
