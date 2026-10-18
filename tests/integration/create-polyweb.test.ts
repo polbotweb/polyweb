@@ -58,8 +58,12 @@ describe('create-polyweb end to end (built CLI, local template)', () => {
     expect(env).toMatch(/^STORAGE_DRIVER=r2$/m);
     expect(env).toMatch(/^PAYMENTS_ENABLED=true$/m);
     expect(env).toMatch(/^SITE_NAME=Acme$/m);
-    const sourceSecret = /^BETTER_AUTH_SECRET=(.*)$/m.exec(readFileSync(join(root, '.env'), 'utf8'))?.[1];
-    expect(env).not.toContain(`BETTER_AUTH_SECRET=${sourceSecret}\n`);
+    // Le secret du projet source (.env local, ou .env.example en CI où aucun .env n'existe) ne doit pas être recopié.
+    const sourceEnvFile = existsSync(join(root, '.env')) ? join(root, '.env') : join(root, '.env.example');
+    const sourceSecret = /^BETTER_AUTH_SECRET=(.*)$/m.exec(readFileSync(sourceEnvFile, 'utf8'))?.[1];
+    const generatedSecret = /^BETTER_AUTH_SECRET=(.*)$/m.exec(env)?.[1];
+    expect(generatedSecret, 'BETTER_AUTH_SECRET généré').toBeTruthy();
+    if (sourceSecret) expect(generatedSecret).not.toBe(sourceSecret);
     expect(statSync(join(dest, '.env')).mode & 0o777).toBe(0o600);
     for (const p of ['node_modules', 'dist', 'logs', 'test-results', 'packages/create-polyweb']) expect(existsSync(join(dest, p)), p).toBe(false);
     for (const p of ['src/middleware.ts', 'astro.config.mjs', '.env.example', 'AGENTS.md']) expect(existsSync(join(dest, p)), p).toBe(true);

@@ -60,6 +60,11 @@ describe('scripts/new-module.ts — module généré compilable', () => {
   afterAll(() => rmSync(genDir, { recursive: true, force: true }));
 
   it('type-checks against core abstractions and passes the capability contract', async () => {
+    // Les types Astro (`astro:actions`, `.astro/types.d.ts`) sont générés : en CI (checkout neuf)
+    // ils n'existent pas tant que `astro sync` n'a pas tourné — le test les génère lui-même.
+    if (!existsSync(join(repo, '.astro/types.d.ts'))) {
+      execFileSync(resolve(repo, 'node_modules/.bin/astro'), ['sync'], { cwd: repo, encoding: 'utf8', stdio: 'pipe' });
+    }
     execFileSync(tsx, [script, 'demo-items', '--entity=demo-item', `--root=${join(genDir, 'src')}`], { encoding: 'utf8', stdio: 'pipe' });
     const rootConfig = JSON.parse(readFileSync(join(repo, 'tsconfig.json'), 'utf8')) as { compilerOptions: { paths: Record<string, string[]> } };
     const rel = genDir.slice(repo.length + 1);
