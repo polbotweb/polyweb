@@ -37,6 +37,8 @@ const STATUS: Record<string, ActionErrorCode> = {
   ConflictError: 'CONFLICT',
   ValidationError: 'BAD_REQUEST',
   RateLimitedError: 'TOO_MANY_REQUESTS',
+  LockHeldError: 'CONFLICT',
+  LockExpiredError: 'CONFLICT',
 };
 
 export function toActionError(error: unknown): unknown {
