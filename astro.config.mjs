@@ -34,6 +34,17 @@ const isLoopbackSite = (() => {
   }
 })();
 
+// Hôtes autorisés à alimenter Astro.url (@astrojs/node ≥ 11.1.8 ignore sinon l'en-tête Host et
+// replie sur localhost:<port>) : hôte de SITE_URL, boucle locale en dev/preview/e2e, et
+// ALLOWED_HOSTS (liste séparée par des virgules, ex. domaines multi-site).
+const allowedDomains = (() => {
+  const hosts = new Set();
+  try { hosts.add(new URL(process.env.SITE_URL || 'http://localhost:4321').hostname); } catch { /* site invalide : signalé plus bas */ }
+  if (isLoopbackSite) ['localhost', '127.0.0.1'].forEach((h) => hosts.add(h));
+  for (const h of (process.env.ALLOWED_HOSTS ?? '').split(',')) if (h.trim()) hosts.add(h.trim().toLowerCase());
+  return [...hosts].map((hostname) => ({ hostname }));
+})();
+
 export default defineConfig({
   output: 'server',
   vite: {
@@ -97,6 +108,7 @@ export default defineConfig({
   // exempts bearer-token calls to /api/v1/* (not forgeable cross-site).
   security: {
     checkOrigin: false,
+    allowedDomains,
     csp: {
       directives: [
         "default-src 'self'",

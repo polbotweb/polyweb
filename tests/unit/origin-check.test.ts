@@ -23,4 +23,13 @@ describe('origin check', () => {
     expect(isForbiddenCrossOriginRequest(...req('DELETE', { authorization: 'Bearer pw_x' }))).toBe(true);
     expect(isForbiddenCrossOriginRequest(...req('POST', { authorization: 'Bearer x', origin: 'https://evil.test', 'content-type': 'text/plain' }, new URL('https://site.test/api/upload')))).toBe(true);
   });
+  it('accepte un Origin dont l’hôte est le Host reçu (Astro.url replié sur localhost:<port>)', () => {
+    const fallback = new URL('http://localhost:4321/fr/contact');
+    const form = { 'content-type': 'application/x-www-form-urlencoded' };
+    expect(isForbiddenCrossOriginRequest(...req('POST', { ...form, origin: 'http://localhost:4322', host: 'localhost:4322' }, fallback))).toBe(false);
+    expect(isForbiddenCrossOriginRequest(...req('POST', { ...form, origin: 'https://evil.test', host: 'localhost:4322' }, fallback))).toBe(true);
+    expect(isForbiddenCrossOriginRequest(...req('POST', { ...form, origin: 'http://localhost:4322' }, fallback))).toBe(true);
+    expect(isForbiddenCrossOriginRequest(...req('POST', { ...form, origin: 'null', host: 'localhost:4322' }, fallback))).toBe(true);
+  });
 });
+

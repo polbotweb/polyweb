@@ -331,3 +331,31 @@ Toutes les actions admin utilisent des schemas Zod stricts :
 | `SMTP_HOST/PORT/USER/PASS` | Credentials Nodemailer | ✅ |
 
 > **Règle** : jamais de secret dans le code source. Toutes les variables sensibles sont lues depuis `.env` (non versionné).
+
+---
+
+## 11. Audit des dépendances (`pnpm audit --prod`)
+
+Le job CI `security-audit` (séparé, `pnpm audit --prod --audit-level=moderate`) bloque le déploiement.
+Mises à jour appliquées le 2026-10-18 (validées par l'utilisateur) : `astro` 7.4.0, `@astrojs/node` 11.1.8
+(smol-toml retiré de la chaîne vulnérable), `nodemailer` ^10.0.6 (types fournis par le paquet),
+`sharp` ^0.35.5, correctifs de lockfile (devalue, dompurify ≥ 3.4.16, source-map-js 1.2.2,
+brace-expansion 5.0.12, ip-address 10.7.4) et override pnpm
+`@esbuild-kit/core-utils>esbuild: >=0.25.0` (chaîne drizzle-kit, paquet `@esbuild-kit` abandonné qui
+figeait esbuild 0.18.20). Résultat : `pnpm audit --prod` → aucune vulnérabilité connue.
+
+> `astro` 7.4 exige **Node ≥ 22.22.0** (les environnements de build/exécution doivent suivre).
+
+### http-cache-semantics — GHSA-ch52-4w7c-c8xp
+
+- **Avis** : divulgation possible de réponses en cache entre utilisateurs via `max-stale`
+  (sévérité haute). Plage vulnérable `<= 4.2.0`, **aucune version corrigée déclarée** dans l'avis.
+- **Exposition** : dépendance transitive d'`astro`, utilisée uniquement par
+  `astro/dist/assets/build/remote.js` (cache des images distantes **au build**), pas par le
+  rendu des requêtes à l'exécution. Aucune réponse utilisateur ne transite par ce cache : risque
+  pratique faible pour Polyweb.
+- **État au 2026-10-18** : `astro` 7.4.0 installe `http-cache-semantics` **4.3.0** (publiée le
+  2026-10-04), hors de la plage vulnérable ; l'audit ne la signale plus. Aucun `ignore` n'est donc
+  configuré. L'avis ne déclarant pas 4.3.0 comme correctif, ce point est à re-vérifier : si l'avis est
+  élargi à 4.3.x sans correctif, l'ignorer explicitement (`pnpm.auditConfig.ignoreGhsas`) avec la
+  justification d'exposition ci-dessus, et le retirer dès qu'un correctif est publié.
