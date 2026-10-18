@@ -95,7 +95,7 @@ export const NavigationLoaderEffect = {
 export const PageLoaderEffect = {
   getPage: liftLoader('page.getPage', pageLoader.getPage),
   getPagesList: liftLoader('page.getPagesList', pageLoader.getPagesList),
-  getPagePreview: liftLoader('page.getPagePreview', pageLoader.getPagePreview),
+  getPagePreview: pageLoader.pageLoaderEffects.getPagePreview,
 };
 
 export const SiteLoaderEffect = {
