@@ -8,6 +8,7 @@ import { blogInternalLinkResolver } from "@/lib/blog/blog-internal-link";
 import { serviceInternalLinkResolver } from "@/lib/services/services-internal-link";
 import { registerSearchResource } from "@/core/search/registry";
 import { registerWebhookDispatcher } from "@/modules/webhooks/subscribe";
+import { registerSearchIndexer } from "@/lib/search/indexer";
 
 let bootstrapped = false;
 
@@ -23,5 +24,6 @@ export function bootstrapModules(): void {
   registerInternalLinkResolver(blogInternalLinkResolver);
   registerInternalLinkResolver(serviceInternalLinkResolver);
   registerWebhookDispatcher();
+  registerSearchIndexer();
   bootstrapped = true;
 }

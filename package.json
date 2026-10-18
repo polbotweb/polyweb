@@ -57,7 +57,9 @@
     "storage:push": "npx tsx src/database/commands/storage.push.ts",
     "build:vercel": "ASTRO_ADAPTER=vercel astro build",
     "test:a11y": "playwright test tests/e2e/a11y.spec.ts --project=chromium",
-    "test:visual": "playwright test tests/e2e/visual-regression.spec.ts --project=chromium"
+    "test:visual": "playwright test tests/e2e/visual-regression.spec.ts --project=chromium",
+    "search:reindex": "npx tsx src/database/commands/search.reindex.ts",
+    "search:pagefind": "npx tsx src/database/commands/search.pagefind.ts"
   },
   "dependencies": {
     "@astrojs/node": "11.1.5",
