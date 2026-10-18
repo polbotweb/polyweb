@@ -6,7 +6,7 @@
 import { Effect } from 'effect';
 import { apiRoute } from '@/lib/effect/http';
 import { selectPaymentProvider, UnhandledWebhookError } from '@/modules/payments/domain/providers';
-import { applyProviderEvent, isPaymentsEnabled, PaymentAmountMismatchError } from '@/modules/payments/domain/payment-service';
+import { applyProviderEventEffect, isPaymentsEnabled } from '@/modules/payments/domain/payment-service';
 
 export const prerender = false;
 const text = (body: string, status: number) => new Response(body, { status });
@@ -23,10 +23,10 @@ export const POST = apiRoute(({ request }) =>
     if (verified._tag === 'Failure') {
       return verified.failure.cause instanceof UnhandledWebhookError ? text('OK', 200) : text('Bad Request', 400);
     }
-    const applied = yield* Effect.tryPromise(() => applyProviderEvent(verified.success)).pipe(Effect.result);
+    const applied = yield* applyProviderEventEffect(verified.success).pipe(Effect.result);
     if (applied._tag === 'Failure') {
-      const err = applied.failure.cause;
-      if (err instanceof PaymentAmountMismatchError) {
+      const err = applied.failure;
+      if (err._tag === 'PaymentAmountMismatchError') {
         yield* Effect.logError('[payments]', err.message);
         return text('Unprocessable Entity', 422);
       }

@@ -9,7 +9,9 @@ import { diffWords, diffJson } from "diff";
 import { getDrizzle, schema } from "@database/drizzle";
 import { blocksToText } from "@/core/blocks/registry";
 import type { EntrySnapshot } from "@database/schemas/content.schema";
-import { updateEntry, setEntryStatus, EntryNotFoundError, type Entry } from "./entries";
+import { Effect } from "effect";
+import { DbError, NotFoundError } from "@/lib/effect/errors";
+import { updateEntryEffect, setEntryStatusEffect, runContent, type ContentError, type Entry } from "./entries";
 import type { ContentType } from "./content-types";
 
 export type Revision = typeof schema.contentEntryRevisions.$inferSelect;
@@ -65,23 +67,46 @@ export function rawSnapshotDiff(a: EntrySnapshot, b: EntrySnapshot): DiffPart[] 
 }
 
 /** Restaure une révision : crée une nouvelle version identique à l'instantané (historique conservé). */
-export async function restoreRevision(type: ContentType, entryId: string, version: number, opts: { authorId: string | null; allowedLocales: readonly string[] }): Promise<Entry> {
-  const rev = await getRevision(entryId, version);
-  if (!rev) throw new EntryNotFoundError("Révision introuvable");
-  const s = rev.snapshot;
-  // Les traductions absentes de l'instantané sont supprimées pour une restauration fidèle.
-  const keep = s.translations.map((t) => t.locale);
-  const db = getDrizzle();
-  const existing = await db.select({ locale: schema.contentEntryTranslations.locale }).from(schema.contentEntryTranslations).where(eq(schema.contentEntryTranslations.entryId, entryId));
-  for (const { locale } of existing) {
-    if (!keep.includes(locale)) await db.delete(schema.contentEntryTranslations).where(and(eq(schema.contentEntryTranslations.entryId, entryId), eq(schema.contentEntryTranslations.locale, locale)));
-  }
-  let entry = await updateEntry(type, entryId, {
-    slug: s.slug,
-    sharedData: s.sharedData,
-    translations: Object.fromEntries(s.translations.map((t) => [t.locale, { title: t.title, data: t.data, blocks: t.blocks ?? undefined, seo: t.seo }])),
-    message: `Restauration de la version ${version}`,
-  }, opts);
-  if (entry.status !== s.status) entry = await setEntryStatus(type, entryId, s.status, opts.authorId);
-  return entry;
+export const restoreRevisionEffect = (
+  type: ContentType,
+  entryId: string,
+  version: number,
+  opts: { authorId: string | null; allowedLocales: readonly string[] },
+): Effect.Effect<Entry, ContentError> =>
+  Effect.gen(function* () {
+    const dbe = <A>(operation: string, f: () => Promise<A>) => Effect.tryPromise({ try: f, catch: (cause) => new DbError({ operation, cause }) });
+    const rev = yield* dbe("revisions.get", () => getRevision(entryId, version));
+    if (!rev) return yield* new NotFoundError({ entity: "Revision", id: `${entryId}@${version}` });
+    const s = rev.snapshot;
+    // Les traductions absentes de l'instantané sont supprimées pour une restauration fidèle.
+    const keep = s.translations.map((t) => t.locale);
+    const db = getDrizzle();
+    const existing = yield* dbe("revisions.locales", () =>
+      db.select({ locale: schema.contentEntryTranslations.locale }).from(schema.contentEntryTranslations).where(eq(schema.contentEntryTranslations.entryId, entryId)),
+    );
+    for (const { locale } of existing) {
+      if (!keep.includes(locale)) {
+        yield* dbe("revisions.dropLocale", () =>
+          db.delete(schema.contentEntryTranslations).where(and(eq(schema.contentEntryTranslations.entryId, entryId), eq(schema.contentEntryTranslations.locale, locale))),
+        );
+      }
+    }
+    let entry = yield* updateEntryEffect(
+      type,
+      entryId,
+      {
+        slug: s.slug,
+        sharedData: s.sharedData,
+        translations: Object.fromEntries(s.translations.map((t) => [t.locale, { title: t.title, data: t.data, blocks: t.blocks ?? undefined, seo: t.seo }])),
+        message: `Restauration de la version ${version}`,
+      },
+      opts,
+    );
+    if (entry.status !== s.status) entry = yield* setEntryStatusEffect(type, entryId, s.status, opts.authorId);
+    return entry;
+  }).pipe(Effect.withSpan("content.restoreRevision"));
+
+/** Adaptateur Promise (page admin des révisions). */
+export function restoreRevision(type: ContentType, entryId: string, version: number, opts: { authorId: string | null; allowedLocales: readonly string[] }): Promise<Entry> {
+  return runContent(restoreRevisionEffect(type, entryId, version, opts));
 }
