@@ -149,7 +149,7 @@ export default defineConfig({
 
 ```bash
 # Base de données
-DATABASE_URL_LOCAL=postgresql://user:pass@localhost:5432/atomic_dev
+DATABASE_URL_LOCAL=postgresql://user:pass@localhost:5432/polyweb_dev
 DB_ENV=LOCAL
 
 # Auth
@@ -164,7 +164,7 @@ BETTER_AUTH_URL=http://localhost:4321
 ### En CI (automatique via `ci.yml`)
 
 ```bash
-DATABASE_URL_LOCAL=postgresql://test:test@localhost:5432/atomic_test
+DATABASE_URL_LOCAL=postgresql://test:test@localhost:5432/polyweb_test
 DB_ENV=LOCAL
 NODE_ENV=test
 BETTER_AUTH_SECRET=ci-test-secret-key-minimum-32-chars!!

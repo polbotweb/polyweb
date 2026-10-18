@@ -1,8 +1,8 @@
-# Atomic Admin Resource Foundation
+# Polyweb Admin Resource Foundation
 
 ## Purpose
 
-Atomic's admin is a resource-management system, not a collection of unrelated module pages. The shared contracts live under `src/core/admin/` and are consumed by first-class modules.
+Polyweb's admin is a resource-management system, not a collection of unrelated module pages. The shared contracts live under `src/core/admin/` and are consumed by first-class modules.
 
 ## Resource contract
 
@@ -47,7 +47,7 @@ DirtyGuard
 Toast / live feedback
 ```
 
-Only primitives that have a real consumer should exist. Existing Atomic design-system primitives (`atoms`, `molecules`, `organisms`) remain authoritative for buttons, dialogs, tabs, tables, forms, focus behavior and tokens.
+Only primitives that have a real consumer should exist. Existing Polyweb design-system primitives (`atoms`, `molecules`, `organisms`) remain authoritative for buttons, dialogs, tabs, tables, forms, focus behavior and tokens.
 
 ## Search/filter/sort state
 

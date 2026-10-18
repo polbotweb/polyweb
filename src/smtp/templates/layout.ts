@@ -16,7 +16,7 @@ function esc(s: string): string {
 // Produces a clean, responsive HTML email compatible with all major
 // email clients (Gmail, Outlook, Apple Mail, Yahoo, etc.).
 //
-// Design tokens — kept in sync with the Atomic brand:
+// Design tokens — kept in sync with the Polyweb brand:
 //   bg           #f8fafc  (slate-50)
 //   card         #ffffff
 //   text-primary #0f172a  (slate-900)
@@ -86,7 +86,7 @@ export function renderEmailHtml(
                 A
               </td>
               <td style="padding-${isRTL(locale) ? 'right' : 'left'}:12px;font-size:20px;font-weight:700;color:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;letter-spacing:-0.025em">
-                Atomic
+                Polyweb
               </td>
             </tr>
           </table>

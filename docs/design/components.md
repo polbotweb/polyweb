@@ -8,7 +8,7 @@
 
 ## Vue d'ensemble
 
-**47 composants** répartis selon l'Atomic Design :
+**47 composants** répartis selon l'Polyweb Design :
 
 | Niveau | Emplacement | Composants |
 | :-- | :-- | --: |

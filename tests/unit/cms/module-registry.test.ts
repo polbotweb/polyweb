@@ -41,7 +41,7 @@ const moduleA = {
   presentations: { card: ["default"], list: ["default"], single: ["default"], ui: [] },
 } as const;
 
-describe("Atomic module registry", () => {
+describe("Polyweb module registry", () => {
   beforeEach(() => clearModuleRegistryForTests());
 
   it("registers, retrieves and lists modules deterministically", () => {
@@ -52,6 +52,6 @@ describe("Atomic module registry", () => {
 
   it("rejects duplicate module ids", () => {
     registerModule(moduleA);
-    expect(() => registerModule(moduleA)).toThrow("Atomic module already registered: module-a");
+    expect(() => registerModule(moduleA)).toThrow("Polyweb module already registered: module-a");
   });
 });

@@ -1,4 +1,4 @@
-# Audit Atomic CMS, Blog et Services
+# Audit Polyweb CMS, Blog et Services
 
 Date : 2026-09-05. Audit du code local et validations locales, sans correction applicative.
 
@@ -6,9 +6,9 @@ Date : 2026-09-05. Audit du code local et validations locales, sans correction a
 
 **Ne pas deployer cette revision ni la prendre comme reference stable pour un troisieme module.** Le build echoue, les actions Blog presentent un blocage Zod et des defauts de securite, d'integrite et de routage subsistent.
 
-Atomic possede une base interessante pour un CMS metier multi-tenant sous Astro : PostgreSQL, relations explicites, traductions relationnelles, RBAC, editeur partage, medias communs et separation des domaines. L'architecture annoncee est plus mature que ses garanties effectivement executees.
+Polyweb possede une base interessante pour un CMS metier multi-tenant sous Astro : PostgreSQL, relations explicites, traductions relationnelles, RBAC, editeur partage, medias communs et separation des domaines. L'architecture annoncee est plus mature que ses garanties effectivement executees.
 
-Il s'agit du CMS applicatif Atomic construit sur Astro, pas d'un CMS complet fourni nativement par Astro. Le framework SSR n'est pas la principale limite observee.
+Il s'agit du CMS applicatif Polyweb construit sur Astro, pas d'un CMS complet fourni nativement par Astro. Le framework SSR n'est pas la principale limite observee.
 
 ## Perimetre et niveau de preuve
 

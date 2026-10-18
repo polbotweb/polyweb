@@ -1,4 +1,4 @@
-import type { AtomicModuleCapabilityProviders } from "@/core/modules/module-contract";
+import type { PolywebModuleCapabilityProviders } from "@/core/modules/module-contract";
 import { CMS_CAPABILITIES } from "@/core/capabilities";
 
 const capabilityIds = [
@@ -21,4 +21,4 @@ const capabilityIds = [
 
 export const blogCapabilityProviders = Object.fromEntries(
   capabilityIds.map((id) => [id, CMS_CAPABILITIES[id].implementations.join(" + ")]),
-) as unknown as AtomicModuleCapabilityProviders;
+) as unknown as PolywebModuleCapabilityProviders;

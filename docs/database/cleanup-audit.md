@@ -34,7 +34,7 @@ Supprime les entrées de la table `audit_log` dont `created_at` est antérieur �
    🧹 Cleanup Audit Logs — LOCAL (rétention : 90j)
 ═══════════════════════════════════════════════════════
 
-[cible] LOCAL (postgresql://localhost:5432/atomic_dev)
+[cible] LOCAL (postgresql://localhost:5432/polyweb_dev)
 
 ✔️  247 entrée(s) supprimée(s) (> 90 jours).
 ```
@@ -55,7 +55,7 @@ Pour un nettoyage régulier, ajouter un cron job :
 
 ```bash
 # Chaque dimanche à 3h du matin
-0 3 * * 0 cd /path/to/atomic && AUDIT_RETENTION_DAYS=90 pnpm db:cleanup-audit
+0 3 * * 0 cd /path/to/polyweb && AUDIT_RETENTION_DAYS=90 pnpm db:cleanup-audit
 ```
 
 ---

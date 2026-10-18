@@ -18,7 +18,7 @@ vi.mock('@/smtp/env', () => ({
     pass: '',
   }),
   getSmtpProvider: () => 'BREVO' as const,
-  getSmtpFrom: () => ({ email: 'noreply@example.com', name: 'Atomic' }),
+  getSmtpFrom: () => ({ email: 'noreply@example.com', name: 'Polyweb' }),
   getProviderLabel: () => 'Brevo',
 }));
 
@@ -30,7 +30,7 @@ vi.mock('resend', () => ({
 }));
 
 const payload = { to: 'user@example.com', subject: 'Test', html: '<p>hi</p>', text: 'hi' };
-const from = { email: 'noreply@example.com', name: 'Atomic' };
+const from = { email: 'noreply@example.com', name: 'Polyweb' };
 
 describe('Brevo provider', () => {
   beforeEach(() => {

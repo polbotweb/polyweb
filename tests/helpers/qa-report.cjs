@@ -257,7 +257,7 @@ const present = candidates.filter(Boolean);
 const allOk = present.length > 0 && present.every((s) => s.ok);
 
 lines.push(hr);
-lines.push('  ATOMIC — GLOBAL QA REPORT');
+lines.push('  POLYWEB — GLOBAL QA REPORT');
 lines.push(`  Generated: ${now}`);
 if (SCOPE === 'offline') {
   lines.push('  Scope:    offline (check + lint + vitest — e2e/a11y/lighthouse not regenerated)');

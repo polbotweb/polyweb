@@ -51,7 +51,7 @@ jobs:
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
-          POSTGRES_DB: atomic_test
+          POSTGRES_DB: polyweb_test
         ports:
           - 5432:5432
         options: >-
@@ -60,7 +60,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL_LOCAL: postgresql://test:test@localhost:5432/atomic_test
+      DATABASE_URL_LOCAL: postgresql://test:test@localhost:5432/polyweb_test
       DB_ENV: LOCAL
       NODE_ENV: test
       BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
@@ -114,7 +114,7 @@ jobs:
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
-          POSTGRES_DB: atomic_e2e
+          POSTGRES_DB: polyweb_e2e
         ports:
           - 5432:5432
         options: >-
@@ -123,7 +123,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL_LOCAL: postgresql://test:test@localhost:5432/atomic_e2e
+      DATABASE_URL_LOCAL: postgresql://test:test@localhost:5432/polyweb_e2e
       DB_ENV: LOCAL
       NODE_ENV: test
       BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
@@ -183,7 +183,7 @@ jobs:
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
-          POSTGRES_DB: atomic_test
+          POSTGRES_DB: polyweb_test
         ports:
           - 5432:5432
         options: >-
@@ -192,7 +192,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL_LOCAL: postgresql://test:test@localhost:5432/atomic_test
+      DATABASE_URL_LOCAL: postgresql://test:test@localhost:5432/polyweb_test
       DB_ENV: LOCAL
       NODE_ENV: test
       BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}

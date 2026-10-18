@@ -62,7 +62,7 @@ function renderMessage(success: boolean, message: string): string {
   const color = success ? '#16a34a' : '#dc2626';
   return `<!doctype html>
 <html lang="fr">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Newsletter — Atomic</title></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Newsletter — Polyweb</title></head>
 <body style="font-family:system-ui,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0;background:#f8fafc;">
   <div style="max-width:420px;text-align:center;padding:2rem;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);">
     <div style="font-size:2.5rem;margin-bottom:.5rem;">${success ? '✅' : '⚠️'}</div>

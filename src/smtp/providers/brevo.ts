@@ -5,7 +5,7 @@ const API_URL = 'https://api.brevo.com/v3/smtp/email';
 
 export async function send(payload: EmailPayload, from: EmailFrom): Promise<void> {
   const { apiKey } = getBrevoConfig();
-  const safeName = from.name.replace(/[^a-zA-Z0-9 àâäéèêëïîôùûüÿçñ'\-]/g, '') || 'Atomic';
+  const safeName = from.name.replace(/[^a-zA-Z0-9 àâäéèêëïîôùûüÿçñ'\-]/g, '') || 'Polyweb';
 
   const body = {
     sender: { name: safeName, email: from.email },

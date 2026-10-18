@@ -1,4 +1,4 @@
-# Atomic — TODO / Roadmap
+# Polyweb — TODO / Roadmap
 
 > **Purpose:** permanent, explicit checklist for the CMS platform and its reference modules.
 >
@@ -6,7 +6,7 @@
 
 ## 0. Current baseline
 
-At the current `main` baseline, Atomic has two first-class CMS reference modules:
+At the current `main` baseline, Polyweb has two first-class CMS reference modules:
 
 ```text
 src/modules/blog/
@@ -89,7 +89,7 @@ src/modules/<module>/
 └── workflow.ts
 ```
 
-The exact tree may adapt to an existing Atomic convention, but responsibilities are normative.
+The exact tree may adapt to an existing Polyweb convention, but responsibilities are normative.
 
 ## 1.2 Shared capability boundary
 
@@ -273,7 +273,7 @@ Blog is the first complete editorial proof module.
 
 # 5. IMPLEMENTED: SERVICES REFERENCE MODULE
 
-Services is the second complete CMS reference module and the architectural proof that Atomic is reusable beyond articles.
+Services is the second complete CMS reference module and the architectural proof that Polyweb is reusable beyond articles.
 
 ## Domain
 
@@ -959,7 +959,7 @@ Never introduce the following without an explicit architectural review:
 
 ---
 
-# 22. CONCORDIA → ATOMIC RULE
+# 22. CONCORDIA → POLYWEB RULE
 
 Concordia contributes **product grammar**, not an architecture to copy.
 
@@ -984,7 +984,7 @@ weak/untyped mutation contracts
 architecture that mixes transactional and editorial concerns
 ```
 
-Atomic remains authoritative for:
+Polyweb remains authoritative for:
 
 ```text
 security

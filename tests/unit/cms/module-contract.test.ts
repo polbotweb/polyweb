@@ -3,7 +3,7 @@ import { CMS_CAPABILITIES } from "@/lib/cms/capabilities";
 import { blogModule } from "@/lib/blog/module";
 import { blogPostAdminResource } from "@/lib/blog/admin-resource";
 
-describe("Atomic module contracts", () => {
+describe("Polyweb module contracts", () => {
   it("registers Blog with the complete platform capability surface", () => {
     expect(blogModule.id).toBe("blog");
     expect(blogModule.entity).toBe("blog_post");
@@ -26,7 +26,7 @@ describe("Atomic module contracts", () => {
     });
   });
 
-  it("binds every enabled capability to the canonical Atomic catalog", () => {
+  it("binds every enabled capability to the canonical Polyweb catalog", () => {
     for (const capability of Object.keys(blogModule.capabilities) as Array<keyof typeof blogModule.capabilities>) {
       if (!blogModule.capabilities[capability]) continue;
       expect(blogModule.capabilityProviders[capability]).toBe(CMS_CAPABILITIES[capability].implementations.join(" + "));

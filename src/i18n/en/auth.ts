@@ -2,15 +2,15 @@ import type { AuthTranslations } from '../config';
 
 export default {
   meta: {
-    signIn: { title: 'Sign In — Atomic', description: 'Sign in to your account.' },
-    signUp: { title: 'Sign Up — Atomic', description: 'Create your account.' },
-    dashboard: { title: 'Dashboard — Atomic', description: 'Manage your account and organizations.' },
-    admin: { title: 'Admin — Atomic', description: 'Administration panel.' },
-    forgotPassword: { title: 'Forgot Password — Atomic', description: 'Reset your password.' },
-    resetPassword: { title: 'Reset Password — Atomic', description: 'Choose a new password.' },
-    verifyEmail: { title: 'Verify Email — Atomic', description: 'Confirm your email address.' },
-    profile: { title: 'My Profile — Atomic', description: 'Manage your personal information.' },
-    organizations: { title: 'Organizations — Atomic', description: 'Manage your organizations.' },
+    signIn: { title: 'Sign In — Polyweb', description: 'Sign in to your account.' },
+    signUp: { title: 'Sign Up — Polyweb', description: 'Create your account.' },
+    dashboard: { title: 'Dashboard — Polyweb', description: 'Manage your account and organizations.' },
+    admin: { title: 'Admin — Polyweb', description: 'Administration panel.' },
+    forgotPassword: { title: 'Forgot Password — Polyweb', description: 'Reset your password.' },
+    resetPassword: { title: 'Reset Password — Polyweb', description: 'Choose a new password.' },
+    verifyEmail: { title: 'Verify Email — Polyweb', description: 'Confirm your email address.' },
+    profile: { title: 'My Profile — Polyweb', description: 'Manage your personal information.' },
+    organizations: { title: 'Organizations — Polyweb', description: 'Manage your organizations.' },
   },
   routes: {
     'sign-in': 'sign-in',

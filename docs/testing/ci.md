@@ -83,7 +83,7 @@ services:
     env:
       POSTGRES_USER: test
       POSTGRES_PASSWORD: test
-      POSTGRES_DB: atomic_test
+      POSTGRES_DB: polyweb_test
     ports: ['5432:5432']
     options: >-
       --health-cmd pg_isready
@@ -96,7 +96,7 @@ services:
 
 ```yaml
 env:
-  DATABASE_URL_LOCAL: postgresql://test:test@localhost:5432/atomic_test
+  DATABASE_URL_LOCAL: postgresql://test:test@localhost:5432/polyweb_test
   DB_ENV: LOCAL
   NODE_ENV: test
   BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
@@ -142,7 +142,7 @@ services:
     env:
       POSTGRES_USER: test
       POSTGRES_PASSWORD: test
-      POSTGRES_DB: atomic_e2e    # ← DB séparée pour E2E
+      POSTGRES_DB: polyweb_e2e    # ← DB séparée pour E2E
     ports: ['5432:5432']
 ```
 
@@ -150,7 +150,7 @@ services:
 
 ```yaml
 env:
-  DATABASE_URL_LOCAL: postgresql://test:test@localhost:5432/atomic_e2e
+  DATABASE_URL_LOCAL: postgresql://test:test@localhost:5432/polyweb_e2e
   DB_ENV: LOCAL
   NODE_ENV: test
   BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
@@ -169,7 +169,7 @@ env:
 | pnpm + Node | Setup toolchain | pnpm 10, Node 22 |
 | Install | `pnpm install --frozen-lockfile` | Dépendances |
 | Playwright | `npx playwright install --with-deps chromium firefox webkit` | Installe les 3 navigateurs déclarés dans `playwright.config.ts` |
-| Migrations | `pnpm db:migrate` | Migrations sur `atomic_e2e` |
+| Migrations | `pnpm db:migrate` | Migrations sur `polyweb_e2e` |
 | Build | `pnpm build` | Build Astro SSR complet |
 | E2E | `pnpm test:e2e` | **34 scénarios** Playwright sur Chromium + Firefox + WebKit |
 | Generate Report | `pnpm test:e2e:report` | Génère `tests/reports/playwright-report.txt` depuis le JSON |
@@ -198,7 +198,7 @@ services:
     env:
       POSTGRES_USER: test
       POSTGRES_PASSWORD: test
-      POSTGRES_DB: atomic_test
+      POSTGRES_DB: polyweb_test
     ports: ['5432:5432']
 ```
 
@@ -206,7 +206,7 @@ services:
 
 ```yaml
 env:
-  DATABASE_URL_LOCAL: postgresql://test:test@localhost:5432/atomic_test
+  DATABASE_URL_LOCAL: postgresql://test:test@localhost:5432/polyweb_test
   DB_ENV: LOCAL
   NODE_ENV: test
   BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
@@ -275,7 +275,7 @@ env:
 | URLs Pa11y | 52 (WCAG AAA) |
 | URLs Lighthouse | 52 (28 public + 8 authed + 16 admin) |
 | **Total validations CI** | **741 tests Vitest + 102 exécutions E2E + 104 audits a11y/perf** |
-| PostgreSQL | v16 (3 DBs : `atomic_test` ×2 + `atomic_e2e`) |
+| PostgreSQL | v16 (3 DBs : `polyweb_test` ×2 + `polyweb_e2e`) |
 | Node | v22 |
 | pnpm | v10 |
 | Navigateur | Chromium (Playwright managed) |

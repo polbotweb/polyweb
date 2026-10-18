@@ -126,7 +126,7 @@ export const GET: APIRoute = async ({ request, clientAddress }) => {
     headers: {
       'Cache-Control': 'no-store',
       'Content-Type': 'application/json',
-      'Content-Disposition': 'attachment; filename="atomic-data-export.json"',
+      'Content-Disposition': 'attachment; filename="polyweb-data-export.json"',
     },
   });
 };

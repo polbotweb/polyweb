@@ -26,10 +26,10 @@ pnpm db:reset
 
 ```text
 ═══════════════════════════════════════════════════════
-   🗑️  Reset Database — atomic_dev
+   🗑️  Reset Database — polyweb_dev
 ═══════════════════════════════════════════════════════
 
-[cible] LOCAL (postgresql://localhost:5432/atomic_dev)
+[cible] LOCAL (postgresql://localhost:5432/polyweb_dev)
 ⚠️  RESET COMPLET (suppression de toutes les tables + historique migrations)
 Tapez "OUI" pour confirmer : OUI
 

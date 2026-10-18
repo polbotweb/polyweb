@@ -2,15 +2,15 @@ import type { AuthTranslations } from '../config';
 
 export default {
   meta: {
-    signIn: { title: 'تسجيل الدخول — Atomic', description: 'سجّل الدخول إلى حسابك.' },
-    signUp: { title: 'إنشاء حساب — Atomic', description: 'أنشئ حسابك.' },
-    dashboard: { title: 'لوحة التحكم — Atomic', description: 'إدارة حسابك ومؤسساتك.' },
-    admin: { title: 'الإدارة — Atomic', description: 'لوحة الإدارة.' },
-    forgotPassword: { title: 'نسيت كلمة المرور — Atomic', description: 'أعد تعيين كلمة المرور.' },
-    resetPassword: { title: 'إعادة تعيين كلمة المرور — Atomic', description: 'اختر كلمة مرور جديدة.' },
-    verifyEmail: { title: 'تأكيد البريد الإلكتروني — Atomic', description: 'تأكيد عنوان بريدك الإلكتروني.' },
-    profile: { title: 'ملفي الشخصي — Atomic', description: 'إدارة معلوماتك الشخصية.' },
-    organizations: { title: 'المؤسسات — Atomic', description: 'إدارة مؤسساتك.' },
+    signIn: { title: 'تسجيل الدخول — Polyweb', description: 'سجّل الدخول إلى حسابك.' },
+    signUp: { title: 'إنشاء حساب — Polyweb', description: 'أنشئ حسابك.' },
+    dashboard: { title: 'لوحة التحكم — Polyweb', description: 'إدارة حسابك ومؤسساتك.' },
+    admin: { title: 'الإدارة — Polyweb', description: 'لوحة الإدارة.' },
+    forgotPassword: { title: 'نسيت كلمة المرور — Polyweb', description: 'أعد تعيين كلمة المرور.' },
+    resetPassword: { title: 'إعادة تعيين كلمة المرور — Polyweb', description: 'اختر كلمة مرور جديدة.' },
+    verifyEmail: { title: 'تأكيد البريد الإلكتروني — Polyweb', description: 'تأكيد عنوان بريدك الإلكتروني.' },
+    profile: { title: 'ملفي الشخصي — Polyweb', description: 'إدارة معلوماتك الشخصية.' },
+    organizations: { title: 'المؤسسات — Polyweb', description: 'إدارة مؤسساتك.' },
   },
   routes: {
     'sign-in': 'تسجيل-الدخول',

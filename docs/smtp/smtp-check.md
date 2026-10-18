@@ -28,7 +28,7 @@ pnpm smtp:check --email                   # utilise SMTP_TEST_TO du .env
 | -------- | ------ | ----------- |
 | `SMTP_PROVIDER` | Non | `NODEMAILER` (défaut), `BREVO`, ou `RESEND` |
 | `SMTP_FROM_EMAIL` | Oui | Adresse email de l'expéditeur |
-| `SMTP_FROM_NAME` | Non | Nom affiché de l'expéditeur (défaut : `Atomic`) |
+| `SMTP_FROM_NAME` | Non | Nom affiché de l'expéditeur (défaut : `Polyweb`) |
 | `SMTP_TEST_TO` | Non | Adresse de test par défaut pour `--email` sans valeur |
 
 ### Nodemailer (SMTP générique)

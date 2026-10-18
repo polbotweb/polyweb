@@ -1,8 +1,8 @@
-# Atomic Module System
+# Polyweb Module System
 
 ## Purpose
 
-Atomic uses a first-class module model for business domains. A module combines its domain model, validation, server actions, loaders, permissions, search definition, SEO, presentation and administration while consuming shared platform/CMS capabilities.
+Polyweb uses a first-class module model for business domains. A module combines its domain model, validation, server actions, loaders, permissions, search definition, SEO, presentation and administration while consuming shared platform/CMS capabilities.
 
 The architecture is deliberately modular without introducing a universal polymorphic content table.
 
@@ -63,9 +63,9 @@ module/components/
   ui/
 ```
 
-The components remain domain-specific. Shared design-system primitives remain under Atomic's existing `atoms`, `molecules` and `organisms` hierarchy.
+The components remain domain-specific. Shared design-system primitives remain under Polyweb's existing `atoms`, `molecules` and `organisms` hierarchy.
 
-A module may expose variants such as `default`, `compact`, `featured`, `horizontal`, `dense` or `search`. Variants change presentation, not domain behavior. Styling comes from Atomic design tokens instead of module-specific visual frameworks.
+A module may expose variants such as `default`, `compact`, `featured`, `horizontal`, `dense` or `search`. Variants change presentation, not domain behavior. Styling comes from Polyweb design tokens instead of module-specific visual frameworks.
 
 Do not create `UniversalCard<T>` or another generic semantic component. Shared abstractions belong at the UI primitive level; domain components own domain semantics.
 
@@ -91,7 +91,7 @@ audit
 cache
 ```
 
-A capability identifies a reusable responsibility. The catalogue points to the authoritative Atomic implementation(s). It is not a reason to copy that implementation into each module.
+A capability identifies a reusable responsibility. The catalogue points to the authoritative Polyweb implementation(s). It is not a reason to copy that implementation into each module.
 
 ## Admin Resource model
 
@@ -172,7 +172,7 @@ Do not add:
 - parallel REST admin APIs when Astro Actions already own the mutation boundary;
 - JSONB maps as the primary localization model;
 - `any` or `Record<string, unknown>` as domain mutation contracts;
-- module styles that bypass the Atomic design system.
+- module styles that bypass the Polyweb design system.
 
 ## Adding a new module
 

@@ -1,6 +1,6 @@
-# Atomic Services Module
+# Polyweb Services Module
 
-Services is the second first-class Atomic CMS module after Blog. It validates that a second domain can reuse the shared CMS/Admin foundation without creating a parallel architecture.
+Services is the second first-class Polyweb CMS module after Blog. It validates that a second domain can reuse the shared CMS/Admin foundation without creating a parallel architecture.
 
 ## Position
 
@@ -61,7 +61,7 @@ Registration is explicit through the CMS bootstrap. Services and Blog are regist
 
 ## Presentation grammar
 
-The module follows the Atomic `cards / lists / single / ui` grammar.
+The module follows the Polyweb `cards / lists / single / ui` grammar.
 
 - `ServiceCard`: public/search result projection using shared image, price, rating and metadata primitives.
 - `ServiceGrid`: collection presentation.
@@ -97,7 +97,7 @@ It resets publication state, views, rating aggregates, comments, reviews, reacti
 
 ## Localization and RTL
 
-Services supports `fr`, `en`, `es` and `ar`. Locale validation uses Atomic's shared locale definition. Slugs and localized translation rows remain relationally unique under the service/tenant rules. Arabic uses the shared RTL-capable Atomic primitives.
+Services supports `fr`, `en`, `es` and `ar`. Locale validation uses Polyweb's shared locale definition. Slugs and localized translation rows remain relationally unique under the service/tenant rules. Arabic uses the shared RTL-capable Polyweb primitives.
 
 ## Tenant isolation
 
@@ -111,7 +111,7 @@ Services has explicit localized categories and tags. Categories are hierarchical
 
 ## Media and content
 
-Services uses Atomic's existing shared Media infrastructure for cover, OG and attached media. Ownership is checked against the active tenant before attachment.
+Services uses Polyweb's existing shared Media infrastructure for cover, OG and attached media. Ownership is checked against the active tenant before attachment.
 
 The shared `ContentEditor` is retained as the editor implementation. Services registers the `services` internal-link resolver so internal targets resolve to service data and canonical URLs without reusing Blog semantics.
 

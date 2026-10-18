@@ -44,7 +44,7 @@ describe('getSmtpFrom — header injection defense', () => {
     const { getSmtpFrom } = await import('@smtp/env');
     const result = getSmtpFrom();
     expect(result.email).toBe('noreply@example.com');
-    expect(result.name).toBe('Atomic');
+    expect(result.name).toBe('Polyweb');
   });
 
   it('uses custom SMTP_FROM_NAME when provided', async () => {

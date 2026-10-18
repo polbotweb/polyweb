@@ -59,7 +59,7 @@ export async function getServices(input: unknown = {}, locale: Locale = "fr", pu
   const resolvedLocale = filters.locale ?? locale;
   const db = getDrizzle(); const conditions = [serviceTenantScope(organizationId), eq(serviceTranslations.locale, resolvedLocale), translationTenantScope(organizationId)];
   if (publicOnly) conditions.push(eq(services.status, "PUBLISHED")); else if (filters.status) conditions.push(eq(services.status, filters.status));
-  const searchQuery = filters.search ? sql`websearch_to_tsquery("atomic_service_locale_regconfig"(${resolvedLocale}), ${filters.search})` : null;
+  const searchQuery = filters.search ? sql`websearch_to_tsquery("polyweb_service_locale_regconfig"(${resolvedLocale}), ${filters.search})` : null;
   if (searchQuery) conditions.push(sql`${serviceTranslations.searchVector} @@ ${searchQuery}`);
   if (filters.providerId) conditions.push(eq(services.providerId, filters.providerId)); if (filters.featured !== undefined) conditions.push(eq(services.isFeatured, filters.featured)); if (filters.mobile !== undefined) conditions.push(eq(services.isMobile, filters.mobile));
   if (filters.categoryId) conditions.push(inArray(services.id, db.select({ serviceId: serviceCategoryLinks.serviceId }).from(serviceCategoryLinks).innerJoin(serviceCategories, and(eq(serviceCategories.id, serviceCategoryLinks.categoryId), categoryTenantScope(organizationId))).where(eq(serviceCategoryLinks.categoryId, filters.categoryId))));

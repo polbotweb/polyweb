@@ -1,4 +1,4 @@
-# Atomic
+# Polyweb
 
 [**EN**](./README.md) | [FR](./README.fr.md) | [AR](./README.ar.md) | [ES](./README.es.md)
 
@@ -805,7 +805,7 @@ src/layouts/
 BaseLayout.astro
 ```
 
-Atomic CMS is organized around shared CMS/platform capabilities and first-class domain modules. The foundation covers localised content, shared media, taxonomy, SEO, search, publication workflow, revisions, locks, engagement/moderation boundaries, notifications, audit, cache and the reusable Admin Resource model. Blog is the first complete editorial module; Services is the second validation module. Transactional domains such as booking, enrollment, inventory, payments and orders remain separate cores.
+Polyweb CMS is organized around shared CMS/platform capabilities and first-class domain modules. The foundation covers localised content, shared media, taxonomy, SEO, search, publication workflow, revisions, locks, engagement/moderation boundaries, notifications, audit, cache and the reusable Admin Resource model. Blog is the first complete editorial module; Services is the second validation module. Transactional domains such as booking, enrollment, inventory, payments and orders remain separate cores.
 
 ### Tests
 
@@ -1030,8 +1030,8 @@ tests/
 agents/
   akil.agent.md
   anne.agent.md
-  AtomicFullStackEngineer.agent.md
-  AtomicUIDesigner.agent.md
+  PolywebFullStackEngineer.agent.md
+  PolywebUIDesigner.agent.md
   designer.agent.md
   DevOpsExpert.agent.md
   elias.agent.md

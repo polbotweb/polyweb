@@ -16,14 +16,14 @@ import { GET as confirmNewsletter } from "@/pages/api/blog/newsletter/confirm";
 import { GET as unsubscribeNewsletter } from "@/pages/api/blog/newsletter/unsubscribe";
 
 function routeContext(path: string) {
-  const url = new URL(path, "https://atomic.example");
+  const url = new URL(path, "https://polyweb.example");
   return {
     url,
     request: new Request(url, {
       headers: { "user-agent": "newsletter-route-test" },
     }),
     clientAddress: "203.0.113.10",
-    site: new URL("https://atomic.example"),
+    site: new URL("https://polyweb.example"),
   } as any;
 }
 

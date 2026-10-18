@@ -75,7 +75,7 @@ export function getSmtpFrom(): EmailFrom {
   }
   return {
     email,
-    name: process.env.SMTP_FROM_NAME?.trim() || 'Atomic',
+    name: process.env.SMTP_FROM_NAME?.trim() || 'Polyweb',
   };
 }
 

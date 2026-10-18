@@ -24,7 +24,7 @@
 Tous les tests d'intégration nécessitent une **base PostgreSQL opérationnelle** avec les migrations appliquées. Les variables d'environnement requises :
 
 ```bash
-DATABASE_URL_LOCAL=postgresql://test:test@localhost:5432/atomic_test
+DATABASE_URL_LOCAL=postgresql://test:test@localhost:5432/polyweb_test
 DB_ENV=LOCAL
 NODE_ENV=test
 BETTER_AUTH_SECRET=ci-test-secret-key-minimum-32-chars!!

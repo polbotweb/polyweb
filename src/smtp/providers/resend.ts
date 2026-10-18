@@ -12,7 +12,7 @@ function getClient(): Resend {
 }
 
 export async function send(payload: EmailPayload, from: EmailFrom): Promise<void> {
-  const safeName = from.name.replace(/[^a-zA-Z0-9 àâäéèêëïîôùûüÿçñ'\-]/g, '') || 'Atomic';
+  const safeName = from.name.replace(/[^a-zA-Z0-9 àâäéèêëïîôùûüÿçñ'\-]/g, '') || 'Polyweb';
   const { error } = await getClient().emails.send({
     from: `${safeName} <${from.email}>`,
     to: [payload.to],

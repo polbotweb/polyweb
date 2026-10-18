@@ -1,15 +1,15 @@
-# Concordia → Atomic synthesis
+# Concordia → Polyweb synthesis
 
-This document records the product patterns intentionally retained from Concordia and the architectural decisions used to implement them in Atomic.
+This document records the product patterns intentionally retained from Concordia and the architectural decisions used to implement them in Polyweb.
 
-| Concordia pattern | Atomic decision | Concrete destination |
+| Concordia pattern | Polyweb decision | Concrete destination |
 | --- | --- | --- |
 | `cards / lists / single / ui` module grammar | Keep as a semantic module convention, not a copied codebase | `src/modules/*/components/{cards,lists,single,ui}` |
-| Rich service cards | Domain projections using Atomic Card/Image/Badge/Price/Rating/Meta primitives | Blog + Services module UI |
+| Rich service cards | Domain projections using Polyweb Card/Image/Badge/Price/Rating/Meta primitives | Blog + Services module UI |
 | Responsive resource administration | Shared resource shell and responsive data-view patterns | `src/core/admin`, existing Admin organisms |
 | Admin filters/search/sort | Typed resource definitions and URL/SSR state | `src/core/admin`, module admin contracts |
 | Media picker workflow | Reuse shared Media and MediaPicker | `src/core/media` + `@atoms/media-picker` |
-| Upload validation/lifecycle | Keep ownership, validation and cleanup centralized in Atomic Media | existing Media services |
+| Upload validation/lifecycle | Keep ownership, validation and cleanup centralized in Polyweb Media | existing Media services |
 | Multilingual editor | Shared localization/content workflow with relational locale rows | `src/core/localization`, ContentEditor |
 | Automatic slug then manual override | Shared editorial form behavior | content/admin conventions |
 | Admin feedback/toasts | Shared accessible feedback primitives | Admin Core / design system |
@@ -22,7 +22,7 @@ This document records the product patterns intentionally retained from Concordia
 | Domain metadata | Module-specific projections on shared UI primitives | Blog + Services UI |
 | Visual variants | Semantic/token-driven variants, not copied `retro/modern/futuristic` styles | module presentation contracts |
 
-## What Atomic deliberately rejects
+## What Polyweb deliberately rejects
 
 - Blog-specific REST mutation endpoints.
 - `Record<string, unknown>` as the domain mutation contract.
@@ -36,7 +36,7 @@ This document records the product patterns intentionally retained from Concordia
 
 ## Current proof modules
 
-Atomic now contains two first-class modules using the same platform:
+Polyweb now contains two first-class modules using the same platform:
 
 ```text
 src/modules/blog/
@@ -55,6 +55,6 @@ A module may introduce domain-specific concepts where the domain genuinely requi
 
 Concordia supplies a useful product grammar: coherent resources, presentation variants, responsive administration and polished editorial workflows.
 
-Atomic supplies the system architecture: explicit domain entities, typed Actions, tenant isolation, relational localization, transactional invariants, shared infrastructure and deterministic module boundaries.
+Polyweb supplies the system architecture: explicit domain entities, typed Actions, tenant isolation, relational localization, transactional invariants, shared infrastructure and deterministic module boundaries.
 
 The target is the combination of those strengths without copying either project's accidental complexity.

@@ -1,4 +1,4 @@
-# Atomic CMS — Implementation Matrix
+# Polyweb CMS — Implementation Matrix
 
 This document is the canonical implementation map for the current CMS foundation and its two reference modules.
 
@@ -9,7 +9,7 @@ This document is the canonical implementation map for the current CMS foundation
 | Module contract | ✅ | ✅ | `src/core/modules/` |
 | Capability binding | ✅ | ✅ | `src/core/capabilities/` |
 | Presentation grammar | ✅ | ✅ | `src/core/presentation/` |
-| Card / list / single / UI | ✅ | ✅ | module presentation contracts + Atomic design system |
+| Card / list / single / UI | ✅ | ✅ | module presentation contracts + Polyweb design system |
 | Admin Resource | ✅ | ✅ | `src/core/admin/` |
 | Search / filter / sort state | ✅ | ✅ | shared contracts + module definitions |
 | Localization | ✅ | ✅ | shared i18n + domain translations |
@@ -179,7 +179,7 @@ shipping
 
 ## Design-system rule
 
-Module components use Atomic's existing design-system primitives. Presentation variants are token-driven and change representation only. They must not create module-specific design systems or generic semantic components such as `UniversalCard<T>`.
+Module components use Polyweb's existing design-system primitives. Presentation variants are token-driven and change representation only. They must not create module-specific design systems or generic semantic components such as `UniversalCard<T>`.
 
 ## Data-model rule
 
@@ -206,7 +206,7 @@ audit / cache boundaries
 cards / lists / single / ui grammar
 ```
 
-The architectural test is reuse: a third module should add domain semantics, not another copy of Atomic CMS.
+The architectural test is reuse: a third module should add domain semantics, not another copy of Polyweb CMS.
 
 ## Validation boundary
 

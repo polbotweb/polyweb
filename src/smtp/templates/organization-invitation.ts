@@ -32,7 +32,7 @@ export function organizationInvitationTemplate({
   };
 
   return {
-    subject: `${subject} — Atomic`,
+    subject: `${subject} — Polyweb`,
     html: renderEmailHtml(locale, layout, section),
     text: renderEmailText(section),
   };

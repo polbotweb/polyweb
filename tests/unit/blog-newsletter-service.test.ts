@@ -85,7 +85,7 @@ function sha256(value: string): string {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.stubEnv("SITE_URL", "https://atomic.example/application-path");
+  vi.stubEnv("SITE_URL", "https://polyweb.example/application-path");
   selectResults = [];
   txUpdateResults = [];
   insertResults = [];
@@ -157,7 +157,7 @@ describe("blog newsletter business service", () => {
     };
     const confirmationToken = new URL(templateInput.confirmUrl).searchParams.get("token");
     const unsubscribeToken = new URL(templateInput.unsubscribeUrl).searchParams.get("token");
-    expect(new URL(templateInput.confirmUrl).origin).toBe("https://atomic.example");
+    expect(new URL(templateInput.confirmUrl).origin).toBe("https://polyweb.example");
     expect(confirmationToken).toMatch(/^newsletter\.confirm\.v2\./);
     expect(unsubscribeToken).toMatch(/^newsletter\.unsubscribe\.v2\./);
     expect(confirmationToken).not.toBe(unsubscribeToken);

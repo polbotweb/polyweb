@@ -1,8 +1,8 @@
-# Contributing to Atomic
+# Contributing to Polyweb
 
 ## Overview
 
-**Atomic** is a full-stack SSR web application with complete authentication, organization management, audit trails, and accessibility compliance. We welcome contributions!
+**Polyweb** is a full-stack SSR web application with complete authentication, organization management, audit trails, and accessibility compliance. We welcome contributions!
 
 **Tech Stack**: Astro 6 · better-auth · Drizzle ORM · PostgreSQL 16 · Tailwind CSS 4 · Vitest · Playwright
 
@@ -17,8 +17,8 @@
 
 ```bash
 # Clone repository
-git clone git@github.com:yourusername/atomic.git
-cd atomic
+git clone git@github.com:yourusername/polyweb.git
+cd polyweb
 
 # Install dependencies
 pnpm install
@@ -81,7 +81,7 @@ src/
 ├── actions/                   # Astro server actions (mutations)
 │   ├── admin/                # Admin panel actions
 │   └── org/                  # Organization management
-├── components/               # Atomic design
+├── components/               # Polyweb design
 │   ├── atoms/               # Basic UI (Button, Input, Card, Badge)
 │   ├── molecules/           # Combinations (SearchBar, FormGroup)
 │   ├── organisms/           # Complex features (MediaPicker, RoleMatrix)

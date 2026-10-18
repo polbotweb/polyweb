@@ -1,4 +1,4 @@
-import type { AtomicModuleDefinition } from "@/core/modules";
+import type { PolywebModuleDefinition } from "@/core/modules";
 import type { AdminResourceListDefinition } from "@/core/admin/filter-contract";
 
 export type ResourceAction =
@@ -53,14 +53,14 @@ export interface AdminResourceDefinition {
   readonly permissionNamespace?: string;
 }
 
-const ACTION_CAPABILITY_REQUIREMENTS: Readonly<Partial<Record<keyof ResourceActionCapabilities, keyof AtomicModuleDefinition["capabilities"]>>> = {
+const ACTION_CAPABILITY_REQUIREMENTS: Readonly<Partial<Record<keyof ResourceActionCapabilities, keyof PolywebModuleDefinition["capabilities"]>>> = {
   publish: "publication",
   unpublish: "publication",
   archive: "publication",
   restore: "publication",
 };
 
-export function assertResourceCompatibility(module: AtomicModuleDefinition, resource: AdminResourceDefinition): void {
+export function assertResourceCompatibility(module: PolywebModuleDefinition, resource: AdminResourceDefinition): void {
   const management = resource.management ?? {};
   const actions = resource.actions ?? {};
 
@@ -69,7 +69,7 @@ export function assertResourceCompatibility(module: AtomicModuleDefinition, reso
   }
 
   for (const [action, capability] of Object.entries(ACTION_CAPABILITY_REQUIREMENTS)) {
-    if (actions[action as keyof ResourceActionCapabilities] === true && module.capabilities[capability as keyof AtomicModuleDefinition["capabilities"]] !== true) {
+    if (actions[action as keyof ResourceActionCapabilities] === true && module.capabilities[capability as keyof PolywebModuleDefinition["capabilities"]] !== true) {
       throw new Error(`Resource ${resource.id} enables ${action}, but module ${module.id} does not enable ${capability}.`);
     }
   }

@@ -1,7 +1,7 @@
-/** Capabilities that a first-class Atomic module may opt into. */
+/** Capabilities that a first-class Polyweb module may opt into. */
 import type { SearchResourceDefinition } from "@/core/search";
 
-export interface AtomicModuleCapabilities {
+export interface PolywebModuleCapabilities {
   content: boolean;
   localization: boolean;
   media: boolean;
@@ -19,7 +19,7 @@ export interface AtomicModuleCapabilities {
   cache: boolean;
 }
 
-export interface AtomicModuleCapabilityProviders {
+export interface PolywebModuleCapabilityProviders {
   readonly content: string;
   readonly localization: string;
   readonly media: string;
@@ -37,29 +37,29 @@ export interface AtomicModuleCapabilityProviders {
   readonly cache: string;
 }
 
-export interface AtomicModulePresentations {
+export interface PolywebModulePresentations {
   readonly card: readonly string[];
   readonly list: readonly string[];
   readonly single: readonly string[];
   readonly ui: readonly string[];
 }
 
-export interface AtomicModuleDefinition {
+export interface PolywebModuleDefinition {
   readonly id: string;
   readonly entity: string;
-  readonly capabilities: Readonly<AtomicModuleCapabilities>;
-  readonly capabilityProviders: Readonly<AtomicModuleCapabilityProviders>;
-  readonly presentations: Readonly<AtomicModulePresentations>;
+  readonly capabilities: Readonly<PolywebModuleCapabilities>;
+  readonly capabilityProviders: Readonly<PolywebModuleCapabilityProviders>;
+  readonly presentations: Readonly<PolywebModulePresentations>;
   readonly searchDefinition?: Readonly<SearchResourceDefinition>;
 }
 
-export type ModuleCapability = keyof AtomicModuleCapabilities;
+export type ModuleCapability = keyof PolywebModuleCapabilities;
 
-export function defineModuleCapabilities<const T extends AtomicModuleCapabilities>(capabilities: T): Readonly<T> { return capabilities; }
-export function defineModuleCapabilityProviders<const T extends AtomicModuleCapabilityProviders>(providers: T): Readonly<T> { return providers; }
-export function defineModulePresentations<const T extends AtomicModulePresentations>(presentations: T): Readonly<T> { return presentations; }
+export function defineModuleCapabilities<const T extends PolywebModuleCapabilities>(capabilities: T): Readonly<T> { return capabilities; }
+export function defineModuleCapabilityProviders<const T extends PolywebModuleCapabilityProviders>(providers: T): Readonly<T> { return providers; }
+export function defineModulePresentations<const T extends PolywebModulePresentations>(presentations: T): Readonly<T> { return presentations; }
 
-export function assertModuleCapabilityProviders(module: AtomicModuleDefinition): void {
+export function assertModuleCapabilityProviders(module: PolywebModuleDefinition): void {
   for (const capability of Object.keys(module.capabilities) as ModuleCapability[]) {
     if (module.capabilities[capability] && !module.capabilityProviders[capability]) throw new Error(`Module ${module.id} enables ${capability} without a concrete provider.`);
   }

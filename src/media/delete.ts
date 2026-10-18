@@ -1,5 +1,5 @@
 import { unlink } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 
 /**
  * Supprime un fichier uploadé à partir de son URL publique.
@@ -11,12 +11,17 @@ export async function deleteUpload(url: string): Promise<void> {
     throw new Error('URL invalide — seuls les fichiers dans /uploads/ peuvent être supprimés');
   }
 
+  // Refuser les séparateurs Windows et les segments « .. » avant toute résolution
+  if (url.includes('\\') || url.split('/').includes('..') || url.includes('\0')) {
+    throw new Error('Chemin invalide — tentative de path traversal détectée');
+  }
+
   // Résoudre le chemin absolu et vérifier qu'il reste dans public/uploads/
   const uploadsRoot = resolve(process.cwd(), 'public', 'uploads');
   const filePath = join(process.cwd(), 'public', url.slice(1));
   const resolved = resolve(filePath);
 
-  if (!resolved.startsWith(uploadsRoot)) {
+  if (!resolved.startsWith(uploadsRoot + sep)) {
     throw new Error('Chemin invalide — tentative de path traversal détectée');
   }
 

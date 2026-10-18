@@ -107,7 +107,7 @@ describe('getDbUrl / getDbConfig / getConnectionLabel', () => {
     process.env = {
       ...originalEnv,
       DB_ENV: 'TEST',
-      DATABASE_URL_TEST: 'postgresql://u:p@localhost:5432/atomic_test',
+      DATABASE_URL_TEST: 'postgresql://u:p@localhost:5432/polyweb_test',
     };
   });
 
@@ -117,7 +117,7 @@ describe('getDbUrl / getDbConfig / getConnectionLabel', () => {
 
   it('getDbUrl returns the active env URL', async () => {
     const { getDbUrl } = await import('@database/env');
-    expect(getDbUrl()).toBe('postgresql://u:p@localhost:5432/atomic_test');
+    expect(getDbUrl()).toBe('postgresql://u:p@localhost:5432/polyweb_test');
   });
 
   it('getDbUrl with explicit env returns that env URL', async () => {
@@ -129,7 +129,7 @@ describe('getDbUrl / getDbConfig / getConnectionLabel', () => {
   it('getDbUrl with explicit env returns correct URL', async () => {
     process.env.DATABASE_URL_LOCAL = 'postgresql://u:p@localhost/local';
     const { getDbUrl } = await import('@database/env');
-    expect(getDbUrl('TEST')).toBe('postgresql://u:p@localhost:5432/atomic_test');
+    expect(getDbUrl('TEST')).toBe('postgresql://u:p@localhost:5432/polyweb_test');
   });
 
   it('getConnectionLabel returns human-readable label', async () => {
@@ -143,7 +143,7 @@ describe('getDbUrl / getDbConfig / getConnectionLabel', () => {
     const { getDbConfig } = await import('@database/env');
     const config = getDbConfig();
     expect(config.env).toBe('TEST');
-    expect(config.url).toBe('postgresql://u:p@localhost:5432/atomic_test');
+    expect(config.url).toBe('postgresql://u:p@localhost:5432/polyweb_test');
     expect(config.poolConfig.max).toBe(5);
   });
 

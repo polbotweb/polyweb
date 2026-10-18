@@ -54,9 +54,9 @@ Erreurs gérées : nombre d'arguments incorrect, environnement invalide, deux fo
 Chaque base est testée indépendamment. En cas d'échec :
 
 ```md
-✔ [LOCAL] Connecté à atomic_local (user: postgres)
+✔ [LOCAL] Connecté à polyweb_local (user: postgres)
 ✖ [PROD] Utilisateur ou mot de passe incorrect
-   URL : postgresql://***@localhost:5432/atomic_prod
+   URL : postgresql://***@localhost:5432/polyweb_prod
    → Vérifiez user/password dans .env
 
 ❌ Connexion impossible : PROD

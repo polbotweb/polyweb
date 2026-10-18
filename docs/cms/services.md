@@ -2,7 +2,7 @@
 
 ## Positionnement
 
-`Services` est le deuxième module métier de démonstration du CMS Atomic après Blog. Il utilise les mêmes contrats de module, de présentation et d'administration sans introduire une infrastructure CMS concurrente.
+`Services` est le deuxième module métier de démonstration du CMS Polyweb après Blog. Il utilise les mêmes contrats de module, de présentation et d'administration sans introduire une infrastructure CMS concurrente.
 
 Le module est enregistré au bootstrap avec Blog et déclare ses capacités via `src/modules/services/module.ts`.
 
@@ -63,7 +63,7 @@ Les champs métier fortement structurants restent typés. Les attributs configur
 
 ## Localisation
 
-Chaque ligne de `service_translations` représente une paire `service × locale`. Le module utilise les quatre locales Atomic :
+Chaque ligne de `service_translations` représente une paire `service × locale`. Le module utilise les quatre locales Polyweb :
 
 ```text
 fr
@@ -196,7 +196,7 @@ filterable
 sortable
 ```
 
-La recherche reste branchée sur l'architecture PostgreSQL/SSR d'Atomic et ne crée pas de moteur `%query%` parallèle.
+La recherche reste branchée sur l'architecture PostgreSQL/SSR d'Polyweb et ne crée pas de moteur `%query%` parallèle.
 
 ## Administration globale et organisationnelle
 
@@ -243,7 +243,7 @@ Aucun service, média, tag, catégorie, commentaire, avis ou rapport appartenant
 
 ## i18n et RTL
 
-Les textes du module résident dans `src/modules/services/i18n/` pour `fr`, `en`, `es`, `ar`. L'interface arabe doit fonctionner avec le RTL fourni par Atomic. Les composants ne doivent pas introduire une direction ou une traduction concurrente.
+Les textes du module résident dans `src/modules/services/i18n/` pour `fr`, `en`, `es`, `ar`. L'interface arabe doit fonctionner avec le RTL fourni par Polyweb. Les composants ne doivent pas introduire une direction ou une traduction concurrente.
 
 ## Tests attendus
 

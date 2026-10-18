@@ -1,6 +1,6 @@
-# Atomic CMS + Blog convergence
+# Polyweb CMS + Blog convergence
 
-Blog is the first complete Atomic domain module. It remains authoritative for Blog-specific schema and behavior while consuming shared CMS/Admin capabilities.
+Blog is the first complete Polyweb domain module. It remains authoritative for Blog-specific schema and behavior while consuming shared CMS/Admin capabilities.
 
 ## Architecture
 
@@ -22,7 +22,7 @@ src/modules/blog/
 
 The module uses Astro SSR, Astro Actions, Drizzle, Zod, shared Media, the generic ContentEditor, tenant guards, RBAC, audit, cache, search and shared administrative resource primitives.
 
-Concordia contributed validated editorial/admin product patterns only. Its API and schema architecture are not copied into Atomic.
+Concordia contributed validated editorial/admin product patterns only. Its API and schema architecture are not copied into Polyweb.
 
 ## Module capabilities
 
@@ -97,7 +97,7 @@ Admin internal-link management uses searchable target selection rather than `win
 
 ## Media
 
-Blog uses the Atomic shared Media and MediaPicker infrastructure for featured/OG/inline/gallery media. There is no `blog_media` table.
+Blog uses the Polyweb shared Media and MediaPicker infrastructure for featured/OG/inline/gallery media. There is no `blog_media` table.
 
 ## Engagement and moderation
 
@@ -111,7 +111,7 @@ Notification target relationships are type-specific rather than relying on a des
 
 Public Blog loaders are always tenant-scoped, locale-scoped and publication-scoped. They never expose drafts, archived posts or deleted posts.
 
-Search continues to use Atomic's PostgreSQL full-text search architecture rather than a second `%query%` search engine.
+Search continues to use Polyweb's PostgreSQL full-text search architecture rather than a second `%query%` search engine.
 
 ## Public routes
 
@@ -119,7 +119,7 @@ Canonical routes remain localized and support global and organization contexts, 
 
 ## Security and tenancy
 
-Mutations follow the Atomic domain sequence:
+Mutations follow the Polyweb domain sequence:
 
 ```text
 validate

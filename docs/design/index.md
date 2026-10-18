@@ -1,6 +1,6 @@
 # Design System — Index
 
-> **Projet** : Atomic  
+> **Projet** : Polyweb  
 > **Stack** : Astro 6 + Tailwind CSS 4 + Starwind UI + tailwind-variants  
 > **Palette** : Fire Brand — OKLCH color space — hue 68° (golden yellow)  
 > **Composants** : 47 atoms + 8 wow effects  
@@ -67,7 +67,7 @@ Chaque composant définit ses styles via `tv()` :
 - **Compound variants** : combinaisons de variants (ex: `isLink + variant = hover state`)
 - **Composition** : les sous-composants héritent du contexte parent via `group-data-*`
 
-### 3. Atomic Design
+### 3. Polyweb Design
 
 | Niveau | Contenu | Exemples |
 | :-- | :-- | :-- |

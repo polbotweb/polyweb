@@ -1,6 +1,6 @@
-# Atomic CMS Documentation
+# Polyweb CMS Documentation
 
-Atomic CMS is organized around shared platform/CMS capabilities and first-class business modules.
+Polyweb CMS is organized around shared platform/CMS capabilities and first-class business modules.
 
 ## Core references
 
@@ -10,7 +10,7 @@ Atomic CMS is organized around shared platform/CMS capabilities and first-class 
 
 ## Module references
 
-- [Blog](../blog.md) — first complete editorial module and its Atomic-native architecture.
+- [Blog](../blog.md) — first complete editorial module and its Polyweb-native architecture.
 - [Services](./services.md) — second complete validation module, demonstrating reuse of the same CMS/Admin foundations for a non-blog domain.
 
 ## Architectural rule

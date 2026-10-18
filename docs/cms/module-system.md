@@ -1,6 +1,6 @@
-# Atomic CMS Module System
+# Polyweb CMS Module System
 
-Ce document est la référence normative pour la frontière entre le socle Atomic et les modules métier. Le `README.md` n'est pas une source éditoriale : il est généré par `pnpm run readme:generate` depuis `readme-builder/`.
+Ce document est la référence normative pour la frontière entre le socle Polyweb et les modules métier. Le `README.md` n'est pas une source éditoriale : il est généré par `pnpm run readme:generate` depuis `readme-builder/`.
 
 ## Architecture
 
@@ -37,7 +37,7 @@ src/modules/
 
 ## Core responsibilities
 
-`src/core` owns concepts shared by several modules. A core may expose a contract, invariant, adapter or stable facade over an existing Atomic implementation. It must not duplicate a domain implementation merely to satisfy a directory convention.
+`src/core` owns concepts shared by several modules. A core may expose a contract, invariant, adapter or stable facade over an existing Polyweb implementation. It must not duplicate a domain implementation merely to satisfy a directory convention.
 
 Core capabilities include content and sanitization, media ownership and lifecycle, localization and locale state, taxonomy invariants, SEO, search contracts, publication workflow, editorial revisions and locks, engagement/moderation boundaries, notifications, audit and cache invalidation, plus reusable administrative resource primitives.
 
@@ -67,7 +67,7 @@ module/
 └── tests/
 ```
 
-The exact physical layout may adapt to existing Atomic conventions, but the responsibilities are normative.
+The exact physical layout may adapt to existing Polyweb conventions, but the responsibilities are normative.
 
 ## Presentation grammar
 
@@ -80,7 +80,7 @@ single
 ui
 ```
 
-Variants are presentation concerns. They must not duplicate domain behavior or introduce a parallel design system. Generic visual primitives remain in the Atomic design system.
+Variants are presentation concerns. They must not duplicate domain behavior or introduce a parallel design system. Generic visual primitives remain in the Polyweb design system.
 
 ## Admin Resource grammar
 
@@ -131,7 +131,7 @@ Publication lifecycle transitions are explicit. Ordinary update operations must 
 
 ## Localization
 
-Localized editorial data uses relational rows, normally one resource × locale. Localized slugs and SEO remain relational and unique within their tenant rules. Modules support the Atomic locale set and use the shared RTL-capable UI primitives.
+Localized editorial data uses relational rows, normally one resource × locale. Localized slugs and SEO remain relational and unique within their tenant rules. Modules support the Polyweb locale set and use the shared RTL-capable UI primitives.
 
 ## Reuse rule
 

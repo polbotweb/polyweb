@@ -105,7 +105,7 @@ export function contactFormTemplate(opts: ContactFormEmailOptions) {
       <td style="padding:8px 12px;font-size:14px;color:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:${align}">${value}</td>
     </tr>`;
 
-  const subject = `${opts.urgent ? t.subjectUrgent : t.subject} — Atomic`;
+  const subject = `${opts.urgent ? t.subjectUrgent : t.subject} — Polyweb`;
 
   const html = `<!DOCTYPE html>
 <html lang="${opts.locale}" dir="${dir}">

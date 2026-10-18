@@ -2,15 +2,15 @@ import type { AuthTranslations } from '../config';
 
 export default {
   meta: {
-    signIn: { title: 'Iniciar sesión — Atomic', description: 'Inicie sesión en su cuenta.' },
-    signUp: { title: 'Registro — Atomic', description: 'Cree su cuenta.' },
-    dashboard: { title: 'Panel — Atomic', description: 'Gestione su cuenta y organizaciones.' },
-    admin: { title: 'Administración — Atomic', description: 'Panel de administración.' },
-    forgotPassword: { title: 'Contraseña olvidada — Atomic', description: 'Restablezca su contraseña.' },
-    resetPassword: { title: 'Restablecer contraseña — Atomic', description: 'Elija una nueva contraseña.' },
-    verifyEmail: { title: 'Verificar correo — Atomic', description: 'Confirme su dirección de correo.' },
-    profile: { title: 'Mi perfil — Atomic', description: 'Gestione su información personal.' },
-    organizations: { title: 'Organizaciones — Atomic', description: 'Gestione sus organizaciones.' },
+    signIn: { title: 'Iniciar sesión — Polyweb', description: 'Inicie sesión en su cuenta.' },
+    signUp: { title: 'Registro — Polyweb', description: 'Cree su cuenta.' },
+    dashboard: { title: 'Panel — Polyweb', description: 'Gestione su cuenta y organizaciones.' },
+    admin: { title: 'Administración — Polyweb', description: 'Panel de administración.' },
+    forgotPassword: { title: 'Contraseña olvidada — Polyweb', description: 'Restablezca su contraseña.' },
+    resetPassword: { title: 'Restablecer contraseña — Polyweb', description: 'Elija una nueva contraseña.' },
+    verifyEmail: { title: 'Verificar correo — Polyweb', description: 'Confirme su dirección de correo.' },
+    profile: { title: 'Mi perfil — Polyweb', description: 'Gestione su información personal.' },
+    organizations: { title: 'Organizaciones — Polyweb', description: 'Gestione sus organizaciones.' },
   },
   routes: {
     'sign-in': 'iniciar-sesion',

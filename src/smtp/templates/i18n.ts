@@ -74,7 +74,7 @@ const translations: Record<Locale, EmailTranslations> = {
   fr: {
     layout: {
       fallbackLink: 'Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur\u00a0:',
-      footer: 'Cet email a été envoyé automatiquement par Atomic. Ne répondez pas à ce message.',
+      footer: 'Cet email a été envoyé automatiquement par Polyweb. Ne répondez pas à ce message.',
     },
     verifyEmail: {
       subject: 'Confirmez votre adresse email',
@@ -82,7 +82,7 @@ const translations: Record<Locale, EmailTranslations> = {
       greeting: 'Bonjour {name},',
       body: 'Merci d\'avoir créé votre compte. Confirmez votre adresse email en cliquant sur le bouton ci-dessous.',
       button: 'Vérifier mon email',
-      ignore: 'Si vous n\'avez pas créé de compte sur Atomic, ignorez simplement cet email.',
+      ignore: 'Si vous n\'avez pas créé de compte sur Polyweb, ignorez simplement cet email.',
     },
     resetPassword: {
       subject: 'Réinitialisez votre mot de passe',
@@ -127,7 +127,7 @@ const translations: Record<Locale, EmailTranslations> = {
   en: {
     layout: {
       fallbackLink: 'If the button doesn\'t work, copy and paste this link into your browser:',
-      footer: 'This email was sent automatically by Atomic. Please do not reply.',
+      footer: 'This email was sent automatically by Polyweb. Please do not reply.',
     },
     verifyEmail: {
       subject: 'Verify your email address',
@@ -135,7 +135,7 @@ const translations: Record<Locale, EmailTranslations> = {
       greeting: 'Hi {name},',
       body: 'Thanks for creating your account. Please verify your email address by clicking the button below.',
       button: 'Verify my email',
-      ignore: 'If you didn\'t create an account on Atomic, you can safely ignore this email.',
+      ignore: 'If you didn\'t create an account on Polyweb, you can safely ignore this email.',
     },
     resetPassword: {
       subject: 'Reset your password',
@@ -180,7 +180,7 @@ const translations: Record<Locale, EmailTranslations> = {
   es: {
     layout: {
       fallbackLink: 'Si el botón no funciona, copie y pegue este enlace en su navegador:',
-      footer: 'Este correo fue enviado automáticamente por Atomic. No responda a este mensaje.',
+      footer: 'Este correo fue enviado automáticamente por Polyweb. No responda a este mensaje.',
     },
     verifyEmail: {
       subject: 'Confirme su dirección de correo',
@@ -188,7 +188,7 @@ const translations: Record<Locale, EmailTranslations> = {
       greeting: 'Hola {name},',
       body: 'Gracias por crear su cuenta. Confirme su dirección de correo haciendo clic en el botón de abajo.',
       button: 'Verificar mi correo',
-      ignore: 'Si no creó una cuenta en Atomic, puede ignorar este correo.',
+      ignore: 'Si no creó una cuenta en Polyweb, puede ignorar este correo.',
     },
     resetPassword: {
       subject: 'Restablezca su contraseña',
@@ -233,7 +233,7 @@ const translations: Record<Locale, EmailTranslations> = {
   ar: {
     layout: {
       fallbackLink: 'إذا لم يعمل الزر، انسخ هذا الرابط والصقه في متصفحك:',
-      footer: 'تم إرسال هذا البريد تلقائيًا من Atomic. لا تقم بالرد على هذه الرسالة.',
+      footer: 'تم إرسال هذا البريد تلقائيًا من Polyweb. لا تقم بالرد على هذه الرسالة.',
     },
     verifyEmail: {
       subject: 'أكّد عنوان بريدك الإلكتروني',
@@ -241,7 +241,7 @@ const translations: Record<Locale, EmailTranslations> = {
       greeting: 'مرحبًا {name}،',
       body: 'شكرًا لإنشاء حسابك. يرجى تأكيد عنوان بريدك الإلكتروني بالنقر على الزر أدناه.',
       button: 'تأكيد بريدي الإلكتروني',
-      ignore: 'إذا لم تقم بإنشاء حساب على Atomic، يمكنك تجاهل هذا البريد.',
+      ignore: 'إذا لم تقم بإنشاء حساب على Polyweb، يمكنك تجاهل هذا البريد.',
     },
     resetPassword: {
       subject: 'أعد تعيين كلمة المرور',

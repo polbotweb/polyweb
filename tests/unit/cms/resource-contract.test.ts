@@ -41,7 +41,7 @@ const moduleDefinition = {
   presentations: { card: ["default"], list: ["default"], single: ["default"], ui: [] },
 } as const;
 
-describe("Atomic admin resource contract", () => {
+describe("Polyweb admin resource contract", () => {
   it("accepts matching entity and capability contracts", () => {
     const resource: AdminResourceDefinition = { id: "blog-post", entity: "blog_post", management: {}, actions: { read: true, publish: true, archive: true } };
     expect(() => assertResourceCompatibility(moduleDefinition, resource)).not.toThrow();

@@ -344,7 +344,7 @@ const initials = user?.name
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'atomic-data-export.json';
+        a.download = 'polyweb-data-export.json';
         a.click();
         URL.revokeObjectURL(url);
       } catch {

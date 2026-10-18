@@ -2,15 +2,15 @@ import type { AuthTranslations } from '../config';
 
 export default {
   meta: {
-    signIn: { title: 'Connexion — Atomic', description: 'Connectez-vous à votre compte.' },
-    signUp: { title: 'Inscription — Atomic', description: 'Créez votre compte.' },
-    dashboard: { title: 'Tableau de bord — Atomic', description: 'Gérez votre compte et vos organisations.' },
-    admin: { title: 'Administration — Atomic', description: 'Panneau d\'administration.' },
-    forgotPassword: { title: 'Mot de passe oublié — Atomic', description: 'Réinitialisez votre mot de passe.' },
-    resetPassword: { title: 'Réinitialiser le mot de passe — Atomic', description: 'Choisissez un nouveau mot de passe.' },
-    verifyEmail: { title: 'Vérification de l\'email — Atomic', description: 'Confirmez votre adresse email.' },
-    profile: { title: 'Mon profil — Atomic', description: 'Gérez vos informations personnelles.' },
-    organizations: { title: 'Organisations — Atomic', description: 'Gérez vos organisations.' },
+    signIn: { title: 'Connexion — Polyweb', description: 'Connectez-vous à votre compte.' },
+    signUp: { title: 'Inscription — Polyweb', description: 'Créez votre compte.' },
+    dashboard: { title: 'Tableau de bord — Polyweb', description: 'Gérez votre compte et vos organisations.' },
+    admin: { title: 'Administration — Polyweb', description: 'Panneau d\'administration.' },
+    forgotPassword: { title: 'Mot de passe oublié — Polyweb', description: 'Réinitialisez votre mot de passe.' },
+    resetPassword: { title: 'Réinitialiser le mot de passe — Polyweb', description: 'Choisissez un nouveau mot de passe.' },
+    verifyEmail: { title: 'Vérification de l\'email — Polyweb', description: 'Confirmez votre adresse email.' },
+    profile: { title: 'Mon profil — Polyweb', description: 'Gérez vos informations personnelles.' },
+    organizations: { title: 'Organisations — Polyweb', description: 'Gérez vos organisations.' },
   },
   routes: {
     'sign-in': 'connexion',

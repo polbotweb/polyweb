@@ -1,6 +1,6 @@
 # Créer un schéma Drizzle
 
-Guide pas à pas pour ajouter ou étendre un schéma métier Atomic.
+Guide pas à pas pour ajouter ou étendre un schéma métier Polyweb.
 
 ## 1. Créer le fichier de schéma
 

@@ -7,7 +7,7 @@
 ## Prérequis
 
 - Connaître le système de [tokens](tokens.md) et de [variants](variants.md)
-- Comprendre l'architecture Atomic Design : `atoms/ → molecules/ → organisms/`
+- Comprendre l'architecture Polyweb Design : `atoms/ → molecules/ → organisms/`
 
 ---
 

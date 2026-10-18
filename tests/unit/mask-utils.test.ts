@@ -29,7 +29,7 @@ describe('maskUrl', () => {
 
 describe('dbNameFromUrl', () => {
   it('extracts database name from a standard PostgreSQL URL', () => {
-    expect(dbNameFromUrl('postgresql://user:pass@localhost:5432/atomic_local')).toBe('atomic_local');
+    expect(dbNameFromUrl('postgresql://user:pass@localhost:5432/polyweb_local')).toBe('polyweb_local');
   });
 
   it('extracts from URL with query params', () => {

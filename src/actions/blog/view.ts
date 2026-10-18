@@ -20,7 +20,7 @@ function detectDeviceType(userAgent: string | null): DeviceType | undefined {
 
 /**
  * Records a single public view of a blog post: increments `blogPosts.viewCount`
- * (atomic SQL increment, safe under concurrency) and appends a row to
+ * (polyweb SQL increment, safe under concurrency) and appends a row to
  * `blogPostViewStats` for the analytics breakdown (date/hour/referrer/device).
  *
  * Called client-side (fire-and-forget) from the public post page — NOT during
@@ -53,12 +53,12 @@ export const recordBlogPostView = defineAction({
     // so it can drive de-duplication — not the IP alone.
     let visitorSessionId = context.locals.session?.id ?? null;
     if (!visitorSessionId) {
-      const visitorCookie = context.cookies.get("atomic_visitor");
+      const visitorCookie = context.cookies.get("polyweb_visitor");
       if (visitorCookie?.value) {
         visitorSessionId = `anon:${visitorCookie.value}`;
       } else {
         const visitorId = crypto.randomUUID();
-        context.cookies.set("atomic_visitor", visitorId, {
+        context.cookies.set("polyweb_visitor", visitorId, {
           path: "/",
           maxAge: 60 * 60 * 24 * 365,
           httpOnly: true,

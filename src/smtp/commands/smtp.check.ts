@@ -125,7 +125,7 @@ async function main() {
     try {
       await sendEmail({
         to: testTo,
-        subject: `[Atomic] Test SMTP — ${provider}`,
+        subject: `[Polyweb] Test SMTP — ${provider}`,
         html: `
           <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
             <h2 style="color: #1a1a2e;">📧 Test SMTP réussi !</h2>

@@ -1,6 +1,6 @@
 # Testing — Rapport & Index
 
-> **Projet** : Atomic  
+> **Projet** : Polyweb  
 > **Stack** : Astro 6 + better-auth + Drizzle/PostgreSQL + Vitest + Playwright + Pa11y + Lighthouse  
 > **Couverture globale** : **741 tests** · **102 audits e2e** · **52 URLs a11y** · **62 fichiers de test** · **5 générateurs de rapports**  
 > **Dernière mise à jour** : 31/03/2026
