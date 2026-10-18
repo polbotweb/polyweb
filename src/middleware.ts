@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { LOCALES } from "@/i18n/config";
 import { bootstrapModules } from "@/lib/cms/bootstrap";
+import { resolveSiteForHost } from "@/modules/sites/domain/sites";
 import { defineMiddleware } from "astro:middleware";
 
 export const onRequest = defineMiddleware(async (context, next) => {
@@ -51,6 +52,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
     context.locals.session = null;
   }
 
+  // ─── Multi-site : site courant d'après le Host (cache 30 s) ─────
+  try {
+    context.locals.site = await resolveSiteForHost(context.request.headers.get("x-forwarded-host") && process.env.TRUST_PROXY === "true"
+      ? context.request.headers.get("x-forwarded-host")
+      : context.request.headers.get("host"));
+  } catch (err) {
+    console.error("[middleware] Site resolution failed:", err);
+    context.locals.site = null;
+  }
+
   const response = await next();
   const url = new URL(context.request.url);
   const lowerPath = url.pathname.toLowerCase();
@@ -70,6 +81,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
     'Cross-Origin-Resource-Policy': 'same-origin',
     'Cross-Origin-Embedder-Policy': 'credentialless',
   };
+
+  // API publique (brique c) : consommable cross-origin (lecture sans cookies).
+  if (lowerPath.startsWith('/api/v1/')) securityHeaders['Cross-Origin-Resource-Policy'] = 'cross-origin';
 
   for (const [key, value] of Object.entries(securityHeaders)) response.headers.set(key, value);
   return response;

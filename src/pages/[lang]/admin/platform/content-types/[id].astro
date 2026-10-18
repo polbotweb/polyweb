@@ -1,0 +1,86 @@
+---
+import { requirePermission } from '@/lib/auth-guards';
+import PlatformAdminShell from '@organisms/PlatformAdmin/PlatformAdminShell.astro';
+import FieldsEditor from '@/components/platform/FieldsEditor.astro';
+import { getPlatformLabel, getPlatformAdminUrl } from '@/core/localization/platform-labels';
+import { getAdminSite, userCan } from '@/lib/platform/admin';
+import { logAuditEvent, extractIp } from '@/lib/audit';
+import { getContentType, createContentType, updateContentType, deleteContentType, ContentTypeConflictError, type ContentTypeInput } from '@/modules/content/domain/content-types';
+import { z } from 'astro/zod';
+import type { FieldDefinition } from '@/core/content-types/fields';
+
+export const prerender = false;
+const result = await requirePermission(Astro, { contentType: ['read'] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT, user } = result;
+const site = await getAdminSite(Astro);
+const id = Astro.params.id!;
+const isNew = id === 'new';
+let type = isNew ? undefined : await getContentType(site.id, id);
+if (!isNew && !type) return Astro.redirect(getPlatformAdminUrl(locale, 'content-types'));
+
+let error: string | null = null;
+let form: { slug: string; name: string; description: string; fields: FieldDefinition[]; hasBlocks: boolean; publicRead: boolean; singleton: boolean } = {
+  slug: type?.slug ?? '', name: type?.name ?? '', description: type?.description ?? '', fields: type?.fields ?? [],
+  hasBlocks: type?.settings.hasBlocks !== false, publicRead: type?.settings.publicRead !== false, singleton: !!type?.settings.singleton,
+};
+
+if (Astro.request.method === 'POST') {
+  const fd = await Astro.request.formData();
+  const intent = String(fd.get('intent') ?? 'save');
+  const meta = { ipAddress: extractIp(Astro.request.headers, Astro.clientAddress), userAgent: Astro.request.headers.get('user-agent') };
+  try {
+    if (intent === 'delete' && type) {
+      if (!(await userCan(user.id, { contentType: ['delete'] }))) throw new Error('Permission refusée');
+      await deleteContentType(site.id, type.id);
+      void logAuditEvent({ userId: user.id, action: 'CONTENT_TYPE_DELETE', resource: 'content_type', resourceId: type.id, metadata: { slug: type.slug }, ...meta });
+      return Astro.redirect(getPlatformAdminUrl(locale, 'content-types'), 303);
+    }
+    if (!(await userCan(user.id, { contentType: [isNew ? 'create' : 'update'] }))) throw new Error('Permission refusée');
+    const input: ContentTypeInput = {
+      slug: String(fd.get('slug') ?? ''), name: String(fd.get('name') ?? ''), description: String(fd.get('description') ?? '') || null,
+      fields: String(fd.get('fields') ?? '[]'),
+      settings: { hasBlocks: fd.get('hasBlocks') === 'on', publicRead: fd.get('publicRead') === 'on', singleton: fd.get('singleton') === 'on' },
+    };
+    form = { slug: input.slug, name: input.name, description: input.description ?? '', fields: (() => { try { return JSON.parse(String(input.fields)); } catch { return form.fields; } })(), hasBlocks: !!input.settings?.hasBlocks, publicRead: !!input.settings?.publicRead, singleton: !!input.settings?.singleton };
+    const saved = isNew ? await createContentType(site.id, input) : await updateContentType(site.id, type!.id, input);
+    void logAuditEvent({ userId: user.id, action: isNew ? 'CONTENT_TYPE_CREATE' : 'CONTENT_TYPE_UPDATE', resource: 'content_type', resourceId: saved.id, metadata: { slug: saved.slug, fields: saved.fields.length }, ...meta });
+    return Astro.redirect(`${getPlatformAdminUrl(locale, 'content-types', saved.id)}?saved=1`, 303);
+  } catch (e) {
+    error = e instanceof z.ZodError ? e.issues.map((i) => `${i.path.join('.')} : ${i.message}`).join(' · ') : e instanceof ContentTypeConflictError || e instanceof SyntaxError ? e.message : (e as Error).message;
+  }
+}
+const saved = Astro.url.searchParams.get('saved') === '1';
+const title = isNew ? 'Nouveau type de contenu' : `Type : ${type!.name}`;
+---
+<PlatformAdminShell t={authT} locale={locale} section="content-types" title={title}>
+  <a slot="actions" class="rounded-md border px-3 py-2 text-sm" href={getPlatformAdminUrl(locale, 'content-types')}>← {getPlatformLabel('content-types', locale)}</a>
+  {saved && <p class="rounded-md border border-success bg-success/10 p-3 text-sm" role="status">Enregistré.</p>}
+  {error && <p class="rounded-md border border-error bg-error/10 p-3 text-sm" role="alert">{error}</p>}
+  <form method="post" class="grid gap-4">
+    <div class="grid gap-4 sm:grid-cols-2">
+      <label class="grid gap-1 text-sm font-medium">Nom<input name="name" required maxlength="160" value={form.name} class="rounded-md border bg-background px-3 py-2" /></label>
+      <label class="grid gap-1 text-sm font-medium">Slug (API : <code>/api/v1/content/&lt;slug&gt;</code>)<input name="slug" required pattern="[a-z][a-z0-9-]{0,62}" value={form.slug} class="rounded-md border bg-background px-3 py-2 font-mono" /></label>
+    </div>
+    <label class="grid gap-1 text-sm font-medium">Description<textarea name="description" rows="2" class="rounded-md border bg-background px-3 py-2">{form.description}</textarea></label>
+    <fieldset class="flex flex-wrap gap-4 text-sm">
+      <legend class="mb-1 font-medium">Options</legend>
+      <label class="flex items-center gap-2"><input type="checkbox" name="hasBlocks" checked={form.hasBlocks} /> Éditeur de blocs</label>
+      <label class="flex items-center gap-2"><input type="checkbox" name="publicRead" checked={form.publicRead} /> Lecture publique (API &amp; pages)</label>
+      <label class="flex items-center gap-2"><input type="checkbox" name="singleton" checked={form.singleton} /> Singleton</label>
+    </fieldset>
+    <section class="grid gap-2">
+      <h2 class="font-semibold">Champs</h2>
+      <p class="text-muted-foreground text-xs">Le titre, le slug, le statut, les blocs et le SEO sont gérés automatiquement ; ajoutez ici les champs spécifiques.</p>
+      <FieldsEditor value={form.fields} />
+    </section>
+    <div class="flex flex-wrap gap-2">
+      <button type="submit" name="intent" value="save" class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Enregistrer</button>
+      {!isNew && <button type="submit" name="intent" value="delete" formnovalidate class="rounded-md border border-error px-4 py-2 text-sm text-error" data-confirm="Supprimer ce type ET toutes ses entrées ?">Supprimer</button>}
+    </div>
+  </form>
+</PlatformAdminShell>
+<script>
+  import { initConfirmButtons } from '@/lib/platform/confirm';
+  initConfirmButtons();
+</script>

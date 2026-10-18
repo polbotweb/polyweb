@@ -148,25 +148,26 @@ const types = listBlocks().map((b) => ({ type: b.type, label: b.label, fields: b
       this.editors.set(block.id, editor);
       const btn = (label: string, title: string, run: () => void) => {
         const b = el('button', { type: 'button', class: 'rounded border px-2 text-xs', title, 'aria-label': title }, label);
-        b.addEventListener('click', () => { run(); editor.commands.focus(); });
+        b.addEventListener('mousedown', (e) => e.preventDefault()); // garde la sélection de l'éditeur
+        b.addEventListener('click', () => run());
         bar.append(b);
       };
-      btn('B', 'Gras', () => editor.chain().toggleBold().run());
-      btn('I', 'Italique', () => editor.chain().toggleItalic().run());
-      btn('S', 'Barré', () => editor.chain().toggleStrike().run());
-      btn('H2', 'Titre 2', () => editor.chain().toggleHeading({ level: 2 }).run());
-      btn('H3', 'Titre 3', () => editor.chain().toggleHeading({ level: 3 }).run());
-      btn('•', 'Liste à puces', () => editor.chain().toggleBulletList().run());
-      btn('1.', 'Liste numérotée', () => editor.chain().toggleOrderedList().run());
-      btn('❝', 'Citation', () => editor.chain().toggleBlockquote().run());
-      btn('</>', 'Code', () => editor.chain().toggleCodeBlock().run());
+      btn('B', 'Gras', () => editor.chain().focus().toggleBold().run());
+      btn('I', 'Italique', () => editor.chain().focus().toggleItalic().run());
+      btn('S', 'Barré', () => editor.chain().focus().toggleStrike().run());
+      btn('H2', 'Titre 2', () => editor.chain().focus().toggleHeading({ level: 2 }).run());
+      btn('H3', 'Titre 3', () => editor.chain().focus().toggleHeading({ level: 3 }).run());
+      btn('•', 'Liste à puces', () => editor.chain().focus().toggleBulletList().run());
+      btn('1.', 'Liste numérotée', () => editor.chain().focus().toggleOrderedList().run());
+      btn('❝', 'Citation', () => editor.chain().focus().toggleBlockquote().run());
+      btn('</>', 'Code', () => editor.chain().focus().toggleCodeBlock().run());
       btn('🔗', 'Lien', () => {
         const href = prompt('URL du lien (https://…, /chemin, mailto:)');
         if (href === null) return;
-        if (!href) editor.chain().unsetLink().run();
-        else editor.chain().extendMarkRange('link').setLink({ href }).run();
+        if (!href) editor.chain().focus().unsetLink().run();
+        else editor.chain().focus().extendMarkRange('link').setLink({ href }).run();
       });
-      btn('↶', 'Annuler', () => editor.chain().undo().run());
+      btn('↶', 'Annuler', () => editor.chain().focus().undo().run());
       return box;
     }
   }

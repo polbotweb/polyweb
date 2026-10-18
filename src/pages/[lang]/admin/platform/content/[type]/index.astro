@@ -1,0 +1,65 @@
+---
+import { requirePermission } from '@/lib/auth-guards';
+import PlatformAdminShell from '@organisms/PlatformAdmin/PlatformAdminShell.astro';
+import { getPlatformLabel, getPlatformAdminUrl } from '@/core/localization/platform-labels';
+import { getAdminSite, userCan, formatDate } from '@/lib/platform/admin';
+import { getContentType } from '@/modules/content/domain/content-types';
+import { listEntries, pickTranslation } from '@/modules/content/domain/entries';
+import { CONTENT_STATUSES, type ContentStatus } from '@database/schemas/content.schema';
+
+export const prerender = false;
+const result = await requirePermission(Astro, { contentEntry: ['read'] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT, user } = result;
+const site = await getAdminSite(Astro);
+const type = await getContentType(site.id, Astro.params.type!);
+if (!type) return Astro.redirect(getPlatformAdminUrl(locale, 'content'));
+const statusParam = Astro.url.searchParams.get('status') ?? 'any';
+const status = (CONTENT_STATUSES as readonly string[]).includes(statusParam) ? (statusParam as ContentStatus) : 'any';
+const q = Astro.url.searchParams.get('q') ?? '';
+const page = Math.max(1, Number(Astro.url.searchParams.get('page')) || 1);
+const perPage = 20;
+const [{ items, total }, canCreate] = await Promise.all([
+  listEntries(type, { status, search: q, limit: perPage, offset: (page - 1) * perPage }),
+  userCan(user.id, { contentEntry: ['create'] }),
+]);
+const pages = Math.max(1, Math.ceil(total / perPage));
+const qs = (p: number) => `?${new URLSearchParams({ status, q, page: String(p) })}`;
+const statusLabel: Record<string, string> = { draft: 'Brouillon', published: 'Publié', archived: 'Archivé' };
+---
+<PlatformAdminShell t={authT} locale={locale} section="content" title={type.name}>
+  <a slot="actions" class="rounded-md border px-3 py-2 text-sm" href={getPlatformAdminUrl(locale, 'content')}>← {getPlatformLabel('content', locale)}</a>
+  {canCreate && !(type.settings.singleton && total > 0) && <a slot="actions" class="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground" href={getPlatformAdminUrl(locale, 'content', type.slug, 'new')}>+ Nouvelle entrée</a>}
+  <form method="get" class="flex flex-wrap items-end gap-2" role="search">
+    <label class="grid gap-1 text-sm">Recherche<input name="q" value={q} class="rounded-md border bg-background px-3 py-1.5" /></label>
+    <label class="grid gap-1 text-sm">Statut
+      <select name="status" class="rounded-md border bg-background px-2 py-1.5">
+        <option value="any">Tous</option>
+        {CONTENT_STATUSES.map((s) => <option value={s} selected={status === s}>{statusLabel[s]}</option>)}
+      </select>
+    </label>
+    <button class="rounded-md border px-3 py-1.5 text-sm">Filtrer</button>
+  </form>
+  <p class="text-muted-foreground text-sm">{total} entrée(s)</p>
+  <table class="w-full text-sm">
+    <thead><tr class="border-b"><th class="py-2 text-start">Titre</th><th class="text-start">Slug</th><th class="text-start">Statut</th><th class="text-start">Langues</th><th class="text-start">Modifié</th></tr></thead>
+    <tbody>
+      {items.map((e) => (
+        <tr class="border-b">
+          <td class="py-2"><a class="font-medium hover:underline" href={getPlatformAdminUrl(locale, 'content', type.slug, e.id)}>{pickTranslation(e, locale, site.defaultLocale)?.title ?? '—'}</a></td>
+          <td><code>{e.slug}</code></td>
+          <td>{statusLabel[e.status]}</td>
+          <td>{e.translations.map((t) => t.locale).join(', ')}</td>
+          <td><time datetime={e.updatedAt.toISOString()}>{formatDate(e.updatedAt, locale)}</time></td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  {pages > 1 && (
+    <nav class="flex gap-2 text-sm" aria-label="Pagination">
+      {page > 1 && <a class="underline" href={qs(page - 1)}>← Précédent</a>}
+      <span>Page {page} / {pages}</span>
+      {page < pages && <a class="underline" href={qs(page + 1)}>Suivant →</a>}
+    </nav>
+  )}
+</PlatformAdminShell>

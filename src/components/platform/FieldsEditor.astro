@@ -1,0 +1,112 @@
+---
+/**
+ * FieldsEditor — constructeur de champs (types de contenu, formulaires).
+ * Sérialise la liste en JSON dans <input type="hidden" name={name}> ;
+ * la validation fait foi côté serveur (fieldListSchema).
+ */
+import { FIELD_TYPES, type FieldDefinition, type FieldType } from '@/core/content-types/fields';
+
+interface Props { name?: string; value?: FieldDefinition[]; allowedTypes?: readonly FieldType[]; id?: string }
+const { name = 'fields', value = [], allowedTypes = FIELD_TYPES, id = 'fields-editor' } = Astro.props;
+---
+<fields-editor id={id} data-types={JSON.stringify(allowedTypes)} class="block grid gap-3">
+  <input type="hidden" name={name} value={JSON.stringify(value)} data-fields-input />
+  <ol class="grid gap-3" data-fields-list aria-label="Champs"></ol>
+  <button type="button" class="justify-self-start rounded-md border px-3 py-1.5 text-sm" data-fields-add>+ Ajouter un champ</button>
+  <details class="text-sm">
+    <summary class="cursor-pointer text-muted-foreground">Éditer en JSON</summary>
+    <textarea class="mt-2 w-full rounded-md border bg-background p-2 font-mono text-xs" rows="8" data-fields-json aria-label="Définition JSON des champs"></textarea>
+    <button type="button" class="mt-1 rounded border px-2 py-1 text-xs" data-fields-json-apply>Appliquer le JSON</button>
+  </details>
+</fields-editor>
+
+<script>
+  type Opt = { value: string; label: string | Record<string, string> };
+  type Field = { name: string; label: string | Record<string, string>; type: string; required?: boolean; localized?: boolean; helpText?: string; options?: Opt[]; relationType?: string; multiple?: boolean; min?: number; max?: number };
+
+  const h = <K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string> = {}, text?: string) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (text !== undefined) n.textContent = text;
+    return n;
+  };
+  const labelText = (l: Field['label']) => (typeof l === 'string' ? l : l.fr ?? Object.values(l)[0] ?? '');
+
+  class FieldsEditor extends HTMLElement {
+    private fields: Field[] = [];
+    private types: string[] = [];
+    connectedCallback() {
+      if (this.dataset.ready) return;
+      this.dataset.ready = '1';
+      this.types = JSON.parse(this.dataset.types || '[]');
+      const input = this.querySelector<HTMLInputElement>('[data-fields-input]')!;
+      try { this.fields = JSON.parse(input.value || '[]'); } catch { this.fields = []; }
+      this.querySelector('[data-fields-add]')!.addEventListener('click', () => {
+        this.fields.push({ name: `champ${this.fields.length + 1}`, label: 'Nouveau champ', type: 'text', required: false, localized: true });
+        this.render();
+      });
+      this.querySelector('[data-fields-json-apply]')!.addEventListener('click', () => {
+        try { this.fields = JSON.parse(this.querySelector<HTMLTextAreaElement>('[data-fields-json]')!.value); this.render(); }
+        catch (e) { alert(`JSON invalide : ${(e as Error).message}`); }
+      });
+      this.render();
+    }
+    private sync() {
+      const json = JSON.stringify(this.fields);
+      this.querySelector<HTMLInputElement>('[data-fields-input]')!.value = json;
+      this.querySelector<HTMLTextAreaElement>('[data-fields-json]')!.value = JSON.stringify(this.fields, null, 2);
+    }
+    private render() {
+      const list = this.querySelector('[data-fields-list]')!;
+      list.replaceChildren();
+      this.fields.forEach((f, i) => {
+        const li = h('li', { class: 'grid gap-2 rounded-md border p-3 sm:grid-cols-6' });
+        const text = (label: string, val: string, set: (v: string) => void, cls = 'sm:col-span-2') => {
+          const w = h('label', { class: `grid gap-1 text-xs ${cls}` }); w.append(h('span', {}, label));
+          const inp = h('input', { class: 'rounded border bg-background px-2 py-1 text-sm', value: val });
+          inp.addEventListener('input', () => { set(inp.value); this.sync(); });
+          w.append(inp); return w;
+        };
+        const check = (label: string, val: boolean, set: (v: boolean) => void) => {
+          const w = h('label', { class: 'flex items-center gap-1 text-xs' });
+          const c = h('input', { type: 'checkbox' }); c.checked = val;
+          c.addEventListener('change', () => { set(c.checked); this.sync(); });
+          w.append(c, document.createTextNode(label)); return w;
+        };
+        li.append(text('Nom technique', f.name, (v) => (f.name = v)));
+        li.append(text('Libellé', labelText(f.label), (v) => (f.label = v)));
+        const tw = h('label', { class: 'grid gap-1 text-xs sm:col-span-2' }); tw.append(h('span', {}, 'Type'));
+        const sel = h('select', { class: 'rounded border bg-background px-2 py-1 text-sm' });
+        for (const t of this.types) { const o = h('option', { value: t }, t); if (t === f.type) o.selected = true; sel.append(o); }
+        sel.addEventListener('change', () => { f.type = sel.value; this.render(); });
+        tw.append(sel); li.append(tw);
+        const flags = h('div', { class: 'flex flex-wrap items-center gap-3 sm:col-span-6' });
+        flags.append(check('Obligatoire', !!f.required, (v) => (f.required = v)));
+        flags.append(check('Traduit', f.localized !== false, (v) => (f.localized = v)));
+        if (f.type === 'relation') flags.append(check('Multiple', !!f.multiple, (v) => (f.multiple = v)));
+        li.append(flags);
+        if (f.type === 'select' || f.type === 'multiselect') {
+          const w = h('label', { class: 'grid gap-1 text-xs sm:col-span-6' }); w.append(h('span', {}, 'Options (une par ligne : valeur=Libellé)'));
+          const ta = h('textarea', { rows: '3', class: 'rounded border bg-background p-2 font-mono text-xs' });
+          ta.value = (f.options ?? []).map((o) => `${o.value}=${labelText(o.label)}`).join('\n');
+          ta.addEventListener('input', () => {
+            f.options = ta.value.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => { const [v, ...rest] = l.split('='); return { value: v!.trim(), label: (rest.join('=') || v!).trim() }; });
+            this.sync();
+          });
+          w.append(ta); li.append(w);
+        }
+        if (f.type === 'relation') li.append(text('Type lié (slug)', f.relationType ?? '', (v) => (f.relationType = v)));
+        li.append(text('Aide', f.helpText ?? '', (v) => (f.helpText = v || undefined), 'sm:col-span-4'));
+        const actions = h('div', { class: 'flex gap-1 sm:col-span-6' });
+        const btn = (label: string, fn: () => void) => { const b = h('button', { type: 'button', class: 'rounded border px-2 py-0.5 text-xs' }, label); b.addEventListener('click', fn); actions.append(b); };
+        btn('↑ Monter', () => { if (i > 0) { [this.fields[i - 1], this.fields[i]] = [this.fields[i]!, this.fields[i - 1]!]; this.render(); } });
+        btn('↓ Descendre', () => { if (i < this.fields.length - 1) { [this.fields[i + 1], this.fields[i]] = [this.fields[i]!, this.fields[i + 1]!]; this.render(); } });
+        btn('Supprimer', () => { this.fields.splice(i, 1); this.render(); });
+        li.append(actions);
+        list.append(li);
+      });
+      this.sync();
+    }
+  }
+  if (!customElements.get('fields-editor')) customElements.define('fields-editor', FieldsEditor);
+</script>

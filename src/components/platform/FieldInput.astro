@@ -1,0 +1,62 @@
+---
+/**
+ * FieldInput — rendu d'un champ dynamique (types de contenu, formulaires).
+ * Nom HTML : `${prefix}__${field.name}` (lu par readFieldValues()).
+ */
+import type { FieldDefinition } from '@/core/content-types/fields';
+import { labelFor } from '@/core/content-types/fields';
+
+interface Props { field: FieldDefinition; prefix: string; value?: unknown; locale: string; error?: string; idPrefix?: string }
+const { field: f, prefix, value, locale, error, idPrefix = prefix } = Astro.props;
+const name = `${prefix}__${f.name}`;
+const id = `${idPrefix}-${f.name}`;
+const label = labelFor(f.label, locale);
+const str = value === undefined || value === null ? '' : typeof value === 'string' ? value : f.type === 'json' ? JSON.stringify(value, null, 2) : String(value);
+const arr = Array.isArray(value) ? value.map(String) : [];
+const inputClass = 'w-full rounded-md border bg-background px-3 py-2 text-sm aria-[invalid=true]:border-error';
+const describedBy = [f.helpText ? `${id}-help` : '', error ? `${id}-err` : ''].filter(Boolean).join(' ') || undefined;
+const common = { id, name, 'aria-invalid': error ? ('true' as const) : undefined, 'aria-describedby': describedBy, required: f.required || undefined };
+---
+<div class="grid gap-1.5">
+  {f.type === 'boolean' ? (
+    <label class="flex items-center gap-2 text-sm font-medium">
+      <input type="checkbox" {...common} required={undefined} checked={value === true || value === 'on'} />
+      {label}{f.required && <span aria-hidden="true">*</span>}
+    </label>
+  ) : f.type === 'multiselect' ? (
+    <fieldset class="grid gap-1" aria-describedby={describedBy}>
+      <legend class="text-sm font-medium">{label}{f.required && <span aria-hidden="true">*</span>}</legend>
+      {(f.options ?? []).map((o) => (
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" name={name} value={o.value} checked={arr.includes(o.value)} /> {labelFor(o.label, locale)}</label>
+      ))}
+    </fieldset>
+  ) : (
+    <>
+      <label for={id} class="text-sm font-medium">{label}{f.required && <span aria-hidden="true"> *</span>}</label>
+      {f.type === 'textarea' || f.type === 'markdown' || f.type === 'json' ? (
+        <textarea {...common} rows={f.type === 'markdown' ? 10 : f.type === 'json' ? 6 : 4} class:list={[inputClass, (f.type === 'markdown' || f.type === 'json') && 'font-mono']} maxlength={f.max}>{str}</textarea>
+      ) : f.type === 'select' ? (
+        <select {...common} class={inputClass}>
+          {!f.required && <option value="">—</option>}
+          {(f.options ?? []).map((o) => <option value={o.value} selected={str === o.value}>{labelFor(o.label, locale)}</option>)}
+        </select>
+      ) : (
+        <input
+          {...common}
+          class={inputClass}
+          value={f.type === 'datetime' && str ? str.slice(0, 16) : str}
+          type={f.type === 'number' ? 'number' : f.type === 'email' ? 'email' : f.type === 'url' || f.type === 'media' ? 'text' : f.type === 'date' ? 'date' : f.type === 'datetime' ? 'datetime-local' : 'text'}
+          inputmode={f.type === 'url' || f.type === 'media' ? 'url' : undefined}
+          min={f.type === 'number' ? f.min : undefined}
+          max={f.type === 'number' ? f.max : undefined}
+          step={f.type === 'number' ? 'any' : undefined}
+          minlength={f.type === 'text' ? f.min : undefined}
+          maxlength={f.type === 'text' ? f.max ?? 500 : undefined}
+          placeholder={f.type === 'relation' ? 'UUID de l’entrée liée' : f.type === 'media' ? '/uploads/…' : undefined}
+        />
+      )}
+    </>
+  )}
+  {f.helpText && <p id={`${id}-help`} class="text-muted-foreground text-xs">{f.helpText}</p>}
+  {error && <p id={`${id}-err`} class="text-error text-xs" role="alert">{error}</p>}
+</div>

@@ -1,0 +1,28 @@
+---
+/** Page publique d'une entrée publiée : champs, blocs, SEO (SEOHead + JSON-LD Article). */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import SEOHead from '@/components/seo/SEOHead.astro';
+import EntryView from '@/components/platform/EntryView.astro';
+import { toLocale } from '@i18n/utils';
+import { getContentType } from '@/modules/content/domain/content-types';
+import { getPublishedEntryBySlug, pickTranslation } from '@/modules/content/domain/entries';
+import { ensureDefaultSite } from '@/modules/sites/domain/sites';
+import { articleJsonLd, absoluteUrl } from '@/lib/seo/seo-meta';
+
+export const prerender = false;
+const locale = toLocale(Astro.params.lang);
+const site = Astro.locals.site ?? (await ensureDefaultSite());
+const type = await getContentType(site.id, Astro.params.type!);
+if (!type || type.settings.publicRead === false || type.slug !== Astro.params.type) return new Response('Not Found', { status: 404 });
+const entry = await getPublishedEntryBySlug(type, Astro.params.slug!);
+if (!entry) return new Response('Not Found', { status: 404 });
+const t = pickTranslation(entry, locale, site.defaultLocale)!;
+const siteUrl = (process.env.SITE_URL || Astro.url.origin).replace(/\/$/, '');
+const url = absoluteUrl(siteUrl, `/${locale}/c/${type.slug}/${entry.slug}`);
+const jsonLd = JSON.stringify(articleJsonLd({ headline: t.title, url, locale, description: t.seo.metaDescription, image: t.seo.ogImage ? absoluteUrl(siteUrl, t.seo.ogImage) : undefined, datePublished: entry.publishedAt, dateModified: entry.updatedAt, publisherName: site.name }));
+const alternateUrls = Object.fromEntries(entry.translations.map((tr) => [tr.locale, absoluteUrl(siteUrl, `/${tr.locale}/c/${type.slug}/${entry.slug}`)]));
+---
+<BaseLayout title={t.seo.metaTitle || t.title} description={t.seo.metaDescription || t.title} jsonLd={jsonLd} ogType="article" alternateUrls={alternateUrls} ogImage={t.seo.ogImage ? absoluteUrl(siteUrl, t.seo.ogImage) : undefined}>
+  <SEOHead slot="head" locale={locale} ogType="article" noindex={t.seo.noindex} publishedTime={entry.publishedAt} modifiedTime={entry.updatedAt} />
+  <EntryView entry={entry} translation={t} locale={locale} />
+</BaseLayout>
