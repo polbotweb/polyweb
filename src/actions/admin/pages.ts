@@ -5,7 +5,7 @@ import { eq, and, asc, desc, isNull, isNotNull, inArray, max } from "drizzle-orm
 import { getDrizzle } from "@database/drizzle";
 import { pages, pageSections, pageVersions } from "@database/schemas";
 import { invalidateCache } from "@database/cache";
-import { assertPermission, auditAdmin } from "./_helpers";
+import { auditAdmin } from "./_helpers";
 import { LOCALES } from "@i18n/config";
 import { actionRateLimit, actionTry, effectHandler, requireActionPermission } from "@/lib/effect/action";
 
@@ -815,8 +815,9 @@ export const unlockPage = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/pages.unlockPage", async () => {
-    await assertPermission(context, { page: ["update"] });
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    yield* requireActionPermission(context, { page: ["update"] });
+    return yield* actionTry("admin/pages.unlockPage", async () => {
     const db = getDrizzle();
 
     // Only the lock owner (or any admin via force) can unlock
@@ -826,6 +827,7 @@ export const unlockPage = defineAction({
       .where(eq(pages.id, input.id));
 
     return { success: true as const };
+    });
   })),
 });
 

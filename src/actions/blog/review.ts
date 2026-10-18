@@ -9,7 +9,7 @@ import { sanitizeHtml } from "@/lib/sanitize";
 import { blogReviewFormSchema, blogReviewModerationSchema } from "@/lib/blog/validation";
 import { publicBlogPostScope } from "@/lib/blog/public-visibility";
 import { extractIp } from "@/lib/audit";
-import { actionTry, effectHandler } from "@/lib/effect/action";
+import { actionTry, effectHandler, requireUser } from "@/lib/effect/action";
 
 export const createBlogReview = defineAction({
   input: blogReviewFormSchema,
@@ -143,9 +143,9 @@ export const voteBlogReviewHelpful = defineAction({
     reviewId: z.uuid(),
     isHelpful: z.boolean(),
   }),
-  handler: effectHandler((input, context) => actionTry("blog/review.voteBlogReviewHelpful", async () => {
-    const user = context.locals.user;
-    if (!user) throw new ActionError({ code: "UNAUTHORIZED", message: "Connexion requise." });
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireUser(context, "Connexion requise.");
+    return yield* actionTry("blog/review.voteBlogReviewHelpful", async () => {
 
     const db = getDrizzle();
     await db.transaction(async (tx) => {
@@ -185,5 +185,6 @@ export const voteBlogReviewHelpful = defineAction({
 
     invalidateBlogCache();
     return { success: true };
+    });
   })),
 });

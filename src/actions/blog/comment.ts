@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { resolveBlogTenant, auditBlog, blogOrganizationIdSchema, blogPublicRateLimit, invalidateBlogCache, requireBlogPermission } from "./_helpers";
+import { resolveBlogTenant, auditBlog, blogOrganizationIdSchema, invalidateBlogCache, requireBlogPermission, blogPublicRateLimitEffect } from "./_helpers";
 import { defineAction, ActionError } from "astro:actions";
 import { eq, and, isNull } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
@@ -16,8 +16,9 @@ const MAX_COMMENT_REPLY_DEPTH = 1;
 
 export const createBlogComment = defineAction({
   input: blogCommentFormSchema,
-  handler: effectHandler((input, context) => actionTry("blog/comment.createBlogComment", async () => {
-    blogPublicRateLimit(context, "comment-create", { window: 300, max: 5 });
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    yield* blogPublicRateLimitEffect(context, "comment-create", { window: 300, max: 5 });
+    return yield* actionTry("blog/comment.createBlogComment", async () => {
     const db = getDrizzle();
     const [post] = await db
       .select({ id: blogPosts.id, commentStatus: blogPosts.commentStatus, organizationId: blogPosts.organizationId })
@@ -93,6 +94,7 @@ export const createBlogComment = defineAction({
     // comment that is not visible until approved. Notification is sent on
     // approval in moderateBlogComment.
     return { id: comment.id, status: comment.status };
+    });
   })),
 });
 

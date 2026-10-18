@@ -72,6 +72,23 @@ export async function runGuard<A, E>(effect: Effect.Effect<A, E>): Promise<A> {
 
 type Permissions = Record<string, string[]>;
 
+/** Session requise (message UI propre à l'appelant). */
+export const requireUser = (context: Pick<ActionAPIContext, 'locals'>, message = 'Vous devez être connecté pour effectuer cette action.') =>
+  Effect.suspend(() => {
+    const user = context.locals.user;
+    return user ? Effect.succeed(user) : fail('UNAUTHORIZED', message);
+  });
+
+/** Administrateur global requis (équivalent Effect d'`assertAdmin`). */
+export const requireAdmin = (context: Pick<ActionAPIContext, 'locals'>) =>
+  Effect.suspend(() => {
+    const user = context.locals.user;
+    if (!user) return fail('UNAUTHORIZED', 'Vous devez être connecté pour effectuer cette action.');
+    if (user.role !== 'admin') return fail('FORBIDDEN', 'Accès réservé aux administrateurs.');
+    if (user.banned) return fail('FORBIDDEN', 'Compte suspendu.');
+    return Effect.succeed(user);
+  });
+
 /** Session + RBAC better-auth (`userHasPermission`). */
 export const requireActionPermission = (context: ActionAPIContext, permissions: Permissions) =>
   Effect.gen(function* () {

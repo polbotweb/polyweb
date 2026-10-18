@@ -1,6 +1,7 @@
+import { Effect } from "effect";
 import { ActionError, defineAction } from "astro:actions";
 import { z } from "astro/zod";
-import { blogPublicRateLimit } from "./_helpers";
+import { blogPublicRateLimitEffect } from "./_helpers";
 import { extractIp } from "@/lib/audit";
 import { LOCALES } from "@i18n/config";
 import {
@@ -33,8 +34,9 @@ function auditContext(context: {
 
 export const subscribeBlogNewsletter = defineAction({
   input: blogSubscriptionSchema,
-  handler: effectHandler((input, context) => actionTry("blog/subscription.subscribeBlogNewsletter", async () => {
-    blogPublicRateLimit(context, "newsletter-subscribe", { window: 3600, max: 10 });
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    yield* blogPublicRateLimitEffect(context, "newsletter-subscribe", { window: 3600, max: 10 });
+    return yield* actionTry("blog/subscription.subscribeBlogNewsletter", async () => {
 
     try {
       await blogNewsletterService.subscribe({
@@ -64,13 +66,15 @@ export const subscribeBlogNewsletter = defineAction({
     }
 
     return { success: true };
+    });
   })),
 });
 
 export const confirmBlogSubscription = defineAction({
   input: blogTokenSchema,
-  handler: effectHandler((input, context) => actionTry("blog/subscription.confirmBlogSubscription", async () => {
-    blogPublicRateLimit(context, "newsletter-confirm", { window: 3600, max: 20 });
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    yield* blogPublicRateLimitEffect(context, "newsletter-confirm", { window: 3600, max: 20 });
+    return yield* actionTry("blog/subscription.confirmBlogSubscription", async () => {
     await blogNewsletterService.confirm({
       token: input.token,
       audit: auditContext(context),
@@ -78,13 +82,15 @@ export const confirmBlogSubscription = defineAction({
 
     // Deliberately state-independent for the public Action API.
     return { success: true };
+    });
   })),
 });
 
 export const unsubscribeBlogNewsletter = defineAction({
   input: blogTokenSchema,
-  handler: effectHandler((input, context) => actionTry("blog/subscription.unsubscribeBlogNewsletter", async () => {
-    blogPublicRateLimit(context, "newsletter-unsubscribe", { window: 3600, max: 20 });
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    yield* blogPublicRateLimitEffect(context, "newsletter-unsubscribe", { window: 3600, max: 20 });
+    return yield* actionTry("blog/subscription.unsubscribeBlogNewsletter", async () => {
     await blogNewsletterService.unsubscribe({
       token: input.token,
       audit: auditContext(context),
@@ -92,6 +98,7 @@ export const unsubscribeBlogNewsletter = defineAction({
 
     // Deliberately state-independent for the public Action API.
     return { success: true };
+    });
   })),
 });
 

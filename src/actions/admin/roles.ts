@@ -1,7 +1,8 @@
+import { Effect } from "effect";
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
-import { assertAdmin, adminRateLimit, auditAdmin } from "./_helpers";
-import { actionTry, effectHandler } from "@/lib/effect/action";
+import { auditAdmin } from "./_helpers";
+import { actionTry, effectHandler, requireAdmin, actionRateLimit } from "@/lib/effect/action";
 
 /**
  * Org role management actions — thin wrappers around better-auth's native
@@ -14,8 +15,9 @@ export const listOrgRoles = defineAction({
   input: z.object({
     organizationId: z.string().min(1, "L'identifiant de l'organisation est requis."),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/roles.listOrgRoles", async () => {
-    assertAdmin(context);
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    yield* requireAdmin(context);
+    return yield* actionTry("admin/roles.listOrgRoles", async () => {
 
     const { auth } = await import("@/lib/auth");
     const result = await auth.api.listOrgRoles({
@@ -24,6 +26,7 @@ export const listOrgRoles = defineAction({
     });
 
     return result;
+    });
   })),
 });
 
@@ -38,9 +41,10 @@ export const createOrgRole = defineAction({
       .regex(/^[a-z0-9-]+$/, "Le nom du rôle ne peut contenir que des lettres minuscules, chiffres et tirets."),
     permission: z.record(z.string(), z.array(z.string())),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/roles.createOrgRole", async () => {
-    const user = assertAdmin(context);
-    adminRateLimit(context, user.id, "org-roles");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireAdmin(context);
+    yield* actionRateLimit(user.id, "org-roles");
+    return yield* actionTry("admin/roles.createOrgRole", async () => {
 
     const { auth } = await import("@/lib/auth");
 
@@ -68,6 +72,7 @@ export const createOrgRole = defineAction({
       const msg = err instanceof Error ? err.message : "Erreur lors de la création du rôle.";
       throw new ActionError({ code: "BAD_REQUEST", message: msg });
     }
+    });
   })),
 });
 
@@ -90,9 +95,10 @@ export const updateOrgRole = defineAction({
     (d) => d.roleId || d.roleName,
     "roleId ou roleName est requis.",
   ),
-  handler: effectHandler((input, context) => actionTry("admin/roles.updateOrgRole", async () => {
-    const user = assertAdmin(context);
-    adminRateLimit(context, user.id, "org-roles");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireAdmin(context);
+    yield* actionRateLimit(user.id, "org-roles");
+    return yield* actionTry("admin/roles.updateOrgRole", async () => {
 
     const { auth } = await import("@/lib/auth");
 
@@ -122,6 +128,7 @@ export const updateOrgRole = defineAction({
       const msg = err instanceof Error ? err.message : "Erreur lors de la mise à jour du rôle.";
       throw new ActionError({ code: "BAD_REQUEST", message: msg });
     }
+    });
   })),
 });
 
@@ -134,9 +141,10 @@ export const deleteOrgRole = defineAction({
     (d) => d.roleId || d.roleName,
     "roleId ou roleName est requis.",
   ),
-  handler: effectHandler((input, context) => actionTry("admin/roles.deleteOrgRole", async () => {
-    const user = assertAdmin(context);
-    adminRateLimit(context, user.id, "org-roles");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireAdmin(context);
+    yield* actionRateLimit(user.id, "org-roles");
+    return yield* actionTry("admin/roles.deleteOrgRole", async () => {
 
     const { auth } = await import("@/lib/auth");
 
@@ -165,6 +173,7 @@ export const deleteOrgRole = defineAction({
       const msg = err instanceof Error ? err.message : "Erreur lors de la suppression du rôle.";
       throw new ActionError({ code: "BAD_REQUEST", message: msg });
     }
+    });
   })),
 });
 
@@ -177,9 +186,10 @@ export const updateMemberRole = defineAction({
     ]),
     organizationId: z.string().optional(),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/roles.updateMemberRole", async () => {
-    const user = assertAdmin(context);
-    adminRateLimit(context, user.id, "org-roles");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireAdmin(context);
+    yield* actionRateLimit(user.id, "org-roles");
+    return yield* actionTry("admin/roles.updateMemberRole", async () => {
 
     const { auth } = await import("@/lib/auth");
 
@@ -207,5 +217,6 @@ export const updateMemberRole = defineAction({
       const msg = err instanceof Error ? err.message : "Erreur lors de la mise à jour du rôle du membre.";
       throw new ActionError({ code: "BAD_REQUEST", message: msg });
     }
+    });
   })),
 });

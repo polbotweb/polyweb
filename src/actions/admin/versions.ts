@@ -5,7 +5,7 @@ import { eq, desc, asc } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { pages, pageSections, pageVersions } from "@database/schemas";
 import { invalidateCache } from "@database/cache";
-import { assertPermission, auditAdmin } from "./_helpers";
+import { auditAdmin } from "./_helpers";
 import { sanitizeSectionContent } from "./sections";
 import { actionRateLimit, actionTry, effectHandler, requireActionPermission } from "@/lib/effect/action";
 
@@ -92,8 +92,9 @@ export const listPageVersions = defineAction({
   input: z.object({
     pageId: z.string().min(1, "L'identifiant de la page est requis."),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/versions.listPageVersions", async () => {
-    await assertPermission(context, { page: ["read"] });
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    yield* requireActionPermission(context, { page: ["read"] });
+    return yield* actionTry("admin/versions.listPageVersions", async () => {
 
     const db = getDrizzle();
 
@@ -111,6 +112,7 @@ export const listPageVersions = defineAction({
       .limit(100);
 
     return versions;
+    });
   })),
 });
 

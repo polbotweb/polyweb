@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { resolveBlogTenant, auditBlog, blogOrganizationIdSchema, blogPublicRateLimit, invalidateBlogCache, requireBlogPermission } from "./_helpers";
+import { resolveBlogTenant, auditBlog, blogOrganizationIdSchema, invalidateBlogCache, requireBlogPermission, blogPublicRateLimitEffect } from "./_helpers";
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { eq, and, desc, isNull, or } from "drizzle-orm";
@@ -11,8 +11,9 @@ import { actionTry, effectHandler } from "@/lib/effect/action";
 
 export const createBlogReport = defineAction({
   input: blogReportFormSchema,
-  handler: effectHandler((input, context) => actionTry("blog/moderation.createBlogReport", async () => {
-    blogPublicRateLimit(context, "report-create", { window: 600, max: 10 });
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    yield* blogPublicRateLimitEffect(context, "report-create", { window: 600, max: 10 });
+    return yield* actionTry("blog/moderation.createBlogReport", async () => {
     const user = context.locals.user;
     const db = getDrizzle();
 
@@ -80,6 +81,7 @@ export const createBlogReport = defineAction({
 
     invalidateBlogCache();
     return { id: report.id };
+    });
   })),
 });
 
