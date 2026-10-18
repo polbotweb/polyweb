@@ -176,6 +176,10 @@ const canonicalUrl = absoluteUrl(canonicalOverride ?? Astro.url.pathname);
     />
     <Toaster position="bottom-right" />
     {consentData?.isActive && <CookieConsent consent={consentData} />}
+    {/* Styles dynamiques (data-style) appliqués par CSSOM : aucun attribut style= sous CSP stricte. */}
+    <script>
+      import '@/scripts/inline-styles';
+    </script>
     <script>
       import { authClient } from '@/lib/auth-client';
       const btn = document.getElementById('stop-impersonation-btn');

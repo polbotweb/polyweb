@@ -63,13 +63,7 @@ const {
   <!-- Marquee container -->
   <div
     id="feature-25-marquee"
-    class="relative flex flex-col gap-(--gap) overflow-x-clip"
-    style={{
-      "--gap": "1.25rem",
-      "--marquee-duration": "60s",
-      "mask-image": "linear-gradient(to right, transparent, black 6rem, black calc(100% - 6rem), transparent)",
-      "-webkit-mask-image": "linear-gradient(to right, transparent, black 6rem, black calc(100% - 6rem), transparent)",
-    }}
+    class="relative flex flex-col gap-(--gap) overflow-x-clip [--gap:1.25rem] [--marquee-duration:60s] [mask-image:linear-gradient(to_right,transparent,black_6rem,black_calc(100%_-_6rem),transparent)]"
   >
 
     <!-- Row 1: Normal direction -->
@@ -101,7 +95,7 @@ const {
     </div>
 
     <!-- Row 2: Reverse direction -->
-    <div class="feature-25-row flex gap-(--gap)" style={{ "--direction": "reverse" }}>
+    <div class="feature-25-row flex gap-(--gap) [--direction:reverse]">
       {
         [0, 1].map(() => (
           <div class="feature-25-animate flex min-w-full shrink-0 gap-(--gap)">

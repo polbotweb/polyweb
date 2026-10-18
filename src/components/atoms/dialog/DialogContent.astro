@@ -1,4 +1,5 @@
 ---
+import { styleAttr } from "@/lib/ui/inline-style";
 import X from "@tabler/icons/outline/x.svg";
 import type { HTMLAttributes } from "astro/types";
 import { tv } from "tailwind-variants";
@@ -49,7 +50,7 @@ const { class: className, animationDuration = 200, ...rest } = Astro.props;
     class={dialogBackdrop()}
     data-state="closed"
     data-slot="dialog-backdrop"
-    style={{ animationDuration: `${animationDuration}ms` }}
+    {...styleAttr({ animationDuration: `${animationDuration}ms` })}
   >
   </div>
 </slot>
@@ -57,7 +58,7 @@ const { class: className, animationDuration = 200, ...rest } = Astro.props;
 <dialog
   class={dialogContent({ class: className })}
   data-state="closed"
-  style={{ animationDuration: `${animationDuration}ms` }}
+  {...styleAttr({ animationDuration: `${animationDuration}ms` })}
   {...rest}
   data-slot="dialog-content"
 >

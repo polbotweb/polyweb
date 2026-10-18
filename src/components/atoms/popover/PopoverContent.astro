@@ -1,4 +1,5 @@
 ---
+import { hiddenUntilScript } from "@/lib/ui/inline-style";
 import type { HTMLAttributes } from "astro/types";
 import { tv } from "tailwind-variants";
 
@@ -91,10 +92,9 @@ const {
   aria-label={ariaLabel}
   aria-labelledby={ariaLabelledBy}
   tabindex="-1"
-  style={{
-    display: "none",
+  {...hiddenUntilScript({
     animationDuration: `${animationDuration}ms`,
-  }}
+  })}
   {...rest}
   data-slot="popover-content"
 >

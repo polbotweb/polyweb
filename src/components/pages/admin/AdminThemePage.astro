@@ -1,4 +1,5 @@
 ---
+import { styleText } from "@/lib/ui/inline-style";
 /**
  * AdminThemePage — Novice-friendly theme editor with color pickers,
  * font selects, border-radius presets, and full Starwind token support.
@@ -102,7 +103,7 @@ function tokenLabel(key: string): string {
                   {(['primary', 'secondary', 'accent', 'background', 'foreground'] as const).map((k) => (
                     <span
                       class="inline-block size-4 rounded-full border border-border"
-                      style={`background: ${lightTokens[k]};`}
+                      {...styleText(`background: ${lightTokens[k]};`)}
                       title={k}
                     />
                   ))}
@@ -127,7 +128,7 @@ function tokenLabel(key: string): string {
                         <SelectGroup>
                           {FONT_OPTIONS.map((f) => (
                             <SelectItem value={f.value}>
-                              <span style={`font-family: ${f.value};`}>{f.label}</span>
+                              <span {...styleText(`font-family: ${f.value};`)}>{f.label}</span>
                             </SelectItem>
                           ))}
                         </SelectGroup>
@@ -144,7 +145,7 @@ function tokenLabel(key: string): string {
                         <SelectGroup>
                           {FONT_OPTIONS.map((f) => (
                             <SelectItem value={f.value}>
-                              <span style={`font-family: ${f.value};`}>{f.label}</span>
+                              <span {...styleText(`font-family: ${f.value};`)}>{f.label}</span>
                             </SelectItem>
                           ))}
                         </SelectGroup>
@@ -164,7 +165,7 @@ function tokenLabel(key: string): string {
                               <span class="flex items-center gap-2">
                                 <span
                                   class="inline-block size-4 border-2 border-foreground"
-                                  style={`border-radius: ${r.value};`}
+                                  {...styleText(`border-radius: ${r.value};`)}
                                 />
                                 {r.label}
                               </span>
@@ -183,85 +184,85 @@ function tokenLabel(key: string): string {
                 <div class="theme-preview grid grid-cols-1 gap-4 lg:grid-cols-2">
                   {/* Mini site mockup — light */}
                   <div class="preview-pane overflow-hidden rounded-xl border-2 border-border/60 shadow-sm transition-all duration-300" data-preview-mode="light"
-                    style={`background: ${lightTokens['background']}; color: ${lightTokens['foreground']}; font-family: ${currentBody}; --pv-radius: ${currentRadius};`}>
+                    {...styleText(`background: ${lightTokens['background']}; color: ${lightTokens['foreground']}; font-family: ${currentBody}; --pv-radius: ${currentRadius};`)}>
                     {/* Top bar */}
                     <div class="flex items-center justify-between border-b px-4 py-2" data-pv="border-bar"
-                      style={`border-color: ${lightTokens['border']};`}>
+                      {...styleText(`border-color: ${lightTokens['border']};`)}>
                       <span class="text-xs font-bold tracking-wide uppercase opacity-60" data-pv="heading-font"
-                        style={`font-family: ${currentFont};`}>{cms.lightMode}</span>
+                        {...styleText(`font-family: ${currentFont};`)}>{cms.lightMode}</span>
                       <div class="flex gap-1.5">
                         <span class="inline-block size-2 rounded-full" data-pv="primary-dot"
-                          style={`background: ${lightTokens['primary']};`}/>
+                          {...styleText(`background: ${lightTokens['primary']};`)}/>
                         <span class="inline-block size-2 rounded-full" data-pv="secondary-dot"
-                          style={`background: ${lightTokens['secondary']};`}/>
+                          {...styleText(`background: ${lightTokens['secondary']};`)}/>
                         <span class="inline-block size-2 rounded-full" data-pv="accent-dot"
-                          style={`background: ${lightTokens['accent']};`}/>
+                          {...styleText(`background: ${lightTokens['accent']};`)}/>
                       </div>
                     </div>
                     <div class="space-y-3 p-4">
                       {/* Heading + primary badge */}
                       <div class="flex items-center justify-between">
                         <span class="text-sm font-semibold" data-pv="heading-font"
-                          style={`font-family: ${currentFont};`}>Heading</span>
+                          {...styleText(`font-family: ${currentFont};`)}>Heading</span>
                         <span class="px-2 py-0.5 text-[10px] font-bold" data-pv="primary-bg"
-                          style={`background: ${lightTokens['primary']}; color: ${lightTokens['primary-foreground']}; border-radius: var(--pv-radius);`}>
+                          {...styleText(`background: ${lightTokens['primary']}; color: ${lightTokens['primary-foreground']}; border-radius: var(--pv-radius);`)}>
                           Primary
                         </span>
                       </div>
                       {/* Card */}
                       <div class="p-3 text-xs" data-pv="card"
-                        style={`background: ${lightTokens['card']}; color: ${lightTokens['card-foreground']}; border: 1px solid ${lightTokens['border']}; border-radius: var(--pv-radius);`}>
-                        <p class="font-medium" data-pv="heading-font" style={`font-family: ${currentFont};`}>Card title</p>
+                        {...styleText(`background: ${lightTokens['card']}; color: ${lightTokens['card-foreground']}; border: 1px solid ${lightTokens['border']}; border-radius: var(--pv-radius);`)}>
+                        <p class="font-medium" data-pv="heading-font" {...styleText(`font-family: ${currentFont};`)}>Card title</p>
                         <p class="mt-1" data-pv="muted-text"
-                          style={`color: ${lightTokens['muted-foreground']};`}>Muted description text</p>
+                          {...styleText(`color: ${lightTokens['muted-foreground']};`)}>Muted description text</p>
                       </div>
                       {/* Secondary + Accent badges */}
                       <div class="flex items-center gap-2">
                         <span class="px-2 py-0.5 text-[10px] font-medium" data-pv="secondary-bg"
-                          style={`background: ${lightTokens['secondary']}; color: ${lightTokens['secondary-foreground']}; border-radius: var(--pv-radius);`}>
+                          {...styleText(`background: ${lightTokens['secondary']}; color: ${lightTokens['secondary-foreground']}; border-radius: var(--pv-radius);`)}>
                           Secondary
                         </span>
                         <span class="px-2 py-0.5 text-[10px] font-medium" data-pv="accent-bg"
-                          style={`background: ${lightTokens['accent']}; color: ${lightTokens['accent-foreground']}; border-radius: var(--pv-radius);`}>
+                          {...styleText(`background: ${lightTokens['accent']}; color: ${lightTokens['accent-foreground']}; border-radius: var(--pv-radius);`)}>
                           Accent
                         </span>
                       </div>
                       {/* Button + Input mockups */}
                       <div class="flex items-center gap-2">
                         <span class="px-3 py-1 text-[10px] font-medium shadow-sm" data-pv="primary-bg"
-                          style={`background: ${lightTokens['primary']}; color: ${lightTokens['primary-foreground']}; border-radius: var(--pv-radius);`}>
+                          {...styleText(`background: ${lightTokens['primary']}; color: ${lightTokens['primary-foreground']}; border-radius: var(--pv-radius);`)}>
                           Button
                         </span>
                         <span class="flex-1 px-2 py-1 text-[10px]" data-pv="input-mock"
-                          style={`background: ${lightTokens['background']}; color: ${lightTokens['muted-foreground']}; border: 1px solid ${lightTokens['border']}; border-radius: var(--pv-radius);`}>
+                          {...styleText(`background: ${lightTokens['background']}; color: ${lightTokens['muted-foreground']}; border: 1px solid ${lightTokens['border']}; border-radius: var(--pv-radius);`)}>
                           Input placeholder…
                         </span>
                       </div>
                       {/* Ring + focus indicator */}
                       <div class="flex items-center gap-2">
                         <span class="px-2 py-0.5 text-[10px]" data-pv="ring-mock"
-                          style={`border: 2px solid ${lightTokens['outline']}; border-radius: var(--pv-radius); color: ${lightTokens['foreground']};`}>
+                          {...styleText(`border: 2px solid ${lightTokens['outline']}; border-radius: var(--pv-radius); color: ${lightTokens['foreground']};`)}>
                           Focus ring
                         </span>
                         <span class="inline-block h-3 flex-1" data-pv="sidebar-bg"
-                          style={`background: ${lightTokens['sidebar-background']}; border-radius: var(--pv-radius);`}/>
+                          {...styleText(`background: ${lightTokens['sidebar-background']}; border-radius: var(--pv-radius);`)}/>
                       </div>
                       {/* Status row */}
                       <div class="flex flex-wrap gap-1.5">
                         <span class="px-2 py-0.5 text-[10px] font-medium" data-pv="success-bg"
-                          style={`background: ${lightTokens['success']}; color: ${lightTokens['success-foreground']}; border-radius: var(--pv-radius);`}>
+                          {...styleText(`background: ${lightTokens['success']}; color: ${lightTokens['success-foreground']}; border-radius: var(--pv-radius);`)}>
                           Success
                         </span>
                         <span class="px-2 py-0.5 text-[10px] font-medium" data-pv="error-bg"
-                          style={`background: ${lightTokens['error']}; color: ${lightTokens['error-foreground']}; border-radius: var(--pv-radius);`}>
+                          {...styleText(`background: ${lightTokens['error']}; color: ${lightTokens['error-foreground']}; border-radius: var(--pv-radius);`)}>
                           Error
                         </span>
                         <span class="px-2 py-0.5 text-[10px] font-medium" data-pv="warning-bg"
-                          style={`background: ${lightTokens['warning']}; color: ${lightTokens['warning-foreground']}; border-radius: var(--pv-radius);`}>
+                          {...styleText(`background: ${lightTokens['warning']}; color: ${lightTokens['warning-foreground']}; border-radius: var(--pv-radius);`)}>
                           Warning
                         </span>
                         <span class="px-2 py-0.5 text-[10px] font-medium" data-pv="info-bg"
-                          style={`background: ${lightTokens['info'] ?? lightTokens['primary']}; color: ${lightTokens['info-foreground'] ?? lightTokens['primary-foreground']}; border-radius: var(--pv-radius);`}>
+                          {...styleText(`background: ${lightTokens['info'] ?? lightTokens['primary']}; color: ${lightTokens['info-foreground'] ?? lightTokens['primary-foreground']}; border-radius: var(--pv-radius);`)}>
                           Info
                         </span>
                       </div>
@@ -269,85 +270,85 @@ function tokenLabel(key: string): string {
                   </div>
                   {/* Mini site mockup — dark */}
                   <div class="preview-pane overflow-hidden rounded-xl border-2 border-border/60 shadow-sm transition-all duration-300" data-preview-mode="dark"
-                    style={`background: ${darkTokens['background']}; color: ${darkTokens['foreground']}; font-family: ${currentBody}; --pv-radius: ${currentRadius};`}>
+                    {...styleText(`background: ${darkTokens['background']}; color: ${darkTokens['foreground']}; font-family: ${currentBody}; --pv-radius: ${currentRadius};`)}>
                     {/* Top bar */}
                     <div class="flex items-center justify-between border-b px-4 py-2" data-pv="border-bar"
-                      style={`border-color: ${darkTokens['border']};`}>
+                      {...styleText(`border-color: ${darkTokens['border']};`)}>
                       <span class="text-xs font-bold tracking-wide uppercase opacity-60" data-pv="heading-font"
-                        style={`font-family: ${currentFont};`}>{cms.darkMode}</span>
+                        {...styleText(`font-family: ${currentFont};`)}>{cms.darkMode}</span>
                       <div class="flex gap-1.5">
                         <span class="inline-block size-2 rounded-full" data-pv="primary-dot"
-                          style={`background: ${darkTokens['primary']};`}/>
+                          {...styleText(`background: ${darkTokens['primary']};`)}/>
                         <span class="inline-block size-2 rounded-full" data-pv="secondary-dot"
-                          style={`background: ${darkTokens['secondary']};`}/>
+                          {...styleText(`background: ${darkTokens['secondary']};`)}/>
                         <span class="inline-block size-2 rounded-full" data-pv="accent-dot"
-                          style={`background: ${darkTokens['accent']};`}/>
+                          {...styleText(`background: ${darkTokens['accent']};`)}/>
                       </div>
                     </div>
                     <div class="space-y-3 p-4">
                       {/* Heading + primary badge */}
                       <div class="flex items-center justify-between">
                         <span class="text-sm font-semibold" data-pv="heading-font"
-                          style={`font-family: ${currentFont};`}>Heading</span>
+                          {...styleText(`font-family: ${currentFont};`)}>Heading</span>
                         <span class="px-2 py-0.5 text-[10px] font-bold" data-pv="primary-bg"
-                          style={`background: ${darkTokens['primary']}; color: ${darkTokens['primary-foreground']}; border-radius: var(--pv-radius);`}>
+                          {...styleText(`background: ${darkTokens['primary']}; color: ${darkTokens['primary-foreground']}; border-radius: var(--pv-radius);`)}>
                           Primary
                         </span>
                       </div>
                       {/* Card */}
                       <div class="p-3 text-xs" data-pv="card"
-                        style={`background: ${darkTokens['card']}; color: ${darkTokens['card-foreground']}; border: 1px solid ${darkTokens['border']}; border-radius: var(--pv-radius);`}>
-                        <p class="font-medium" data-pv="heading-font" style={`font-family: ${currentFont};`}>Card title</p>
+                        {...styleText(`background: ${darkTokens['card']}; color: ${darkTokens['card-foreground']}; border: 1px solid ${darkTokens['border']}; border-radius: var(--pv-radius);`)}>
+                        <p class="font-medium" data-pv="heading-font" {...styleText(`font-family: ${currentFont};`)}>Card title</p>
                         <p class="mt-1" data-pv="muted-text"
-                          style={`color: ${darkTokens['muted-foreground']};`}>Muted description text</p>
+                          {...styleText(`color: ${darkTokens['muted-foreground']};`)}>Muted description text</p>
                       </div>
                       {/* Secondary + Accent badges */}
                       <div class="flex items-center gap-2">
                         <span class="px-2 py-0.5 text-[10px] font-medium" data-pv="secondary-bg"
-                          style={`background: ${darkTokens['secondary']}; color: ${darkTokens['secondary-foreground']}; border-radius: var(--pv-radius);`}>
+                          {...styleText(`background: ${darkTokens['secondary']}; color: ${darkTokens['secondary-foreground']}; border-radius: var(--pv-radius);`)}>
                           Secondary
                         </span>
                         <span class="px-2 py-0.5 text-[10px] font-medium" data-pv="accent-bg"
-                          style={`background: ${darkTokens['accent']}; color: ${darkTokens['accent-foreground']}; border-radius: var(--pv-radius);`}>
+                          {...styleText(`background: ${darkTokens['accent']}; color: ${darkTokens['accent-foreground']}; border-radius: var(--pv-radius);`)}>
                           Accent
                         </span>
                       </div>
                       {/* Button + Input mockups */}
                       <div class="flex items-center gap-2">
                         <span class="px-3 py-1 text-[10px] font-medium shadow-sm" data-pv="primary-bg"
-                          style={`background: ${darkTokens['primary']}; color: ${darkTokens['primary-foreground']}; border-radius: var(--pv-radius);`}>
+                          {...styleText(`background: ${darkTokens['primary']}; color: ${darkTokens['primary-foreground']}; border-radius: var(--pv-radius);`)}>
                           Button
                         </span>
                         <span class="flex-1 px-2 py-1 text-[10px]" data-pv="input-mock"
-                          style={`background: ${darkTokens['background']}; color: ${darkTokens['muted-foreground']}; border: 1px solid ${darkTokens['border']}; border-radius: var(--pv-radius);`}>
+                          {...styleText(`background: ${darkTokens['background']}; color: ${darkTokens['muted-foreground']}; border: 1px solid ${darkTokens['border']}; border-radius: var(--pv-radius);`)}>
                           Input placeholder…
                         </span>
                       </div>
                       {/* Ring + focus indicator */}
                       <div class="flex items-center gap-2">
                         <span class="px-2 py-0.5 text-[10px]" data-pv="ring-mock"
-                          style={`border: 2px solid ${darkTokens['outline']}; border-radius: var(--pv-radius); color: ${darkTokens['foreground']};`}>
+                          {...styleText(`border: 2px solid ${darkTokens['outline']}; border-radius: var(--pv-radius); color: ${darkTokens['foreground']};`)}>
                           Focus ring
                         </span>
                         <span class="inline-block h-3 flex-1" data-pv="sidebar-bg"
-                          style={`background: ${darkTokens['sidebar-background']}; border-radius: var(--pv-radius);`}/>
+                          {...styleText(`background: ${darkTokens['sidebar-background']}; border-radius: var(--pv-radius);`)}/>
                       </div>
                       {/* Status row */}
                       <div class="flex flex-wrap gap-1.5">
                         <span class="px-2 py-0.5 text-[10px] font-medium" data-pv="success-bg"
-                          style={`background: ${darkTokens['success']}; color: ${darkTokens['success-foreground']}; border-radius: var(--pv-radius);`}>
+                          {...styleText(`background: ${darkTokens['success']}; color: ${darkTokens['success-foreground']}; border-radius: var(--pv-radius);`)}>
                           Success
                         </span>
                         <span class="px-2 py-0.5 text-[10px] font-medium" data-pv="error-bg"
-                          style={`background: ${darkTokens['error']}; color: ${darkTokens['error-foreground']}; border-radius: var(--pv-radius);`}>
+                          {...styleText(`background: ${darkTokens['error']}; color: ${darkTokens['error-foreground']}; border-radius: var(--pv-radius);`)}>
                           Error
                         </span>
                         <span class="px-2 py-0.5 text-[10px] font-medium" data-pv="warning-bg"
-                          style={`background: ${darkTokens['warning']}; color: ${darkTokens['warning-foreground']}; border-radius: var(--pv-radius);`}>
+                          {...styleText(`background: ${darkTokens['warning']}; color: ${darkTokens['warning-foreground']}; border-radius: var(--pv-radius);`)}>
                           Warning
                         </span>
                         <span class="px-2 py-0.5 text-[10px] font-medium" data-pv="info-bg"
-                          style={`background: ${darkTokens['info'] ?? darkTokens['primary']}; color: ${darkTokens['info-foreground'] ?? darkTokens['primary-foreground']}; border-radius: var(--pv-radius);`}>
+                          {...styleText(`background: ${darkTokens['info'] ?? darkTokens['primary']}; color: ${darkTokens['info-foreground'] ?? darkTokens['primary-foreground']}; border-radius: var(--pv-radius);`)}>
                           Info
                         </span>
                       </div>
@@ -423,7 +424,7 @@ function tokenLabel(key: string): string {
                                       />
                                       <span
                                         class="token-swatch inline-block size-8 rounded-md border border-border shadow-sm transition-shadow hover:shadow-md"
-                                        style={`background: ${oklchVal};`}
+                                        {...styleText(`background: ${oklchVal};`)}
                                         data-swatch={`${mode}:${tokenKey}`}
                                       />
                                     </label>

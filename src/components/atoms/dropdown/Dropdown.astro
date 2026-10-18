@@ -29,6 +29,7 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
 </div>
 
 <script>
+  import { applyInlineStyle } from "@/lib/ui/inline-style-dom";
   class DropdownHandler {
     private dropdown: HTMLElement;
     private trigger: HTMLElement | null;
@@ -79,6 +80,8 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
       if (!this.trigger || !this.content) return;
 
       // Get animation duration from inline styles if available
+      // data-style (CSP) appliqué ici aussi : indépendant de l'ordre des scripts.
+      applyInlineStyle(this.content);
       const animationDurationString = this.content.style.animationDuration;
       if (animationDurationString.endsWith("ms")) {
         this.animationDuration = parseFloat(animationDurationString);

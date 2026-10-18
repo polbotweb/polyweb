@@ -94,6 +94,30 @@ Définis dans `src/middleware.ts` et appliqués à **toutes les réponses** :
 | `X-XSS-Protection` | `0` | Désactive filtre XSS legacy (peut causer des bugs) |
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` | Force HTTPS |
 
+### CSP stricte et styles dynamiques (aucun `style=`)
+
+La CSP Astro (`astro.config.mjs`, en-tête de réponse) n'autorise **ni `'unsafe-inline'` ni
+`'unsafe-hashes'`** pour `style-src` ; les hashes ne couvrant pas les attributs, tout
+attribut HTML `style="…"` serait bloqué (Lighthouse « Best Practices »). Règles :
+
+| Cas | Mécanisme | Fichier |
+| :-- | :-- | :-- |
+| Valeur statique (`--stagger: 1`, `--gap`, masque, largeur sidebar, géométrie switch) | classe Tailwind arbitraire (`[--stagger:1]`) ou CSS du composant | composant |
+| Valeur dynamique (particules, index, durée en prop, aperçus du thème) | `styleAttr({...})` / `styleText("a: b")` → `data-style`, appliqué en CSSOM (`style.setProperty`, non soumis à `style-src`) | `src/lib/ui/inline-style.ts`, `src/lib/ui/inline-style-dom.ts`, `src/scripts/inline-styles.ts` |
+| Contenu masqué jusqu'au script (popover, select, menu, onglets de langue admin) | `hiddenUntilScript()` : attribut `hidden` (pas de flash sans JS) + `display:none` en CSSOM, puis `hidden` retiré | idem |
+| Ratio d'aspect courant | classes `aspect-video`, `aspect-[4/3]`… ; ratio arbitraire via `styleAttr` | `AspectRatio.astro` |
+| Accordéon (pas d'animation au chargement) | règle CSS `:not([data-animated])`, attribut posé par le script au premier basculement | `AccordionContent.astro` |
+
+Les valeurs sont filtrées (propriété `--x`/`kebab-case` uniquement ; `;`, `{}`, `<>`, `\`, `/*`
+rejetés). Les scripts de composants qui lisent leur style à l'initialisation appellent
+`applyInlineStyle(el)` (idempotent) : aucun ordre d'exécution des modules n'est supposé.
+HTML injecté côté client (`innerHTML`) : utiliser `data-style`, l'observateur l'applique.
+
+Régressions : `tests/unit/inline-style.test.ts` (filtres + **aucun `style=` dans
+`src/**/*.astro`**) et `tests/e2e/csp.spec.ts` (aucun événement `securitypolicyviolation`
+sur les pages publiques, `data-style` effectivement appliqués). Les gabarits d'e-mail
+(`src/smtp/`) ne sont pas concernés (pas de CSP côté client mail).
+
 ### SVG XSS Prevention
 
 Les fichiers SVG uploadés (`/uploads/*.svg`) sont servis avec :

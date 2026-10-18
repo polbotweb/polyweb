@@ -1,4 +1,5 @@
 ---
+import { styleAttr } from "@/lib/ui/inline-style";
 import type { HTMLAttributes } from "astro/types";
 import { Icon } from "astro-icon/components";
 import { tv } from "tailwind-variants";
@@ -24,7 +25,7 @@ const { cards = [], class: className, ...rest } = Astro.props;
   {cards.map((card, i) => (
     <div
       class="group/card bg-card ring-border relative overflow-hidden rounded-2xl p-6 ring-1 transition-all duration-300"
-      style={`animation: blur-card-enter 0.6s ease-out ${i * 150}ms both;`}
+      {...styleAttr({ animation: `blur-card-enter 0.6s ease-out ${i * 150}ms both` })}
     >
       <div class="relative z-10">
         <div class="bg-primary/10 text-primary mb-4 flex size-12 items-center justify-center rounded-xl">

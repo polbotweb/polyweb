@@ -81,25 +81,24 @@ const {
       <!-- Badge -->
       <a
         href={badgeHref}
-        class="hero-stagger bg-muted/50 text-muted-foreground hover:text-foreground hover:border-foreground/40 mb-6 flex w-fit items-center gap-2 rounded-full border px-3 py-0.5 text-sm transition-colors"
-        style="--stagger: 0"
+        class="hero-stagger bg-muted/50 text-muted-foreground hover:text-foreground hover:border-foreground/40 mb-6 flex w-fit items-center gap-2 rounded-full border px-3 py-0.5 text-sm transition-colors [--stagger:0]"
       >
         <BadgeIcon class="size-4" />
         <span>{badgeText}</span>
       </a>
 
       <!-- Heading -->
-      <h1 class="hero-stagger font-heading text-4xl font-semibold tracking-tight text-pretty @3xl:text-5xl" style="--stagger: 1">
+      <h1 class="hero-stagger font-heading text-4xl font-semibold tracking-tight text-pretty @3xl:text-5xl [--stagger:1]">
         {heading}
       </h1>
 
       <!-- Description -->
-      <p class="hero-stagger text-muted-foreground mt-6 text-lg text-pretty" style="--stagger: 2">
+      <p class="hero-stagger text-muted-foreground mt-6 text-lg text-pretty [--stagger:2]">
         {description}
       </p>
 
       <!-- Buttons -->
-      <div class="hero-stagger mt-8 flex flex-col flex-wrap gap-4 @md:flex-row" style="--stagger: 3">
+      <div class="hero-stagger mt-8 flex flex-col flex-wrap gap-4 @md:flex-row [--stagger:3]">
         <Button variant="primary" class="rounded-full" href={primaryButtonHref}
           >{primaryButtonText}</Button
         >

@@ -1,6 +1,7 @@
 ---
 import type { HTMLTag, Polymorphic } from "astro/types";
 import { tv } from "tailwind-variants";
+import { styleAttr } from "@/lib/ui/inline-style";
 
 type Props<Tag extends HTMLTag> = Polymorphic<{ as: Tag }> & {
   /**
@@ -19,11 +20,24 @@ export const aspectRatio = tv({
 });
 
 const { ratio = 1, class: className, as: Tag = "div", ...rest } = Astro.props;
+
+// Ratios courants en classes (rendu serveur, aucun décalage de mise en page) ; un ratio
+// arbitraire passe par `aspect-ratio` en CSSOM (`styleAttr`) — pas d'attribut style= (CSP).
+const RATIO_CLASSES: Record<string, string> = {
+  "1": "aspect-square",
+  [String(16 / 9)]: "aspect-video",
+  [String(4 / 3)]: "aspect-[4/3]",
+  [String(3 / 2)]: "aspect-[3/2]",
+  [String(21 / 9)]: "aspect-[21/9]",
+  [String(3 / 4)]: "aspect-[3/4]",
+  [String(9 / 16)]: "aspect-[9/16]",
+};
+const ratioClass = RATIO_CLASSES[String(ratio)];
 ---
 
 <div
-  class={aspectRatioWrapper()}
-  style={`padding-bottom: ${100 / ratio}%`}
+  class={aspectRatioWrapper({ class: ratioClass })}
+  {...(ratioClass ? {} : styleAttr({ aspectRatio: String(ratio) }))}
   data-slot="aspect-ratio-wrapper"
 >
   <Tag class={aspectRatio({ class: className })} data-slot="aspect-ratio" {...rest}>

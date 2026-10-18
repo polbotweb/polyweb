@@ -1,4 +1,5 @@
 ---
+import { styleAttr } from "@/lib/ui/inline-style";
 import { Icon } from "astro-icon/components";
 import IconChevronDown from "@tabler/icons/outline/chevron-down.svg";
 import IconMenu from "@tabler/icons/outline/menu-deep.svg";
@@ -170,7 +171,7 @@ const {
                   return (
                     <Collapsible
                       class="group w-full opacity-0"
-                      style={`--link-index: ${index}`}
+                      {...styleAttr({ "--link-index": index })}
                       data-nav-link
                     >
                       <CollapsibleTrigger asChild>
@@ -207,7 +208,7 @@ const {
                     <a
                       href={link.href}
                       class="text-muted-foreground hover:text-foreground -mx-3 flex items-center gap-2 rounded-md px-3 py-2 text-xl opacity-0 transition-colors"
-                      style={`--link-index: ${index}`}
+                      {...styleAttr({ "--link-index": index })}
                       data-nav-link
                     >
                       {link.icon && <Icon name={link.icon} class="size-5 shrink-0" />}

@@ -1,4 +1,5 @@
 ---
+import { styleAttr } from "@/lib/ui/inline-style";
 import type { HTMLAttributes } from "astro/types";
 import { tv } from "tailwind-variants";
 
@@ -118,9 +119,11 @@ const rangeEnd = isRange ? getPercentage(Math.max(...values)) : getPercentage(va
         class={range()}
         data-slot="slider-range"
         data-orientation={orientation}
-        style={orientation === "horizontal"
-          ? `left: ${rangeStart}%; width: ${rangeEnd - rangeStart}%`
-          : `bottom: ${rangeStart}%; height: ${rangeEnd - rangeStart}%`}
+        {...styleAttr(
+          orientation === "horizontal"
+            ? { left: `${rangeStart}%`, width: `${rangeEnd - rangeStart}%` }
+            : { bottom: `${rangeStart}%`, height: `${rangeEnd - rangeStart}%` },
+        )}
       >
       </div>
     </div>
@@ -131,11 +134,11 @@ const rangeEnd = isRange ? getPercentage(Math.max(...values)) : getPercentage(va
           data-slot="slider-thumb"
           data-index={index}
           data-orientation={orientation}
-          style={
+          {...styleAttr(
             orientation === "horizontal"
-              ? `left: ${getPercentage(val)}%`
-              : `bottom: ${getPercentage(val)}%`
-          }
+              ? { left: `${getPercentage(val)}%` }
+              : { bottom: `${getPercentage(val)}%` },
+          )}
           tabindex={disabled ? -1 : 0}
           role="slider"
           aria-label={ariaLabel}

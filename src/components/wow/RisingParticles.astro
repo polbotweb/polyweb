@@ -1,4 +1,5 @@
 ---
+import { styleAttr } from "@/lib/ui/inline-style";
 import type { HTMLAttributes } from "astro/types";
 import { tv } from "tailwind-variants";
 
@@ -87,9 +88,9 @@ const particles = Array.from({ length: particleCount }, (_, i) => {
 <div
   id={uniqueId}
   class={risingParticlesEffect({ class: className })}
-  style={{
+  {...styleAttr({
     "--particle-color": particleColor,
-  }}
+  })}
   {...rest}
 >
   <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
@@ -97,7 +98,7 @@ const particles = Array.from({ length: particleCount }, (_, i) => {
       particles.map((particle) => (
         <span
           class="rising-particle absolute bottom-0 rounded-full"
-          style={{
+          {...styleAttr({
             width: `${particle.size}px`,
             height: `${particle.size}px`,
             left: `${particle.left}%`,
@@ -105,7 +106,7 @@ const particles = Array.from({ length: particleCount }, (_, i) => {
             "--drift": `${particle.drift}px`,
             "--duration": `${particle.duration}s`,
             "--delay": `${particle.delay}s`,
-          }}
+          })}
         />
       ))
     }

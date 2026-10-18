@@ -11,6 +11,7 @@ const { class: className, ...rest } = Astro.props;
 </div>
 
 <script>
+  import { applyInlineStyle } from "@/lib/ui/inline-style-dom";
   // Store instances in a WeakMap to avoid memory leaks
   const dialogInstances = new WeakMap<HTMLElement, DialogHandler>();
   let dialogCounter = 0;
@@ -52,6 +53,8 @@ const { class: className, ...rest } = Astro.props;
 
       // animationDuration is set with inline styles through passed prop to DialogContent
       // if no animationDuration, check data-close-duration
+      // data-style (CSP) appliqué ici aussi : indépendant de l'ordre des scripts.
+      applyInlineStyle(this.dialog);
       const animationDurationString = this.dialog.style.animationDuration;
       if (animationDurationString.endsWith("ms")) {
         this.animationDuration = parseFloat(animationDurationString);
