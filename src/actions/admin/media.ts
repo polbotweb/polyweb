@@ -10,9 +10,10 @@ import { processUpload } from "@/media/upload";
 import { serializeVariants } from "@/media/variants";
 import { deleteUpload } from "@/media/delete";
 import { UPLOAD_DIRS } from "@/media/types";
-import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
+import { auditAdmin } from "./_helpers";
 import { LOCALES } from "@i18n/config";
-import { actionTry, effectHandler } from "@/lib/effect/action";
+import { Effect } from "effect";
+import { actionRateLimit, actionTry, effectHandler, fail, requireActionPermission, runGuard } from "@/lib/effect/action";
 
 const localeEnum = z.enum(LOCALES, {
   message: `La locale doit être l'une des suivantes : ${LOCALES.join(", ")}.`,
@@ -42,89 +43,46 @@ function mediaFileScope(organizationId: string | null) {
     : eq(mediaFiles.organizationId, organizationId);
 }
 
-async function assertMediaPermission(
-  context: Parameters<typeof assertPermission>[0],
-  tenant: MediaTenantContext,
-  permissions: Parameters<typeof assertPermission>[1],
-) {
-  const user = context.locals.user;
-  if (!user) {
-    throw new ActionError({
-      code: "UNAUTHORIZED",
-      message: "Vous devez être connecté pour effectuer cette action.",
-    });
-  }
-  if (user.banned) {
-    throw new ActionError({ code: "FORBIDDEN", message: "Compte suspendu." });
-  }
+type MediaPermissions = Parameters<typeof requireActionPermission>[1];
 
-  if (user.role === "admin") {
-    return user;
-  }
-
-  if (tenant.isOrgContext) {
-    const { auth } = await import("@/lib/auth");
-    const fullOrg = await auth.api.getFullOrganization({
-      query: { organizationId: tenant.organizationId! },
-      headers: context.request.headers,
-    });
-
-    if (!fullOrg) {
-      throw new ActionError({ code: "NOT_FOUND", message: "Organisation introuvable." });
+/** Admin global : passe ; contexte organisation : owner/admin du membre ; puis RBAC better-auth. */
+const requireMediaPermission = (context: Parameters<typeof requireActionPermission>[0], tenant: MediaTenantContext, permissions: MediaPermissions) =>
+  Effect.gen(function* () {
+    const user = context.locals.user;
+    if (!user) return yield* fail("UNAUTHORIZED", "Vous devez être connecté pour effectuer cette action.");
+    if (user.banned) return yield* fail("FORBIDDEN", "Compte suspendu.");
+    if (user.role === "admin") return user;
+    if (tenant.isOrgContext) {
+      const fullOrg = yield* actionTry("auth.getFullOrganization", () =>
+        import("@/lib/auth").then(({ auth }) => auth.api.getFullOrganization({ query: { organizationId: tenant.organizationId! }, headers: context.request.headers })),
+      );
+      if (!fullOrg) return yield* fail("NOT_FOUND", "Organisation introuvable.");
+      const member = (fullOrg.members ?? []).find((item: { userId: string }) => item.userId === user.id);
+      if (!member || (member.role !== "owner" && member.role !== "admin")) {
+        return yield* fail("FORBIDDEN", "Vous devez être propriétaire ou administrateur de cette organisation.");
+      }
     }
+    return yield* requireActionPermission(context, permissions);
+  });
 
-    const member = (fullOrg.members ?? []).find(
-      (item: { userId: string }) => item.userId === user.id,
-    );
+const ownedBy = <T extends { organizationId: string | null }>(op: string, missing: string, foreign: string, load: () => Promise<T[]>, tenant: MediaTenantContext) =>
+  Effect.gen(function* () {
+    const [item] = yield* actionTry(op, load);
+    if (!item) return yield* fail("NOT_FOUND", missing);
+    if ((item.organizationId ?? null) !== tenant.organizationId) return yield* fail("FORBIDDEN", foreign);
+    return item;
+  });
 
-    if (!member || (member.role !== "owner" && member.role !== "admin")) {
-      throw new ActionError({
-        code: "FORBIDDEN",
-        message: "Vous devez être propriétaire ou administrateur de cette organisation.",
-      });
-    }
-  }
+const folderInTenant = (folderId: string, tenant: MediaTenantContext) =>
+  ownedBy("media.folder.tenant", "Dossier introuvable.", "Ce dossier n'appartient pas à ce tenant.", () =>
+    getDrizzle().select({ id: mediaFolders.id, organizationId: mediaFolders.organizationId, parentId: mediaFolders.parentId }).from(mediaFolders).where(eq(mediaFolders.id, folderId)).limit(1), tenant);
 
-  return assertPermission(context, permissions);
-}
+const fileInTenant = (fileId: string, tenant: MediaTenantContext) =>
+  ownedBy("media.file.tenant", "Fichier introuvable.", "Ce fichier n'appartient pas à ce tenant.", () => getDrizzle().select().from(mediaFiles).where(eq(mediaFiles.id, fileId)).limit(1), tenant);
 
-async function assertFolderInTenant(folderId: string, tenant: MediaTenantContext) {
-  const db = getDrizzle();
-  const [folder] = await db
-    .select({ id: mediaFolders.id, organizationId: mediaFolders.organizationId, parentId: mediaFolders.parentId })
-    .from(mediaFolders)
-    .where(eq(mediaFolders.id, folderId))
-    .limit(1);
-
-  if (!folder) {
-    throw new ActionError({ code: "NOT_FOUND", message: "Dossier introuvable." });
-  }
-
-  if ((folder.organizationId ?? null) !== tenant.organizationId) {
-    throw new ActionError({ code: "FORBIDDEN", message: "Ce dossier n'appartient pas à ce tenant." });
-  }
-
-  return folder;
-}
-
-async function assertFileInTenant(fileId: string, tenant: MediaTenantContext) {
-  const db = getDrizzle();
-  const [file] = await db
-    .select()
-    .from(mediaFiles)
-    .where(eq(mediaFiles.id, fileId))
-    .limit(1);
-
-  if (!file) {
-    throw new ActionError({ code: "NOT_FOUND", message: "Fichier introuvable." });
-  }
-
-  if ((file.organizationId ?? null) !== tenant.organizationId) {
-    throw new ActionError({ code: "FORBIDDEN", message: "Ce fichier n'appartient pas à ce tenant." });
-  }
-
-  return file;
-}
+// Adaptateurs Promise (gardes appelées au milieu des corps métier).
+const assertFolderInTenant = (folderId: string, tenant: MediaTenantContext) => runGuard(folderInTenant(folderId, tenant));
+const assertFileInTenant = (fileId: string, tenant: MediaTenantContext) => runGuard(fileInTenant(fileId, tenant));
 
 // ═══════════════════════════════════════════════════════════════════════
 // Folders
@@ -140,10 +98,11 @@ export const createMediaFolder = defineAction({
     parentId: z.string().nullable().optional(),
     organizationId: z.uuid().optional().nullable(),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/media.createMediaFolder", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveMediaTenant(input);
-    const user = await assertMediaPermission(context, tenant, { media: ["upload"] });
-    adminRateLimit(context, user.id, "media");
+    const user = yield* requireMediaPermission(context, tenant, { media: ["upload"] });
+    yield* actionRateLimit(user.id, "media");
+    return yield* actionTry("admin/media.createMediaFolder", async () => {
 
     const db = getDrizzle();
 
@@ -177,6 +136,7 @@ export const createMediaFolder = defineAction({
 
     invalidateCache("media:");
     return created;
+    });
   })),
 });
 
@@ -192,10 +152,11 @@ export const updateMediaFolder = defineAction({
     parentId: z.string().nullable().optional(),
     organizationId: z.uuid().optional().nullable(),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/media.updateMediaFolder", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveMediaTenant(input);
-    const user = await assertMediaPermission(context, tenant, { media: ["upload"] });
-    adminRateLimit(context, user.id, "media");
+    const user = yield* requireMediaPermission(context, tenant, { media: ["upload"] });
+    yield* actionRateLimit(user.id, "media");
+    return yield* actionTry("admin/media.updateMediaFolder", async () => {
 
     const { id, organizationId: _, ...data } = input;
     const db = getDrizzle();
@@ -254,6 +215,7 @@ export const updateMediaFolder = defineAction({
 
     invalidateCache("media:");
     return updated;
+    });
   })),
 });
 
@@ -262,10 +224,11 @@ export const deleteMediaFolder = defineAction({
     id: z.string().min(1, "L'identifiant est requis."),
     organizationId: z.uuid().optional().nullable(),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/media.deleteMediaFolder", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveMediaTenant(input);
-    const user = await assertMediaPermission(context, tenant, { media: ["delete"] });
-    adminRateLimit(context, user.id, "media");
+    const user = yield* requireMediaPermission(context, tenant, { media: ["delete"] });
+    yield* actionRateLimit(user.id, "media");
+    return yield* actionTry("admin/media.deleteMediaFolder", async () => {
 
     const db = getDrizzle();
 
@@ -314,6 +277,7 @@ export const deleteMediaFolder = defineAction({
 
     invalidateCache("media:");
     return { success: true };
+    });
   })),
 });
 
@@ -328,10 +292,11 @@ export const uploadMediaFile = defineAction({
     folderId: z.string().nullable().optional(),
     organizationId: z.uuid().optional().nullable(),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/media.uploadMediaFile", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveMediaTenant(input);
-    const user = await assertMediaPermission(context, tenant, { media: ["upload"] });
-    adminRateLimit(context, user.id, "media");
+    const user = yield* requireMediaPermission(context, tenant, { media: ["upload"] });
+    yield* actionRateLimit(user.id, "media");
+    return yield* actionTry("admin/media.uploadMediaFile", async () => {
 
     const db = getDrizzle();
 
@@ -376,6 +341,7 @@ export const uploadMediaFile = defineAction({
 
     invalidateCache("media:");
     return created;
+    });
   })),
 });
 
@@ -393,10 +359,11 @@ export const renameMediaFile = defineAction({
       ),
     organizationId: z.uuid().optional().nullable(),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/media.renameMediaFile", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveMediaTenant(input);
-    const user = await assertMediaPermission(context, tenant, { media: ["upload"] });
-    adminRateLimit(context, user.id, "media");
+    const user = yield* requireMediaPermission(context, tenant, { media: ["upload"] });
+    yield* actionRateLimit(user.id, "media");
+    return yield* actionTry("admin/media.renameMediaFile", async () => {
 
     const db = getDrizzle();
 
@@ -459,6 +426,7 @@ export const renameMediaFile = defineAction({
 
     invalidateCache("media:");
     return updated;
+    });
   })),
 });
 
@@ -468,10 +436,11 @@ export const moveMediaFile = defineAction({
     folderId: z.string().nullable(),
     organizationId: z.uuid().optional().nullable(),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/media.moveMediaFile", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveMediaTenant(input);
-    const user = await assertMediaPermission(context, tenant, { media: ["upload"] });
-    adminRateLimit(context, user.id, "media");
+    const user = yield* requireMediaPermission(context, tenant, { media: ["upload"] });
+    yield* actionRateLimit(user.id, "media");
+    return yield* actionTry("admin/media.moveMediaFile", async () => {
 
     const db = getDrizzle();
 
@@ -499,6 +468,7 @@ export const moveMediaFile = defineAction({
 
     invalidateCache("media:");
     return updated;
+    });
   })),
 });
 
@@ -507,10 +477,11 @@ export const deleteMediaFile = defineAction({
     id: z.string().min(1, "L'identifiant est requis."),
     organizationId: z.uuid().optional().nullable(),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/media.deleteMediaFile", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveMediaTenant(input);
-    const user = await assertMediaPermission(context, tenant, { media: ["delete"] });
-    adminRateLimit(context, user.id, "media");
+    const user = yield* requireMediaPermission(context, tenant, { media: ["delete"] });
+    yield* actionRateLimit(user.id, "media");
+    return yield* actionTry("admin/media.deleteMediaFile", async () => {
 
     const db = getDrizzle();
 
@@ -534,6 +505,7 @@ export const deleteMediaFile = defineAction({
 
     invalidateCache("media:");
     return { success: true };
+    });
   })),
 });
 
@@ -549,10 +521,11 @@ export const upsertMediaFileAlt = defineAction({
     title: z.string().trim().max(500, "500 caractères maximum.").nullable().optional(),
     organizationId: z.uuid().optional().nullable(),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/media.upsertMediaFileAlt", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveMediaTenant(input);
-    const user = await assertMediaPermission(context, tenant, { media: ["upload"] });
-    adminRateLimit(context, user.id, "media");
+    const user = yield* requireMediaPermission(context, tenant, { media: ["upload"] });
+    yield* actionRateLimit(user.id, "media");
+    return yield* actionTry("admin/media.upsertMediaFileAlt", async () => {
 
     const db = getDrizzle();
 
@@ -598,6 +571,7 @@ export const upsertMediaFileAlt = defineAction({
 
     invalidateCache("media:");
     return result;
+    });
   })),
 });
 
@@ -607,10 +581,11 @@ export const deleteMediaFileAlt = defineAction({
     locale: localeEnum,
     organizationId: z.uuid().optional().nullable(),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/media.deleteMediaFileAlt", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveMediaTenant(input);
-    const user = await assertMediaPermission(context, tenant, { media: ["delete"] });
-    adminRateLimit(context, user.id, "media");
+    const user = yield* requireMediaPermission(context, tenant, { media: ["delete"] });
+    yield* actionRateLimit(user.id, "media");
+    return yield* actionTry("admin/media.deleteMediaFileAlt", async () => {
 
     const db = getDrizzle();
 
@@ -638,5 +613,6 @@ export const deleteMediaFileAlt = defineAction({
 
     invalidateCache("media:");
     return { success: true };
+    });
   })),
 });
