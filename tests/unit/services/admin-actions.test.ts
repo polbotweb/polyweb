@@ -41,7 +41,15 @@ const { permission, assertInTenant, assertLockOwner } = vi.hoisted(() => ({
   assertInTenant: vi.fn(async () => ({ id: "service-1", organizationId: null, status: "DRAFT", providerId: "user-1" })),
   assertLockOwner: vi.fn(async () => undefined),
 }));
-vi.mock("@/modules/services/permissions", () => ({
+vi.mock("@/modules/services/permissions", async () => {
+  const { Effect } = await import("effect");
+  const { actionTry } = await import("@/lib/effect/action");
+  return {
+  // Versions Effect déléguées aux mêmes mocks (les assertions restent valables).
+  requireServicePermission: (...args: unknown[]) => actionTry("test.permission", () => (permission as (...a: unknown[]) => Promise<unknown>)(...args)),
+  serviceInTenant: (...args: unknown[]) => actionTry("test.inTenant", () => (assertInTenant as (...a: unknown[]) => Promise<unknown>)(...args)),
+  publishedServiceInTenant: (...args: unknown[]) => actionTry("test.published", () => (assertInTenant as (...a: unknown[]) => Promise<unknown>)(...args)),
+  serviceRateLimitEffect: () => Effect.void,
   assertServicePermission: permission,
   resolveServiceTenant: (input: { organizationId?: string | null }) => ({ organizationId: input.organizationId ?? null, isOrgContext: Boolean(input.organizationId) }),
   assertServiceInTenant: assertInTenant,
@@ -50,7 +58,8 @@ vi.mock("@/modules/services/permissions", () => ({
   assertServiceTagInTenant: vi.fn(async () => undefined),
   assertServiceMediaInTenant: vi.fn(async () => undefined),
   serviceRateLimit: vi.fn(),
-}));
+  };
+});
 
 import { createService, updateService } from "@/actions/services/service";
 
