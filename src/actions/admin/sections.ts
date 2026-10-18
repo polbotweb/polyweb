@@ -1,13 +1,14 @@
+import { Effect } from "effect";
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { eq, and, inArray } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { pageSections, pages } from "@database/schemas";
 import { invalidateCache } from "@database/cache";
-import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
+import { auditAdmin } from "./_helpers";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { validateSectionContent as validateStructure } from "@/lib/section-schemas";
-import { actionTry, effectHandler } from "@/lib/effect/action";
+import { actionRateLimit, actionTry, effectHandler, requireActionPermission } from "@/lib/effect/action";
 
 /** Maximum total size of serialized section content (500 KB). */
 const MAX_CONTENT_SIZE = 500 * 1024;
@@ -89,9 +90,10 @@ export const createSection = defineAction({
       .optional(),
     isVisible: z.boolean().optional(),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/sections.createSection", async () => {
-    const user = await assertPermission(context, { section: ["create"] });
-    adminRateLimit(context, user.id, "sections");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { section: ["create"] });
+    yield* actionRateLimit(user.id, "sections");
+    return yield* actionTry("admin/sections.createSection", async () => {
 
     const sanitizedContent = sanitizeSectionContent(input.content);
     assertContentSize(sanitizedContent);
@@ -139,6 +141,7 @@ export const createSection = defineAction({
 
     invalidateCache("page:");
     return created;
+    });
   })),
 });
 
@@ -174,9 +177,10 @@ export const updateSection = defineAction({
     isVisible: z.boolean().optional(),
     expectedUpdatedAt: z.string().optional(),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/sections.updateSection", async () => {
-    const user = await assertPermission(context, { section: ["update"] });
-    adminRateLimit(context, user.id, "sections");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { section: ["update"] });
+    yield* actionRateLimit(user.id, "sections");
+    return yield* actionTry("admin/sections.updateSection", async () => {
 
     const { id, expectedUpdatedAt, ...data } = input;
     const updateData: Record<string, unknown> = { ...data };
@@ -241,6 +245,7 @@ export const updateSection = defineAction({
 
     invalidateCache("page:");
     return updated;
+    });
   })),
 });
 
@@ -248,9 +253,10 @@ export const deleteSection = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/sections.deleteSection", async () => {
-    const user = await assertPermission(context, { section: ["delete"] });
-    adminRateLimit(context, user.id, "sections");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { section: ["delete"] });
+    yield* actionRateLimit(user.id, "sections");
+    return yield* actionTry("admin/sections.deleteSection", async () => {
 
     const db = getDrizzle();
     const [deleted] = await db
@@ -273,6 +279,7 @@ export const deleteSection = defineAction({
 
     invalidateCache("page:");
     return { success: true as const };
+    });
   })),
 });
 
@@ -292,9 +299,10 @@ export const reorderSections = defineAction({
         "Les ordres de tri doivent être uniques.",
       ),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/sections.reorderSections", async () => {
-    const user = await assertPermission(context, { section: ["update"] });
-    adminRateLimit(context, user.id, "sections");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { section: ["update"] });
+    yield* actionRateLimit(user.id, "sections");
+    return yield* actionTry("admin/sections.reorderSections", async () => {
 
     const db = getDrizzle();
     await db.transaction(async (tx) => {
@@ -336,5 +344,6 @@ export const reorderSections = defineAction({
 
     invalidateCache("page:");
     return { success: true as const };
+    });
   })),
 });

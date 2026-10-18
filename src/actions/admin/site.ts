@@ -1,12 +1,13 @@
+import { Effect } from "effect";
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { eq } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { siteSettings } from "@database/schemas";
 import { invalidateCache } from "@database/cache";
-import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
+import { auditAdmin } from "./_helpers";
 import { isValidLocale } from "@i18n/utils";
-import { actionTry, effectHandler } from "@/lib/effect/action";
+import { actionRateLimit, actionTry, effectHandler, requireActionPermission } from "@/lib/effect/action";
 
 const urlField = z.string().max(500).refine((v) => !v || /^(https?:\/\/|\/(?!\/))/.test(v), "L'URL doit commencer par http://, https:// ou /").nullable().optional();
 
@@ -36,9 +37,10 @@ export const upsertSiteSettings = defineAction({
     footerNavSecondaryHeading: z.string().trim().max(100).nullable().optional(),
     footerLegalHeading: z.string().trim().max(100).nullable().optional(),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/site.upsertSiteSettings", async () => {
-    const user = await assertPermission(context, { site: ["update"] });
-    adminRateLimit(context, user.id, "site");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { site: ["update"] });
+    yield* actionRateLimit(user.id, "site");
+    return yield* actionTry("admin/site.upsertSiteSettings", async () => {
 
     if (!isValidLocale(input.locale)) {
       throw new ActionError({ code: "BAD_REQUEST", message: "Locale invalide." });
@@ -79,6 +81,7 @@ export const upsertSiteSettings = defineAction({
 
     invalidateCache(`site:settings:${locale}`);
     return result;
+    });
   })),
 });
 
@@ -95,9 +98,10 @@ export const updateSiteSettings = defineAction({
     favicon: urlField,
     ogImage: urlField,
   }),
-  handler: effectHandler((input, context) => actionTry("admin/site.updateSiteSettings", async () => {
-    const user = await assertPermission(context, { site: ["update"] });
-    adminRateLimit(context, user.id, "site");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { site: ["update"] });
+    yield* actionRateLimit(user.id, "site");
+    return yield* actionTry("admin/site.updateSiteSettings", async () => {
 
     const { id, ...data } = input;
     const db = getDrizzle();
@@ -122,5 +126,6 @@ export const updateSiteSettings = defineAction({
 
     invalidateCache(`site:settings:${updated.locale}`);
     return updated;
+    });
   })),
 });

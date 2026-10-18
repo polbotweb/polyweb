@@ -149,7 +149,7 @@ describe('Audit — Hooks integration', () => {
     await auth.api.banUser({ body: { userId: targetUser.id }, headers });
 
     // Filtré sur la cible : d'autres fichiers de tests (auth, auth-plugins) bannissent en parallèle.
-    let entry: Awaited<ReturnType<typeof getLatestAudit>> = null;
+    let entry: typeof auditLog.$inferSelect | null = null;
     for (let i = 0; i < 20 && entry?.resourceId !== targetUser.id; i++) {
       const [row] = await getDrizzle()
         .select()

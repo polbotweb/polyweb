@@ -1,12 +1,13 @@
+import { Effect } from "effect";
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { eq } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { consentSettings } from "@database/schemas";
 import { invalidateCache } from "@database/cache";
-import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
+import { auditAdmin } from "./_helpers";
 import { isValidLocale } from "@i18n/utils";
-import { actionTry, effectHandler } from "@/lib/effect/action";
+import { actionRateLimit, actionTry, effectHandler, requireActionPermission } from "@/lib/effect/action";
 
 export const updateConsentSettings = defineAction({
   input: z.object({
@@ -32,9 +33,10 @@ export const updateConsentSettings = defineAction({
       .optional(),
     isActive: z.boolean().optional(),
   }),
-  handler: effectHandler((input, context) => actionTry("admin/consent.updateConsentSettings", async () => {
-    const user = await assertPermission(context, { site: ["update"] });
-    adminRateLimit(context, user.id, "consent");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { site: ["update"] });
+    yield* actionRateLimit(user.id, "consent");
+    return yield* actionTry("admin/consent.updateConsentSettings", async () => {
 
     if (!isValidLocale(input.locale)) {
       throw new ActionError({ code: "BAD_REQUEST", message: "Locale invalide." });
@@ -70,5 +72,6 @@ export const updateConsentSettings = defineAction({
 
     invalidateCache(`consent:settings:${locale}`);
     return result;
+    });
   })),
 });
