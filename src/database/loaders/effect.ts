@@ -80,7 +80,7 @@ export const MediaLoaderEffect = {
   getMediaFolders: liftLoader('media.getMediaFolders', mediaLoader.getMediaFolders),
   getMediaFoldersList: liftLoader('media.getMediaFoldersList', mediaLoader.getMediaFoldersList),
   getMediaFilesByFolder: liftLoader('media.getMediaFilesByFolder', mediaLoader.getMediaFilesByFolder),
-  getMediaFile: liftLoader('media.getMediaFile', mediaLoader.getMediaFile),
+  getMediaFile: mediaLoader.mediaLoaderEffects.getMediaFile,
   getAllMediaFiles: liftLoader('media.getAllMediaFiles', mediaLoader.getAllMediaFiles),
   getMediaFileCountsByFolder: liftLoader('media.getMediaFileCountsByFolder', mediaLoader.getMediaFileCountsByFolder),
   getMediaStats: liftLoader('media.getMediaStats', mediaLoader.getMediaStats),

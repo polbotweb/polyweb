@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
+import { Effect } from "effect";
 import { getDrizzle } from "@database/drizzle";
 import {
   blogCategories,
@@ -13,6 +14,7 @@ import {
 } from "@database/schemas";
 import type { Locale } from "@i18n/config";
 import type { BlogPostStatus } from "@/lib/blog/constants";
+import { dbTry, runOrThrow } from "@/lib/effect/run";
 
 export interface BlogAdminPostFilters {
   page?: number;
@@ -53,7 +55,12 @@ function tagTenantScope(organizationId: string | null) {
   return organizationId === null ? isNull(blogTags.organizationId) : eq(blogTags.organizationId, organizationId);
 }
 
-export async function getBlogAdminPostData(organizationId: string | null, locale: Locale, filters: BlogAdminPostFilters = {}) {
+/**
+ * Liste admin paginée + statistiques du tenant : page, total et agrégats en parallèle, puis
+ * catégories de la page en une requête groupée.
+ */
+const blogAdminPostDataEffect = (organizationId: string | null, locale: Locale, filters: BlogAdminPostFilters = {}) =>
+  Effect.suspend(() => {
   const db = getDrizzle();
   const displayLocale = filters.translationLocale ?? locale;
   const page = Math.max(1, filters.page ?? 1);
@@ -88,7 +95,12 @@ export async function getBlogAdminPostData(organizationId: string | null, locale
     }
   })();
 
-  const rows = await db
+  return Effect.gen(function* () {
+    const translated = and(eq(blogPostTranslations.postId, blogPosts.id), eq(blogPostTranslations.locale, displayLocale), translationTenantScope(organizationId));
+    const scope = tenantScope(organizationId);
+    const [rows, [{ total }], [{ total: aggregateTotal }], statusRows, [{ views }], [{ featured }], [{ sticky }]] = yield* Effect.all(
+      [
+        dbTry("blogAdmin.posts", () => db
     .select({ post: blogPosts, translation: { id: blogPostTranslations.id, title: blogPostTranslations.title, slug: blogPostTranslations.slug, locale: blogPostTranslations.locale }, author: { id: user.id, name: user.name, image: user.image } })
     .from(blogPosts)
     .innerJoin(blogPostTranslations, and(eq(blogPostTranslations.postId, blogPosts.id), eq(blogPostTranslations.locale, displayLocale), translationTenantScope(organizationId)))
@@ -96,51 +108,70 @@ export async function getBlogAdminPostData(organizationId: string | null, locale
     .where(and(...conditions))
     .orderBy(orderBy, desc(blogPosts.id))
     .limit(limit)
-    .offset(offset);
+    .offset(offset)),
+        dbTry("blogAdmin.postsCount", () => db.select({ total: count() }).from(blogPosts).innerJoin(blogPostTranslations, translated).where(and(...conditions))),
+        dbTry("blogAdmin.statsTotal", () => db.select({ total: count() }).from(blogPosts).where(scope)),
+        dbTry("blogAdmin.statsByStatus", () => db.select({ status: blogPosts.status, count: count() }).from(blogPosts).where(scope).groupBy(blogPosts.status)),
+        dbTry("blogAdmin.statsViews", () => db.select({ views: sql<number>`coalesce(sum(${blogPosts.viewCount}), 0)` }).from(blogPosts).where(scope)),
+        dbTry("blogAdmin.statsFeatured", () => db.select({ featured: count() }).from(blogPosts).where(and(scope, eq(blogPosts.isFeatured, true)))),
+        dbTry("blogAdmin.statsSticky", () => db.select({ sticky: count() }).from(blogPosts).where(and(scope, eq(blogPosts.isSticky, true)))),
+      ],
+      { concurrency: "unbounded" },
+    );
 
-  const [{ total }] = await db.select({ total: count() }).from(blogPosts).innerJoin(blogPostTranslations, and(eq(blogPostTranslations.postId, blogPosts.id), eq(blogPostTranslations.locale, displayLocale), translationTenantScope(organizationId))).where(and(...conditions));
-
-  const postIds = rows.map(({ post }) => post.id);
-  const categoryRows = postIds.length === 0 ? [] : await db
+    const postIds = rows.map(({ post }) => post.id);
+    const categoryRows = postIds.length === 0 ? [] : yield* dbTry("blogAdmin.postCategories", () => db
     .select({ postId: blogPostCategories.postId, id: blogCategories.id, slug: sql<string>`coalesce(${blogCategoryTranslations.slug}, ${blogCategories.slug})`, name: sql<string>`coalesce(${blogCategoryTranslations.name}, ${blogCategories.slug})` })
     .from(blogPostCategories)
     .innerJoin(blogCategories, eq(blogCategories.id, blogPostCategories.categoryId))
     .leftJoin(blogCategoryTranslations, and(eq(blogCategoryTranslations.categoryId, blogCategories.id), eq(blogCategoryTranslations.locale, displayLocale)))
     .where(and(inArray(blogPostCategories.postId, postIds), categoryTenantScope(organizationId)))
-    .orderBy(asc(blogCategories.sortOrder), asc(blogCategories.id));
-  const categoriesByPost = new Map<string, typeof categoryRows>();
-  for (const category of categoryRows) {
-    const list = categoriesByPost.get(category.postId);
-    if (list) list.push(category); else categoriesByPost.set(category.postId, [category]);
-  }
+    .orderBy(asc(blogCategories.sortOrder), asc(blogCategories.id)));
+    const categoriesByPost = new Map<string, typeof categoryRows>();
+    for (const category of categoryRows) {
+      const list = categoriesByPost.get(category.postId);
+      if (list) list.push(category); else categoriesByPost.set(category.postId, [category]);
+    }
+    const items = rows.map((row) => ({ ...row, categories: (categoriesByPost.get(row.post.id) ?? []).map((category) => ({ id: category.id, slug: category.slug, name: category.name })) }));
 
-  const items = rows.map((row) => ({ ...row, categories: (categoriesByPost.get(row.post.id) ?? []).map((category) => ({ id: category.id, slug: category.slug, name: category.name })) }));
+    const stats: BlogAdminAggregateStats = {
+      total: Number(aggregateTotal),
+      published: Number(statusRows.find((row) => row.status === "PUBLISHED")?.count ?? 0),
+      draft: Number(statusRows.find((row) => row.status === "DRAFT")?.count ?? 0),
+      archived: Number(statusRows.find((row) => row.status === "ARCHIVED")?.count ?? 0),
+      deleted: Number(statusRows.find((row) => row.status === "DELETED")?.count ?? 0),
+      featured: Number(featured),
+      sticky: Number(sticky),
+      views: Number(views),
+    };
 
-  const [{ total: aggregateTotal }] = await db.select({ total: count() }).from(blogPosts).where(tenantScope(organizationId));
-  const statusRows = await db.select({ status: blogPosts.status, count: count() }).from(blogPosts).where(tenantScope(organizationId)).groupBy(blogPosts.status);
-  const [{ views }] = await db.select({ views: sql<number>`coalesce(sum(${blogPosts.viewCount}), 0)` }).from(blogPosts).where(tenantScope(organizationId));
-  const [{ featured }] = await db.select({ featured: count() }).from(blogPosts).where(and(tenantScope(organizationId), eq(blogPosts.isFeatured, true)));
-  const [{ sticky }] = await db.select({ sticky: count() }).from(blogPosts).where(and(tenantScope(organizationId), eq(blogPosts.isSticky, true)));
-  const stats: BlogAdminAggregateStats = {
-    total: Number(aggregateTotal),
-    published: Number(statusRows.find((row) => row.status === "PUBLISHED")?.count ?? 0),
-    draft: Number(statusRows.find((row) => row.status === "DRAFT")?.count ?? 0),
-    archived: Number(statusRows.find((row) => row.status === "ARCHIVED")?.count ?? 0),
-    deleted: Number(statusRows.find((row) => row.status === "DELETED")?.count ?? 0),
-    featured: Number(featured),
-    sticky: Number(sticky),
-    views: Number(views),
-  };
+    return { rows: items, meta: { total: Number(total), page, limit, totalPages: Math.ceil(Number(total) / limit), hasNextPage: offset + limit < Number(total), hasPrevPage: page > 1 }, stats };
+  });
+  });
 
-  return { rows: items, meta: { total: Number(total), page, limit, totalPages: Math.ceil(Number(total) / limit), hasNextPage: offset + limit < Number(total), hasPrevPage: page > 1 }, stats };
-}
+const blogAdminAuthorsEffect = (organizationId: string | null) =>
+  dbTry("blogAdmin.authors", () =>
+    getDrizzle().selectDistinct({ id: user.id, name: user.name }).from(user).innerJoin(blogPosts, eq(blogPosts.authorId, user.id)).where(tenantScope(organizationId)).orderBy(asc(user.name)),
+  );
 
-export async function getBlogAdminAuthors(organizationId: string | null) {
-  const db = getDrizzle();
-  return db.selectDistinct({ id: user.id, name: user.name }).from(user).innerJoin(blogPosts, eq(blogPosts.authorId, user.id)).where(tenantScope(organizationId)).orderBy(asc(user.name));
-}
+const blogAdminTagsEffect = (organizationId: string | null, locale: Locale) =>
+  dbTry("blogAdmin.tags", () =>
+    getDrizzle()
+      .select({ id: blogTags.id, slug: blogTags.slug, name: sql<string>`coalesce(${blogTagTranslations.name}, ${blogTags.slug})` })
+      .from(blogTags)
+      .leftJoin(blogTagTranslations, and(eq(blogTagTranslations.tagId, blogTags.id), eq(blogTagTranslations.locale, locale)))
+      .where(tagTenantScope(organizationId))
+      .orderBy(asc(sql<string>`coalesce(${blogTagTranslations.name}, ${blogTags.slug})`)),
+  );
 
-export async function getBlogAdminTags(organizationId: string | null, locale: Locale) {
-  const db = getDrizzle();
-  return db.select({ id: blogTags.id, slug: blogTags.slug, name: sql<string>`coalesce(${blogTagTranslations.name}, ${blogTags.slug})` }).from(blogTags).leftJoin(blogTagTranslations, and(eq(blogTagTranslations.tagId, blogTags.id), eq(blogTagTranslations.locale, locale))).where(tagTenantScope(organizationId)).orderBy(asc(sql<string>`coalesce(${blogTagTranslations.name}, ${blogTags.slug})`));
-}
+/** Lectures admin blog Effect-natives (non mises en cache, comme les exports Promise). */
+export const blogAdminLoaderEffects = {
+  getBlogAdminPostData: blogAdminPostDataEffect,
+  getBlogAdminAuthors: blogAdminAuthorsEffect,
+  getBlogAdminTags: blogAdminTagsEffect,
+};
+
+export const getBlogAdminPostData = (organizationId: string | null, locale: Locale, filters: BlogAdminPostFilters = {}) =>
+  runOrThrow(blogAdminPostDataEffect(organizationId, locale, filters));
+export const getBlogAdminAuthors = (organizationId: string | null) => runOrThrow(blogAdminAuthorsEffect(organizationId));
+export const getBlogAdminTags = (organizationId: string | null, locale: Locale) => runOrThrow(blogAdminTagsEffect(organizationId, locale));
