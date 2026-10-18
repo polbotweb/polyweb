@@ -1,0 +1,94 @@
+---
+/**
+ * Barre d'actions groupées générique (core/bulk) — utilisable par tout module.
+ * Enveloppe la liste : les cases `[data-bulk-item]` (value = id) et `[data-bulk-page]` du slot
+ * pilotent la sélection (page courante uniquement, bornée). Accessibilité : région nommée,
+ * compteur annoncé (aria-live), case « page » à l'état mixte (indeterminate), boutons désactivés
+ * sans sélection, confirmation par dialogue modal natif (focus piégé, Échap = annuler).
+ * L'action serveur reçoit { ids, organizationId, operation } et reste seule juge (permissions, tout ou rien).
+ */
+import type { Locale } from "@i18n/config";
+import { getBulkUiTranslations } from "@/core/bulk/i18n";
+import { DEFAULT_BULK_MAX_ITEMS } from "@/core/bulk";
+
+import type { AdminBulkBarOperation } from "@/core/bulk/ui";
+interface Props { action: string; locale: Locale; organizationId?: string | null; operations: readonly AdminBulkBarOperation[]; max?: number }
+const { action, locale, organizationId = null, operations, max = DEFAULT_BULK_MAX_ITEMS } = Astro.props;
+const t = getBulkUiTranslations(locale);
+---
+<div data-bulk-root data-bulk-action={action} data-organization-id={organizationId ?? ""} data-max={max} data-t={JSON.stringify(t)} class="space-y-3">
+  {operations.length > 0 && (
+    <section aria-label={t.region} class="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/30 p-3" data-bulk-bar>
+      <p class="text-sm font-medium" aria-live="polite" aria-atomic="true" data-bulk-count>{t.none}</p>
+      <div class="flex flex-wrap gap-2">
+        {operations.map((op) => (
+          <button type="button" disabled data-bulk-op={op.id} data-confirm={op.requiresConfirmation ? "true" : "false"} data-label={op.label}
+            class:list={["min-h-11 rounded-md border px-3 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60", { "text-destructive": op.destructive }]}>{op.label}</button>
+        ))}
+        <button type="button" disabled data-bulk-clear class="min-h-11 rounded-md px-3 text-sm underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60">{t.clear}</button>
+      </div>
+    </section>
+  )}
+  <slot />
+</div>
+<script>
+  import { actions } from "astro:actions";
+  import { toast } from "@atoms/toast";
+  import { confirmAdminAction } from "@/core/admin/confirmation";
+  import { clear, emptySelection, pageCheckState, selectedIds, toggle, togglePage, type BulkSelection } from "@/core/bulk/selection";
+  import { formatBulk, type BulkUiTranslations } from "@/core/bulk/i18n";
+
+  for (const root of document.querySelectorAll<HTMLElement>("[data-bulk-root]")) {
+    const t = JSON.parse(root.dataset.t ?? "{}") as BulkUiTranslations;
+    const actionName = root.dataset.bulkAction ?? "";
+    const organizationId = root.dataset.organizationId || null;
+    let selection: BulkSelection = emptySelection(Number(root.dataset.max) || 100);
+    const items = () => [...root.querySelectorAll<HTMLInputElement>("input[data-bulk-item]")];
+    // « Toute la page » = éléments VISIBLES seulement (vue tableau/cartes active, filtres client) :
+    // jamais de sélection implicite d'éléments masqués.
+    const visible = (el: HTMLElement) => (typeof el.checkVisibility === "function" ? el.checkVisibility() : el.offsetParent !== null);
+    const pageIds = () => [...new Set(items().filter(visible).map((input) => input.value))];
+    const count = root.querySelector<HTMLElement>("[data-bulk-count]");
+    const opButtons = [...root.querySelectorAll<HTMLButtonElement>("[data-bulk-op]")];
+    const clearButton = root.querySelector<HTMLButtonElement>("[data-bulk-clear]");
+
+    const render = () => {
+      const n = selection.ids.size;
+      for (const input of items()) input.checked = selection.ids.has(input.value);
+      const state = pageCheckState(selection, pageIds());
+      for (const box of root.querySelectorAll<HTMLInputElement>("input[data-bulk-page]")) { box.checked = state === true; box.indeterminate = state === "mixed"; }
+      if (count) count.textContent = n === 0 ? t.none : formatBulk(t.selected, { count: n });
+      for (const button of [...opButtons, ...(clearButton ? [clearButton] : [])]) button.disabled = n === 0;
+    };
+    const limitReached = (before: BulkSelection, after: BulkSelection, wanted: boolean) => { if (wanted && after.ids.size === before.ids.size) toast.error(formatBulk(t.limit, { count: selection.max })); };
+
+    root.addEventListener("change", (event) => {
+      const target = event.target as HTMLInputElement | null;
+      if (!target) return;
+      if (target.matches("input[data-bulk-item]")) { const before = selection; selection = toggle(selection, target.value); limitReached(before, selection, target.checked); render(); }
+      else if (target.matches("input[data-bulk-page]")) { selection = togglePage(selection, pageIds()); render(); }
+    });
+    clearButton?.addEventListener("click", () => { selection = clear(selection); render(); });
+
+    for (const button of opButtons) button.addEventListener("click", async () => {
+      const ids = selectedIds(selection);
+      if (ids.length === 0) return;
+      const operation = button.dataset.bulkOp ?? "";
+      if (button.dataset.confirm === "true") {
+        const ok = await confirmAdminAction({ title: t.confirmTitle, message: formatBulk(t.confirmMessage, { action: button.dataset.label ?? operation, count: ids.length }), confirmLabel: t.confirm, cancelLabel: t.cancel });
+        if (!ok) { button.focus(); return; }
+      }
+      // Nom d'action plat (« bulkServiceLifecycle ») ou imbriqué (« events.bulk » pour un module généré).
+      const run = actionName.split(".").reduce<unknown>((node, key) => (node as Record<string, unknown> | undefined)?.[key], actions) as ((input: unknown) => Promise<{ data?: { updated?: number }; error?: { message?: string } }>) | undefined;
+      if (typeof run !== "function") return;
+      opButtons.forEach((b) => (b.disabled = true));
+      try {
+        const result = await run({ ids, organizationId, operation });
+        if (result.error) { toast.error(result.error.message || t.error); render(); return; }
+        toast.success(formatBulk(t.success, { count: result.data?.updated ?? ids.length }));
+        window.location.reload();
+      } catch { toast.error(t.error); render(); }
+    });
+    render();
+  }
+</script>

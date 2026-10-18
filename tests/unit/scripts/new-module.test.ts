@@ -45,6 +45,18 @@ describe('scripts/new-module.ts', () => {
     expect(read('loaders/ticket.loader.ts')).toContain('runOrThrow(eventTicketsLoader.byId(id, viewerId))');
     expect(read('actions/index.ts')).toContain('yield* requireEventTicketsPermission(context, ["update"])');
     expect(read('module.ts')).toMatch(/locks: true,[\s\S]*/);
+    // Actions groupées (core/bulk) : action générée, ressource activée, barre générique dans la liste.
+    const bulk = read('actions/bulk.ts');
+    expect(bulk).toContain('runBulkAction({');
+    expect(bulk).toContain('eventTicketsLock.ensureNoneLockedByOther');
+    expect(bulk).toContain('canTransition(eventTicketsWorkflow');
+    expect(read('actions/index.ts')).toContain('bulk: bulkEventTicketsLifecycle,');
+    const resource = read('admin/resource.ts');
+    expect(resource).toContain('bulk: true,');
+    expect(resource).toContain('{ id: "archive", permission: "event-tickets:update", confirmationKey: "event-tickets.bulk.archive" }');
+    const list = readFileSync(join(dir, 'components/event-tickets/admin/EventTicketsAdminList.astro'), 'utf8');
+    expect(list).toContain('<AdminBulkBar action="eventTickets.bulk"');
+    expect(list).toContain('data-bulk-item value={item.id}');
   });
 });
 

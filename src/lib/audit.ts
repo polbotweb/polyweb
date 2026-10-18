@@ -33,7 +33,9 @@ export type AuditAction =
   | "FORM_CREATE" | "FORM_UPDATE" | "FORM_DELETE" | "FORM_SUBMIT" | "FORM_SUBMISSION_DELETE"
   | "PLUGIN_ENABLE" | "PLUGIN_DISABLE" | "PLUGIN_SETTINGS_UPDATE"
   | "SITE_CREATE" | "SITE_UPDATE" | "SITE_DELETE"
-  | "SEARCH_REINDEX";
+  | "SEARCH_REINDEX"
+  // Action groupée générique (core/bulk) des modules générés : l'opération est dans metadata.operation.
+  | "BULK_ACTION";
 
 export interface AuditEventInput { userId?: string | null; action: AuditAction; resource?: string | null; resourceId?: string | null; metadata?: Record<string, unknown> | null; ipAddress?: string | null; userAgent?: string | null; }
 const MAX_METADATA_SIZE = 10 * 1024;
