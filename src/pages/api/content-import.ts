@@ -1,11 +1,12 @@
-import type { APIRoute } from 'astro';
+import { Effect } from 'effect';
 import { z } from 'astro/zod';
 import { eq, and } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { getDrizzle } from '@database/drizzle';
 import { pages, pageSections } from '@database/schemas';
 import { invalidateCache } from '@database/cache';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { apiRoute } from '@/lib/effect/http';
+import { attempt, rateLimit, retryAfterSeconds } from '@/lib/effect/route';
 import { logAuditEvent, extractIp } from '@/lib/audit';
 
 export const prerender = false;
@@ -38,123 +39,81 @@ const importSchema = z.object({
   pages: z.array(pageSchema).min(1).max(1000),
 });
 
-export const POST: APIRoute = async ({ request, clientAddress }) => {
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session || session.user.role !== 'admin') {
-    return Response.json({ error: 'UNAUTHORIZED' }, { status: 401 });
-  }
+type ImportedPage = z.infer<typeof pageSchema>;
 
-  const userId = session.user.id;
-  const rl = checkRateLimit(`content-import:${userId}`, { window: 60, max: 3 });
-  if (!rl.allowed) {
-    return Response.json(
-      { error: 'RATE_LIMITED' },
-      { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } },
-    );
-  }
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return Response.json({ error: 'INVALID_JSON' }, { status: 400 });
-  }
-
-  const parsed = importSchema.safeParse(body);
-  if (!parsed.success) {
-    return Response.json(
-      { error: 'VALIDATION_ERROR', details: z.flattenError(parsed.error).fieldErrors },
-      { status: 400 },
-    );
-  }
-
-  const data = parsed.data;
-  const db = getDrizzle();
-
-  let created = 0;
-  let updated = 0;
-  let skipped = 0;
-
-  for (const pageData of data.pages) {
-    const { sections, publishedAt, ...pageFields } = pageData;
-
-    // Check if page already exists for this locale+slug
-    const [existing] = await db
-      .select({ id: pages.id })
-      .from(pages)
-      .where(and(eq(pages.locale, pageFields.locale), eq(pages.slug, pageFields.slug)))
-      .limit(1);
-
-    try {
+/** Importe (crée ou met à jour) une page et ses sections dans une transaction. */
+const importPage = (pageData: ImportedPage, userId: string) =>
+  attempt(`content-import ${pageData.locale}/${pageData.slug}`, () =>
+    getDrizzle().transaction(async (tx) => {
+      const { sections, publishedAt, ...pageFields } = pageData;
+      const values = { ...pageFields, publishedAt: publishedAt ? new Date(publishedAt) : null, updatedBy: userId };
+      const [existing] = await tx
+        .select({ id: pages.id })
+        .from(pages)
+        .where(and(eq(pages.locale, pageFields.locale), eq(pages.slug, pageFields.slug)))
+        .limit(1);
+      let pageId: string | undefined;
       if (existing) {
-        // Update existing page
-        await db
-          .update(pages)
-          .set({
-            ...pageFields,
-            publishedAt: publishedAt ? new Date(publishedAt) : null,
-            updatedBy: userId,
-          })
-          .where(eq(pages.id, existing.id));
-
-        // Replace sections: delete old, insert new
-        if (sections.length > 0) {
-          await db.delete(pageSections).where(eq(pageSections.pageId, existing.id));
-          await db.insert(pageSections).values(
-            sections.map((s) => ({
-              pageId: existing.id,
-              type: s.type,
-              content: s.content,
-              sortOrder: s.sortOrder,
-              isVisible: s.isVisible,
-              updatedBy: userId,
-            })),
-          );
-        }
-        updated++;
+        await tx.update(pages).set(values).where(eq(pages.id, existing.id));
+        pageId = existing.id;
+        // Remplacement des sections uniquement si l'import en fournit.
+        if (sections.length > 0) await tx.delete(pageSections).where(eq(pageSections.pageId, existing.id));
       } else {
-        // Create new page
-        const [newPage] = await db
-          .insert(pages)
-          .values({
-            ...pageFields,
-            publishedAt: publishedAt ? new Date(publishedAt) : null,
-            updatedBy: userId,
-          })
-          .returning({ id: pages.id });
-
-        // Insert sections
-        if (sections.length > 0 && newPage) {
-          await db.insert(pageSections).values(
-            sections.map((s) => ({
-              pageId: newPage.id,
-              type: s.type,
-              content: s.content,
-              sortOrder: s.sortOrder,
-              isVisible: s.isVisible,
-              updatedBy: userId,
-            })),
-          );
-        }
-        created++;
+        const [newPage] = await tx.insert(pages).values(values).returning({ id: pages.id });
+        pageId = newPage?.id;
       }
-    } catch (err: unknown) {
-      console.error(`[content-import] Failed to import page ${pageFields.locale}/${pageFields.slug}:`, err);
-      skipped++;
+      if (sections.length > 0 && pageId) {
+        const id = pageId;
+        await tx.insert(pageSections).values(
+          sections.map((s) => ({ pageId: id, type: s.type, content: s.content, sortOrder: s.sortOrder, isVisible: s.isVisible, updatedBy: userId })),
+        );
+      }
+      return existing ? ('updated' as const) : ('created' as const);
+    }),
+  );
+
+export const POST = apiRoute(({ request, clientAddress }) =>
+  Effect.gen(function* () {
+    const session = yield* attempt('auth.session', () => auth.api.getSession({ headers: request.headers }));
+    if (!session || session.user.role !== 'admin') return Response.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+
+    const userId = session.user.id;
+    const rl = yield* rateLimit(`content-import:${userId}`, { window: 60, max: 3 });
+    if (!rl.allowed) return Response.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': retryAfterSeconds(rl) } });
+
+    const body = yield* Effect.tryPromise(() => request.json() as Promise<unknown>).pipe(Effect.option);
+    if (body._tag === 'None') return Response.json({ error: 'INVALID_JSON' }, { status: 400 });
+    const parsed = importSchema.safeParse(body.value);
+    if (!parsed.success) {
+      return Response.json({ error: 'VALIDATION_ERROR', details: z.flattenError(parsed.error).fieldErrors }, { status: 400 });
     }
-  }
+    const data = parsed.data;
 
-  invalidateCache('page:');
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+    for (const pageData of data.pages) {
+      const outcome = yield* importPage(pageData, userId).pipe(Effect.result);
+      if (outcome._tag === 'Success') {
+        if (outcome.success === 'created') created++;
+        else updated++;
+      } else {
+        yield* Effect.logError(`[content-import] ${outcome.failure.operation} failed`, outcome.failure.cause);
+        skipped++;
+      }
+    }
 
-  void logAuditEvent({
-    userId,
-    action: 'CONTENT_IMPORT',
-    resource: 'pages',
-    resourceId: null,
-    metadata: { created, updated, skipped, total: data.pages.length },
-    ipAddress: extractIp(request.headers, clientAddress),
-    userAgent: request.headers.get('user-agent'),
-  }).catch(() => {});
+    invalidateCache('page:');
+    void logAuditEvent({
+      userId,
+      action: 'CONTENT_IMPORT',
+      resource: 'pages',
+      resourceId: null,
+      metadata: { created, updated, skipped, total: data.pages.length },
+      ipAddress: extractIp(request.headers, clientAddress),
+      userAgent: request.headers.get('user-agent'),
+    }).catch(() => {});
 
-  return Response.json({ success: true, created, updated, skipped });
-};
+    return Response.json({ success: true, created, updated, skipped });
+  }),
+);

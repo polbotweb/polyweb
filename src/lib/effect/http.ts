@@ -25,6 +25,7 @@ const STATUS: Record<AppError['_tag'], number> = {
   RateLimitedError: 429,
   UpstreamError: 502,
   DbError: 500,
+  OperationError: 500,
   ConfigError: 500,
 };
 
@@ -47,6 +48,8 @@ export function errorResponse(error: unknown): Response {
   }
   return json({ error: 'InternalError', message: 'Internal error' }, { status: 500 });
 }
+
+const pathOf = (context: APIContext) => context.url?.pathname ?? new URL(context.request.url).pathname;
 
 /** Run an Effect on the shared runtime and return a plain Promise. */
 export const runApp = <A, E>(effect: Effect.Effect<A, E, AppServices>): Promise<A> => appRuntime.runPromise(effect);
@@ -79,20 +82,20 @@ export function apiRoute<E>(
       Effect.catchCause((cause) => {
         const failure = Cause.findErrorOption(cause);
         const request = { method: context.request.method, url: context.request.url };
-        const route = context.routePattern ?? context.url.pathname;
+        const route = context.routePattern ?? pathOf(context);
         if (failure._tag === 'Some') {
           const response = errorResponse(failure.value);
           // Erreurs typées 5xx (DbError, ConfigError, UpstreamError) : remontées aussi.
           return response.status >= 500
-            ? captureError(failure.value, { request, tags: { route }, userId: context.locals.user?.id }).pipe(Effect.as(response))
+            ? captureError(failure.value, { request, tags: { route }, userId: context.locals?.user?.id }).pipe(Effect.as(response))
             : Effect.succeed(response);
         }
-        return Effect.logError('Unhandled defect in API route', context.url.pathname, cause).pipe(
-          Effect.andThen(captureError(Cause.squash(cause), { request, tags: { route, kind: 'defect' }, userId: context.locals.user?.id, level: 'fatal' })),
+        return Effect.logError('Unhandled defect in API route', pathOf(context), cause).pipe(
+          Effect.andThen(captureError(Cause.squash(cause), { request, tags: { route, kind: 'defect' }, userId: context.locals?.user?.id, level: 'fatal' })),
           Effect.as(errorResponse(null)),
         );
       }),
-      Effect.withSpan(`http ${context.request.method} ${context.routePattern ?? context.url.pathname}`, { attributes: { 'http.method': context.request.method, 'url.path': context.url.pathname } }),
+      Effect.withSpan(`http ${context.request.method} ${context.routePattern ?? pathOf(context)}`, { attributes: { 'http.method': context.request.method, 'url.path': pathOf(context) } }),
     );
     return appRuntime.runPromise(program as Effect.Effect<Response, never, AppServices>);
   };

@@ -1,6 +1,6 @@
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { Effect } from 'effect';
+import { Data, Effect } from 'effect';
 import { Storage, IMMUTABLE_CACHE, type StorageShape } from '@/lib/storage';
 import { runApp } from '@/lib/effect/http';
 import DOMPurify from 'isomorphic-dompurify';
@@ -51,6 +51,26 @@ export async function processUpload(
     throw new UploadError("Le fichier n'a pas pu être enregistré (stockage indisponible).", 'STORAGE_ERROR');
   }
 }
+
+/** Erreur typée de l'upload (validation ou stockage) — version Effect de `UploadError`. */
+export class UploadRejected extends Data.TaggedError('UploadRejected')<{ readonly reason: string; readonly code: string }> {
+  override get message() {
+    return this.reason;
+  }
+}
+
+/** Upload complet en Effect : validation puis stockage (original + variantes). */
+export const uploadFile = (file: File, options: UploadOptions) =>
+  Effect.gen(function* () {
+    const prepared = yield* Effect.tryPromise({
+      try: () => prepareUpload(file, options),
+      catch: (e) => (e instanceof UploadError ? new UploadRejected({ reason: e.message, code: e.code }) : new UploadRejected({ reason: 'Fichier illisible', code: 'INVALID_FILE' })),
+    });
+    return yield* storeUpload(prepared).pipe(
+      Effect.tapError((e) => Effect.logError('[upload] storage failure', e)),
+      Effect.mapError(() => new UploadRejected({ reason: "Le fichier n'a pas pu être enregistré (stockage indisponible).", code: 'STORAGE_ERROR' })),
+    );
+  }).pipe(Effect.withSpan('media.upload'));
 
 /** Fichier validé, prêt à être stocké. */
 export interface PreparedUpload {

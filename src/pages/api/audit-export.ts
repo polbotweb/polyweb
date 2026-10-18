@@ -1,7 +1,8 @@
-import type { APIRoute } from "astro";
+import { Effect } from "effect";
 import { fetchAdminAuditLogs, type AuditFilters } from "@/lib/auth-data";
 import { logAuditEvent, extractIp } from "@/lib/audit";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { apiRoute } from "@/lib/effect/http";
+import { attempt, legacyJson, rateLimit, retryAfterSeconds } from "@/lib/effect/route";
 
 export const prerender = false;
 
@@ -11,21 +12,15 @@ const MAX_EXPORT_ROWS = 5000;
  * GET /api/audit-export?action=...&userId=...&from=...&to=...
  * Exports audit logs as CSV. Requires admin auth.
  */
-export const GET: APIRoute = async (context) => {
+export const GET = apiRoute((context) => Effect.gen(function* () {
   const user = context.locals.user;
   if (!user || user.role !== "admin") {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
+    return legacyJson({ error: "Unauthorized" }, 401);
   }
 
-  const rl = checkRateLimit(`audit-export:${user.id}`, { window: 60, max: 5 });
+  const rl = yield* rateLimit(`audit-export:${user.id}`, { window: 60, max: 5 });
   if (!rl.allowed) {
-    return new Response(JSON.stringify({ error: "Too many requests" }), {
-      status: 429,
-      headers: { "Content-Type": "application/json", "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)) },
-    });
+    return legacyJson({ error: "Too many requests" }, 429, { "Retry-After": retryAfterSeconds(rl) });
   }
 
   const params = context.url.searchParams;
@@ -46,12 +41,12 @@ export const GET: APIRoute = async (context) => {
     if (!isNaN(d.getTime())) filters.to = d;
   }
 
-  const { rows } = await fetchAdminAuditLogs(
+  const { rows } = yield* attempt('audit.export', () => fetchAdminAuditLogs(
     context.request.headers,
     1,
     MAX_EXPORT_ROWS,
     filters,
-  );
+  ));
 
   // Log the export action itself for audit trail
   void logAuditEvent({
@@ -88,7 +83,7 @@ export const GET: APIRoute = async (context) => {
       "Cache-Control": "no-store",
     },
   });
-};
+}));
 
 function escapeCsv(value: string): string {
   if (value.includes(",") || value.includes('"') || value.includes("\n")) {

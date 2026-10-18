@@ -24,6 +24,9 @@ vi.mock('@/lib/audit', () => ({
 }));
 
 vi.mock('@database/drizzle', () => ({
+  // Requis par le runtime Effect partagé (DbLive) : jamais appelé par cette route.
+  getDrizzle: vi.fn(() => ({})),
+  getLazyDrizzle: vi.fn(() => ({})),
   schema: {
     user: { id: 'id', name: 'name', email: 'email', emailVerified: 'ev', image: 'img', createdAt: 'ca', updatedAt: 'ua', username: 'u', displayUsername: 'du', role: 'role' },
     account: { id: 'id', providerId: 'pid', accountId: 'aid', createdAt: 'ca', userId: 'uid' },

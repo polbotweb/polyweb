@@ -1,55 +1,30 @@
-import type { APIRoute } from 'astro';
+import { Effect } from 'effect';
 import { extractIp } from '@/lib/audit';
+import { apiRoute } from '@/lib/effect/http';
 import { blogNewsletterService } from '@/lib/newsletter/blog-newsletter-service';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ url, request, clientAddress, site }) => {
-  const token = url.searchParams.get('token')?.trim();
-  if (!token || token.length > 512) {
-    return new Response(renderMessage(false, 'Lien de désinscription invalide.'), {
-      status: 400,
-      headers: responseHeaders,
-    });
-  }
+const page = (success: boolean, message: string, status: number) => new Response(renderMessage(success, message), { status, headers: responseHeaders });
 
-  // Anti-phishing: only honor the link on the trusted site origin.
-  if (site && url.origin !== site.origin) {
-    return new Response(renderMessage(false, 'Lien de désinscription invalide.'), {
-      status: 400,
-      headers: responseHeaders,
-    });
-  }
-
-  try {
-    const result = await blogNewsletterService.unsubscribe({
-      token,
-      audit: {
-        ipAddress: extractIp(request.headers, clientAddress),
-        userAgent: request.headers.get('user-agent'),
-      },
-    });
-    if (!result.consumed) {
-      return new Response(renderMessage(false, 'Lien de désinscription invalide ou expiré.'), {
-        status: 400,
-        headers: responseHeaders,
-      });
+export const GET = apiRoute(({ url, request, clientAddress, site }) =>
+  Effect.gen(function* () {
+    const token = url.searchParams.get('token')?.trim();
+    if (!token || token.length > 512) return page(false, 'Lien de désinscription invalide.', 400);
+    // Anti-phishing : lien honoré uniquement sur l'origine de confiance (pas de Host injecté).
+    if (site && url.origin !== site.origin) return page(false, 'Lien de désinscription invalide.', 400);
+    const result = yield* Effect.tryPromise(() =>
+      blogNewsletterService.unsubscribe({ token, audit: { ipAddress: extractIp(request.headers, clientAddress), userAgent: request.headers.get('user-agent') } }),
+    ).pipe(Effect.result);
+    if (result._tag === 'Failure') {
+      const error = result.failure.cause;
+      yield* Effect.logError('[newsletter] unsubscribe endpoint failed', { name: error instanceof Error ? error.name : 'UnknownError' });
+      return page(false, 'Service temporairement indisponible.', 503);
     }
-  } catch (error) {
-    console.error('[newsletter] Unsubscribe endpoint failed', {
-      name: error instanceof Error ? error.name : 'UnknownError',
-    });
-    return new Response(renderMessage(false, 'Service temporairement indisponible.'), {
-      status: 503,
-      headers: responseHeaders,
-    });
-  }
-
-  return new Response(renderMessage(true, 'Vous êtes désabonné de la newsletter. Vous pourrez vous réinscrire à tout moment.'), {
-    status: 200,
-    headers: responseHeaders,
-  });
-};
+    if (!result.success.consumed) return page(false, 'Lien de désinscription invalide ou expiré.', 400);
+    return page(true, 'Vous êtes désabonné de la newsletter. Vous pourrez vous réinscrire à tout moment.', 200);
+  }),
+);
 
 const responseHeaders = {
   'Content-Type': 'text/html; charset=utf-8',

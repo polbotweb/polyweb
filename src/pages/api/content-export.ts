@@ -1,31 +1,32 @@
-import type { APIRoute } from 'astro';
+import { Effect } from 'effect';
 import { asc, isNull } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { getDrizzle } from '@database/drizzle';
 import { pages, pageSections } from '@database/schemas';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { apiRoute } from '@/lib/effect/http';
+import { attempt, rateLimit, retryAfterSeconds } from '@/lib/effect/route';
 import { logAuditEvent, extractIp } from '@/lib/audit';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ request, clientAddress }) => {
-  const session = await auth.api.getSession({ headers: request.headers });
+export const GET = apiRoute(({ request, clientAddress }) => Effect.gen(function* () {
+  const session = yield* attempt('auth.session', () => auth.api.getSession({ headers: request.headers }));
   if (!session || session.user.role !== 'admin') {
     return Response.json({ error: 'UNAUTHORIZED' }, { status: 401 });
   }
 
   const userId = session.user.id;
-  const rl = checkRateLimit(`content-export:${userId}`, { window: 60, max: 5 });
+  const rl = yield* rateLimit(`content-export:${userId}`, { window: 60, max: 5 });
   if (!rl.allowed) {
     return Response.json(
       { error: 'RATE_LIMITED' },
-      { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } },
+      { status: 429, headers: { 'Retry-After': retryAfterSeconds(rl) } },
     );
   }
 
   const db = getDrizzle();
 
-  const [allPages, allSections] = await Promise.all([
+  const [allPages, allSections] = yield* attempt('content.export', () => Promise.all([
     db
       .select()
       .from(pages)
@@ -35,7 +36,7 @@ export const GET: APIRoute = async ({ request, clientAddress }) => {
       .select()
       .from(pageSections)
       .orderBy(asc(pageSections.pageId), asc(pageSections.sortOrder)),
-  ]);
+  ]));
 
   // Group sections by pageId
   const sectionsByPage = new Map<string, typeof allSections>();
@@ -88,4 +89,4 @@ export const GET: APIRoute = async ({ request, clientAddress }) => {
       'Content-Disposition': `attachment; filename="${filename}"`,
     },
   });
-};
+}));

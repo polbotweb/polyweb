@@ -73,7 +73,18 @@ export class ConfigError extends Data.TaggedError('ConfigError')<{
   }
 }
 
+/** Échec d'une opération interne non typée (code historique en Promise). → 500 */
+export class OperationError extends Data.TaggedError('OperationError')<{
+  readonly operation: string;
+  readonly cause?: unknown;
+}> {
+  override get message() {
+    return `Operation ${this.operation} failed`;
+  }
+}
+
 export type AppError =
+  | OperationError
   | DbError
   | NotFoundError
   | ValidationError

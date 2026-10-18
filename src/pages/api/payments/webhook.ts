@@ -1,38 +1,38 @@
-import type { APIRoute } from "astro";
-import { selectPaymentProvider, UnhandledWebhookError } from "@/modules/payments/domain/providers";
-import { applyProviderEvent, isPaymentsEnabled, PaymentAmountMismatchError } from "@/modules/payments/domain/payment-service";
+/**
+ * Webhook fournisseur de paiement (repris d'atlaselle) : signature → idempotence → montants.
+ * 200 après traitement ; 400 signature invalide ; 422 montant incohérent ; 500 échec
+ * (le fournisseur réessaie, le traitement est idempotent) ; événement valide non géré = 200.
+ */
+import { Effect } from 'effect';
+import { apiRoute } from '@/lib/effect/http';
+import { selectPaymentProvider, UnhandledWebhookError } from '@/modules/payments/domain/providers';
+import { applyProviderEvent, isPaymentsEnabled, PaymentAmountMismatchError } from '@/modules/payments/domain/payment-service';
 
 export const prerender = false;
+const text = (body: string, status: number) => new Response(body, { status });
 
-// Webhook fournisseur (repris d'atlaselle) : signature → idempotence → montants.
-// 200 après traitement ; 400 signature invalide ; 500 échec (le fournisseur réessaie,
-// le traitement est idempotent) ; événement valide non géré = 200 sans effet.
-export const POST: APIRoute = async ({ request }) => {
-  if (!isPaymentsEnabled()) return new Response("Not Found", { status: 404 });
-  let provider;
-  try {
-    provider = selectPaymentProvider();
-  } catch {
-    return new Response("Not Found", { status: 404 });
-  }
-  const rawBody = await request.text();
-  const signature = request.headers.get(provider.name === "stripe" ? "stripe-signature" : "x-polyweb-mock-signature");
-  let event;
-  try {
-    event = await provider.verifyWebhook(rawBody, signature);
-  } catch (err) {
-    if (err instanceof UnhandledWebhookError) return new Response("OK", { status: 200 });
-    return new Response("Bad Request", { status: 400 });
-  }
-  try {
-    await applyProviderEvent(event);
-  } catch (err) {
-    if (err instanceof PaymentAmountMismatchError) {
-      console.error("[payments]", err.message);
-      return new Response("Unprocessable Entity", { status: 422 });
+export const POST = apiRoute(({ request }) =>
+  Effect.gen(function* () {
+    if (!isPaymentsEnabled()) return text('Not Found', 404);
+    const provider = yield* Effect.try(() => selectPaymentProvider()).pipe(Effect.option);
+    if (provider._tag === 'None') return text('Not Found', 404);
+    const p = provider.value;
+    const rawBody = yield* Effect.promise(() => request.text());
+    const signature = request.headers.get(p.name === 'stripe' ? 'stripe-signature' : 'x-polyweb-mock-signature');
+    const verified = yield* Effect.tryPromise(() => p.verifyWebhook(rawBody, signature)).pipe(Effect.result);
+    if (verified._tag === 'Failure') {
+      return verified.failure.cause instanceof UnhandledWebhookError ? text('OK', 200) : text('Bad Request', 400);
     }
-    console.error("[payments] Webhook processing failed:", err);
-    return new Response("Internal Server Error", { status: 500 });
-  }
-  return new Response("OK", { status: 200 });
-};
+    const applied = yield* Effect.tryPromise(() => applyProviderEvent(verified.success)).pipe(Effect.result);
+    if (applied._tag === 'Failure') {
+      const err = applied.failure.cause;
+      if (err instanceof PaymentAmountMismatchError) {
+        yield* Effect.logError('[payments]', err.message);
+        return text('Unprocessable Entity', 422);
+      }
+      yield* Effect.logError('[payments] Webhook processing failed', err);
+      return text('Internal Server Error', 500);
+    }
+    return text('OK', 200);
+  }),
+);
