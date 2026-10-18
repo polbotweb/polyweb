@@ -1,10 +1,17 @@
 import { defineAction, ActionError } from "astro:actions";
+import { Effect } from "effect";
 import { z } from "astro/zod";
 import { eq, sql, inArray } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { socialLinks } from "@database/schemas";
 import { invalidateCache } from "@database/cache";
-import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
+import { auditAdmin } from "./_helpers";
+import { actionRateLimit, actionTry, effectHandler, fail, requireActionPermission } from "@/lib/effect/action";
+
+const guard = (context: Parameters<typeof requireActionPermission>[0]) =>
+  Effect.tap(requireActionPermission(context, { site: ["update"] }), (user) => actionRateLimit(user.id, "social"));
+
+const isUnique = (err: unknown) => typeof err === "object" && err !== null && "code" in err && (err as { code: string }).code === "23505";
 
 const socialLinkBase = z.object({
   platform: z
@@ -38,23 +45,15 @@ const socialLinkBase = z.object({
 
 export const createSocialLink = defineAction({
   input: socialLinkBase,
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { site: ["update"] });
-    adminRateLimit(context, user.id, "social");
-
-    const db = getDrizzle();
-    let created;
-    try {
-      [created] = await db.insert(socialLinks).values(input).returning();
-    } catch (err: unknown) {
-      if (typeof err === "object" && err !== null && "code" in err && (err as { code: string }).code === "23505") {
-        throw new ActionError({
-          code: "CONFLICT",
-          message: "Un lien social existe déjà pour cette plateforme.",
-        });
-      }
-      throw err;
-    }
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* guard(context);
+    const inserted = yield* actionTry("social.create", () => getDrizzle().insert(socialLinks).values(input).returning()).pipe(
+      Effect.catchIf(
+        (e) => e._tag === "OperationError" && isUnique(e.cause),
+        () => fail("CONFLICT", "Un lien social existe déjà pour cette plateforme."),
+      ),
+    );
+    const created = inserted[0]!;
 
     auditAdmin(context, user.id, "SOCIAL_LINK_CREATE", {
       resource: "social_links",
@@ -64,31 +63,18 @@ export const createSocialLink = defineAction({
 
     invalidateCache("site:social");
     return created;
-  },
+  })),
 });
 
 export const updateSocialLink = defineAction({
   input: socialLinkBase.partial().extend({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { site: ["update"] });
-    adminRateLimit(context, user.id, "social");
-
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* guard(context);
     const { id, ...data } = input;
-    const db = getDrizzle();
-    const [updated] = await db
-      .update(socialLinks)
-      .set(data)
-      .where(eq(socialLinks.id, id))
-      .returning();
-
-    if (!updated) {
-      throw new ActionError({
-        code: "NOT_FOUND",
-        message: "Lien social introuvable.",
-      });
-    }
+    const [updated] = yield* actionTry("social.update", () => getDrizzle().update(socialLinks).set(data).where(eq(socialLinks.id, id)).returning());
+    if (!updated) return yield* fail("NOT_FOUND", "Lien social introuvable.");
 
     auditAdmin(context, user.id, "SOCIAL_LINK_UPDATE", {
       resource: "social_links",
@@ -98,29 +84,17 @@ export const updateSocialLink = defineAction({
 
     invalidateCache("site:social");
     return updated;
-  },
+  })),
 });
 
 export const deleteSocialLink = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { site: ["update"] });
-    adminRateLimit(context, user.id, "social");
-
-    const db = getDrizzle();
-    const [deleted] = await db
-      .delete(socialLinks)
-      .where(eq(socialLinks.id, input.id))
-      .returning({ id: socialLinks.id });
-
-    if (!deleted) {
-      throw new ActionError({
-        code: "NOT_FOUND",
-        message: "Lien social introuvable.",
-      });
-    }
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* guard(context);
+    const [deleted] = yield* actionTry("social.delete", () => getDrizzle().delete(socialLinks).where(eq(socialLinks.id, input.id)).returning({ id: socialLinks.id }));
+    if (!deleted) return yield* fail("NOT_FOUND", "Lien social introuvable.");
 
     auditAdmin(context, user.id, "SOCIAL_LINK_DELETE", {
       resource: "social_links",
@@ -129,7 +103,7 @@ export const deleteSocialLink = defineAction({
 
     invalidateCache("site:social");
     return { success: true as const };
-  },
+  })),
 });
 
 export const reorderSocialLinks = defineAction({
@@ -144,12 +118,9 @@ export const reorderSocialLinks = defineAction({
       .min(1, "La liste ne peut pas être vide.")
       .max(200, "Maximum 200 éléments par réordonnancement."),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { site: ["update"] });
-    adminRateLimit(context, user.id, "social");
-
-    const db = getDrizzle();
-    await db.transaction(async (tx) => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* guard(context);
+    yield* actionTry("social.reorder", () => getDrizzle().transaction(async (tx) => {
       const ids = input.items.map((i) => i.id);
       const cases = input.items
         .map((item) => sql`WHEN ${socialLinks.id} = ${item.id} THEN ${item.sortOrder}`)
@@ -160,12 +131,9 @@ export const reorderSocialLinks = defineAction({
         .where(inArray(socialLinks.id, ids))
         .returning({ id: socialLinks.id });
       if (updated.length !== input.items.length) {
-        throw new ActionError({
-          code: "NOT_FOUND",
-          message: "Un ou plusieurs liens sociaux introuvables.",
-        });
+        throw new ActionError({ code: "NOT_FOUND", message: "Un ou plusieurs liens sociaux introuvables." });
       }
-    });
+    }));
 
     auditAdmin(context, user.id, "SOCIAL_LINK_REORDER", {
       resource: "social_links",
@@ -174,5 +142,5 @@ export const reorderSocialLinks = defineAction({
 
     invalidateCache("site:social");
     return { success: true as const };
-  },
+  })),
 });

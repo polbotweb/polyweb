@@ -1,10 +1,12 @@
 import { defineAction, ActionError } from "astro:actions";
+import { Effect } from "effect";
 import { z } from "astro/zod";
 import { eq } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { openingHours } from "@database/schemas";
 import { invalidateCache } from "@database/cache";
-import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
+import { auditAdmin } from "./_helpers";
+import { actionRateLimit, actionTry, effectHandler, requireActionPermission } from "@/lib/effect/action";
 
 /** HH:MM field with range validation (00-23 : 00-59) */
 const timeField = (label: string) =>
@@ -49,13 +51,12 @@ export const updateOpeningHours = defineAction({
       .min(1, "Au moins un horaire est requis.")
       .max(7, "Maximum 7 jours de la semaine."),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { site: ["update"] });
-    adminRateLimit(context, user.id, "hours");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { site: ["update"] });
+    yield* actionRateLimit(user.id, "hours");
 
-    const db = getDrizzle();
-
-    const updated = await db.transaction(async (tx) => {
+    // Une ActionError levée dans la transaction (rollback) est relevée telle quelle par actionTry.
+    const updated = yield* actionTry("hours.update", () => getDrizzle().transaction(async (tx) => {
       const rows: Array<typeof openingHours.$inferSelect> = [];
 
       for (const item of input.items) {
@@ -76,7 +77,7 @@ export const updateOpeningHours = defineAction({
       }
 
       return rows;
-    });
+    }));
 
     auditAdmin(context, user.id, "OPENING_HOURS_UPDATE", {
       resource: "opening_hours",
@@ -85,5 +86,5 @@ export const updateOpeningHours = defineAction({
 
     invalidateCache("site:hours");
     return updated;
-  },
+  })),
 });
