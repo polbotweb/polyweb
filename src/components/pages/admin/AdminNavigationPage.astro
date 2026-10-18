@@ -251,10 +251,10 @@ const childItems = items.filter((i) => !!i.parentId);
                   >
                     <div class="flex items-center justify-between gap-3">
                       <div class="flex items-center gap-2.5 min-w-0">
-                        <div class="flex flex-col gap-0.5 shrink-0">
+                        <div class="flex flex-col gap-1 shrink-0">
                           <button
                             type="button"
-                            class="nav-move-up inline-flex items-center justify-center size-5 rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30"
+                            class="nav-move-up inline-flex items-center justify-center size-6 rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30"
                             title={cms.moveUp}
                             disabled={idx === 0}
                           >
@@ -262,7 +262,7 @@ const childItems = items.filter((i) => !!i.parentId);
                           </button>
                           <button
                             type="button"
-                            class="nav-move-down inline-flex items-center justify-center size-5 rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30"
+                            class="nav-move-down inline-flex items-center justify-center size-6 rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30"
                             title={cms.moveDown}
                             disabled={idx === rootItems.length - 1}
                           >
@@ -336,10 +336,10 @@ const childItems = items.filter((i) => !!i.parentId);
                         >
                           <div class="flex items-center justify-between gap-3">
                             <div class="flex items-center gap-2 min-w-0">
-                              <div class="flex flex-col gap-0.5 shrink-0">
+                              <div class="flex flex-col gap-1 shrink-0">
                                 <button
                                   type="button"
-                                  class="nav-move-up inline-flex items-center justify-center size-4 rounded text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30"
+                                  class="nav-move-up inline-flex items-center justify-center size-6 rounded text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30"
                                   title={cms.moveUp}
                                   disabled={cidx === 0}
                                 >
@@ -347,7 +347,7 @@ const childItems = items.filter((i) => !!i.parentId);
                                 </button>
                                 <button
                                   type="button"
-                                  class="nav-move-down inline-flex items-center justify-center size-4 rounded text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30"
+                                  class="nav-move-down inline-flex items-center justify-center size-6 rounded text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30"
                                   title={cms.moveDown}
                                   disabled={cidx === children.length - 1}
                                 >

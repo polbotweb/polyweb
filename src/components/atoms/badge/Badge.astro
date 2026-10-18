@@ -29,7 +29,8 @@ export const badge = tv({
       md: "px-3 py-0.5 text-sm [&_svg:not([class*='size-'])]:size-4",
       lg: "px-4 py-1 text-base [&_svg:not([class*='size-'])]:size-4.5",
     },
-    isLink: { true: "cursor-pointer", false: "" },
+    // Badge cliquable : cible d'au moins 24 px de haut (WCAG 2.2 — 2.5.8 Target Size Minimum).
+    isLink: { true: "cursor-pointer min-h-6", false: "" },
   },
   compoundVariants: [
     { isLink: true, variant: "default", className: "hover:bg-foreground/80" },
