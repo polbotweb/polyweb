@@ -337,10 +337,21 @@ export const ${camel}Workflow: WorkflowDefinition<${pascal}Status> = {
  * \`src/core/locks\` : politique utilisateur + session, reprise par soi depuis
  * une autre session (\`takeOver\`), TTL, purge des verrous expirés, erreurs typées.
  */
+import { Effect } from "effect";
+import { eq } from "drizzle-orm";
+import { getDrizzle } from "@database/drizzle";
+import { dbTry } from "@/lib/effect/run";
 import { defineLockResource, drizzleLockStore } from "@/core/locks/service";
-import { ${camel}Locks } from "./schema";
+import { ${camel}, ${camel}Locks } from "./schema";
 
-export const ${camel}Lock = defineLockResource("${name}", drizzleLockStore("${name}", ${camel}Locks, "resourceId"));
+export const ${camel}Lock = defineLockResource("${name}", drizzleLockStore("${name}", ${camel}Locks, "resourceId"), {
+  // Organisation propriétaire : libération administrative réservée à l'administrateur global
+  // ou aux owner/admin de CETTE organisation (action générique \`forceReleaseLock\`, auditée).
+  tenantOf: (id) =>
+    dbTry("${name}.lockTenant", () => getDrizzle().select({ organizationId: ${camel}.organizationId }).from(${camel}).where(eq(${camel}.id, id)).limit(1)).pipe(
+      Effect.map((rows) => (rows[0] ? rows[0].organizationId : undefined)),
+    ),
+});
 `,
 
   [`${moduleDir}/permissions/index.ts`]: `/**
@@ -533,11 +544,16 @@ const { item } = Astro.props as Props;
  * un GET vers l'URL courante, ce qui exposerait les valeurs saisies dans la
  * chaîne de requête, l'historique et les journaux.
  */
+import ForceReleaseLockButton from "@/components/admin/ForceReleaseLockButton.astro";
+
 interface Props {
-  items: Array<{ id: string; title: string }>;
+  items: Array<{ id: string; title: string; lockedByOther?: boolean }>;
+  locale: string;
+  /** Calculé par la page : \`canAdministerTenant(Astro.locals.user, organizationId)\` (core/permissions/tenant). */
+  canForceReleaseLock?: boolean;
 }
 
-const { items } = Astro.props as Props;
+const { items, locale, canForceReleaseLock = false } = Astro.props as Props;
 ---
 
 <div class="flex flex-col gap-4">
@@ -546,7 +562,10 @@ const { items } = Astro.props as Props;
   ) : (
     <ul class="flex flex-col gap-2">
       {items.map((item) => (
-        <li class="flex items-center justify-between border px-4 py-3">{item.title}</li>
+        <li class="flex items-center justify-between border px-4 py-3">
+          {item.title}
+          {canForceReleaseLock && item.lockedByOther && <ForceReleaseLockButton resourceType="${name}" resourceId={item.id} locale={locale} />}
+        </li>
       ))}
     </ul>
   )}

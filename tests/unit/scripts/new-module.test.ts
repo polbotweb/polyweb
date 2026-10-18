@@ -33,7 +33,9 @@ describe('scripts/new-module.ts', () => {
   it('scaffolds the core Effect stack: schema, workflow, lock, permission guard, service, loader, actions', () => {
     const base = join(dir, 'modules/event-tickets');
     const read = (file: string) => readFileSync(join(base, file), 'utf8');
-    expect(read('locks.ts')).toContain('defineLockResource("event-tickets", drizzleLockStore("event-tickets", eventTicketsLocks, "resourceId"))');
+    expect(read('locks.ts')).toContain('defineLockResource("event-tickets", drizzleLockStore("event-tickets", eventTicketsLocks, "resourceId"), {');
+    expect(read('locks.ts')).toContain('tenantOf: (id) =>');
+    expect(readFileSync(join(dir, 'components/event-tickets/admin/EventTicketsAdminList.astro'), 'utf8')).toContain('<ForceReleaseLockButton resourceType="event-tickets"');
     expect(read('domain/workflow.ts')).toContain('export const eventTicketsWorkflow: WorkflowDefinition<EventTicketsStatus>');
     expect(read('permissions/index.ts')).toContain('requireActionPermission(context, { "event-tickets": [...permissions] })');
     const service = read('services/ticket.service.ts');
