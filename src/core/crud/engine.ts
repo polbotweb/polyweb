@@ -10,6 +10,8 @@ import { and, asc, desc, eq, count, type SQL } from "drizzle-orm";
 import type { PgTable, PgColumn } from "drizzle-orm/pg-core";
 import type { DrizzleDB } from "@database/drizzle";
 import type { CrudAccessRule, CrudAction, CrudColumn, CrudResourceDefinition } from "./contract";
+import { Effect } from "effect";
+import { DbError } from "@/lib/effect/errors";
 
 export interface CrudActor {
   id: string;
@@ -111,54 +113,72 @@ function parseFilterValue(column: CrudColumn, raw: string): unknown {
   return raw;
 }
 
-export async function handleCrud(registration: CrudRegistration, request: CrudRequest, db: DrizzleDB): Promise<CrudResponse> {
-  const { definition: def, table } = registration;
-  const action = actionFor(request.method, Boolean(request.id));
-  if (!action) return { status: 405, body: { error: "METHOD_NOT_ALLOWED" } };
-  const rule = def.access[action];
-  if (rule === "disabled") return { status: 404, body: { error: "NOT_FOUND" } };
-  if (!(await evaluateAccess(rule, request.actor, request.hasPermission))) {
-    return { status: request.actor ? 403 : 401, body: { error: request.actor ? "FORBIDDEN" : "UNAUTHORIZED" } };
-  }
-  const pk = col(table, def.primaryKey);
+const q = <A>(operation: string, f: () => Promise<A>) => Effect.tryPromise({ try: f, catch: (cause) => new DbError({ operation: `crud.${operation}`, cause }) });
 
-  if (action === "list") {
-    const page = Math.max(1, Number(request.searchParams.get("page")) || 1);
-    const perPage = Math.min(100, Math.max(1, Number(request.searchParams.get("perPage")) || 20));
-    const sortKey = request.searchParams.get("sort") ?? def.primaryKey;
-    const direction = request.searchParams.get("order") === "desc" ? desc : asc;
-    if (!def.sortable.includes(sortKey)) return { status: 400, body: { error: "INVALID_SORT" } };
-    const filters: SQL[] = [];
-    for (const key of def.filterable) {
-      const raw = request.searchParams.get(`filter[${key}]`);
-      if (raw === null) continue;
-      const column = def.columns.find((c) => c.key === key)!;
-      filters.push(eq(col(table, key), parseFilterValue(column, raw)));
+/**
+ * Moteur CRUD en Effect : les refus (405/404/401/403/400/422) sont des réponses
+ * normales ; seules les erreurs d'infrastructure échouent (`DbError`).
+ */
+export const handleCrudEffect = (registration: CrudRegistration, request: CrudRequest, db: DrizzleDB): Effect.Effect<CrudResponse, DbError> =>
+  Effect.gen(function* () {
+    const { definition: def, table } = registration;
+    const action = actionFor(request.method, Boolean(request.id));
+    if (!action) return { status: 405, body: { error: "METHOD_NOT_ALLOWED" } };
+    const rule = def.access[action];
+    if (rule === "disabled") return { status: 404, body: { error: "NOT_FOUND" } };
+    const allowed = yield* q("access", () => evaluateAccess(rule, request.actor, request.hasPermission));
+    if (!allowed) return { status: request.actor ? 403 : 401, body: { error: request.actor ? "FORBIDDEN" : "UNAUTHORIZED" } };
+    const pk = col(table, def.primaryKey);
+
+    if (action === "list") {
+      const page = Math.max(1, Number(request.searchParams.get("page")) || 1);
+      const perPage = Math.min(100, Math.max(1, Number(request.searchParams.get("perPage")) || 20));
+      const sortKey = request.searchParams.get("sort") ?? def.primaryKey;
+      const direction = request.searchParams.get("order") === "desc" ? desc : asc;
+      if (!def.sortable.includes(sortKey)) return { status: 400, body: { error: "INVALID_SORT" } };
+      const filters: SQL[] = [];
+      for (const key of def.filterable) {
+        const raw = request.searchParams.get(`filter[${key}]`);
+        if (raw === null) continue;
+        const column = def.columns.find((c) => c.key === key)!;
+        filters.push(eq(col(table, key), parseFilterValue(column, raw)));
+      }
+      const where = filters.length ? and(...filters) : undefined;
+      const [rows, [{ total }]] = yield* Effect.all(
+        [
+          q("list", () => db.select().from(table).where(where).orderBy(direction(col(table, sortKey))).limit(perPage).offset((page - 1) * perPage)),
+          q("count", () => db.select({ total: count() }).from(table).where(where)),
+        ],
+        { concurrency: 2 },
+      );
+      return { status: 200, body: { data: rows.map((r) => project(def, r as Record<string, unknown>)), meta: { page, perPage, total: Number(total) } } };
     }
-    const where = filters.length ? and(...filters) : undefined;
-    const rows = await db.select().from(table).where(where).orderBy(direction(col(table, sortKey))).limit(perPage).offset((page - 1) * perPage);
-    const [{ total }] = await db.select({ total: count() }).from(table).where(where);
-    return { status: 200, body: { data: rows.map((r) => project(def, r as Record<string, unknown>)), meta: { page, perPage, total: Number(total) } } };
-  }
 
-  if (action === "read") {
-    const [row] = await db.select().from(table).where(eq(pk, request.id!)).limit(1);
+    if (action === "read") {
+      const [row] = yield* q("read", () => db.select().from(table).where(eq(pk, request.id!)).limit(1));
+      return row ? { status: 200, body: { data: project(def, row as Record<string, unknown>) } } : { status: 404, body: { error: "NOT_FOUND" } };
+    }
+
+    if (action === "delete") {
+      const deleted = yield* q("delete", () => db.delete(table).where(eq(pk, request.id!)).returning());
+      return deleted.length ? { status: 204, body: null } : { status: 404, body: { error: "NOT_FOUND" } };
+    }
+
+    const parsed = buildInputSchema(def, action).safeParse(request.body ?? {});
+    if (!parsed.success) return { status: 422, body: { error: "VALIDATION_ERROR", issues: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) } };
+
+    if (action === "create") {
+      const [row] = yield* q("create", () => db.insert(table).values(parsed.data as never).returning());
+      return { status: 201, body: { data: project(def, row as Record<string, unknown>) } };
+    }
+
+    const [row] = yield* q("update", () => db.update(table).set(parsed.data as never).where(eq(pk, request.id!)).returning());
     return row ? { status: 200, body: { data: project(def, row as Record<string, unknown>) } } : { status: 404, body: { error: "NOT_FOUND" } };
-  }
+  }).pipe(Effect.withSpan("crud.handle", { attributes: { "crud.resource": registration.definition.id, "http.method": request.method } }));
 
-  if (action === "delete") {
-    const deleted = await db.delete(table).where(eq(pk, request.id!)).returning();
-    return deleted.length ? { status: 204, body: null } : { status: 404, body: { error: "NOT_FOUND" } };
-  }
-
-  const parsed = buildInputSchema(def, action).safeParse(request.body ?? {});
-  if (!parsed.success) return { status: 422, body: { error: "VALIDATION_ERROR", issues: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) } };
-
-  if (action === "create") {
-    const [row] = await db.insert(table).values(parsed.data as never).returning();
-    return { status: 201, body: { data: project(def, row as Record<string, unknown>) } };
-  }
-
-  const [row] = await db.update(table).set(parsed.data as never).where(eq(pk, request.id!)).returning();
-  return row ? { status: 200, body: { data: project(def, row as Record<string, unknown>) } } : { status: 404, body: { error: "NOT_FOUND" } };
+/** Adaptateur Promise (page admin CRUD, tests) : rejette la cause d'origine d'un `DbError`. */
+export async function handleCrud(registration: CrudRegistration, request: CrudRequest, db: DrizzleDB): Promise<CrudResponse> {
+  const r = await Effect.runPromise(Effect.result(handleCrudEffect(registration, request, db)));
+  if (r._tag === "Success") return r.success;
+  throw r.failure.cause;
 }

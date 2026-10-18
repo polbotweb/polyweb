@@ -1,10 +1,10 @@
 /** API CRUD générée (`pnpm api:generate`) : /api/crud/<ressource>[/<id>]. */
 import { Effect } from 'effect';
 import { getDrizzle } from '@database/drizzle';
-import { handleCrud } from '@/core/crud/engine';
+import { handleCrudEffect } from '@/core/crud/engine';
 import { crudResources } from '@/generated/crud';
 import { apiRoute } from '@/lib/effect/http';
-import { attempt, rateLimit } from '@/lib/effect/route';
+import { rateLimit } from '@/lib/effect/route';
 import { userCan } from '@/lib/platform/admin';
 
 export const prerender = false;
@@ -29,8 +29,7 @@ const handler = apiRoute(({ params, request, locals, clientAddress, url }) =>
     }
 
     const user = locals.user;
-    const result = yield* attempt('crud.handle', () =>
-      handleCrud(
+    const result = yield* handleCrudEffect(
         registration,
         {
           method: request.method,
@@ -41,7 +40,6 @@ const handler = apiRoute(({ params, request, locals, clientAddress, url }) =>
           hasPermission: async (resource, action) => (user ? userCan(user.id, { [resource]: [action] }) : false),
         },
         getDrizzle(),
-      ),
     );
     return result.status === 204 ? new Response(null, { status: 204 }) : json(result.body, result.status);
   }),
