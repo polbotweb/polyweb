@@ -3,8 +3,8 @@
  * code de sortie, libération du pool Drizzle et du runtime partagé.
  */
 import { Cause, Data, Effect, Exit } from 'effect';
-import type { PoolClient, QueryResultRow } from 'pg';
-import { c } from './_utils';
+import type { Client, ClientBase, PoolClient, QueryResultRow } from 'pg';
+import { c, safeConnect } from './_utils';
 
 export class ScriptError extends Data.TaggedError('ScriptError')<{ readonly step: string; readonly cause?: unknown }> {
   override get message() {
@@ -42,14 +42,24 @@ export const withPgClient = <A, E>(
   Effect.acquireUseRelease(step('connexion', acquire), use, (client) => Effect.sync(() => client.release()));
 
 /** Requête SQL nommée : un échec devient `ScriptError` (étape = libellé). */
-export const sqlStep = <R extends QueryResultRow = QueryResultRow>(client: PoolClient, label: string, text: string, params?: unknown[]) =>
+export const sqlStep = <R extends QueryResultRow = QueryResultRow>(client: ClientBase, label: string, text: string, params?: unknown[]) =>
   step(label, () => client.query<R>(text, params));
 
 /** BEGIN … COMMIT ; ROLLBACK (best effort) si le corps échoue. */
-export const inTransaction = <A, E>(client: PoolClient, body: Effect.Effect<A, E>): Effect.Effect<A, E | ScriptError> =>
+export const inTransaction = <A, E>(client: ClientBase, body: Effect.Effect<A, E>): Effect.Effect<A, E | ScriptError> =>
   Effect.gen(function* () {
     yield* sqlStep(client, 'BEGIN', 'BEGIN');
     const result = yield* body.pipe(Effect.onError(() => Effect.ignore(sqlStep(client, 'ROLLBACK', 'ROLLBACK'))));
     yield* sqlStep(client, 'COMMIT', 'COMMIT');
     return result;
   });
+
+/**
+ * Connexion dédiée (pg.Client via safeConnect, qui diagnostique déjà un échec), fermée à la
+ * sortie du scope. `null` si la connexion a échoué : l'appelant décide (tout tenter puis échouer).
+ */
+export const scopedConnection = (label: string, url: string) =>
+  Effect.acquireRelease(
+    step(`connexion ${label}`, () => safeConnect(label, url)).pipe(Effect.map((conn) => (conn.ok ? conn.client : null))),
+    (client: Client | null) => (client ? Effect.promise(() => client.end().catch(() => undefined)) : Effect.void),
+  );
