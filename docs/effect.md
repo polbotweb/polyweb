@@ -123,3 +123,26 @@ Le code antérieur est migré **par zones**, chaque zone gardant typecheck/tests
 | `src/lib/content/internal-link-resolver.ts` | Vue Effect du registre (`resolveInternalLinkEffect`, `listInternalLinkTargetsEffect`, `searchInternalLinksEffect` : timeout 10 s, `NotFoundError`/`DbError`). **Partiel :** les résolveurs blog/services restent des objets Promise (contrat ouvert aux modules). |
 | `src/lib/auth.ts` (config + hooks better-auth), `src/modules/services/permissions` | Promise (callbacks imposés par better-auth ; assertions appelées à l'intérieur des actions déjà enveloppées). |
 | Code client (`markdown-editor`, `media-picker-client`, `admin/confirmation`) | Hors périmètre (navigateur). |
+
+## Verrou d'édition générique (`src/core/locks`)
+
+Abstraction core, indépendante de l'entité, utilisable par tout module :
+
+- `registerLockStore(resourceType, drizzleLockStore(resourceType, table, 'serviceId'), { ttlMs })` — un stockage
+  par type de ressource ; toute table `{ <ressource> unique, userId, sessionId, lockedAt, expiresAt }` convient
+  (aucune migration pour `service_locks` / `blog_post_locks`).
+- `acquireLock` (atomique : `INSERT … ON CONFLICT DO UPDATE … WHERE expiré OU même propriétaire`),
+  `releaseLock`, `ensureNotLockedByOther` (purge l'expiré), `ensureNoneLockedByOther` (actions groupées),
+  `requireOwnLock` (ex. restauration de révision) ; `lockOwnerFrom(userId, sessionId)`.
+- Politique unique (`policy.ts`) : propriétaire = utilisateur + session (session inconnue → utilisateur seul) ;
+  un verrou expiré ne bloque jamais.
+- Erreurs `LockHeldError` / `LockExpiredError` (messages fr/en/es/ar), traduites en `CONFLICT` par `toActionError`.
+- `src/core/locks/service.ts` accède à la base : il s'importe explicitement (hors barrel `@/core`).
+
+État : abstraction livrée et testée (`tests/unit/core-locks.test.ts`) ; **migration des appels services/blog
+vers ce service : à faire** (les implémentations par module restent en place d'ici là).
+
+## Helper unique d'accès base
+
+`dbTry(operation, f, span?)` (`src/lib/effect/run.ts`) : `liftLoader`, `core/locks` et les résolveurs de liens
+reposent dessus ; `runOrThrow` est l'adaptateur Promise des contrats ouverts (cause d'origine relevée).
