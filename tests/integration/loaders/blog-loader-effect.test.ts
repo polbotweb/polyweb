@@ -71,4 +71,24 @@ describe('blog.loader Effect-natif', () => {
     expect((await blog.getBlogGalleriesWithMedia([])).size).toBe(0);
     expect((await blog.getBlogGalleriesWithMedia([crypto.randomUUID()])).size).toBe(0);
   });
+
+  it('admin : article complet, liste paginée, file de modération, notifications', async () => {
+    const admin = await blog.getBlogPostForAdmin(post);
+    expect(admin?.post.id).toBe(post);
+    expect(admin).toMatchObject({ translations: [], seo: null, galleries: [], links: [], categoryIds: [], tagIds: [], lock: null });
+    expect(await blog.getBlogPostForAdmin(crypto.randomUUID())).toBeNull();
+    expect(await Effect.runPromise(blog.blogLoaderEffects.getBlogPostForAdmin(post))).toEqual(admin);
+
+    const list = await blog.getBlogPostsForAdmin(null, undefined, { limit: 100, status: 'DRAFT' });
+    expect(list.rows.some((r) => r.post.id === draft)).toBe(true);
+    expect(list.meta.total).toBeGreaterThanOrEqual(1);
+    expect(list.rows.every((r) => Array.isArray(r.categories))).toBe(true);
+
+    const queue = await blog.getBlogModerationQueue(null, { limit: 100 });
+    expect(queue.comments.some((c) => c.comment.content === 'en attente')).toBe(true);
+
+    expect(await blog.getBlogNotifications(reader)).toEqual([]);
+    expect(await blog.getUnreadBlogNotificationCount(reader)).toBe(0);
+  });
 });
+

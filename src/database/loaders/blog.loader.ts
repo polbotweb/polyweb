@@ -1017,8 +1017,7 @@ const blogGalleriesWithMediaEffect = (galleryIds: string[]) =>
         }),
       );
 
-/** Lectures blog Effect-natives (migration en cours : les autres passent encore par `liftLoader`). */
-export const blogLoaderEffects = {
+const engagementEffects = {
   getBlogComments: blogCommentsEffect,
   getBlogReviews: blogReviewsEffect,
   getBlogReviewStats: blogReviewStatsEffect,
@@ -1038,350 +1037,276 @@ export const getBlogGalleriesWithMedia = (galleryIds: string[]) => runOrThrow(bl
 
 // ─── Admin helpers ───────────────────────────────────────────────────────────
 
-export async function getBlogPostForAdmin(postId: string) {
-  const db = getDrizzle();
-  const [post] = await db.select().from(blogPosts).where(eq(blogPosts.id, postId)).limit(1);
-  if (!post) return null;
+// ─── Admin (Effect natif) ────────────────────────────────────────────────────
 
-  const translations = await db
-    .select()
-    .from(blogPostTranslations)
-    .where(eq(blogPostTranslations.postId, postId));
+const blogPostForAdminEffect = (postId: string) =>
+  Effect.gen(function* () {
+    const db = getDrizzle();
+    const [post] = yield* dbTry("blog.admin.post", () => db.select().from(blogPosts).where(eq(blogPosts.id, postId)).limit(1));
+    if (!post) return null;
 
-  const categories = await db
-    .select({ categoryId: blogPostCategories.categoryId })
-    .from(blogPostCategories)
-    .where(eq(blogPostCategories.postId, postId));
-
-  const tags = await db
-    .select({ tagId: blogPostTags.tagId })
-    .from(blogPostTags)
-    .where(eq(blogPostTags.postId, postId));
-
-  const revisions = await db
-    .select({
-      revision: blogPostRevisions,
-      author: { id: user.id, name: user.name },
-    })
-    .from(blogPostRevisions)
-    .leftJoin(user, eq(user.id, blogPostRevisions.authorId))
-    .where(eq(blogPostRevisions.postId, postId))
-    .orderBy(desc(blogPostRevisions.createdAt))
-    .limit(20);
-
-  const lock = await db
-    .select()
-    .from(blogPostLocks)
-    .where(eq(blogPostLocks.postId, postId))
-    .limit(1)
-    .then(r => r[0] ?? null);
-
-  const [seo] = await db
-    .select()
-    .from(blogPostSeo)
-    .where(eq(blogPostSeo.postId, postId))
-    .limit(1);
-
-  const galleries = await db
-    .select({
-      id: blogPostGalleries.id,
-      title: blogPostGalleries.title,
-      description: blogPostGalleries.description,
-      sortOrder: blogPostGalleries.sortOrder,
-    })
-    .from(blogPostGalleries)
-    .where(eq(blogPostGalleries.postId, postId))
-    .orderBy(asc(blogPostGalleries.sortOrder));
-
-  const galleriesWithMedia = await (async () => {
-    const mediaByGallery = await getBlogGalleriesWithMedia(galleries.map((g) => g.id));
-    return galleries.map((gallery) => ({ ...gallery, media: mediaByGallery.get(gallery.id) ?? [] }));
-  })();
-
-  const links = await db
-    .select({
-      id: blogPostLinks.id,
-      linkType: blogPostLinks.linkType,
-      sortOrder: blogPostLinks.sortOrder,
-      targetId: blogPosts.id,
-      targetSlug: blogPosts.slug,
-      targetTitle: blogPostTranslations.title,
-    })
-    .from(blogPostLinks)
-    .innerJoin(blogPosts, eq(blogPostLinks.targetPostId, blogPosts.id))
-    .leftJoin(
-      blogPostTranslations,
-      and(eq(blogPostTranslations.postId, blogPosts.id), eq(blogPostTranslations.locale, "fr")),
-    )
-    .where(eq(blogPostLinks.sourcePostId, postId))
-    .orderBy(asc(blogPostLinks.sortOrder));
-
-  return {
-    post,
-    translations,
-    seo: seo ?? null,
-    galleries: galleriesWithMedia,
-    links: links.map((link) => ({
-      id: link.id,
-      linkType: link.linkType,
-      sortOrder: link.sortOrder,
-      target: {
-        id: link.targetId,
-        slug: link.targetSlug,
-        title: link.targetTitle ?? null,
+    // Lectures indépendantes de l'article : exécutées en parallèle.
+    const { translations, categories, tags, revisions, lock, seo, galleries, links } = yield* Effect.all(
+      {
+        translations: dbTry("blog.admin.translations", () => db.select().from(blogPostTranslations).where(eq(blogPostTranslations.postId, postId))),
+        categories: dbTry("blog.admin.categories", () => db.select({ categoryId: blogPostCategories.categoryId }).from(blogPostCategories).where(eq(blogPostCategories.postId, postId))),
+        tags: dbTry("blog.admin.tags", () => db.select({ tagId: blogPostTags.tagId }).from(blogPostTags).where(eq(blogPostTags.postId, postId))),
+        revisions: dbTry("blog.admin.revisions", () =>
+          db
+            .select({ revision: blogPostRevisions, author: { id: user.id, name: user.name } })
+            .from(blogPostRevisions)
+            .leftJoin(user, eq(user.id, blogPostRevisions.authorId))
+            .where(eq(blogPostRevisions.postId, postId))
+            .orderBy(desc(blogPostRevisions.createdAt))
+            .limit(20),
+        ),
+        lock: dbTry("blog.admin.lock", () => db.select().from(blogPostLocks).where(eq(blogPostLocks.postId, postId)).limit(1)).pipe(Effect.map((r) => r[0] ?? null)),
+        seo: dbTry("blog.admin.seo", () => db.select().from(blogPostSeo).where(eq(blogPostSeo.postId, postId)).limit(1)).pipe(Effect.map((r) => r[0] ?? null)),
+        galleries: dbTry("blog.admin.galleries", () =>
+          db
+            .select({ id: blogPostGalleries.id, title: blogPostGalleries.title, description: blogPostGalleries.description, sortOrder: blogPostGalleries.sortOrder })
+            .from(blogPostGalleries)
+            .where(eq(blogPostGalleries.postId, postId))
+            .orderBy(asc(blogPostGalleries.sortOrder)),
+        ),
+        links: dbTry("blog.admin.links", () =>
+          db
+            .select({
+              id: blogPostLinks.id,
+              linkType: blogPostLinks.linkType,
+              sortOrder: blogPostLinks.sortOrder,
+              targetId: blogPosts.id,
+              targetSlug: blogPosts.slug,
+              targetTitle: blogPostTranslations.title,
+            })
+            .from(blogPostLinks)
+            .innerJoin(blogPosts, eq(blogPostLinks.targetPostId, blogPosts.id))
+            .leftJoin(blogPostTranslations, and(eq(blogPostTranslations.postId, blogPosts.id), eq(blogPostTranslations.locale, "fr")))
+            .where(eq(blogPostLinks.sourcePostId, postId))
+            .orderBy(asc(blogPostLinks.sortOrder)),
+        ),
       },
-    })),
-    categoryIds: categories.map((c) => c.categoryId),
-    tagIds: tags.map((t) => t.tagId),
-    revisions,
-    lock,
-  };
-}
+      { concurrency: "unbounded" },
+    );
 
-export async function getBlogPostsForAdmin(
+    const mediaByGallery = yield* blogGalleriesWithMediaEffect(galleries.map((g) => g.id));
+
+    return {
+      post,
+      translations,
+      seo,
+      galleries: galleries.map((gallery) => ({ ...gallery, media: mediaByGallery.get(gallery.id) ?? [] })),
+      links: links.map((link) => ({
+        id: link.id,
+        linkType: link.linkType,
+        sortOrder: link.sortOrder,
+        target: { id: link.targetId, slug: link.targetSlug, title: link.targetTitle ?? null },
+      })),
+      categoryIds: categories.map((c) => c.categoryId),
+      tagIds: tags.map((t) => t.tagId),
+      revisions,
+      lock,
+    };
+  });
+
+const blogPostsForAdminEffect = (
   organizationId: string | null,
   locale?: Locale,
   opts: { page?: number; limit?: number; status?: BlogPostStatus; search?: string } = {},
-) {
-  const db = getDrizzle();
-  const categoryLocale = locale ?? "fr";
-  const page = Math.max(1, opts.page ?? 1);
-  const limit = Math.min(100, Math.max(1, opts.limit ?? 20));
-  const offset = (page - 1) * limit;
+) =>
+  Effect.gen(function* () {
+    const db = getDrizzle();
+    const categoryLocale = locale ?? "fr";
+    const page = Math.max(1, opts.page ?? 1);
+    const limit = Math.min(100, Math.max(1, opts.limit ?? 20));
+    const offset = (page - 1) * limit;
 
-  const conditions = [orgScope(blogPosts, organizationId)];
-  if (locale) conditions.push(eq(blogPostTranslations.locale, locale));
-  if (opts.status) conditions.push(eq(blogPosts.status, opts.status));
-  if (opts.search) {
-    const q = `%${opts.search}%`;
-    const searchCondition = or(
-      ilike(blogPostTranslations.title, q),
-      ilike(blogPostTranslations.slug, q),
+    const conditions = [orgScope(blogPosts, organizationId)];
+    if (locale) conditions.push(eq(blogPostTranslations.locale, locale));
+    if (opts.status) conditions.push(eq(blogPosts.status, opts.status));
+    if (opts.search) {
+      const q = `%${opts.search}%`;
+      const searchCondition = or(ilike(blogPostTranslations.title, q), ilike(blogPostTranslations.slug, q));
+      if (searchCondition) conditions.push(searchCondition);
+    }
+    const translationJoin = locale
+      ? and(eq(blogPostTranslations.postId, blogPosts.id), eq(blogPostTranslations.locale, locale))
+      : eq(blogPostTranslations.postId, blogPosts.id);
+
+    const { rows, total } = yield* Effect.all(
+      {
+        rows: dbTry("blog.admin.list", () =>
+          db
+            .select({ post: blogPosts, translation: blogPostTranslations, author: { id: user.id, name: user.name } })
+            .from(blogPosts)
+            .leftJoin(blogPostTranslations, translationJoin)
+            .leftJoin(user, eq(user.id, blogPosts.authorId))
+            .where(and(...conditions))
+            .orderBy(desc(blogPosts.updatedAt))
+            .limit(limit)
+            .offset(offset),
+        ),
+        total: dbTry("blog.admin.count", () =>
+          db.select({ value: count() }).from(blogPosts).leftJoin(blogPostTranslations, translationJoin).where(and(...conditions)),
+        ).pipe(Effect.map(([row]) => Number(row.value))),
+      },
+      { concurrency: "unbounded" },
     );
-    if (searchCondition) conditions.push(searchCondition);
-  }
 
-  const rows = await db
-    .select({
-      post: blogPosts,
-      translation: blogPostTranslations,
-      author: { id: user.id, name: user.name },
-    })
-    .from(blogPosts)
-    .leftJoin(
-      blogPostTranslations,
-      locale
-        ? and(eq(blogPostTranslations.postId, blogPosts.id), eq(blogPostTranslations.locale, locale))
-        : eq(blogPostTranslations.postId, blogPosts.id),
-    )
-    .leftJoin(user, eq(user.id, blogPosts.authorId))
-    .where(and(...conditions))
-    .orderBy(desc(blogPosts.updatedAt))
-    .limit(limit)
-    .offset(offset);
+    const categorySlug = sql<string>`coalesce(${blogCategoryTranslations.slug}, ${blogCategories.slug})`;
+    const rowsWithCategories = yield* Effect.forEach(
+      rows,
+      (row) =>
+        dbTry("blog.admin.listCategories", () =>
+          db
+            .select({ id: blogCategories.id, slug: categorySlug, name: blogCategoryTranslations.name })
+            .from(blogPostCategories)
+            .innerJoin(blogCategories, eq(blogPostCategories.categoryId, blogCategories.id))
+            .leftJoin(blogCategoryTranslations, and(eq(blogCategoryTranslations.categoryId, blogCategories.id), eq(blogCategoryTranslations.locale, categoryLocale)))
+            .where(eq(blogPostCategories.postId, row.post.id))
+            .orderBy(asc(blogCategories.sortOrder), asc(categorySlug), asc(blogCategories.id)),
+        ).pipe(Effect.map((categories) => ({ ...row, categories }))),
+      { concurrency: "unbounded" },
+    );
 
-  const [{ value: total }] = await db
-    .select({ value: count() })
-    .from(blogPosts)
-    .leftJoin(
-      blogPostTranslations,
-      locale
-        ? and(eq(blogPostTranslations.postId, blogPosts.id), eq(blogPostTranslations.locale, locale))
-        : eq(blogPostTranslations.postId, blogPosts.id),
-    )
-    .where(and(...conditions));
+    return {
+      rows: rowsWithCategories,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: offset + limit < total,
+        hasPrevPage: page > 1,
+      },
+    };
+  });
 
-  const rowsWithCategories = await Promise.all(
-    rows.map(async (row) => {
-      const categories = await db
-        .select({
-          id: blogCategories.id,
-          slug: sql<string>`coalesce(${blogCategoryTranslations.slug}, ${blogCategories.slug})`,
-          name: blogCategoryTranslations.name,
-        })
-        .from(blogPostCategories)
-        .innerJoin(blogCategories, eq(blogPostCategories.categoryId, blogCategories.id))
-        .leftJoin(
-          blogCategoryTranslations,
-          and(
-            eq(blogCategoryTranslations.categoryId, blogCategories.id),
-            eq(blogCategoryTranslations.locale, categoryLocale),
-          ),
-        )
-        .where(eq(blogPostCategories.postId, row.post.id))
-        .orderBy(
-          asc(blogCategories.sortOrder),
-          asc(sql<string>`coalesce(${blogCategoryTranslations.slug}, ${blogCategories.slug})`),
-          asc(blogCategories.id),
-        );
-
-      return {
-        ...row,
-        categories,
-      };
-    }),
-  );
-
-  return {
-    rows: rowsWithCategories,
-    meta: {
-      total: Number(total),
-      page,
-      limit,
-      totalPages: Math.ceil(Number(total) / limit),
-      hasNextPage: offset + limit < Number(total),
-      hasPrevPage: page > 1,
-    },
-  };
-}
-
-export async function getBlogModerationQueue(
-  organizationId: string | null,
-  opts: { page?: number; limit?: number } = {},
-) {
+const blogModerationQueueEffect = (organizationId: string | null, opts: { page?: number; limit?: number } = {}) => {
   const db = getDrizzle();
   const page = Math.max(1, opts.page ?? 1);
   const limit = Math.min(100, Math.max(1, opts.limit ?? 20));
   const offset = (page - 1) * limit;
-
-  const comments = await db
-    .select({
-      comment: blogComments,
-      post: blogPosts,
-      author: { id: user.id, name: user.name },
-    })
-    .from(blogComments)
-    .innerJoin(blogPosts, eq(blogComments.postId, blogPosts.id))
-    .leftJoin(user, eq(user.id, blogComments.authorId))
-    .where(and(orgScope(blogPosts, organizationId), eq(blogComments.status, "PENDING")))
-    .orderBy(desc(blogComments.createdAt))
-    .limit(limit)
-    .offset(offset);
-
-  const reviews = await db
-    .select({
-      review: blogPostReviews,
-      post: blogPosts,
-      author: { id: user.id, name: user.name },
-    })
-    .from(blogPostReviews)
-    .innerJoin(blogPosts, eq(blogPostReviews.postId, blogPosts.id))
-    .leftJoin(user, eq(user.id, blogPostReviews.authorId))
-    .where(and(orgScope(blogPosts, organizationId), eq(blogPostReviews.status, "PENDING")))
-    .orderBy(desc(blogPostReviews.createdAt))
-    .limit(limit)
-    .offset(offset);
-
-  const reports = await db
-    .select({
-      report: blogReports,
-      post: blogPosts,
-      reporter: { id: user.id, name: user.name },
-    })
-    .from(blogReports)
-    .leftJoin(blogComments, eq(blogReports.commentId, blogComments.id))
-    .leftJoin(blogPostReviews, eq(blogReports.reviewId, blogPostReviews.id))
-    .leftJoin(
-      blogPosts,
-      or(
-        eq(blogReports.postId, blogPosts.id),
-        eq(blogComments.postId, blogPosts.id),
-        eq(blogPostReviews.postId, blogPosts.id),
+  return Effect.all(
+    {
+      comments: dbTry("blog.moderation.comments", () =>
+        db
+          .select({ comment: blogComments, post: blogPosts, author: { id: user.id, name: user.name } })
+          .from(blogComments)
+          .innerJoin(blogPosts, eq(blogComments.postId, blogPosts.id))
+          .leftJoin(user, eq(user.id, blogComments.authorId))
+          .where(and(orgScope(blogPosts, organizationId), eq(blogComments.status, "PENDING")))
+          .orderBy(desc(blogComments.createdAt))
+          .limit(limit)
+          .offset(offset),
       ),
-    )
-    .leftJoin(user, eq(user.id, blogReports.reporterId))
-    .where(and(orgScope(blogPosts, organizationId), eq(blogReports.status, "PENDING")))
-    .orderBy(desc(blogReports.createdAt))
-    .limit(limit)
-    .offset(offset);
+      reviews: dbTry("blog.moderation.reviews", () =>
+        db
+          .select({ review: blogPostReviews, post: blogPosts, author: { id: user.id, name: user.name } })
+          .from(blogPostReviews)
+          .innerJoin(blogPosts, eq(blogPostReviews.postId, blogPosts.id))
+          .leftJoin(user, eq(user.id, blogPostReviews.authorId))
+          .where(and(orgScope(blogPosts, organizationId), eq(blogPostReviews.status, "PENDING")))
+          .orderBy(desc(blogPostReviews.createdAt))
+          .limit(limit)
+          .offset(offset),
+      ),
+      reports: dbTry("blog.moderation.reports", () =>
+        db
+          .select({ report: blogReports, post: blogPosts, reporter: { id: user.id, name: user.name } })
+          .from(blogReports)
+          .leftJoin(blogComments, eq(blogReports.commentId, blogComments.id))
+          .leftJoin(blogPostReviews, eq(blogReports.reviewId, blogPostReviews.id))
+          .leftJoin(blogPosts, or(eq(blogReports.postId, blogPosts.id), eq(blogComments.postId, blogPosts.id), eq(blogPostReviews.postId, blogPosts.id)))
+          .leftJoin(user, eq(user.id, blogReports.reporterId))
+          .where(and(orgScope(blogPosts, organizationId), eq(blogReports.status, "PENDING")))
+          .orderBy(desc(blogReports.createdAt))
+          .limit(limit)
+          .offset(offset),
+      ),
+    },
+    { concurrency: "unbounded" },
+  );
+};
 
-  return { comments, reviews, reports };
-}
+// ─── Notifications (Effect natif) ────────────────────────────────────────────
 
-// ─── Notifications ───────────────────────────────────────────────────────────
+const notificationPostJoin = () =>
+  or(eq(blogNotifications.postId, blogPosts.id), eq(blogComments.postId, blogPosts.id), eq(blogPostReviews.postId, blogPosts.id));
 
-export async function getBlogNotifications(
+const blogNotificationsEffect = (
   userId: string,
-  opts: {
-    page?: number;
-    limit?: number;
-    unreadOnly?: boolean;
-    organizationId?: string | null;
-  } = {},
-) {
-  const db = getDrizzle();
+  opts: { page?: number; limit?: number; unreadOnly?: boolean; organizationId?: string | null } = {},
+) => {
   const page = Math.max(1, opts.page ?? 1);
   const limit = Math.min(50, Math.max(1, opts.limit ?? 20));
   const offset = (page - 1) * limit;
-
-  const rows = await db
-    .select({
-      notification: blogNotifications,
-      post: { id: blogPosts.id, slug: blogPosts.slug },
-      fromUser: { id: user.id, name: user.name, image: user.image },
-    })
-    .from(blogNotifications)
-    .leftJoin(blogComments, eq(blogNotifications.commentId, blogComments.id))
-    .leftJoin(blogPostReviews, eq(blogNotifications.reviewId, blogPostReviews.id))
-    .leftJoin(
-      blogPosts,
-      or(
-        eq(blogNotifications.postId, blogPosts.id),
-        eq(blogComments.postId, blogPosts.id),
-        eq(blogPostReviews.postId, blogPosts.id),
-      ),
-    )
-    .leftJoin(user, eq(user.id, blogNotifications.fromUserId))
-    .where(
-      and(
-        eq(blogNotifications.userId, userId),
-        opts.unreadOnly ? eq(blogNotifications.isRead, false) : undefined,
-        Object.hasOwn(opts, "organizationId")
-          ? opts.organizationId === null
-            ? isNull(blogNotifications.organizationId)
-            : eq(blogNotifications.organizationId, opts.organizationId!)
-          : undefined,
-      ),
-    )
-    .orderBy(desc(blogNotifications.createdAt))
-    .limit(limit)
-    .offset(offset);
-
-  return rows;
-}
-
-export async function getUnreadBlogNotificationCount(
-  userId: string,
-  organizationId?: string | null,
-): Promise<number> {
-  const db = getDrizzle();
-  const query = db
-    .select({ value: count() })
-    .from(blogNotifications)
-    .leftJoin(blogComments, eq(blogNotifications.commentId, blogComments.id))
-    .leftJoin(blogPostReviews, eq(blogNotifications.reviewId, blogPostReviews.id))
-    .leftJoin(
-      blogPosts,
-      or(
-        eq(blogNotifications.postId, blogPosts.id),
-        eq(blogComments.postId, blogPosts.id),
-        eq(blogPostReviews.postId, blogPosts.id),
-      ),
-    );
-
-  const [{ value }] = await query.where(
-    and(
-      eq(blogNotifications.userId, userId),
-      eq(blogNotifications.isRead, false),
-      organizationId === undefined
-        ? undefined
-        : organizationId === null
-          ? isNull(blogNotifications.organizationId)
-          : eq(blogNotifications.organizationId, organizationId),
-    ),
+  return dbTry("blog.notifications", () =>
+    getDrizzle()
+      .select({
+        notification: blogNotifications,
+        post: { id: blogPosts.id, slug: blogPosts.slug },
+        fromUser: { id: user.id, name: user.name, image: user.image },
+      })
+      .from(blogNotifications)
+      .leftJoin(blogComments, eq(blogNotifications.commentId, blogComments.id))
+      .leftJoin(blogPostReviews, eq(blogNotifications.reviewId, blogPostReviews.id))
+      .leftJoin(blogPosts, notificationPostJoin())
+      .leftJoin(user, eq(user.id, blogNotifications.fromUserId))
+      .where(
+        and(
+          eq(blogNotifications.userId, userId),
+          opts.unreadOnly ? eq(blogNotifications.isRead, false) : undefined,
+          Object.hasOwn(opts, "organizationId")
+            ? opts.organizationId === null
+              ? isNull(blogNotifications.organizationId)
+              : eq(blogNotifications.organizationId, opts.organizationId!)
+            : undefined,
+        ),
+      )
+      .orderBy(desc(blogNotifications.createdAt))
+      .limit(limit)
+      .offset(offset),
   );
-  return Number(value);
-}
+};
+
+const unreadBlogNotificationCountEffect = (userId: string, organizationId?: string | null) =>
+  dbTry("blog.notifications.unread", () =>
+    getDrizzle()
+      .select({ value: count() })
+      .from(blogNotifications)
+      .leftJoin(blogComments, eq(blogNotifications.commentId, blogComments.id))
+      .leftJoin(blogPostReviews, eq(blogNotifications.reviewId, blogPostReviews.id))
+      .leftJoin(blogPosts, notificationPostJoin())
+      .where(
+        and(
+          eq(blogNotifications.userId, userId),
+          eq(blogNotifications.isRead, false),
+          organizationId === undefined
+            ? undefined
+            : organizationId === null
+              ? isNull(blogNotifications.organizationId)
+              : eq(blogNotifications.organizationId, organizationId),
+        ),
+      ),
+  ).pipe(Effect.map(([{ value }]) => Number(value)));
+
+/** Lectures blog Effect-natives (migration en cours : les autres passent encore par `liftLoader`). */
+export const blogLoaderEffects = {
+  ...engagementEffects,
+  getBlogPostForAdmin: blogPostForAdminEffect,
+  getBlogPostsForAdmin: blogPostsForAdminEffect,
+  getBlogModerationQueue: blogModerationQueueEffect,
+  getBlogNotifications: blogNotificationsEffect,
+  getUnreadBlogNotificationCount: unreadBlogNotificationCountEffect,
+};
+
+export const getBlogPostForAdmin = (postId: string) => runOrThrow(blogPostForAdminEffect(postId));
+export const getBlogPostsForAdmin = (...args: Parameters<typeof blogPostsForAdminEffect>) => runOrThrow(blogPostsForAdminEffect(...args));
+export const getBlogModerationQueue = (...args: Parameters<typeof blogModerationQueueEffect>) => runOrThrow(blogModerationQueueEffect(...args));
+export const getBlogNotifications = (...args: Parameters<typeof blogNotificationsEffect>) => runOrThrow(blogNotificationsEffect(...args));
+export const getUnreadBlogNotificationCount = (userId: string, organizationId?: string | null): Promise<number> =>
+  runOrThrow(unreadBlogNotificationCountEffect(userId, organizationId));
 
 /**
  * Returns the set of published post slugs for a tenant + locale.
