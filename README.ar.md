@@ -113,6 +113,7 @@ pnpm dev
 ```
 src/components/
 admin/
+  ForceReleaseLockButton.astro
   MarkdownEditor.astro
 atoms/
   accordion/
@@ -422,6 +423,8 @@ migrations/
   0016_forms.sql
   0017_plugins.sql
   0018_search_documents.sql
+  0019_page_locks.sql
+  0020_drop_pages_legacy_lock.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -438,6 +441,8 @@ migrations/
     0016_snapshot.json
     0017_snapshot.json
     0018_snapshot.json
+    0019_snapshot.json
+    0020_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -490,8 +495,9 @@ schemas.ts
 - `navigation_items`: `id`, `menuId`, `parentId`, `locale`, `label`, `url`, `icon`, `showIcon`, `sortOrder`, `isActive`, `openInNewTab`, `createdAt`, `updatedAt`
 
 **page.schema.ts**
-- `pages`: `id`, `locale`, `slug`, `title`, `metaTitle`, `metaDescription`, `ogImage`, `canonical`, `robots`, `template`, `isPublished`, `publishedAt`, `scheduledAt`, `scheduledUnpublishAt`, `sortOrder`, `deletedAt`, `updatedBy`, `lockedBy`, `lockedAt`, `createdAt`, `updatedAt` _(sections: many)_
+- `pages`: `id`, `locale`, `slug`, `title`, `metaTitle`, `metaDescription`, `ogImage`, `canonical`, `robots`, `template`, `isPublished`, `publishedAt`, `scheduledAt`, `scheduledUnpublishAt`, `sortOrder`, `deletedAt`, `updatedBy`, `createdAt`, `updatedAt` _(sections: many)_
 - `page_sections`: `id`, `pageId`, `type`, `content`, `sortOrder`, `isVisible`, `createdAt`, `updatedAt`, `updatedBy` _(page: one)_
+- `page_locks`: `id`, `pageId`, `userId`, `sessionId`, `lockedAt`, `expiresAt`
 
 **page-version.schema.ts**
 - `page_versions`: `id`, `pageId`, `versionNumber`, `snapshot`, `createdBy`, `note`, `createdAt` _(page: one, author: one)_
@@ -605,6 +611,8 @@ schemas.ts
 - `0016_forms.sql`
 - `0017_plugins.sql`
 - `0018_search_documents.sql`
+- `0019_page_locks.sql`
+- `0020_drop_pages_legacy_lock.sql`
 
 ### الأوامر
 
@@ -751,7 +759,10 @@ localization/
   module-labels.ts
   platform-labels.ts
 locks/
+  errors.ts
   index.ts
+  policy.ts
+  service.ts
 media/
   index.ts
 moderation/
@@ -763,6 +774,8 @@ modules/
   module-registry.ts
 notifications/
   index.ts
+permissions/
+  tenant.ts
 plugins/
   contract.ts
   host.ts
@@ -810,6 +823,7 @@ blog/
   index.ts
   loaders/
     index.ts
+  locks.ts
   module.ts
   permissions/
     index.ts
@@ -876,6 +890,7 @@ services/
   index.ts
   loaders/
     index.ts
+  locks.ts
   module.ts
   permissions/
     index.ts
@@ -989,6 +1004,7 @@ rss.xml.ts
 sitemap-blog-org.xml.ts
 sitemap-cms.xml.ts
 sitemap-services-org.xml.ts
+theme.css.ts
 src/layouts/
 BaseLayout.astro
 ```
@@ -1007,6 +1023,7 @@ BaseLayout.astro
 - `tests/integration/consent-cms.test.ts`
 - `tests/integration/contact-api.test.ts`
 - `tests/integration/legal-cms.test.ts`
+- `tests/integration/loaders/blog-loader-effect.test.ts`
 - `tests/integration/navigation-cycle.test.ts`
 - `tests/unit/admin-consent.test.ts`
 - `tests/unit/admin-contact.test.ts`

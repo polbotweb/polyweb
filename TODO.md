@@ -1053,3 +1053,17 @@ Before changing a CMS/module file:
 12. Update this TODO only when the implementation state actually changes.
 
 The purpose of this file is not to make the repository look busy. It exists so that future work starts from the architecture we actually built rather than from a hallucinated architecture somebody inferred from a directory tree.
+
+---
+
+# 25. ÉTAT VÉRIFIÉ (2026-10-18)
+
+Section additive : uniquement des faits vérifiés (commande exécutée ou run CI consulté) à la date indiquée.
+
+- **CI main entièrement verte** : run 39144229835 (af56103) — Lint & Type Check, Unit & Integration, Security Audit (`pnpm audit --prod --audit-level=moderate`), E2E (chromium/firefox/webkit), Accessibility & Performance.
+- **`pnpm qa` complet** (3c01cdb, base fraîche migrée + seedée) : astro check 0 erreur ; ESLint 0 erreur ; Vitest 1579/1579 ; Playwright 255/285 (30 skip, 3 navigateurs) ; Pa11y 60/60 URLs ; Lighthouse public + authentifié 52 pages ≥ 90 ; rapports dans `tests/reports/`, aucun cookie/jeton en clair (en-têtes `Cookie` caviardés `[REDACTED]`), upload Lighthouse `filesystem` uniquement.
+- **Effect côté serveur** : tous les loaders (`*LoaderEffects`, exports Promise mis en cache inchangés) et toutes les commandes `db:*` sont des programmes Effect à étapes nommées (`ScriptError`, `withPgClient`/`scopedConnection`, `inTransaction`) ; couverts par `tests/integration/db-commands-effect.test.ts` (bases jetables).
+- **Verrous d'édition** : verrou générique `src/core/locks` (`page_locks`, `blog_post_locks`, `service_locks`) ; colonnes héritées `pages.locked_by/locked_at` supprimées (migration `0020_drop_pages_legacy_lock`).
+- **Régression visuelle** : polices système figées dans le spec (Liberation Sans / DejaVu Sans) — références home issues du runner CI ; écart local ↔ CI < 1 %.
+- **Dépendances** : astro 7.4.0, @astrojs/node 11.1.8 (`security.allowedDomains` + `ALLOWED_HOSTS`), nodemailer ≥ 10.0.6, sharp 0.35.5 ; Node ≥ 22.22 requis.
+- **Corrigés au passage** : `db:sync` (TRUNCATE CASCADE par table qui vidait les tables déjà copiées ; tableaux JS dans colonnes json/jsonb) ; bruit FK `audit_log` dans `create-admin.test`.
