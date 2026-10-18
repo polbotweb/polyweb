@@ -13,7 +13,7 @@ import { UPLOAD_DIRS } from "@/media/types";
 import { auditAdmin } from "./_helpers";
 import { LOCALES } from "@i18n/config";
 import { Effect } from "effect";
-import { actionRateLimit, actionTry, effectHandler, fail, requireActionPermission, runGuard } from "@/lib/effect/action";
+import { actionRateLimit, actionTry, effectHandler, fail, requireActionPermission } from "@/lib/effect/action";
 
 const localeEnum = z.enum(LOCALES, {
   message: `La locale doit être l'une des suivantes : ${LOCALES.join(", ")}.`,
@@ -80,9 +80,6 @@ const folderInTenant = (folderId: string, tenant: MediaTenantContext) =>
 const fileInTenant = (fileId: string, tenant: MediaTenantContext) =>
   ownedBy("media.file.tenant", "Fichier introuvable.", "Ce fichier n'appartient pas à ce tenant.", () => getDrizzle().select().from(mediaFiles).where(eq(mediaFiles.id, fileId)).limit(1), tenant);
 
-// Adaptateurs Promise (gardes appelées au milieu des corps métier).
-const assertFolderInTenant = (folderId: string, tenant: MediaTenantContext) => runGuard(folderInTenant(folderId, tenant));
-const assertFileInTenant = (fileId: string, tenant: MediaTenantContext) => runGuard(fileInTenant(fileId, tenant));
 
 // ═══════════════════════════════════════════════════════════════════════
 // Folders
@@ -102,14 +99,10 @@ export const createMediaFolder = defineAction({
     const tenant = resolveMediaTenant(input);
     const user = yield* requireMediaPermission(context, tenant, { media: ["upload"] });
     yield* actionRateLimit(user.id, "media");
-    return yield* actionTry("admin/media.createMediaFolder", async () => {
-
-    const db = getDrizzle();
-
     // Validate parent exists if provided
-    if (input.parentId) {
-      await assertFolderInTenant(input.parentId, tenant);
-    }
+    if (input.parentId) yield* folderInTenant(input.parentId, tenant);
+    return yield* actionTry("admin/media.createMediaFolder", async () => {
+    const db = getDrizzle();
 
     let created;
     try {
@@ -156,15 +149,11 @@ export const updateMediaFolder = defineAction({
     const tenant = resolveMediaTenant(input);
     const user = yield* requireMediaPermission(context, tenant, { media: ["upload"] });
     yield* actionRateLimit(user.id, "media");
-    return yield* actionTry("admin/media.updateMediaFolder", async () => {
-
     const { id, organizationId: _, ...data } = input;
+    yield* folderInTenant(id, tenant);
+    if (data.parentId) yield* folderInTenant(data.parentId, tenant);
+    return yield* actionTry("admin/media.updateMediaFolder", async () => {
     const db = getDrizzle();
-
-    await assertFolderInTenant(id, tenant);
-    if (data.parentId) {
-      await assertFolderInTenant(data.parentId, tenant);
-    }
 
     const [updated] = await db.transaction(async (tx) => {
       // Prevent moving a folder into itself or into one of its descendants
@@ -228,11 +217,9 @@ export const deleteMediaFolder = defineAction({
     const tenant = resolveMediaTenant(input);
     const user = yield* requireMediaPermission(context, tenant, { media: ["delete"] });
     yield* actionRateLimit(user.id, "media");
+    yield* folderInTenant(input.id, tenant);
     return yield* actionTry("admin/media.deleteMediaFolder", async () => {
-
     const db = getDrizzle();
-
-    await assertFolderInTenant(input.id, tenant);
 
     // Check for child folders
     const children = await db
@@ -296,14 +283,10 @@ export const uploadMediaFile = defineAction({
     const tenant = resolveMediaTenant(input);
     const user = yield* requireMediaPermission(context, tenant, { media: ["upload"] });
     yield* actionRateLimit(user.id, "media");
-    return yield* actionTry("admin/media.uploadMediaFile", async () => {
-
-    const db = getDrizzle();
-
     // Validate folder exists if provided
-    if (input.folderId) {
-      await assertFolderInTenant(input.folderId, tenant);
-    }
+    if (input.folderId) yield* folderInTenant(input.folderId, tenant);
+    return yield* actionTry("admin/media.uploadMediaFile", async () => {
+    const db = getDrizzle();
 
     // Upload file to disk via the existing media pipeline
     const result = await processUpload(input.file, { subDir: UPLOAD_DIRS.media });
@@ -363,11 +346,9 @@ export const renameMediaFile = defineAction({
     const tenant = resolveMediaTenant(input);
     const user = yield* requireMediaPermission(context, tenant, { media: ["upload"] });
     yield* actionRateLimit(user.id, "media");
+    const file = yield* fileInTenant(input.id, tenant);
     return yield* actionTry("admin/media.renameMediaFile", async () => {
-
     const db = getDrizzle();
-
-    const file = await assertFileInTenant(input.id, tenant);
 
     // Keep the original extension
     const origExt = extname(file.filename);
@@ -440,15 +421,11 @@ export const moveMediaFile = defineAction({
     const tenant = resolveMediaTenant(input);
     const user = yield* requireMediaPermission(context, tenant, { media: ["upload"] });
     yield* actionRateLimit(user.id, "media");
+    yield* fileInTenant(input.id, tenant);
+    if (input.folderId) yield* folderInTenant(input.folderId, tenant);
     return yield* actionTry("admin/media.moveMediaFile", async () => {
-
     const db = getDrizzle();
 
-    await assertFileInTenant(input.id, tenant);
-
-    if (input.folderId) {
-      await assertFolderInTenant(input.folderId, tenant);
-    }
 
     const [updated] = await db
       .update(mediaFiles)
@@ -481,11 +458,9 @@ export const deleteMediaFile = defineAction({
     const tenant = resolveMediaTenant(input);
     const user = yield* requireMediaPermission(context, tenant, { media: ["delete"] });
     yield* actionRateLimit(user.id, "media");
+    const file = yield* fileInTenant(input.id, tenant);
     return yield* actionTry("admin/media.deleteMediaFile", async () => {
-
     const db = getDrizzle();
-
-    const file = await assertFileInTenant(input.id, tenant);
 
     // Delete from disk
     try {
@@ -525,12 +500,9 @@ export const upsertMediaFileAlt = defineAction({
     const tenant = resolveMediaTenant(input);
     const user = yield* requireMediaPermission(context, tenant, { media: ["upload"] });
     yield* actionRateLimit(user.id, "media");
+    yield* fileInTenant(input.fileId, tenant);
     return yield* actionTry("admin/media.upsertMediaFileAlt", async () => {
-
     const db = getDrizzle();
-
-    // Ensure file exists
-    await assertFileInTenant(input.fileId, tenant);
 
     // Upsert: update if exists, otherwise insert
     const [existing] = await db
@@ -585,11 +557,9 @@ export const deleteMediaFileAlt = defineAction({
     const tenant = resolveMediaTenant(input);
     const user = yield* requireMediaPermission(context, tenant, { media: ["delete"] });
     yield* actionRateLimit(user.id, "media");
+    yield* fileInTenant(input.fileId, tenant);
     return yield* actionTry("admin/media.deleteMediaFileAlt", async () => {
-
     const db = getDrizzle();
-
-    await assertFileInTenant(input.fileId, tenant);
 
     const [deleted] = await db
       .delete(mediaFileAlts)
