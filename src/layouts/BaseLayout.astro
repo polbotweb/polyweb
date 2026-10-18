@@ -9,6 +9,7 @@ import { CookieConsent } from "@organisms/CookieConsent";
 import { getSiteSettings, getSocialLinks, getActiveThemeCss } from "@database/loaders/site.loader";
 import { getConsentSettings } from "@database/loaders/consent.loader";
 import { safeJsonLd } from "@/lib/sanitize";
+import { allowInlineStyle } from "@/lib/security/csp-hash";
 import { getMenu, getMenuMeta, type NavTreeItem } from "@database/loaders/navigation.loader";
 
 interface Props {
@@ -46,6 +47,9 @@ const [siteData, dbSocialLinks, headerNav, footerPrimary, footerSecondary, foote
   getMenuMeta("footer_legal"),
   getConsentSettings(locale),
 ]);
+
+// Le CSS du thème est injecté en <style> inline : son empreinte doit figurer dans style-src.
+allowInlineStyle(Astro.csp, themeCss);
 
 const siteName = siteData?.siteName ?? "";
 const metaTitle = titleOverride ?? siteData?.metaTitle ?? t.meta.title;
