@@ -9,7 +9,7 @@ import { CookieConsent } from "@organisms/CookieConsent";
 import { getSiteSettings, getSocialLinks, getActiveThemeCss } from "@database/loaders/site.loader";
 import { getConsentSettings } from "@database/loaders/consent.loader";
 import { safeJsonLd } from "@/lib/sanitize";
-import { allowInlineStyle } from "@/lib/security/csp-hash";
+import { cspSha256 } from "@/lib/security/csp-hash";
 import { getMenu, getMenuMeta, type NavTreeItem } from "@database/loaders/navigation.loader";
 
 interface Props {
@@ -48,8 +48,9 @@ const [siteData, dbSocialLinks, headerNav, footerPrimary, footerSecondary, foote
   getConsentSettings(locale),
 ]);
 
-// Le CSS du thème est injecté en <style> inline : son empreinte doit figurer dans style-src.
-allowInlineStyle(Astro.csp, themeCss);
+// CSS du thème : feuille externe /theme.css (un <style> inline serait bloqué par la CSP en
+// en-tête, cf. src/pages/theme.css.ts) ; `v` = empreinte du contenu pour l'invalidation du cache.
+const themeCssVersion = themeCss ? encodeURIComponent(cspSha256(themeCss).slice(7, 23)) : "";
 
 const siteName = siteData?.siteName ?? "";
 const metaTitle = titleOverride ?? siteData?.metaTitle ?? t.meta.title;
@@ -130,7 +131,7 @@ const canonicalUrl = absoluteUrl(canonicalOverride ?? Astro.url.pathname);
     {/* eslint-disable-next-line astro/no-set-html-directive -- jsonLd is pre-escaped via safeJsonLd() (neutralizes </script> breakout); it is structured data (JSON.stringify output), not arbitrary HTML */}
     {jsonLd && <script type="application/ld+json" set:html={safeJsonLd(jsonLd)} />}
     {/* eslint-disable-next-line astro/no-set-html-directive -- theme CSS is generated server-side from validated OKLCH tokens */}
-    {themeCss && <style set:html={themeCss} />}
+    {themeCss && <link rel="stylesheet" href={`/theme.css?v=${themeCssVersion}`} />}
     <slot name="head" />
 </head>
 
