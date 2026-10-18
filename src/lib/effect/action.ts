@@ -39,6 +39,8 @@ const STATUS: Record<string, ActionErrorCode> = {
   RateLimitedError: 'TOO_MANY_REQUESTS',
   LockHeldError: 'CONFLICT',
   LockExpiredError: 'CONFLICT',
+  LockReleaseForbiddenError: 'FORBIDDEN',
+  LockResourceNotFoundError: 'NOT_FOUND',
 };
 
 export function toActionError(error: unknown): unknown {

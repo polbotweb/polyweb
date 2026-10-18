@@ -8,6 +8,7 @@ import { createPage, updatePage, deletePage, publishPage, schedulePage, unschedu
 import { createSection, updateSection, deleteSection, reorderSections } from "./admin/sections";
 import { createTheme, updateTheme, deleteTheme } from "./admin/theme";
 import { updateConsentSettings } from "./admin/consent";
+import { forceReleaseLock } from "./admin/locks";
 import { createMediaFolder, updateMediaFolder, deleteMediaFolder, uploadMediaFile, renameMediaFile, moveMediaFile, deleteMediaFile, upsertMediaFileAlt, deleteMediaFileAlt } from "./admin/media";
 import { createPageVersion, listPageVersions, restorePageVersion } from "./admin/versions";
 import { listOrgRoles, createOrgRole, updateOrgRole, deleteOrgRole, updateMemberRole } from "./admin/roles";
@@ -30,6 +31,7 @@ export const server = {
   updateSiteSettings, upsertSiteSettings, createSocialLink, updateSocialLink, deleteSocialLink, reorderSocialLinks, updateContactInfo, updateOpeningHours,
   createNavigationMenu, updateNavigationMenu, deleteNavigationMenu, createNavigationItem, updateNavigationItem, deleteNavigationItem, reorderNavigationItems,
   createPage, updatePage, deletePage, publishPage, schedulePage, unschedulePage, scheduleUnpublishPage, unscheduleUnpublishPage, restoreFromTrash, permanentlyDeletePage, bulkPublishPages, bulkArchivePages, bulkRestorePages, bulkDeletePages, clonePage, lockPage, unlockPage,
+  forceReleaseLock,
   createSection, updateSection, deleteSection, reorderSections, createTheme, updateTheme, deleteTheme, updateConsentSettings,
   createMediaFolder, updateMediaFolder, deleteMediaFolder, uploadMediaFile, renameMediaFile, moveMediaFile, deleteMediaFile, upsertMediaFileAlt, deleteMediaFileAlt,
   createPageVersion, listPageVersions, restorePageVersion, listOrgRoles, createOrgRole, updateOrgRole, deleteOrgRole, updateMemberRole, orgListRoles, orgCreateRole, orgUpdateRole, orgDeleteRole, orgUpdateMemberRole,

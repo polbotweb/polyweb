@@ -7,9 +7,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Effect } from 'effect';
 import { eq, inArray } from 'drizzle-orm';
 import { getDrizzle } from '@database/drizzle';
-import { serviceLocks, services, user } from '@database/schemas';
+import { member, organization, serviceLocks, services, user } from '@database/schemas';
 import { serviceLock } from '@/modules/services/locks';
-import { LockExpiredError, LockHeldError } from '@/core/locks/errors';
+import { LockExpiredError, LockHeldError, LockReleaseForbiddenError, LockResourceNotFoundError } from '@/core/locks/errors';
 
 const tag = `lockpg-${crypto.randomUUID().slice(0, 8)}`;
 const alice = `${tag}-alice`;
@@ -77,5 +77,70 @@ describe('core/locks sur Postgres (service_locks)', () => {
     expect(await flip(serviceLock.requireOwn(serviceId, { userId: alice, sessionId: 'tab-1' }))).toBeInstanceOf(LockHeldError);
     await run(serviceLock.forceRelease(serviceId));
     expect(await getDrizzle().select().from(serviceLocks).where(eq(serviceLocks.serviceId, serviceId))).toHaveLength(0);
+  });
+});
+
+describe('libération administrative contrôlée par tenant (Postgres)', () => {
+  const t = `lockadm-${crypto.randomUUID().slice(0, 8)}`;
+  const ids = { editor: `${t}-editor`, adminA: `${t}-admina`, memberA: `${t}-membera`, adminB: `${t}-adminb`, global: `${t}-global` };
+  const orgA = `${t}-org-a`;
+  const orgB = `${t}-org-b`;
+  const orgService = crypto.randomUUID();
+  const platformService = crypto.randomUUID();
+  const actor = (id: string, role = 'user') => ({ id, role, banned: false });
+
+  beforeAll(async () => {
+    const db = getDrizzle();
+    await db.insert(user).values(Object.values(ids).map((id) => ({ id, name: id, email: `${id}@example.test`, role: id === ids.global ? 'admin' : 'user' })));
+    await db.insert(organization).values([
+      { id: orgA, name: 'A', slug: orgA, createdAt: new Date() },
+      { id: orgB, name: 'B', slug: orgB, createdAt: new Date() },
+    ]);
+    await db.insert(member).values([
+      { id: `${t}-m1`, organizationId: orgA, userId: ids.adminA, role: 'admin', createdAt: new Date() },
+      { id: `${t}-m2`, organizationId: orgA, userId: ids.memberA, role: 'member', createdAt: new Date() },
+      { id: `${t}-m3`, organizationId: orgB, userId: ids.adminB, role: 'owner', createdAt: new Date() },
+    ]);
+    await db.insert(services).values([
+      { id: orgService, providerId: ids.editor, slug: `${t}-a`, organizationId: orgA },
+      { id: platformService, providerId: ids.editor, slug: `${t}-p` },
+    ]);
+  });
+
+  afterAll(async () => {
+    const db = getDrizzle();
+    await db.delete(services).where(inArray(services.id, [orgService, platformService]));
+    await db.delete(member).where(inArray(member.organizationId, [orgA, orgB]));
+    await db.delete(organization).where(inArray(organization.id, [orgA, orgB]));
+    await db.delete(user).where(inArray(user.id, Object.values(ids)));
+  });
+
+  const lockBy = (id: string) => run(serviceLock.acquire(id, { userId: ids.editor, sessionId: 'editor-tab' }));
+  const lockRow = (id: string) => getDrizzle().select().from(serviceLocks).where(eq(serviceLocks.serviceId, id));
+
+  it("admin d'une autre organisation refusé ; simple membre refusé ; verrou intact", async () => {
+    await lockBy(orgService);
+    expect(await flip(serviceLock.adminRelease(orgService, actor(ids.adminB)))).toBeInstanceOf(LockReleaseForbiddenError);
+    expect(await flip(serviceLock.adminRelease(orgService, actor(ids.memberA)))).toBeInstanceOf(LockReleaseForbiddenError);
+    expect(await lockRow(orgService)).toHaveLength(1);
+  });
+
+  it("admin de l'organisation propriétaire libère et récupère l'ancien propriétaire", async () => {
+    const released = await run(serviceLock.adminRelease(orgService, actor(ids.adminA)));
+    expect(released.organizationId).toBe(orgA);
+    expect(released.previousOwner).toMatchObject({ userId: ids.editor, sessionId: 'editor-tab' });
+    expect(await lockRow(orgService)).toHaveLength(0);
+  });
+
+  it('ressource plateforme : admin d’organisation refusé, administrateur global autorisé (partout)', async () => {
+    await lockBy(platformService);
+    expect(await flip(serviceLock.adminRelease(platformService, actor(ids.adminA)))).toBeInstanceOf(LockReleaseForbiddenError);
+    expect((await run(serviceLock.adminRelease(platformService, actor(ids.global, 'admin')))).previousOwner?.userId).toBe(ids.editor);
+    await lockBy(orgService);
+    expect((await run(serviceLock.adminRelease(orgService, actor(ids.global, 'admin')))).organizationId).toBe(orgA);
+  });
+
+  it('ressource inconnue → LockResourceNotFoundError', async () => {
+    expect(await flip(serviceLock.adminRelease(crypto.randomUUID(), actor(ids.global, 'admin')))).toBeInstanceOf(LockResourceNotFoundError);
   });
 });

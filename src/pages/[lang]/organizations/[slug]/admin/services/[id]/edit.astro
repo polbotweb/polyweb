@@ -1,4 +1,6 @@
 ---
+import { canAdministerTenant } from "@/core/permissions/tenant";
+import { runOrThrow } from "@/lib/effect/run";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
 import OrgSidebar from "@organisms/OrgSidebar/OrgSidebar.astro";
@@ -31,13 +33,15 @@ const item = await getServiceAdminById(Astro.params.id!, locale as Locale, org.i
 if (!item) return Astro.redirect(`/${locale}/${orgSlug}/admin/services`);
 const t = getServiceTranslations(locale as Locale);
 const baseAdminUrl = `/${locale}/${org.slug}/admin/services`;
+// Libération administrative du verrou : administrateur global, ou administrateur de cette organisation (revérifié côté action).
+const canForceReleaseLock = await runOrThrow(canAdministerTenant(Astro.locals.user, org.id)).catch(() => false);
 ---
 <BaseLayout title={`${t.admin.editService} — ${org.name}`} description={t.meta.description}>
   <AuthLayout title={org.name}>
     <OrgSidebar slot="sidebar" t={authT} locale={locale} org={org} orgRole={orgRole} activeItem="services" />
     <main class="mx-auto w-full max-w-5xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">
       <ServiceLocaleSwitcher locale={locale as Locale} service={item} availableLocales={item.availableLocales} />
-      <AdminServiceForm locale={locale as Locale} service={item} organizationId={org.id} baseAdminUrl={baseAdminUrl} canUpdate={canUpdate} canPublish={canPublish} canDelete={canDelete} canCreate={canCreate} />
+      <AdminServiceForm canForceReleaseLock={canForceReleaseLock} locale={locale as Locale} service={item} organizationId={org.id} baseAdminUrl={baseAdminUrl} canUpdate={canUpdate} canPublish={canPublish} canDelete={canDelete} canCreate={canCreate} />
     </main>
   </AuthLayout>
 </BaseLayout>

@@ -18,7 +18,8 @@ import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
 import { getDrizzle } from '@/database/drizzle';
 import type { DbError } from '@/lib/effect/errors';
 import { dbTry } from '@/lib/effect/run';
-import { LockExpiredError, LockHeldError } from './errors';
+import { LockExpiredError, LockHeldError, LockReleaseForbiddenError, LockResourceNotFoundError } from './errors';
+import { canAdministerTenant, type TenantActor } from '@/core/permissions/tenant';
 import { DEFAULT_LOCK_TTL_MS, lockState, type LockOwner, type LockRecord } from './policy';
 
 export interface LockStore {
@@ -88,11 +89,26 @@ export function drizzleLockStore<T extends PgTable & LockColumns, K extends keyo
 
 // ─── Registre (un stockage par type de ressource, déclaré par chaque module) ───
 
-const stores = new Map<string, { store: LockStore; ttlMs: number }>();
+const stores = new Map<string, { store: LockStore; ttlMs: number; tenantOf?: LockTenantResolver }>();
 
-export function registerLockStore(resourceType: string, store: LockStore, options: { ttlMs?: number } = {}): void {
-  stores.set(resourceType, { store, ttlMs: options.ttlMs ?? DEFAULT_LOCK_TTL_MS });
+/**
+ * Organisation propriétaire d'une ressource : `string` (organisation), `null` (plateforme),
+ * `undefined` (ressource absente). Sert au contrôle tenant de la libération administrative.
+ */
+export type LockTenantResolver = (resourceId: string) => Effect.Effect<string | null | undefined, DbError>;
+
+export interface LockResourceOptions {
+  readonly ttlMs?: number;
+  /** Sans résolveur, la ressource est traitée comme « plateforme » : seuls les administrateurs globaux libèrent. */
+  readonly tenantOf?: LockTenantResolver;
 }
+
+export function registerLockStore(resourceType: string, store: LockStore, options: LockResourceOptions = {}): void {
+  stores.set(resourceType, { store, ttlMs: options.ttlMs ?? DEFAULT_LOCK_TTL_MS, tenantOf: options.tenantOf });
+}
+
+/** Types de ressources verrouillables enregistrés (diagnostic, validation d'entrée). */
+export const registeredLockTypes = (): string[] => [...stores.keys()];
 
 const entry = (resourceType: string) =>
   Effect.suspend(() => {
@@ -127,6 +143,27 @@ export const acquireLock = ({ resourceType, resourceId, owner, locale }: LockReq
     }
     return yield* Effect.fail(new LockHeldError({ resourceType, resourceId, expiresAt: current?.expiresAt ?? expiresAt, sameUser, locale }));
   }).pipe(Effect.withSpan(`lock.acquire ${resourceType}`));
+
+/**
+ * Libération administrative contrôlée par tenant : administrateur global → toute ressource ;
+ * propriétaire/administrateur d'organisation → ressources de SA seule organisation ; sinon
+ * `LockReleaseForbiddenError`. Renvoie l'ancien propriétaire (à auditer : `LOCK_FORCE_RELEASE`).
+ */
+export const adminReleaseLock = (input: { resourceType: string; resourceId: string; actor: TenantActor; locale?: string }) =>
+  Effect.gen(function* () {
+    const { resourceType, resourceId, actor, locale } = input;
+    const found = stores.get(resourceType);
+    if (!found) return yield* Effect.fail(new LockResourceNotFoundError({ resourceType, resourceId, locale }));
+    const organizationId = found.tenantOf ? yield* found.tenantOf(resourceId) : null;
+    if (organizationId === undefined) return yield* Effect.fail(new LockResourceNotFoundError({ resourceType, resourceId, locale }));
+    if (!(yield* canAdministerTenant(actor, organizationId))) return yield* Effect.fail(new LockReleaseForbiddenError({ resourceType, resourceId, locale }));
+    const previous = yield* found.store.read(resourceId);
+    yield* found.store.forceRelease(resourceId);
+    return {
+      organizationId,
+      previousOwner: previous ? { userId: previous.userId, sessionId: previous.sessionId, expiresAt: previous.expiresAt } : null,
+    };
+  }).pipe(Effect.withSpan(`lock.adminRelease ${input.resourceType}`));
 
 /** Libération administrative (verrou d'un autre éditeur) — à réserver aux administrateurs et à auditer. */
 export const forceReleaseLock = (resourceType: string, resourceId: string) =>
@@ -179,7 +216,7 @@ export const lockOwnerFrom = (userId: string, sessionId: string | null | undefin
  *   export const serviceLock = defineLockResource('service', drizzleLockStore('service', serviceLocks, 'serviceId'));
  *   yield* serviceLock.ensureNotLockedByOther(id, lockOwnerFrom(user.id, session?.id));
  */
-export function defineLockResource(resourceType: string, store: LockStore, options: { ttlMs?: number } = {}) {
+export function defineLockResource(resourceType: string, store: LockStore, options: LockResourceOptions = {}) {
   registerLockStore(resourceType, store, options);
   const req = (resourceId: string, owner: LockOwner, locale?: string): LockRequest => ({ resourceType, resourceId, owner, locale });
   return {
@@ -187,6 +224,7 @@ export function defineLockResource(resourceType: string, store: LockStore, optio
     acquire: (resourceId: string, owner: LockOwner, opts: { takeOver?: boolean; locale?: string; now?: Date } = {}) => acquireLock(req(resourceId, owner, opts.locale), opts),
     release: (resourceId: string, owner: LockOwner) => releaseLock(req(resourceId, owner)),
     forceRelease: (resourceId: string) => forceReleaseLock(resourceType, resourceId),
+    adminRelease: (resourceId: string, actor: TenantActor, locale?: string) => adminReleaseLock({ resourceType, resourceId, actor, locale }),
     ensureNotLockedByOther: (resourceId: string, owner: LockOwner, locale?: string) => ensureNotLockedByOther(req(resourceId, owner, locale)),
     ensureNoneLockedByOther: (resourceIds: readonly string[], owner: LockOwner, locale?: string) => ensureNoneLockedByOther(resourceType, resourceIds, owner, locale),
     requireOwn: (resourceId: string, owner: LockOwner, locale?: string) => requireOwnLock(req(resourceId, owner, locale)),
