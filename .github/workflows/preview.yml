@@ -40,7 +40,7 @@ jobs:
       SMTP_FROM_EMAIL: ci@test.local
       SMTP_HOST: localhost
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v5
         with: { version: 10 }
       - uses: actions/setup-node@v6
@@ -69,7 +69,7 @@ jobs:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         if: env.VERCEL_TOKEN != ''
       - uses: pnpm/action-setup@v5
         if: env.VERCEL_TOKEN != ''
