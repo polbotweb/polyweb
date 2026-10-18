@@ -1,19 +1,19 @@
 ══════════════════════════════════════════════════════════════════════════════════
   POLYWEB — GLOBAL QA REPORT
-  Generated: 2026-10-18 11:37:23
+  Generated: 2026-10-18 16:10:59
 ══════════════════════════════════════════════════════════════════════════════════
 
   ✅ Type & Template Check (astro check)
-     0 errors, 0 warnings, 69 hints
+     0 errors, 0 warnings, 68 hints
 
   ✅ Lint (ESLint)
-     0 errors, 21 warnings
+     0 errors, 22 warnings
 
   ✅ Unit & Integration Tests (Vitest)
-     1503/1503 passed
+     1579/1579 passed
 
   ✅ End-to-End Tests (Playwright)
-     84/84 passed
+     255/285 passed, 30 skipped
 
   ✅ Accessibility Audit (Pa11y — WCAG 2.1 AAA)
      60/60 URLs clean
@@ -33,8 +33,8 @@
   ├─────────────────────────────────────────────┼──────────────┼─────────┤
   │ Astro check                                 │ GREEN        │ 0 error │
   │ ESLint                                      │ GREEN        │ 0 error │
-  │ Vitest (unit/integration)                   │ GREEN        │ 1503/15 │
-  │ Playwright (e2e)                            │ GREEN        │ 84/84 p │
+  │ Vitest (unit/integration)                   │ GREEN        │ 1579/15 │
+  │ Playwright (e2e)                            │ GREEN        │ 255/285 │
   │ Pa11y (a11y)                                │ GREEN        │ 60/60 U │
   │ Lighthouse (perf)                           │ GREEN        │ 52 page │
   └─────────────────────────────────────────────┴──────────────┴─────────┘

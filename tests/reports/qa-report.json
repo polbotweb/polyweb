@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-18 11:37:23",
+  "generatedAt": "2026-10-18 16:10:59",
   "overall": "green",
   "reportsAvailable": 6,
   "sections": [
@@ -7,31 +7,31 @@
       "key": "check",
       "title": "Type & Template Check (astro check)",
       "ok": true,
-      "summary": "0 errors, 0 warnings, 69 hints",
+      "summary": "0 errors, 0 warnings, 68 hints",
       "metrics": {
         "errors": 0,
         "warnings": 0,
-        "hints": 69
+        "hints": 68
       }
     },
     {
       "key": "lint",
       "title": "Lint (ESLint)",
       "ok": true,
-      "summary": "0 errors, 21 warnings",
+      "summary": "0 errors, 22 warnings",
       "metrics": {
         "errors": 0,
-        "warnings": 21
+        "warnings": 22
       }
     },
     {
       "key": "vitest",
       "title": "Unit & Integration Tests (Vitest)",
       "ok": true,
-      "summary": "1503/1503 passed",
+      "summary": "1579/1579 passed",
       "metrics": {
-        "total": 1503,
-        "passed": 1503,
+        "total": 1579,
+        "passed": 1579,
         "failed": 0,
         "skipped": 0
       }
@@ -40,12 +40,12 @@
       "key": "playwright",
       "title": "End-to-End Tests (Playwright)",
       "ok": true,
-      "summary": "84/84 passed",
+      "summary": "255/285 passed, 30 skipped",
       "metrics": {
-        "total": 84,
-        "passed": 84,
+        "total": 285,
+        "passed": 255,
         "failed": 0,
-        "skipped": 0
+        "skipped": 30
       }
     },
     {

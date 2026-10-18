@@ -1,42 +1,37 @@
 
-> polyweb@0.0.1 check /workspace/polyweb
+> polyweb@0.0.1 check /workspace/polyweb-wt
 > astro check
 
-10:50:10 [@astrojs/node] Enabling sessions with filesystem storage
-10:50:11 [content] Syncing content
-10:50:11 [content] Synced content
-10:50:11 [types] Generated 126ms
-10:50:11 [check] Getting diagnostics for Astro files in /workspace/polyweb...
-[96msrc/actions/services/_helpers.ts[0m:[93m15[0m:[93m10[0m - [93mwarning[0m[90m ts(6133): [0m'and' is declared but its value is never read.
+15:35:14 [@astrojs/node] Enabling sessions with filesystem storage
+15:35:14 [content] Syncing content
+15:35:14 [content] Synced content
+15:35:14 [types] Generated 125ms
+15:35:14 [check] Getting diagnostics for Astro files in /workspace/polyweb-wt...
+[96msrc/actions/services/engagement.ts[0m:[93m2[0m:[93m22[0m - [93mwarning[0m[90m ts(6133): [0m'desc' is declared but its value is never read.
 
-[7m15[0m import { and, eq } from "drizzle-orm";
-[7m  [0m [93m         ~~~[0m
-
-[96msrc/actions/services/engagement.ts[0m:[93m1[0m:[93m22[0m - [93mwarning[0m[90m ts(6133): [0m'desc' is declared but its value is never read.
-
-[7m1[0m import { and, count, desc, eq } from "drizzle-orm";
+[7m2[0m import { and, count, desc, eq } from "drizzle-orm";
 [7m [0m [93m                     ~~~~[0m
 
-[96msrc/actions/services/views.ts[0m:[93m15[0m:[93m26[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { normalize?: boolean | undefined; abort?: boolean | undefined; pattern?: RegExp | undefined; hostname?: RegExp | undefined; protocol?: RegExp | undefined; error?: string | ... 1 more ... | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+[96msrc/actions/services/views.ts[0m:[93m16[0m:[93m26[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { normalize?: boolean | undefined; hostname?: RegExp | undefined; protocol?: RegExp | undefined; abort?: boolean | undefined; pattern?: RegExp | undefined; error?: string | ... 1 more ... | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
 
-[7m15[0m     referrer: z.string().url().optional().nullable(),
+[7m16[0m     referrer: z.string().url().optional().nullable(),
 [7m  [0m [93m                         ~~~[0m
 
-[96msrc/components/blog/AdminPostForm.astro[0m:[93m19[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'BlogPostFormInput' is declared but its value is never read.
+[96msrc/components/blog/AdminPostForm.astro[0m:[93m20[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'BlogPostFormInput' is declared but its value is never read.
 
-[7m19[0m import type { BlogPostFormInput } from "@/lib/blog/types";
+[7m20[0m import type { BlogPostFormInput } from "@/lib/blog/types";
 [7m  [0m [93m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
-[96msrc/components/blog/AdminPostForm.astro[0m:[93m18[0m:[93m61[0m - [93mwarning[0m[90m ts(6196): [0m'BlogPostUpdateInput' is declared but never used.
+[96msrc/components/blog/AdminPostForm.astro[0m:[93m19[0m:[93m61[0m - [93mwarning[0m[90m ts(6196): [0m'BlogPostUpdateInput' is declared but never used.
 
-[7m18[0m import type { BlogEditorTaxonomyOption, BlogPostEditorData, BlogPostUpdateInput } from "@/lib/blog/editor-types";
+[7m19[0m import type { BlogEditorTaxonomyOption, BlogPostEditorData, BlogPostUpdateInput } from "@/lib/blog/editor-types";
 [7m  [0m [93m                                                            ~~~~~~~~~~~~~~~~~~~[0m
-[96msrc/components/blog/AdminPostForm.astro[0m:[93m84[0m:[93m110[0m - [93mwarning[0m[90m ts(6385): [0m'returnValue' is deprecated.
+[96msrc/components/blog/AdminPostForm.astro[0m:[93m86[0m:[93m110[0m - [93mwarning[0m[90m ts(6385): [0m'returnValue' is deprecated.
 
-[7m84[0m     window.addEventListener('beforeunload', (event) => { if (!isDirty) return; event.preventDefault(); event.returnValue = ""; });
+[7m86[0m     window.addEventListener('beforeunload', (event) => { if (!isDirty) return; event.preventDefault(); event.returnValue = ""; });
 [7m  [0m [93m                                                                                                             ~~~~~~~~~~~[0m
-[96msrc/components/blog/AdminPostForm.astro[0m:[93m68[0m:[93m3[0m - [93mwarning[0m[90m ts(6133): [0m'BlogPostUpdateInput' is declared but its value is never read.
+[96msrc/components/blog/AdminPostForm.astro[0m:[93m70[0m:[93m3[0m - [93mwarning[0m[90m ts(6133): [0m'BlogPostUpdateInput' is declared but its value is never read.
 
-[7m68[0m   import type { BlogPostUpdateInput } from "@/lib/blog/editor-types";
+[7m70[0m   import type { BlogPostUpdateInput } from "@/lib/blog/editor-types";
 [7m  [0m [93m  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
 
 [96msrc/components/organisms/AdminFormShell.astro[0m:[93m71[0m:[93m19[0m - [93mwarning[0m[90m ts(6385): [0m'returnValue' is deprecated.
@@ -53,9 +48,9 @@ Add the `is:inline` directive explicitly to silence this hint.
 [7m15[0m {items.map((item) => <script type="application/ld+json" set:html={safeJsonLd(JSON.stringify(item))} />)}
 [7m  [0m [93m                             ~~~~[0m
 
-[96msrc/components/services/AdminServiceForm.astro[0m:[93m12[0m:[93m34[0m - [93mwarning[0m[90m ts(6133): [0m'getServiceErrorMessage' is declared but its value is never read.
+[96msrc/components/services/AdminServiceForm.astro[0m:[93m13[0m:[93m34[0m - [93mwarning[0m[90m ts(6133): [0m'getServiceErrorMessage' is declared but its value is never read.
 
-[7m12[0m import { getServiceTranslations, getServiceErrorMessage } from "@/modules/services/i18n";
+[7m13[0m import { getServiceTranslations, getServiceErrorMessage } from "@/modules/services/i18n";
 [7m  [0m [93m                                 ~~~~~~~~~~~~~~~~~~~~~~[0m
 
 [96msrc/components/services/AdminServiceList.astro[0m:[93m7[0m:[93m34[0m - [93mwarning[0m[90m ts(6133): [0m'getServiceErrorMessage' is declared but its value is never read.
@@ -85,7 +80,7 @@ Add the `is:inline` directive explicitly to silence this hint.
 
 [7m116[0m     schema: z.object({}).passthrough(),
 [7m   [0m [93m                         ~~~~~~~~~~~[0m
-[96msrc/core/blocks/registry.ts[0m:[93m93[0m:[93m40[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { normalize?: boolean | undefined; abort?: boolean | undefined; pattern?: RegExp | undefined; hostname?: RegExp | undefined; protocol?: RegExp | undefined; error?: string | ... 1 more ... | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+[96msrc/core/blocks/registry.ts[0m:[93m93[0m:[93m40[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { normalize?: boolean | undefined; hostname?: RegExp | undefined; protocol?: RegExp | undefined; abort?: boolean | undefined; pattern?: RegExp | undefined; error?: string | ... 1 more ... | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
 
 [7m93[0m     schema: z.object({ url: z.string().url().refine((u) => toEmbedUrl(u) !== null, "seuls YouTube et Vimeo (https) sont autorisés"), title: z.string().max(200).default("Vidéo") }),
 [7m  [0m [93m                                       ~~~[0m
@@ -125,13 +120,13 @@ Add the `is:inline` directive explicitly to silence this hint.
 [7m1[0m import { relations, sql } from "drizzle-orm";
 [7m [0m [93m         ~~~~~~~~~[0m
 
-[96msrc/layouts/BaseLayout.astro[0m:[93m123[0m:[93m24[0m - [93mwarning[0m[90m astro(4000): [0mThis script will be treated as if it has the `is:inline` directive because it contains an attribute. Therefore, features that require processing (e.g. using TypeScript or npm packages in the script) are unavailable.
+[96msrc/layouts/BaseLayout.astro[0m:[93m132[0m:[93m24[0m - [93mwarning[0m[90m astro(4000): [0mThis script will be treated as if it has the `is:inline` directive because it contains an attribute. Therefore, features that require processing (e.g. using TypeScript or npm packages in the script) are unavailable.
 
 See docs for more details: https://docs.astro.build/en/guides/client-side-scripts/#script-processing.
 
 Add the `is:inline` directive explicitly to silence this hint.
 
-[7m123[0m     {jsonLd && <script type="application/ld+json" set:html={safeJsonLd(jsonLd)} />}
+[7m132[0m     {jsonLd && <script type="application/ld+json" set:html={safeJsonLd(jsonLd)} />}
 [7m   [0m [93m                       ~~~~[0m
 
 [96msrc/lib/blog/constants.ts[0m:[93m2[0m:[93m10[0m - [93mwarning[0m[90m ts(6133): [0m'assertTransition' is declared but its value is never read.
@@ -194,7 +189,7 @@ Add the `is:inline` directive explicitly to silence this hint.
 
 [7m86[0m   id: z.string().uuid(),
 [7m  [0m [93m                 ~~~~[0m
-[96msrc/modules/services/validation/index.ts[0m:[93m80[0m:[93m28[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { normalize?: boolean | undefined; abort?: boolean | undefined; pattern?: RegExp | undefined; hostname?: RegExp | undefined; protocol?: RegExp | undefined; error?: string | ... 1 more ... | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+[96msrc/modules/services/validation/index.ts[0m:[93m80[0m:[93m28[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { normalize?: boolean | undefined; hostname?: RegExp | undefined; protocol?: RegExp | undefined; abort?: boolean | undefined; pattern?: RegExp | undefined; error?: string | ... 1 more ... | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
 
 [7m80[0m   canonicalUrl: z.string().url().optional().nullable(),
 [7m  [0m [93m                           ~~~[0m
@@ -222,7 +217,7 @@ Add the `is:inline` directive explicitly to silence this hint.
 
 [7m53[0m   categoryIds: z.array(z.string().uuid()).max(100).default([]),
 [7m  [0m [93m                                  ~~~~[0m
-[96msrc/modules/services/validation/index.ts[0m:[93m40[0m:[93m28[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { normalize?: boolean | undefined; abort?: boolean | undefined; pattern?: RegExp | undefined; hostname?: RegExp | undefined; protocol?: RegExp | undefined; error?: string | ... 1 more ... | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+[96msrc/modules/services/validation/index.ts[0m:[93m40[0m:[93m28[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { normalize?: boolean | undefined; hostname?: RegExp | undefined; protocol?: RegExp | undefined; abort?: boolean | undefined; pattern?: RegExp | undefined; error?: string | ... 1 more ... | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
 
 [7m40[0m   canonicalUrl: z.string().url().optional().nullable(),
 [7m  [0m [93m                           ~~~[0m
@@ -303,9 +298,9 @@ Add the `is:inline` directive explicitly to silence this hint.
 [7m9[0m import type { Locale } from "@i18n/config";
 [7m [0m [93m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
 
-[96msrc/pages/[lang]/admin/services/[id]/edit.astro[0m:[93m11[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'Locale' is declared but its value is never read.
+[96msrc/pages/[lang]/admin/services/[id]/edit.astro[0m:[93m13[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'Locale' is declared but its value is never read.
 
-[7m11[0m import type { Locale } from "@i18n/config";
+[7m13[0m import type { Locale } from "@i18n/config";
 [7m  [0m [93m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
 
 [96msrc/pages/[lang]/preview/[token].astro[0m:[93m21[0m:[93m9[0m - [93mwarning[0m[90m ts(6133): [0m'status' is declared but its value is never read.
@@ -326,8 +321,8 @@ Add the `is:inline` directive explicitly to silence this hint.
 [7m42[0m     await expect(auth.api.signInEmail({ body: { email: target.email, password: target.password } })).rejects.toThrowError(APIError);
 [7m  [0m [93m                                                                                                             ~~~~~~~~~~~~[0m
 
-Result (1112 files): 
+Result (1145 files): 
 - 0 errors
 - 0 warnings
-- 69 hints
+- 68 hints
 

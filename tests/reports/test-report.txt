@@ -1,759 +1,724 @@
 
-> polyweb@0.0.1 test /workspace/polyweb
-> vitest run
+> polyweb@0.0.1 test /workspace/polyweb-wt
+> vitest run -- --coverage
 
-(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
-  - `__dirname` (vitest.config.ts:7:20). Use `import.meta.dirname` instead
-Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
 
- RUN  v4.1.11 /workspace/polyweb
-
-stdout | tests/integration/search/search.test.ts
-◇ injected env (10) from .env // tip: ⌘ enable debugging { debug: true }
+ RUN  v4.1.11 /workspace/polyweb-wt
 
 stdout | tests/integration/create-admin.test.ts
-◇ injected env (10) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
-
-stdout | tests/integration/backup/backup.test.ts
-◇ injected env (10) from .env // tip: ⌘ suppress logs { quiet: true }
-
-stdout | tests/integration/audit.test.ts
-◇ injected env (10) from .env // tip: ⌘ override existing { override: true }
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
 
 stdout | tests/integration/auth-plugins.test.ts
-◇ injected env (10) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
-
-stdout | tests/integration/search/search.test.ts
-◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
-
-stdout | tests/integration/backup/backup.test.ts
 ◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
-
-stdout | tests/integration/auth-plugins.test.ts
-◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
 
 stdout | tests/integration/audit.test.ts
 ◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
 
-stdout | tests/integration/create-admin.test.ts
+stdout | tests/integration/audit.test.ts
 ◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
 
- ✓ tests/integration/backup/backup.test.ts (6 tests) 1800ms
-     ✓ creates an archive with manifest, checksum, migrations and media  343ms
-     ✓ restores into a scratch database (RESTORE_TEST_DATABASE_URL) with media  1368ms
-stderr | tests/unit/media-variants.test.ts > variantes responsive > retourne un tableau vide plutôt que de lever si le fichier est illisible
-[variants] No responsive variant for /uploads/media/casse.jpg (Input buffer contains unsupported image format). Serving the original.
-
- ✓ tests/integration/search/search.test.ts (5 tests) 2004ms
-     ✓ indexes, filters by site/locale/kind, highlights safely, removes and clears  1679ms
-stderr | tests/integration/audit.test.ts > Audit — Hooks integration > logs SIGN_IN_FAILED for bad credentials
-2026-10-18T10:59:57.345Z WARN [Better Auth]: User not found
-
-stdout | tests/unit/database/seed-data-contract.test.ts > seed data contract > maps every manifest entry to an existing non-empty dataset and schema table
-◇ injected env (10) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
-
- ✓ tests/integration/auth-plugins.test.ts (6 tests) 2175ms
-     ✓ admin can set a role and find it via listUsers  647ms
-     ✓ admin can ban and unban a user to control access  512ms
-     ✓ owner can invite a member, and a non-member cannot read the organization  411ms
- ✓ tests/integration/create-polyweb.test.ts (5 tests) 3841ms
-     ✓ creates a project with renamed package, fresh secrets and a git commit  1537ms
-stdout | tests/integration/auth-advanced.test.ts
-◇ injected env (10) from .env // tip: ⌁ auth for agents [www.vestauth.com]
-
-stdout | tests/unit/database/seed-data-contract.test.ts > seed data contract > maps every manifest entry to an existing non-empty dataset and schema table
-◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
-
- ✓ tests/unit/media-variants.test.ts (15 tests) 4104ms
-     ✓ produit des variantes strictement plus étroites que la source  484ms
-     ✓ n'émet jamais de largeur au-delà du plafond, l'original restant le choix au-dessus  378ms
-     ✓ préserve le ratio de la source  344ms
-     ✓ assainit les noms de fichier : aucune espace dans les URLs de variante  428ms
-     ✓ assainit les accents et caractères exotiques  326ms
-     ✓ écrit réellement les fichiers sur disque  321ms
-     ✓ réduit fortement le poids servi : une carte de blog ne doit pas coûter 3 Mo  378ms
-     ✓ rejette une bombe de pixels (décompression vers une image gigantesque)  1195ms
-stdout | tests/integration/auth-extensions.test.ts
-◇ injected env (10) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
-
-stdout | tests/integration/auth-advanced.test.ts
+stdout | tests/integration/auth-plugins.test.ts
 ◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
 
-stdout | tests/integration/platform/webhooks.test.ts
-◇ injected env (10) from .env // tip: ⌘ override existing { override: true }
+stdout | tests/integration/create-admin.test.ts
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
 
- ✓ tests/integration/audit.test.ts (8 tests) 3247ms
-     ✓ logs SIGN_UP when a user signs up  614ms
-     ✓ logs USER_ROLE_CHANGE when admin changes role  529ms
-     ✓ does not log passwords in metadata  641ms
-     ✓ logs SIGN_IN_FAILED for bad credentials  597ms
-     ✓ filters metadata to SAFE_FIELDS only (no password in metadata)  628ms
-stdout | tests/integration/platform/webhooks.test.ts
-◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+ ✓ tests/integration/auth-plugins.test.ts (6 tests) 2469ms
+     ✓ admin can set a role and find it via listUsers  470ms
+     ✓ admin can ban and unban a user to control access  558ms
+     ✓ a regular user cannot change roles  333ms
+     ✓ RBAC: editor can manage content entries but not API tokens  326ms
+     ✓ owner can invite a member, and a non-member cannot read the organization  496ms
+ ✓ tests/integration/create-polyweb.test.ts (5 tests) 4022ms
+     ✓ creates a project with renamed package, fresh secrets and a git commit  1668ms
+ ✓ tests/unit/media-variants.test.ts (15 tests) 4534ms
+     ✓ produit des variantes strictement plus étroites que la source  442ms
+     ✓ n'émet jamais de largeur au-delà du plafond, l'original restant le choix au-dessus  348ms
+     ✓ préserve le ratio de la source  337ms
+     ✓ assainit les noms de fichier : aucune espace dans les URLs de variante  379ms
+     ✓ assainit les accents et caractères exotiques  377ms
+     ✓ écrit réellement les fichiers sur disque  361ms
+     ✓ réduit fortement le poids servi : une carte de blog ne doit pas coûter 3 Mo  355ms
+     ✓ rejette une bombe de pixels (décompression vers une image gigantesque)  1634ms
+stdout | tests/integration/search/search.test.ts
+◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
 
- ✓ tests/unit/database/seed-data-contract.test.ts (2 tests) 1434ms
-     ✓ maps every manifest entry to an existing non-empty dataset and schema table  1432ms
-stderr | tests/integration/auth-advanced.test.ts > Auth — Forget & Reset Password > requestPasswordReset for unknown email does not throw
-2026-10-18T10:59:58.661Z WARN [Better Auth]: Reset Password: User not found
+stdout | tests/integration/search/search.test.ts
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+
+stdout | tests/integration/backup/backup.test.ts
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
+
+ ✓ tests/integration/audit.test.ts (8 tests) 3477ms
+     ✓ logs SIGN_UP when a user signs up  704ms
+     ✓ logs USER_ROLE_CHANGE when admin changes role  533ms
+     ✓ does not log passwords in metadata  813ms
+     ✓ logs SIGN_IN_FAILED for bad credentials  615ms
+     ✓ filters metadata to SAFE_FIELDS only (no password in metadata)  641ms
+stdout | tests/integration/backup/backup.test.ts
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
 
 stdout | tests/integration/auth-extensions.test.ts
-◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+
+stdout | tests/unit/database/seed-data-contract.test.ts > seed data contract > maps every manifest entry to an existing non-empty dataset and schema table
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
+
+stdout | tests/integration/auth-extensions.test.ts
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
+
+stdout | tests/unit/database/seed-data-contract.test.ts > seed data contract > maps every manifest entry to an existing non-empty dataset and schema table
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+
+ ✓ tests/integration/create-admin.test.ts (2 tests) 5206ms
+     ✓ crée un admin vérifié dont le mot de passe fonctionne avec Better Auth  2529ms
+     ✓ réinitialise le mot de passe si le compte existe déjà  2661ms
+ ✓ tests/integration/backup/backup.test.ts (6 tests) 1698ms
+     ✓ restores into a scratch database (RESTORE_TEST_DATABASE_URL) with media  1368ms
+ ✓ tests/unit/database/seed-data-contract.test.ts (2 tests) 1540ms
+     ✓ maps every manifest entry to an existing non-empty dataset and schema table  1538ms
+ ✓ tests/integration/search/search.test.ts (5 tests) 2166ms
+     ✓ indexes, filters by site/locale/kind, highlights safely, removes and clears  1779ms
+stdout | tests/integration/auth-advanced.test.ts
+◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+
+stdout | tests/integration/platform/webhooks.test.ts
+◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+
+stdout | tests/integration/blog-actions.test.ts
+◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+
+ ✓ tests/integration/auth-extensions.test.ts (5 tests) 1575ms
+     ✓ active la 2FA, impose l’étape TOTP à la connexion et accepte un code valide  605ms
+     ✓ un code de secours permet de terminer la connexion  547ms
+stdout | tests/integration/platform/webhooks.test.ts
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
+
+stdout | tests/integration/auth-advanced.test.ts
+◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
 
 stdout | tests/integration/platform/webhooks.test.ts > webhooks > schedules retries with backoff, then succeeds via the cron processor
-[10:59:58.953] WARN (#19): webhook delivery failed {
-  deliveryId: '30d76b03-3bf4-4e67-8b99-89ad73317525',
+[15:36:19.750] WARN (#19): webhook delivery failed {
+  deliveryId: '6156b7a4-022f-4580-879d-3ec33c4399c3',
   status: 500,
   error: null
 }
 
 stdout | tests/integration/platform/webhooks.test.ts > webhooks > schedules retries with backoff, then succeeds via the cron processor
-[10:59:58.984] WARN (#20): webhook delivery failed {
-  deliveryId: '7836e4b6-e8b0-42b6-b268-d00ff102e871',
+[15:36:19.778] WARN (#20): webhook delivery failed {
+  deliveryId: '5b77edd0-49ae-4c78-8904-6f57d5eb5cf7',
   status: 500,
   error: null
 }
 
 stdout | tests/integration/platform/webhooks.test.ts > webhooks > marks 410 Gone as dead and disables the webhook; manual redelivery works
-[10:59:59.045] WARN (#35): webhook delivery failed {
-  deliveryId: '60716358-4e7c-4598-a00f-e7148ab4f16b',
+[15:36:19.810] WARN (#35): webhook delivery failed {
+  deliveryId: 'e5dba85d-979b-4e74-a51d-9db1ec7e70d8',
   status: 410,
   error: null
 }
 
- ✓ tests/unit/scripts/new-module.test.ts (2 tests) 784ms
-     ✓ refuses invalid names and existing modules  550ms
-stdout | tests/integration/blog-actions.test.ts
-◇ injected env (10) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
-
-stderr | tests/integration/auth-advanced.test.ts > Auth — Change Password > changePassword updates credentials
-2026-10-18T10:59:59.162Z WARN [Better Auth]: Invalid password
-
 stdout | tests/unit/export-data.test.ts > /api/export-data > returns 401 when not authenticated
-◇ injected env (10) from .env // tip: ⌘ suppress logs { quiet: true }
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
 
- ✓ tests/unit/export-data.test.ts (4 tests) 642ms
-     ✓ returns 401 when not authenticated  634ms
+ ✓ tests/unit/export-data.test.ts (4 tests) 616ms
+     ✓ returns 401 when not authenticated  609ms
+stdout | tests/integration/auth-flow.test.ts
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+
+stdout | tests/integration/auth.test.ts
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
+
+stdout | tests/integration/auth-flow.test.ts
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
+
 stdout | tests/integration/platform/webhooks.test.ts > webhooks > records network failures (connection refused) without throwing
-[10:59:59.688] WARN (#44): webhook delivery failed {
-  deliveryId: 'ad2c03ce-2530-4213-9b45-f47c97c64e90',
+[15:36:20.725] WARN (#44): webhook delivery failed {
+  deliveryId: '177dd013-52f5-49ea-8ebf-fb4f03e78d7c',
   status: 0,
   error: 'bad port'
 }
 
- ✓ tests/integration/platform/webhooks.test.ts (6 tests) 1038ms
-     ✓ records network failures (connection refused) without throwing  627ms
-stdout | tests/integration/auth-flow.test.ts
-◇ injected env (10) from .env // tip: ⌁ auth for agents [www.vestauth.com]
-
- ✓ tests/integration/auth-advanced.test.ts (10 tests) 1529ms
-     ✓ changePassword updates credentials  486ms
-stderr | tests/integration/create-admin.test.ts > admin:create (repris de les-rochers-blancs) > réinitialise le mot de passe si le compte existe déjà
-2026-10-18T10:59:59.957Z WARN [Better Auth]: Invalid password
-
-stdout | tests/integration/platform/api-v1.test.ts
-◇ injected env (10) from .env // tip: ⌁ auth for agents [www.vestauth.com]
-
- ✓ tests/integration/create-admin.test.ts (2 tests) 4774ms
-     ✓ crée un admin vérifié dont le mot de passe fonctionne avec Better Auth  2124ms
-     ✓ réinitialise le mot de passe si le compte existe déjà  2637ms
- ✓ tests/integration/auth-extensions.test.ts (5 tests) 1293ms
-     ✓ active la 2FA, impose l’étape TOTP à la connexion et accepte un code valide  607ms
-     ✓ un code de secours permet de terminer la connexion  370ms
-stdout | tests/integration/platform/api-v1.test.ts
-◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
-
-stdout | tests/integration/auth-flow.test.ts
-◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
-
-stdout | tests/unit/upload.test.ts
-◇ injected env (10) from .env // tip: ⌘ enable debugging { debug: true }
-
-stdout | tests/unit/upload.test.ts
-◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
-
+ ✓ tests/integration/platform/webhooks.test.ts (6 tests) 1166ms
+     ✓ records network failures (connection refused) without throwing  892ms
 stdout | tests/integration/blog-actions.test.ts > blog actions — integration (real DB) > listBlogPostRevisions returns revisions for a seeded post
-◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
-
-stdout | tests/integration/auth.test.ts
-◇ injected env (10) from .env // tip: ⌘ override existing { override: true }
-
- ✓ tests/integration/platform/api-v1.test.ts (8 tests) 440ms
-stderr | tests/integration/blog-actions.test.ts > blog actions — integration (real DB) > updateBlogReport resolves a PENDING report and persists it
-[test] no PENDING blog report seeded; skipping resolve assertion
-
-stderr | tests/integration/auth-flow.test.ts > Auth — Sign-up & Sign-in flow > signInEmail rejects invalid password
-2026-10-18T11:00:00.830Z WARN [Better Auth]: Invalid password
-
-stdout | tests/integration/platform/sites.test.ts
-◇ injected env (10) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
-
- ✓ tests/integration/blog-actions.test.ts (8 tests) 715ms
-     ✓ listBlogPostRevisions returns revisions for a seeded post  608ms
-stderr | tests/integration/auth-flow.test.ts > Auth — Sign-up & Sign-in flow > signInEmail rejects non-existent email
-2026-10-18T11:00:00.932Z WARN [Better Auth]: User not found
-
-stdout | tests/integration/storage/s3.test.ts
-◇ injected env (10) from .env // tip: ⌘ enable debugging { debug: true }
-
- ✓ tests/integration/auth-flow.test.ts (5 tests) 580ms
-stdout | tests/integration/storage/s3.test.ts
-◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
-
-stdout | tests/integration/platform/sites.test.ts > multi-site — façade Effect (brique j) > mappe les erreurs en erreurs typées
 ◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
 
- ✓ tests/integration/platform/sites.test.ts (5 tests) 319ms
 stdout | tests/integration/auth.test.ts
-◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
 
- ✓ tests/unit/i18n-translations.test.ts (12 tests) 116ms
-stdout | tests/integration/auth-org.test.ts
-◇ injected env (10) from .env // tip: ⌘ override existing { override: true }
-
- ✓ tests/unit/upload.test.ts (24 tests) 336ms
-stdout | tests/integration/platform/content.test.ts
-◇ injected env (10) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
-
- ✓ tests/integration/auth.test.ts (13 tests) 307ms
- ✓ tests/integration/storage/s3.test.ts (4 tests) 234ms
- ✓ tests/integration/platform/content.test.ts (5 tests) 155ms
-stdout | tests/integration/seed-demo-login.test.ts
-◇ injected env (10) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
-
-stdout | tests/integration/platform/forms.test.ts
-◇ injected env (10) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
-
-stdout | tests/integration/auth-org.test.ts
-◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
-
-stdout | tests/integration/platform/forms.test.ts
-◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
-
-stdout | tests/integration/contact-api.test.ts
-◇ injected env (10) from .env // tip: ⌘ suppress logs { quiet: true }
-
- ✓ tests/integration/platform/forms.test.ts (6 tests) 137ms
-stdout | tests/integration/seed-demo-login.test.ts
+ ✓ tests/integration/blog-actions.test.ts (8 tests) 787ms
+     ✓ listBlogPostRevisions returns revisions for a seeded post  632ms
+ ✓ tests/integration/auth-flow.test.ts (5 tests) 674ms
+ ✓ tests/integration/auth.test.ts (13 tests) 319ms
+ ✓ tests/integration/auth-advanced.test.ts (10 tests) 1691ms
+     ✓ changePassword updates credentials  615ms
+     ✓ changePassword rejects wrong current password  303ms
+stdout | tests/integration/platform/api-v1.test.ts
 ◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
 
- ✓ tests/integration/auth-org.test.ts (5 tests) 249ms
-stdout | tests/integration/platform/blocks-media.test.ts
-◇ injected env (10) from .env // tip: ⌘ suppress logs { quiet: true }
+stdout | tests/integration/platform/api-v1.test.ts
+◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
 
-stdout | tests/unit/production-hardening.test.ts
-◇ injected env (10) from .env // tip: ⌁ auth for agents [www.vestauth.com]
-
-stdout | tests/integration/platform/blocks-media.test.ts
+stdout | tests/integration/platform/sites.test.ts
 ◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
 
- ✓ tests/unit/i18n-urls.test.ts (32 tests) 102ms
-stdout | tests/integration/middleware.test.ts
-◇ injected env (10) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+stdout | tests/integration/platform/sites.test.ts > multi-site — façade Effect (brique j) > mappe les erreurs en erreurs typées
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
 
- ✓ tests/integration/seed-demo-login.test.ts (1 test) 183ms
-11:00:02 AM [vite] (ssr) warning: invalid import "../../src/i18n/${locale}/common". A file extension must be included in the static part of the import. For example: import(`./foo/${bar}.js`).
-  Plugin: vite:dynamic-import-vars
-  File: /workspace/polyweb/tests/unit/i18n-key-completeness.test.ts
-11:00:02 AM [vite] (ssr) warning: invalid import "../../src/i18n/blog/${locale}". A file extension must be included in the static part of the import. For example: import(`./foo/${bar}.js`).
-  Plugin: vite:dynamic-import-vars
-  File: /workspace/polyweb/tests/unit/i18n-key-completeness.test.ts
- ✓ tests/unit/production-hardening.test.ts (9 tests) 77ms
- ✓ tests/unit/i18n-key-completeness.test.ts (7 tests) 76ms
-stdout | tests/integration/blog-internal-link.test.ts
-◇ injected env (10) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
-
- ✓ tests/integration/contact-api.test.ts (13 tests) 92ms
-stdout | tests/integration/middleware.test.ts
-◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
-
-stdout | tests/integration/payments.test.ts
-◇ injected env (10) from .env // tip: ⌘ override existing { override: true }
-
-stdout | tests/integration/platform/plugins.test.ts
-◇ injected env (10) from .env // tip: ⌘ enable debugging { debug: true }
-
- ✓ tests/integration/middleware.test.ts (4 tests) 100ms
-stdout | tests/integration/platform/preview.test.ts
-◇ injected env (10) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
-
-stdout | tests/integration/navigation-cycle.test.ts
-◇ injected env (10) from .env // tip: ⌘ enable debugging { debug: true }
-
-stdout | tests/integration/platform/plugins.test.ts
-◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
-
- ✓ tests/integration/blog-internal-link.test.ts (8 tests) 73ms
- ✓ tests/integration/payments.test.ts (3 tests) 80ms
-stdout | tests/integration/platform/preview.test.ts
+stdout | tests/integration/loaders/navigation-consent-effect.test.ts
 ◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
 
+ ✓ tests/integration/platform/sites.test.ts (5 tests) 310ms
+stdout | tests/unit/upload.test.ts
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
+
+ ✓ tests/integration/loaders/navigation-consent-effect.test.ts (3 tests) 66ms
+ ✓ tests/integration/platform/api-v1.test.ts (8 tests) 444ms
+stdout | tests/unit/upload.test.ts
+◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+
+stdout | tests/integration/storage/s3.test.ts
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+
+stdout | tests/integration/storage/s3.test.ts
+◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+
+stdout | tests/integration/auth-org.test.ts
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+
+stdout | tests/integration/loaders/blog-loader-effect.test.ts
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
+
+stdout | tests/integration/platform/content.test.ts
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+
+ ✓ tests/unit/upload.test.ts (24 tests) 360ms
+ ✓ tests/integration/loaders/blog-loader-effect.test.ts (8 tests) 252ms
+ ✓ tests/integration/platform/content.test.ts (5 tests) 162ms
+ ✓ tests/integration/storage/s3.test.ts (4 tests) 304ms
+stdout | tests/integration/auth-org.test.ts
+◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+
+ ✓ tests/unit/scripts/new-module.test.ts (4 tests) 11894ms
+     ✓ refuses invalid names and existing modules  394ms
+     ✓ type-checks against core abstractions and passes the capability contract  11315ms
+ ✓ tests/unit/i18n-translations.test.ts (12 tests) 147ms
+ ✓ tests/unit/port-guard.test.ts (2 tests) 101ms
+ ✓ tests/integration/auth-org.test.ts (5 tests) 264ms
+stdout | tests/integration/locks/core-locks-pg.test.ts
+◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+
+stdout | tests/integration/loaders/site-media-admin-effect.test.ts
+◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+
+ ✓ tests/integration/locks/core-locks-pg.test.ts (8 tests) 169ms
+stdout | tests/integration/seed-demo-login.test.ts
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
+
+ ✓ tests/integration/loaders/site-media-admin-effect.test.ts (3 tests) 154ms
+stdout | tests/integration/platform/forms.test.ts
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+
+stdout | tests/integration/platform/blocks-media.test.ts
+◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+
+stdout | tests/integration/platform/forms.test.ts
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+
+stdout | tests/integration/platform/preview.test.ts
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+
+stdout | tests/integration/platform/blocks-media.test.ts
+◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+
+stdout | tests/integration/platform/preview.test.ts
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
+
+ ✓ tests/integration/platform/forms.test.ts (6 tests) 151ms
+stdout | tests/integration/seed-demo-login.test.ts
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+
+ ✓ tests/unit/i18n-urls.test.ts (32 tests) 85ms
+stdout | tests/integration/platform/plugins.test.ts
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+
+stdout | tests/integration/middleware.test.ts
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+
+ ✓ tests/integration/seed-demo-login.test.ts (1 test) 213ms
+stdout | tests/integration/platform/plugins.test.ts
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+
+ ✓ tests/integration/platform/preview.test.ts (3 tests) 344ms
 stdout | tests/integration/platform/plugins.test.ts > plugin system (brick i) > a failing setup is recorded, rolled back and isolated
-[11:00:03.618] WARN (#12): [plugins] test-broken non activé : Plugin test-broken: boom
+[15:36:25.186] WARN (#12): [plugins] test-broken non activé : Plugin test-broken: boom
 
- ✓ tests/integration/platform/plugins.test.ts (5 tests) 85ms
- ✓ tests/integration/platform/blocks-media.test.ts (2 tests) 126ms
- ✓ tests/integration/navigation-cycle.test.ts (6 tests) 83ms
- ✓ tests/integration/platform/preview.test.ts (3 tests) 92ms
+ ✓ tests/integration/platform/plugins.test.ts (5 tests) 94ms
+stdout | tests/integration/middleware.test.ts
+◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+
 stdout | tests/integration/cms-admin.test.ts
-◇ injected env (10) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
+
+stdout | tests/unit/production-hardening.test.ts
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+
+ ✓ tests/integration/middleware.test.ts (4 tests) 118ms
+ ✓ tests/integration/cms-admin.test.ts (14 tests) 77ms
+stdout | tests/integration/export.test.ts
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
+
+ ✓ tests/integration/platform/blocks-media.test.ts (2 tests) 162ms
+stdout | tests/integration/contact-api.test.ts
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+
+ ✓ tests/unit/production-hardening.test.ts (9 tests) 92ms
+stdout | tests/integration/observability/observability.test.ts > Sentry reporter (brick l) > sends to the envelope endpoint, respects sampling, and never fails the caller
+[15:36:25.901] WARN (#3): [sentry] envoi impossible Error: Sentry HTTP 500
+    at /workspace/polyweb-wt/src/lib/observability/errors.ts:112:52
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at sentry.capture (/workspace/polyweb-wt/src/lib/observability/errors.ts:118:16)
 
 stdout | tests/integration/observability/observability.test.ts > Sentry reporter (brick l) > sends to the envelope endpoint, respects sampling, and never fails the caller
-[11:00:03.908] WARN (#3): [sentry] envoi impossible Error: Sentry HTTP 500
-    at /workspace/polyweb/src/lib/observability/errors.ts:112:52
-    at processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at sentry.capture (/workspace/polyweb/src/lib/observability/errors.ts:118:16)
-
-stdout | tests/integration/observability/observability.test.ts > Sentry reporter (brick l) > sends to the envelope endpoint, respects sampling, and never fails the caller
-[11:00:03.912] WARN (#4): [sentry] envoi impossible TypeError: fetch failed
-    at node:internal/deps/undici/undici:13510:13
-    at processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at sentry.capture (/workspace/polyweb/src/lib/observability/errors.ts:118:16) {
+[15:36:25.906] WARN (#4): [sentry] envoi impossible TypeError: fetch failed
+    at node:internal/deps/undici/undici:15270:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at sentry.capture (/workspace/polyweb-wt/src/lib/observability/errors.ts:118:16) {
   [cause]: Error: bad port
-      at makeNetworkError (node:internal/deps/undici/undici:9277:35)
-      at mainFetch (node:internal/deps/undici/undici:10503:20)
-      at fetching (node:internal/deps/undici/undici:10489:7)
-      at fetch (node:internal/deps/undici/undici:10358:20)
-      at fetch (node:internal/deps/undici/undici:13508:10)
+      at makeNetworkError (node:internal/deps/undici/undici:9617:35)
+      at mainFetch (node:internal/deps/undici/undici:10843:20)
+      at fetching (node:internal/deps/undici/undici:10829:7)
+      at fetch (node:internal/deps/undici/undici:10698:20)
+      at fetch (node:internal/deps/undici/undici:15268:10)
       at fetch (node:internal/bootstrap/web/exposed-window-or-worker:75:12)
-      at try (/workspace/polyweb/src/lib/observability/errors.ts:103:13)
-      at MixedScheduler.<anonymous> (file:///workspace/polyweb/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:785:7)
+      at try (/workspace/polyweb-wt/src/lib/observability/errors.ts:103:13)
+      at MixedScheduler.<anonymous> (file:///workspace/polyweb-wt/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:785:7)
 }
 
- ✓ tests/integration/cms-admin.test.ts (14 tests) 91ms
+ ✓ tests/integration/observability/observability.test.ts (5 tests) 73ms
+stdout | tests/integration/navigation-cycle.test.ts
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
+
+stdout | tests/integration/export.test.ts
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+
+stdout | tests/integration/payments.test.ts
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+
+ ✓ tests/integration/export.test.ts (3 tests) 63ms
+stdout | tests/integration/blog-internal-link.test.ts
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
+
+ ✓ tests/integration/navigation-cycle.test.ts (6 tests) 73ms
+ ✓ tests/integration/payments.test.ts (3 tests) 61ms
+ ✓ tests/integration/contact-api.test.ts (13 tests) 76ms
+stdout | tests/integration/loaders/page-loader-effect.test.ts
+◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+
+ ✓ tests/integration/loaders/page-loader-effect.test.ts (4 tests) 91ms
 stdout | tests/integration/consent-cms.test.ts
-◇ injected env (10) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
 
- ✓ tests/integration/observability/observability.test.ts (5 tests) 71ms
- ✓ tests/integration/consent-cms.test.ts (25 tests) 57ms
- ✓ tests/unit/middleware-timeout.test.ts (6 tests) 40ms
 stdout | tests/integration/legal-cms.test.ts
-◇ injected env (10) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
 
+ ✓ tests/integration/consent-cms.test.ts (25 tests) 87ms
+ ✓ tests/integration/blog-internal-link.test.ts (8 tests) 81ms
+ ✓ tests/integration/legal-cms.test.ts (19 tests) 61ms
+stdout | tests/integration/effect/db.test.ts
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+
+ ✓ tests/unit/i18n-key-completeness.test.ts (7 tests) 62ms
+ ✓ tests/unit/database/services-data-invariants.test.ts (5 tests) 49ms
+stdout | tests/integration/effect/db.test.ts
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+
+ ✓ tests/integration/effect/db.test.ts (3 tests) 68ms
+ ✓ tests/unit/middleware-timeout.test.ts (6 tests) 56ms
+ ✓ tests/unit/sanitize.test.ts (44 tests) 65ms
+ ✓ tests/unit/rate-limit.test.ts (9 tests) 44ms
+ ✓ tests/unit/database/services-data-shape.test.ts (1 test) 56ms
 stdout | tests/unit/smtp-env.test.ts > getSmtpFrom — header injection defense > rejects email with \n character
-◇ injected env (7) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
 
 stdout | tests/unit/smtp-env.test.ts > getSmtpFrom — header injection defense > rejects email with \r character
-◇ injected env (7) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
 
 stdout | tests/unit/smtp-env.test.ts > getSmtpFrom — header injection defense > rejects invalid email format
-◇ injected env (7) from .env // tip: ⌘ enable debugging { debug: true }
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
 
 stdout | tests/unit/smtp-env.test.ts > getSmtpFrom — header injection defense > accepts valid email address
-◇ injected env (7) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
 
 stdout | tests/unit/smtp-env.test.ts > getSmtpFrom — header injection defense > uses custom SMTP_FROM_NAME when provided
-◇ injected env (7) from .env // tip: ⌘ suppress logs { quiet: true }
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
 
 stdout | tests/unit/smtp-env.test.ts > getNodemailerConfig — port validation > defaults to port 587
-◇ injected env (7) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
 
 stdout | tests/unit/smtp-env.test.ts > getNodemailerConfig — port validation > parses valid port
-◇ injected env (7) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
 
 stdout | tests/unit/smtp-env.test.ts > getNodemailerConfig — port validation > rejects port 0
-◇ injected env (7) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
 
 stdout | tests/unit/smtp-env.test.ts > getNodemailerConfig — port validation > rejects port > 65535
-◇ injected env (7) from .env // tip: ⌘ enable debugging { debug: true }
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
 
 stdout | tests/unit/smtp-env.test.ts > getNodemailerConfig — port validation > rejects non-numeric port
-◇ injected env (7) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
 
 stdout | tests/unit/smtp-env.test.ts > getNodemailerConfig — port validation > returns secure=true when SMTP_SECURE=true
-◇ injected env (7) from .env // tip: ⌘ enable debugging { debug: true }
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
 
 stdout | tests/unit/smtp-env.test.ts > getNodemailerConfig — port validation > returns secure=false when SMTP_SECURE is not "true"
-◇ injected env (7) from .env // tip: ⌘ enable debugging { debug: true }
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
 
 stdout | tests/unit/smtp-env.test.ts > getBrevoConfig / getResendConfig — missing API key > getBrevoConfig throws when BREVO_API_KEY is missing
-◇ injected env (7) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
 
 stdout | tests/unit/smtp-env.test.ts > getBrevoConfig / getResendConfig — missing API key > getBrevoConfig returns key when set
-◇ injected env (7) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
 
 stdout | tests/unit/smtp-env.test.ts > getBrevoConfig / getResendConfig — missing API key > getResendConfig throws when RESEND_API_KEY is missing
-◇ injected env (7) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
 
 stdout | tests/unit/smtp-env.test.ts > getBrevoConfig / getResendConfig — missing API key > getResendConfig returns key when set
-◇ injected env (7) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
 
 stdout | tests/unit/smtp-env.test.ts > SMTP_PROVIDER validation > accepts BREVO as provider
-◇ injected env (7) from .env // tip: ⌘ override existing { override: true }
+◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
 
 stdout | tests/unit/smtp-env.test.ts > SMTP_PROVIDER validation > accepts RESEND as provider
-◇ injected env (7) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
 
 stdout | tests/unit/smtp-env.test.ts > SMTP_PROVIDER validation > normalizes lowercase provider name
-◇ injected env (7) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
 
 stdout | tests/unit/smtp-env.test.ts > SMTP_PROVIDER validation > throws for invalid provider
-◇ injected env (7) from .env // tip: ⌘ enable debugging { debug: true }
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
 
- ✓ tests/unit/smtp-env.test.ts (20 tests) 32ms
- ✓ tests/integration/legal-cms.test.ts (19 tests) 53ms
+ ✓ tests/unit/smtp-env.test.ts (20 tests) 38ms
 stdout | tests/integration/crud-engine.test.ts
-◇ injected env (10) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
-
- ✓ tests/unit/rate-limit.test.ts (9 tests) 45ms
-stdout | tests/integration/export.test.ts
-◇ injected env (10) from .env // tip: ⌘ enable debugging { debug: true }
-
- ✓ tests/unit/sanitize.test.ts (44 tests) 59ms
-stdout | tests/unit/send-email.test.ts > sendEmail > retries on transient network error and eventually throws
-[11:00:04.487] WARN (#6): [SMTP] Attempt 1 failed, retrying Error: connect failed
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
 
 stdout | tests/unit/send-email.test.ts > sendEmail > retries on transient network error and eventually throws
-[11:00:05.487] WARN (#6): [SMTP] Attempt 2 failed, retrying Error: connect failed
+[15:36:27.795] WARN (#6): [SMTP] Attempt 1 failed, retrying Error: connect failed
+
+stdout | tests/unit/send-email.test.ts > sendEmail > retries on transient network error and eventually throws
+[15:36:28.795] WARN (#6): [SMTP] Attempt 2 failed, retrying Error: connect failed
 
 stdout | tests/unit/send-email.test.ts > sendEmail > retries on HTTP 429 (rate limit)
-[11:00:04.495] WARN (#7): [SMTP] Attempt 1 failed, retrying Error: HTTP 429 Too Many Requests
+[15:36:27.809] WARN (#7): [SMTP] Attempt 1 failed, retrying Error: HTTP 429 Too Many Requests
 
 stdout | tests/unit/send-email.test.ts > sendEmail > retries on HTTP 500/502/503/504 server errors
-[11:00:04.497] WARN (#8): [SMTP] Attempt 1 failed, retrying Error: HTTP 502 Bad Gateway
+[15:36:27.811] WARN (#8): [SMTP] Attempt 1 failed, retrying Error: HTTP 502 Bad Gateway
 
 stdout | tests/unit/send-email.test.ts > sendEmail > retries on HTTP 500/502/503/504 server errors
-[11:00:05.497] WARN (#8): [SMTP] Attempt 2 failed, retrying Error: HTTP 503 Service Unavailable
+[15:36:28.811] WARN (#8): [SMTP] Attempt 2 failed, retrying Error: HTTP 503 Service Unavailable
 
 stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
-[11:00:04.499] WARN (#9): [SMTP] Attempt 1 failed, retrying Error: network
+[15:36:27.813] WARN (#9): [SMTP] Attempt 1 failed, retrying Error: network
 
 stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
-[11:00:05.499] WARN (#10): [SMTP] Attempt 1 failed, retrying Error: network
+[15:36:28.813] WARN (#10): [SMTP] Attempt 1 failed, retrying Error: network
 
 stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
-[11:00:06.499] WARN (#11): [SMTP] Attempt 1 failed, retrying Error: network
+[15:36:29.813] WARN (#11): [SMTP] Attempt 1 failed, retrying Error: network
 
 stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
-[11:00:07.499] WARN (#12): [SMTP] Attempt 1 failed, retrying Error: network
+[15:36:30.813] WARN (#12): [SMTP] Attempt 1 failed, retrying Error: network
 
 stdout | tests/unit/send-email.test.ts > sendEmail > verifies exponential backoff delay formula: 1000 * 2^(attempt-1)
-[11:00:04.507] WARN (#13): [SMTP] Attempt 1 failed, retrying Error: fail
+[15:36:27.818] WARN (#13): [SMTP] Attempt 1 failed, retrying Error: fail
 
 stdout | tests/unit/send-email.test.ts > sendEmail > verifies exponential backoff delay formula: 1000 * 2^(attempt-1)
-[11:00:05.507] WARN (#13): [SMTP] Attempt 2 failed, retrying Error: fail
+[15:36:28.818] WARN (#13): [SMTP] Attempt 2 failed, retrying Error: fail
 
- ✓ tests/unit/send-email.test.ts (17 tests) 38ms
- ✓ tests/integration/crud-engine.test.ts (2 tests) 48ms
+ ✓ tests/unit/send-email.test.ts (17 tests) 40ms
 stdout | tests/unit/request-context.test.ts > request context (middleware) > treats a failing session lookup as anonymous
-[11:00:04.669] ERROR (#5): [middleware] Session check failed {
+[15:36:27.836] ERROR (#5): [middleware] Session check failed {
   message: 'An error occurred in Effect.tryPromise',
   cause: Error: db down
-      at /workspace/polyweb/tests/unit/request-context.test.ts:14:74
-      at MixedScheduler.<anonymous> (file:///workspace/polyweb/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:785:7)
-      at AsyncImpl.~effect/Effect/evaluate (file:///workspace/polyweb/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:804:38)
-      at FiberImpl.runLoop (file:///workspace/polyweb/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:453:97)
-      at FiberImpl.evaluate (file:///workspace/polyweb/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:402:23)
-      at forkUnsafe (file:///workspace/polyweb/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2426:11)
-      at MixedScheduler.<anonymous> (file:///workspace/polyweb/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:1131:21)
-      at AsyncImpl.~effect/Effect/evaluate (file:///workspace/polyweb/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:804:38)
-      at FiberImpl.runLoop (file:///workspace/polyweb/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:453:97)
-      at FiberImpl.evaluate (file:///workspace/polyweb/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:402:23),
+      at /workspace/polyweb-wt/tests/unit/request-context.test.ts:14:74
+      at MixedScheduler.<anonymous> (file:///workspace/polyweb-wt/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:785:7)
+      at ~effect/Effect/evaluate (file:///workspace/polyweb-wt/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:804:38)
+      at FiberImpl.runLoop (file:///workspace/polyweb-wt/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:453:97)
+      at FiberImpl.evaluate (file:///workspace/polyweb-wt/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:402:23)
+      at forkUnsafe (file:///workspace/polyweb-wt/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2426:11)
+      at MixedScheduler.<anonymous> (file:///workspace/polyweb-wt/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:1131:21)
+      at ~effect/Effect/evaluate (file:///workspace/polyweb-wt/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:804:38)
+      at FiberImpl.runLoop (file:///workspace/polyweb-wt/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:453:97)
+      at FiberImpl.evaluate (file:///workspace/polyweb-wt/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:402:23),
   _tag: 'UnknownError',
   '~effect/Cause/UnknownError': '~effect/Cause/UnknownError'
 }
 
 stdout | tests/unit/request-context.test.ts > request context (middleware) > times out a slow session lookup
-[11:00:04.692] WARN (#7): [middleware] Session check timed out — returning 503
+[15:36:27.859] WARN (#7): [middleware] Session check timed out — returning 503
 
+ ✓ tests/unit/blog-engagement-actions.test.ts (38 tests) 60ms
 stdout | tests/unit/request-context.test.ts > request context (middleware) > falls back to null when site resolution fails
-[11:00:04.700] ERROR (#10): [middleware] Site resolution failed { operation: 'x', cause: 'down', _tag: 'DbError' }
+[15:36:27.868] ERROR (#10): [middleware] Site resolution failed { operation: 'x', cause: 'down', _tag: 'DbError' }
 
- ✓ tests/unit/request-context.test.ts (6 tests) 36ms
-stdout | tests/integration/effect/db.test.ts
-◇ injected env (10) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+ ✓ tests/unit/request-context.test.ts (6 tests) 38ms
+ ✓ tests/unit/admin-helpers.test.ts (7 tests) 30ms
+ ✓ tests/unit/database/migration-sql.test.ts (12 tests) 25ms
+ ✓ tests/integration/crud-engine.test.ts (2 tests) 61ms
+ ✓ tests/unit/cms-seeds.test.ts (12 tests) 36ms
+ ✓ tests/unit/admin-pages.test.ts (26 tests) 33ms
+ ✓ tests/unit/origin-check.test.ts (5 tests) 22ms
+ ✓ tests/unit/db-env.test.ts (16 tests) 25ms
+stdout | tests/integration/db-health.test.ts
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
 
- ✓ tests/unit/cms-seeds.test.ts (12 tests) 37ms
-stdout | tests/integration/effect/db.test.ts
-◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+ ✓ tests/integration/db-health.test.ts (4 tests) 32ms
+ ✓ tests/unit/smtp-providers.test.ts (11 tests) 22ms
+ ✓ tests/unit/inline-style.test.ts (7 tests) 32ms
+ ✓ tests/unit/content-locking.test.ts (7 tests) 25ms
+stdout | tests/unit/services-contract.test.ts
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
 
-stdout | tests/integration/export.test.ts
+stdout | tests/unit/smtp-send-effect.test.ts > sendEmailEffect > retries transient errors then succeeds
+[15:36:28.774] WARN (#3): [SMTP] Attempt 1 failed, retrying Error: conn
+
+stdout | tests/unit/smtp-send-effect.test.ts > sendEmailEffect > gives up after 3 attempts and writes a dead-letter record
+[15:36:28.779] WARN (#4): [SMTP] Attempt 1 failed, retrying Error: HTTP 503
+
+stdout | tests/unit/smtp-send-effect.test.ts > sendEmailEffect > gives up after 3 attempts and writes a dead-letter record
+[15:36:28.779] WARN (#4): [SMTP] Attempt 2 failed, retrying Error: HTTP 503
+
+ ✓ tests/unit/smtp-send-effect.test.ts (5 tests) 19ms
+stdout | tests/unit/services-contract.test.ts
 ◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
 
- ✓ tests/integration/effect/db.test.ts (3 tests) 49ms
- ✓ tests/integration/export.test.ts (3 tests) 55ms
- ✓ tests/unit/blog-engagement-actions.test.ts (38 tests) 47ms
- ✓ tests/unit/database/services-data-shape.test.ts (1 test) 64ms
-stdout | tests/unit/blog-newsletter-routes.test.ts
-◇ injected env (10) from .env // tip: ⌘ enable debugging { debug: true }
-
- ✓ tests/unit/database/migration-sql.test.ts (12 tests) 25ms
- ✓ tests/unit/admin-media.test.ts (26 tests) 22ms
- ✓ tests/unit/cms-i18n.test.ts (16 tests) 19ms
-stderr | tests/unit/smtp-providers.test.ts > Brevo provider > send() throws on non-OK response
-[SMTP] Brevo send error 401: unauthorized
-
-stderr | tests/unit/smtp-providers.test.ts > Resend provider > verify() throws on real 401
-[SMTP] Resend verify error 401: {"error":"invalid_key"}
-
- ✓ tests/unit/smtp-providers.test.ts (11 tests) 16ms
-stdout | tests/unit/blog-newsletter-routes.test.ts
-◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
-
-11:00:05 AM [vite] (ssr) warning: invalid import "../../../src/database/data/${entry.dataFile}". A file extension must be included in the static part of the import. For example: import(`./foo/${bar}.js`).
-  Plugin: vite:dynamic-import-vars
-  File: /workspace/polyweb/tests/unit/database/services-data-invariants.test.ts
- ✓ tests/unit/admin-helpers.test.ts (7 tests) 32ms
-stdout | tests/unit/blog-newsletter-routes.test.ts > blog newsletter HTTP routes > turns service failures into an operationally visible 503
-[11:00:05.311] ERROR (#11): [newsletter] confirm endpoint failed { name: 'Error' }
-
- ✓ tests/unit/blog-newsletter-routes.test.ts (5 tests) 27ms
- ✓ tests/unit/database/services-data-invariants.test.ts (5 tests) 55ms
+ ✓ tests/unit/admin-media.test.ts (26 tests) 32ms
+ ✓ tests/unit/cms-i18n.test.ts (16 tests) 21ms
+ ✓ tests/unit/blog-helpers.test.ts (14 tests) 33ms
+ ✓ tests/unit/services-contract.test.ts (16 tests) 34ms
+ ✓ tests/unit/contact-api.test.ts (12 tests) 28ms
+ ✓ tests/unit/admin-social.test.ts (9 tests) 14ms
+ ✓ tests/unit/blog-post-actions.test.ts (7 tests) 25ms
+ ✓ tests/unit/media-loader.test.ts (12 tests) 16ms
+ ✓ tests/unit/admin-sections.test.ts (16 tests) 18ms
 stdout | tests/unit/sections-sanitize.test.ts
-◇ injected env (10) from .env // tip: ⌘ suppress logs { quiet: true }
+◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
 
- ✓ tests/unit/navigation-menus.test.ts (10 tests) 14ms
-stderr | tests/unit/admin-pages.test.ts > publishPage > publishes a page
-[pages] Auto-snapshot on publish failed: TypeError: Cannot read properties of undefined (reading 'from')
-    at /workspace/polyweb/src/actions/admin/pages.ts:253:20
-    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+ ✓ tests/unit/admin-navigation-items.test.ts (11 tests) 16ms
+ ✓ tests/unit/admin-roles.test.ts (21 tests) 20ms
+stdout | tests/unit/webhooks/signing-ssrf.test.ts
+◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
 
-stderr | tests/unit/admin-pages.test.ts > bulkPublishPages > publishes multiple pages
-[pages] Bulk auto-snapshot failed for some pages: TypeError: Cannot read properties of undefined (reading 'from')
-    at /workspace/polyweb/src/actions/admin/pages.ts:536:43
-    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+ ✓ tests/unit/webhooks/signing-ssrf.test.ts (7 tests) 13ms
+stdout | tests/unit/blog-newsletter-routes.test.ts
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
 
- ✓ tests/unit/admin-pages.test.ts (26 tests) 29ms
-stdout | tests/integration/db-health.test.ts
-◇ injected env (10) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+ ✓ tests/unit/sections-sanitize.test.ts (10 tests) 30ms
+stdout | tests/unit/blog-newsletter-routes.test.ts
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
 
- ✓ tests/integration/db-health.test.ts (4 tests) 31ms
- ✓ tests/unit/contact-api.test.ts (12 tests) 22ms
- ✓ tests/unit/blog-helpers.test.ts (14 tests) 23ms
-stdout | tests/unit/services-contract.test.ts
-◇ injected env (10) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+stdout | tests/unit/blog-newsletter-routes.test.ts > blog newsletter HTTP routes > turns service failures into an operationally visible 503
+[15:36:30.409] ERROR (#11): [newsletter] confirm endpoint failed { name: 'Error' }
 
- ✓ tests/unit/theme-tokens.test.ts (34 tests) 13ms
- ✓ tests/unit/sections-sanitize.test.ts (10 tests) 23ms
+ ✓ tests/unit/blog-newsletter-routes.test.ts (5 tests) 24ms
+ ✓ tests/unit/admin-versions.test.ts (11 tests) 20ms
+ ✓ tests/unit/blog-newsletter-service.test.ts (9 tests) 23ms
+ ✓ tests/unit/services/admin-actions.test.ts (4 tests) 26ms
+ ✓ tests/unit/blog-taxonomy-actions.test.ts (9 tests) 20ms
+ ✓ tests/unit/blog-loader.test.ts (14 tests) 19ms
+ ✓ tests/unit/admin-menus.test.ts (13 tests) 17ms
+ ✓ tests/unit/admin-theme.test.ts (10 tests) 20ms
+ ✓ tests/unit/admin-hours.test.ts (13 tests) 16ms
+stdout | tests/unit/search-fts.test.ts
+◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+
  ✓ tests/unit/admin-pages-theme.test.ts (9 tests) 16ms
+stdout | tests/unit/blog-subscription.test.ts
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
+
+stdout | tests/unit/blog-subscription.test.ts
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+
+ ✓ tests/unit/blog-subscription.test.ts (5 tests) 13ms
+ ✓ tests/unit/search-fts.test.ts (20 tests) 14ms
+ ✓ tests/unit/theme-tokens.test.ts (34 tests) 15ms
+ ✓ tests/unit/seo.test.ts (32 tests) 7ms
+ ✓ tests/unit/navigation-menus.test.ts (10 tests) 17ms
+ ✓ tests/unit/admin-site-social-contact-hours.test.ts (10 tests) 14ms
+ ✓ tests/unit/site-loader.test.ts (13 tests) 18ms
 stdout | tests/unit/audit-fallback.test.ts > logAuditEvent — JSONL fallback > writes to fallback file when DB insert fails
-[11:00:06.096] ERROR (#1): [audit] Failed to log event {
+[15:36:31.767] ERROR (#1): [audit] Failed to log event {
   message: 'An error occurred in Effect.tryPromise',
   cause: Error: DB connection lost
-      at Object.<anonymous> (/workspace/polyweb/tests/unit/audit-fallback.test.ts:24:35)
-      at Object.Mock [as values] (file:///workspace/polyweb/node_modules/.pnpm/@vitest+spy@4.1.11/node_modules/@vitest/spy/dist/index.js:332:34)
-      at /workspace/polyweb/src/lib/audit.ts:56:41
-      at MixedScheduler.<anonymous> (file:///workspace/polyweb/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:785:7)
-      at AsyncImpl.~effect/Effect/evaluate (file:///workspace/polyweb/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:804:38)
-      at FiberImpl.runLoop (file:///workspace/polyweb/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:453:97)
-      at FiberImpl.evaluate (file:///workspace/polyweb/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:402:23)
-      at file:///workspace/polyweb/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2474:9
-      at file:///workspace/polyweb/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2526:19
-      at Module.<anonymous> (file:///workspace/polyweb/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2537:31),
+      at Object.<anonymous> (/workspace/polyweb-wt/tests/unit/audit-fallback.test.ts:24:35)
+      at Object.Mock [as values] (file:///workspace/polyweb-wt/node_modules/.pnpm/@vitest+spy@4.1.11/node_modules/@vitest/spy/dist/index.js:332:34)
+      at /workspace/polyweb-wt/src/lib/audit.ts:56:41
+      at MixedScheduler.<anonymous> (file:///workspace/polyweb-wt/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:785:7)
+      at ~effect/Effect/evaluate (file:///workspace/polyweb-wt/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:804:38)
+      at FiberImpl.runLoop (file:///workspace/polyweb-wt/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:453:97)
+      at FiberImpl.evaluate (file:///workspace/polyweb-wt/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:402:23)
+      at file:///workspace/polyweb-wt/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2474:9
+      at file:///workspace/polyweb-wt/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2526:19
+      at Module.<anonymous> (file:///workspace/polyweb-wt/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2537:31),
   _tag: 'UnknownError',
   '~effect/Cause/UnknownError': '~effect/Cause/UnknownError'
 }
 
  ✓ tests/unit/audit-fallback.test.ts (1 test) 10ms
- ✓ tests/unit/origin-check.test.ts (4 tests) 21ms
-stdout | tests/unit/services-contract.test.ts
-◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+ ✓ tests/unit/cache.test.ts (12 tests) 13ms
+ ✓ tests/unit/blog-gallery.test.ts (7 tests) 14ms
+stdout | tests/unit/loaders.test.ts
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
 
- ✓ tests/unit/blog-post-actions.test.ts (7 tests) 22ms
-stderr | tests/unit/db-env.test.ts > DB_ENV validation > defaults to LOCAL when DB_ENV is undefined
-[33m⚠️  DB_ENV non défini dans .env — défaut : LOCAL[0m
-[2m   Ajoutez DB_ENV=LOCAL|PROD|TEST dans votre fichier .env[0m
+ ✓ tests/unit/loaders.test.ts (9 tests) 6ms
+ ✓ tests/unit/section-schemas.test.ts (48 tests) 10ms
+ ✓ tests/unit/services-validation.test.ts (7 tests) 11ms
+ ✓ tests/unit/admin-contact.test.ts (10 tests) 15ms
+ ✓ tests/unit/admin-site.test.ts (7 tests) 15ms
+ ✓ tests/unit/platform/fields.test.ts (5 tests) 11ms
+ ✓ tests/unit/blog-link.test.ts (6 tests) 16ms
+stdout | tests/unit/media-list.test.ts
+◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
 
-stderr | tests/unit/db-env.test.ts > DB_ENV validation > defaults to LOCAL when DB_ENV is empty
-[33m⚠️  DB_ENV est vide dans .env — défaut : LOCAL[0m
-[2m   Valeurs acceptées : PROD, TEST, LOCAL[0m
+stdout | tests/unit/media-list.test.ts
+◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
 
- ✓ tests/unit/db-env.test.ts (16 tests) 28ms
- ✓ tests/unit/services-contract.test.ts (16 tests) 27ms
-stdout | tests/unit/smtp-send-effect.test.ts > sendEmailEffect > retries transient errors then succeeds
-[11:00:06.440] WARN (#3): [SMTP] Attempt 1 failed, retrying Error: conn
-
-stdout | tests/unit/smtp-send-effect.test.ts > sendEmailEffect > gives up after 3 attempts and writes a dead-letter record
-[11:00:06.443] WARN (#4): [SMTP] Attempt 1 failed, retrying Error: HTTP 503
-
-stdout | tests/unit/smtp-send-effect.test.ts > sendEmailEffect > gives up after 3 attempts and writes a dead-letter record
-[11:00:06.445] WARN (#4): [SMTP] Attempt 2 failed, retrying Error: HTTP 503
-
- ✓ tests/unit/smtp-send-effect.test.ts (5 tests) 20ms
- ✓ tests/unit/cache.test.ts (12 tests) 16ms
- ✓ tests/unit/admin-navigation-items.test.ts (11 tests) 15ms
- ✓ tests/unit/admin-sections.test.ts (16 tests) 19ms
- ✓ tests/unit/admin-roles.test.ts (21 tests) 18ms
-stdout | tests/unit/webhooks/signing-ssrf.test.ts
-◇ injected env (10) from .env // tip: ⌘ suppress logs { quiet: true }
-
- ✓ tests/unit/admin-social.test.ts (9 tests) 22ms
- ✓ tests/unit/admin-menus.test.ts (13 tests) 20ms
-stdout | tests/unit/search-fts.test.ts
-◇ injected env (10) from .env // tip: ⌘ suppress logs { quiet: true }
-
- ✓ tests/unit/services/admin-actions.test.ts (4 tests) 21ms
- ✓ tests/unit/webhooks/signing-ssrf.test.ts (7 tests) 18ms
- ✓ tests/unit/blog-newsletter-service.test.ts (9 tests) 26ms
- ✓ tests/unit/search-fts.test.ts (20 tests) 25ms
- ✓ tests/unit/admin-site-social-contact-hours.test.ts (10 tests) 13ms
- ✓ tests/unit/blog-loader.test.ts (14 tests) 11ms
- ✓ tests/unit/media-loader.test.ts (12 tests) 11ms
- ✓ tests/unit/section-schemas.test.ts (48 tests) 11ms
- ✓ tests/unit/platform/blocks.test.ts (5 tests) 13ms
- ✓ tests/unit/admin-theme.test.ts (10 tests) 13ms
- ✓ tests/unit/admin-hours.test.ts (13 tests) 14ms
- ✓ tests/unit/admin-versions.test.ts (11 tests) 16ms
- ✓ tests/unit/blog-taxonomy-actions.test.ts (9 tests) 20ms
- ✓ tests/unit/admin-contact.test.ts (10 tests) 16ms
+ ✓ tests/unit/media-list.test.ts (4 tests) 13ms
+ ✓ tests/unit/permissions.test.ts (37 tests) 9ms
+ ✓ tests/unit/admin-consent.test.ts (5 tests) 11ms
 stdout | tests/unit/extract-ip.test.ts
-◇ injected env (10) from .env // tip: ⌘ enable debugging { debug: true }
+◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
 
-stdout | tests/unit/effect/foundation.test.ts
-◇ injected env (10) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+ ✓ tests/unit/core-locks.test.ts (8 tests) 12ms
+ ✓ tests/unit/extract-ip.test.ts (19 tests) 10ms
+ ✓ tests/unit/platform/blocks.test.ts (5 tests) 14ms
+ ✓ tests/unit/internal-link-resolvers-effect.test.ts (4 tests) 10ms
+ ✓ tests/unit/crud-engine.test.ts (8 tests) 12ms
+ ✓ tests/unit/section-content-xss.test.ts (18 tests) 6ms
+ ✓ tests/unit/cms/admin-module-contract.test.ts (3 tests) 4ms
+stdout | tests/unit/lock-admin-release.test.ts
+◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
 
- ✓ tests/unit/cms-schemas.test.ts (85 tests) 7ms
- ✓ tests/unit/extract-ip.test.ts (19 tests) 19ms
- ✓ tests/unit/content-editor-helpers.test.ts (14 tests) 7ms
- ✓ tests/unit/blog-link.test.ts (6 tests) 12ms
+ ✓ tests/unit/lock-admin-release.test.ts (6 tests) 10ms
+stdout | tests/unit/navigation-tree.test.ts
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+
 stdout | tests/unit/effect/foundation.test.ts
 ◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
 
-stdout | tests/unit/media-list.test.ts
-◇ injected env (10) from .env // tip: ⌘ suppress logs { quiet: true }
-
- ✓ tests/unit/effect/foundation.test.ts (4 tests) 10ms
-stdout | tests/unit/media-list.test.ts
-◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
-
- ✓ tests/unit/admin-site.test.ts (7 tests) 16ms
- ✓ tests/unit/media-list.test.ts (4 tests) 13ms
- ✓ tests/unit/internal-link-effect.test.ts (3 tests) 6ms
- ✓ tests/unit/platform/fields.test.ts (5 tests) 11ms
- ✓ tests/unit/services/validation.test.ts (6 tests) 9ms
-stdout | tests/unit/blog-subscription.test.ts
-◇ injected env (10) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
-
- ✓ tests/unit/services-validation.test.ts (7 tests) 19ms
- ✓ tests/unit/seo-meta.test.ts (5 tests) 5ms
- ✓ tests/unit/blog-gallery.test.ts (7 tests) 12ms
- ✓ tests/unit/content-locking.test.ts (6 tests) 11ms
- ✓ tests/unit/seo.test.ts (32 tests) 7ms
-stdout | tests/unit/blog-subscription.test.ts
-◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
-
- ✓ tests/unit/content-import-schema.test.ts (10 tests) 9ms
- ✓ tests/unit/blog-subscription.test.ts (5 tests) 12ms
- ✓ tests/unit/permissions.test.ts (37 tests) 9ms
- ✓ tests/unit/blog/status-transitions.test.ts (17 tests) 8ms
- ✓ tests/unit/admin-consent.test.ts (5 tests) 10ms
- ✓ tests/unit/crud-engine.test.ts (8 tests) 24ms
-stdout | tests/unit/navigation-tree.test.ts
-◇ injected env (10) from .env // tip: ⌘ enable debugging { debug: true }
-
-stderr | tests/unit/navigation-tree.test.ts > buildNavTree > detects self-referencing cycle and promotes to root
-[nav] Cycle detected for navigation item "a" (label: "a") — treated as root.
-
-stderr | tests/unit/navigation-tree.test.ts > buildNavTree > detects A→B→A cycle and promotes both to root
-[nav] Cycle detected for navigation item "a" (label: "a") — treated as root.
-[nav] Cycle detected for navigation item "b" (label: "b") — treated as root.
-
-stderr | tests/unit/navigation-tree.test.ts > buildNavTree > detects A→B→C→A three-node cycle and promotes all to root
-[nav] Cycle detected for navigation item "a" (label: "a") — treated as root.
-[nav] Cycle detected for navigation item "b" (label: "b") — treated as root.
-[nav] Cycle detected for navigation item "c" (label: "c") — treated as root.
-
-stderr | tests/unit/navigation-tree.test.ts > buildNavTree > handles mixed: some nodes in cycle, some healthy
-[nav] Cycle detected for navigation item "x" (label: "x") — treated as root.
-[nav] Cycle detected for navigation item "y" (label: "y") — treated as root.
-
- ✓ tests/unit/navigation-tree.test.ts (10 tests) 15ms
- ✓ tests/unit/navigation-loader.test.ts (7 tests) 8ms
- ✓ tests/unit/effect-action.test.ts (6 tests) 11ms
- ✓ tests/unit/site-loader.test.ts (13 tests) 10ms
- ✓ tests/unit/database/seed-manifest.test.ts (3 tests) 7ms
-stdout | tests/unit/platform/revisions-diff.test.ts
-◇ injected env (10) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
-
- ✓ tests/unit/blog-validation.test.ts (3 tests) 7ms
- ✓ tests/unit/cms/workflow.test.ts (4 tests) 3ms
- ✓ tests/unit/payments/providers.test.ts (5 tests) 7ms
- ✓ tests/unit/blog-profile.test.ts (3 tests) 11ms
- ✓ tests/unit/upload-api.test.ts (9 tests) 5ms
- ✓ tests/unit/services/admin-contract.test.ts (2 tests) 6ms
-stdout | tests/unit/cli-utils.test.ts
-◇ injected env (10) from .env // tip: ⌘ enable debugging { debug: true }
-
- ✓ tests/unit/cli-utils.test.ts (12 tests) 4ms
- ✓ tests/unit/platform/revisions-diff.test.ts (4 tests) 7ms
- ✓ tests/unit/contact-form-template.test.ts (15 tests) 5ms
- ✓ tests/unit/routing/content-routes.test.ts (4 tests) 3ms
-stdout | tests/unit/mask-utils.test.ts
-◇ injected env (10) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
-
-stdout | tests/unit/mask-utils.test.ts
-◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
-
- ✓ tests/unit/mask-utils.test.ts (10 tests) 4ms
-stdout | tests/unit/loaders.test.ts
-◇ injected env (10) from .env // tip: ⌁ auth for agents [www.vestauth.com]
-
-stderr | tests/unit/loaders.test.ts > buildNavTree > detects cycles and promotes cyclic items to root
-[nav] Cycle detected for navigation item "a" (label: "A") — treated as root.
-[nav] Cycle detected for navigation item "b" (label: "B") — treated as root.
-
- ✓ tests/unit/loaders.test.ts (9 tests) 6ms
- ✓ tests/unit/cms/capabilities.test.ts (2 tests) 5ms
- ✓ tests/unit/blog-lifecycle.test.ts (2 tests) 4ms
-stdout | tests/unit/auth-guards.test.ts
-◇ injected env (10) from .env // tip: ⌘ override existing { override: true }
-
-stdout | tests/unit/cms/module-contract.test.ts
-◇ injected env (10) from .env // tip: ⌘ override existing { override: true }
-
- ✓ tests/unit/services/workflow.test.ts (3 tests) 3ms
- ✓ tests/unit/section-content-xss.test.ts (18 tests) 16ms
-stdout | tests/unit/cms/module-contract.test.ts
+ ✓ tests/unit/navigation-tree.test.ts (10 tests) 8ms
+ ✓ tests/unit/navigation-loader.test.ts (7 tests) 9ms
+ ✓ tests/unit/services/validation.test.ts (6 tests) 10ms
+stdout | tests/unit/effect/foundation.test.ts
 ◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
 
+ ✓ tests/unit/content-import-schema.test.ts (10 tests) 10ms
+ ✓ tests/unit/effect/foundation.test.ts (4 tests) 9ms
+ ✓ tests/unit/services-workflow-restore.test.ts (2 tests) 3ms
+ ✓ tests/unit/blog-profile.test.ts (3 tests) 9ms
+ ✓ tests/unit/effect-run.test.ts (4 tests) 7ms
+ ✓ tests/unit/blog-validation.test.ts (3 tests) 9ms
+ ✓ tests/unit/effect-action.test.ts (6 tests) 8ms
  ✓ tests/unit/auth-providers.test.ts (4 tests) 4ms
- ✓ tests/unit/cms/module-contract.test.ts (4 tests) 4ms
- ✓ tests/unit/cms/resource-contract.test.ts (6 tests) 4ms
-stdout | tests/unit/loaders-effect.test.ts
-◇ injected env (10) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+ ✓ tests/unit/database/seed-manifest.test.ts (3 tests) 8ms
+ ✓ tests/unit/internal-link-effect.test.ts (3 tests) 6ms
+ ✓ tests/unit/services/admin-contract.test.ts (2 tests) 6ms
+stdout | tests/unit/platform/revisions-diff.test.ts
+◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
 
-stdout | tests/unit/cms/module-boundaries.test.ts
-◇ injected env (10) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+ ✓ tests/unit/blog/status-transitions.test.ts (17 tests) 6ms
+ ✓ tests/unit/cms/resource-contract.test.ts (6 tests) 4ms
+ ✓ tests/unit/cms/admin-filter-contract.test.ts (2 tests) 3ms
+ ✓ tests/unit/cms-schemas.test.ts (85 tests) 7ms
+ ✓ tests/unit/contact-form-template.test.ts (15 tests) 5ms
+ ✓ tests/unit/platform/revisions-diff.test.ts (4 tests) 7ms
+ ✓ tests/unit/payments/providers.test.ts (5 tests) 6ms
+stdout | tests/unit/mask-utils.test.ts
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+
+stdout | tests/unit/mask-utils.test.ts
+◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+
+ ✓ tests/unit/blog-lifecycle.test.ts (2 tests) 8ms
+ ✓ tests/unit/mask-utils.test.ts (10 tests) 4ms
+ ✓ tests/unit/seo-meta.test.ts (5 tests) 5ms
+ ✓ tests/unit/content-editor-helpers.test.ts (14 tests) 9ms
+ ✓ tests/unit/cms/capabilities.test.ts (2 tests) 4ms
+ ✓ tests/unit/csp-hash.test.ts (2 tests) 4ms
+ ✓ tests/unit/i18n-utils.test.ts (6 tests) 3ms
+ ✓ tests/unit/upload-api.test.ts (9 tests) 4ms
+stdout | tests/unit/auth-guards.test.ts
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+
+stdout | tests/unit/cli-utils.test.ts
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
+
+ ✓ tests/unit/cli-utils.test.ts (12 tests) 4ms
+ ✓ tests/unit/cms/module-registry.test.ts (2 tests) 4ms
+stdout | tests/unit/services/module-contract.test.ts
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
 
 stdout | tests/unit/auth-guards.test.ts
-◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
 
- ✓ tests/unit/services-workflow-restore.test.ts (2 tests) 4ms
- ✓ tests/unit/i18n-utils.test.ts (6 tests) 4ms
-stdout | tests/unit/services/module-contract.test.ts
-◇ injected env (10) from .env // tip: ⌘ override existing { override: true }
-
- ✓ tests/unit/auth-guards.test.ts (5 tests) 6ms
- ✓ tests/unit/cms/admin-module-contract.test.ts (3 tests) 3ms
- ✓ tests/unit/editor-dom-safety.test.ts (4 tests) 3ms
-stdout | tests/unit/cms/module-boundaries.test.ts
-◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
-
-stdout | tests/unit/services/module-contract.test.ts
-◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
-
- ✓ tests/unit/cms/module-registry.test.ts (2 tests) 3ms
- ✓ tests/unit/schema-validation.test.ts (12 tests) 13ms
- ✓ tests/unit/services/module-contract.test.ts (3 tests) 4ms
- ✓ tests/unit/services/urls.test.ts (3 tests) 3ms
- ✓ tests/unit/cms/admin-filter-contract.test.ts (2 tests) 3ms
- ✓ tests/unit/cms-audit.test.ts (1 test) 3ms
 stdout | tests/unit/loaders-effect.test.ts
 ◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
 
- ✓ tests/unit/blog-public-visibility.test.ts (1 test) 3ms
- ✓ tests/unit/loaders-effect.test.ts (2 tests) 4ms
-stdout | tests/unit/services/admin-resource.test.ts
-◇ injected env (10) from .env // tip: ⌘ suppress logs { quiet: true }
-
- ✓ tests/unit/cms/module-boundaries.test.ts (2 tests) 4ms
-stdout | tests/unit/services/admin-resource.test.ts
+ ✓ tests/unit/schema-validation.test.ts (12 tests) 4ms
+ ✓ tests/unit/cms/workflow.test.ts (4 tests) 4ms
+ ✓ tests/unit/auth-guards.test.ts (5 tests) 6ms
+stdout | tests/unit/services/module-contract.test.ts
 ◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
 
+ ✓ tests/unit/services/workflow.test.ts (3 tests) 3ms
+ ✓ tests/unit/services/urls.test.ts (3 tests) 3ms
+ ✓ tests/unit/services/module-contract.test.ts (3 tests) 8ms
+stdout | tests/unit/cms/module-boundaries.test.ts
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+
+ ✓ tests/unit/lighthouse-redact.test.ts (3 tests) 3ms
+ ✓ tests/unit/routing/content-routes.test.ts (4 tests) 3ms
+stdout | tests/unit/cms/module-boundaries.test.ts
+◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+
+ ✓ tests/unit/editor-dom-safety.test.ts (4 tests) 5ms
+ ✓ tests/unit/cms-audit.test.ts (1 test) 3ms
+stdout | tests/unit/loaders-effect.test.ts
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
+
+ ✓ tests/unit/blog-public-visibility.test.ts (1 test) 3ms
+stdout | tests/unit/cms/module-contract.test.ts
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
+
+ ✓ tests/unit/loaders-effect.test.ts (2 tests) 5ms
+stdout | tests/unit/cms/module-contract.test.ts
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
+
+ ✓ tests/unit/cms/module-contract.test.ts (4 tests) 4ms
+stdout | tests/unit/services/admin-resource.test.ts
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+
+ ✓ tests/unit/cms/module-boundaries.test.ts (2 tests) 5ms
+stdout | tests/unit/services/admin-resource.test.ts
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+
  ✓ tests/unit/services/admin-resource.test.ts (3 tests) 3ms
+ ✓ tests/integration/db-commands-effect.test.ts (10 tests) 26942ms
+     ✓ db:baseline : marque toutes les migrations sur une base existante, puis ne fait plus rien  2502ms
+     ✓ db:reset : « non » annule ; « oui » supprime les tables et l’historique  2376ms
+     ✓ db:migrate : applique toutes les migrations puis ne fait plus rien  3072ms
+     ✓ db:infra : dry run puis application  2285ms
+     ✓ db:seed : insère le manifest, relance idempotente  4437ms
+     ✓ db:seed-media : indexe les uploads puis ignore les déjà indexés  3548ms
+     ✓ db:backfill-variants : rien à traiter sur une base sans média  2586ms
+     ✓ db:sync LOCAL → TEST puis db:compare LOCAL TEST : identiques  3738ms
+     ✓ db:generate : schéma à jour → aucune migration générée  1288ms
+     ✓ db:check : OK sur la base migrée ; URL invalide → échec (code 1)  825ms
 
- Test Files  153 passed (153)
-      Tests  1503 passed (1503)
-   Start at  10:59:53
-   Duration  18.34s (transform 5.47s, setup 0ms, import 73.08s, tests 35.54s, environment 11ms)
+ Test Files  167 passed (167)
+      Tests  1579 passed (1579)
+   Start at  15:36:11
+   Duration  27.27s (transform 5.28s, setup 0ms, import 78.54s, tests 77.53s, environment 12ms)
 
-JSON report written to /workspace/polyweb/tests/reports/vitest-results.json
+JSON report written to /workspace/polyweb-wt/tests/reports/vitest-results.json
