@@ -3,7 +3,10 @@
  *
  *   pnpm module:new <domaine> [--entity=entityName]
  *
- * Ne crée QUE ce qui est obligatoire : un dossier vide est une dette. Les
+ * Ne crée QUE ce qui est obligatoire : un dossier vide est une dette. Le socle
+ * généré utilise les abstractions core : schéma (contenu, révisions, verrous),
+ * workflow (core/workflow), verrou (core/locks), garde de permission Effect,
+ * service Effect (dbTry), loader Effect + adaptateur Promise, actions à prologue Effect. Les
  * dossiers optionnels (`engagement/`, `repositories/`, `seo/`, …) s'ajoutent
  * quand on en a besoin, pas d'avance.
  */
@@ -43,6 +46,10 @@ const camel = name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
  * `email-voyageAdminResource`, qui ne compile pas.
  */
 const entityCamel = entity.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+
+/** Nom SQL (snake_case) et préfixe de constantes (SCREAMING_SNAKE) du domaine. */
+const snake = name.replace(/-/g, "_");
+const upper = snake.toUpperCase();
 
 // `--root=<dir>` permet de générer ailleurs que dans `src/` (tests, essais).
 const root = rootFlag?.split("=")[1] ?? "src";
@@ -88,9 +95,9 @@ export const ${camel}Module: PolywebModuleDefinition = {
     taxonomy: false,
     attributes: false,
     search: false,
-    publication: false,
-    revisions: false,
-    locks: false,
+    publication: true,
+    revisions: true,
+    locks: true,
     engagement: false,
     moderation: false,
     notifications: false,
@@ -123,41 +130,53 @@ assertModuleCapabilityProviders(${camel}Module);
 export const ${camel}CapabilityProviders = {
   content: "${name}",
   localization: "${name}Translations",
+  publication: "${camel}Workflow",
+  revisions: "${snake}_revisions",
+  locks: "${snake}_locks",
 } as unknown as PolywebModuleCapabilityProviders;
 `,
 
   [`${moduleDir}/loaders/${entity}.loader.ts`]: `/**
  * Lecture du domaine ${name}.
  *
- * SEUL endroit autorisé à interroger la base pour ce domaine. Chaque fonction
- * retourne un objet nommé : les composants reçoivent des DTO, jamais des
- * lignes brutes, et le SQL reste testable hors rendu.
+ * SEUL endroit autorisé à LIRE la base pour ce domaine (les écritures passent par
+ * \`services/\`). Chaque lecture est un Effect (\`dbTry\` → DbError typé) ;
+ * \`load${pascal}\` en est l'adaptateur Promise pour les pages Astro. Les composants
+ * reçoivent des DTO, jamais des lignes brutes.
  */
+import { Effect } from "effect";
+import { and, eq } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
+import { dbTry, runOrThrow } from "@/lib/effect/run";
+import { ${camel} } from "../schema";
 
 /** DTO public du domaine. */
 export interface ${pascal}DTO {
   id: string;
+  slug: string;
+  title: string;
+  status: string;
 }
 
-/**
- * @param id identifiant de l'objet
- * @param viewerId lecteur connecté, ou null pour un visiteur anonyme. Les
- *   données dépendant de la session ne doivent pas passer par un cache public.
- */
-export async function load${pascal}(
-  id: string,
-  viewerId: string | null,
-): Promise<${pascal}DTO | null> {
-  const db = getDrizzle();
-  void db;
-  void viewerId;
+export const ${camel}Loader = {
+  /**
+   * @param viewerId lecteur connecté, ou null pour un visiteur anonyme : un
+   *   visiteur ne voit que le publié. Les données dépendant de la session ne
+   *   doivent pas passer par un cache public.
+   */
+  byId: (id: string, viewerId: string | null) =>
+    dbTry("${name}.byId", () =>
+      getDrizzle()
+        .select({ id: ${camel}.id, slug: ${camel}.slug, title: ${camel}.title, status: ${camel}.status })
+        .from(${camel})
+        .where(viewerId ? eq(${camel}.id, id) : and(eq(${camel}.id, id), eq(${camel}.status, "PUBLISHED")))
+        .limit(1),
+    ).pipe(Effect.map((rows): ${pascal}DTO | null => rows[0] ?? null)),
+};
 
-  // TODO: implémenter la lecture.
-  //   - filtrer sur le statut publié si le domaine a une notion de publication
-  //   - ne jamais retourner un brouillon à un visiteur non autorisé
-  return null;
-}
+/** Adaptateur Promise (pages Astro). */
+export const load${pascal} = (id: string, viewerId: string | null): Promise<${pascal}DTO | null> =>
+  runOrThrow(${camel}Loader.byId(id, viewerId));
 `,
 
   [`${moduleDir}/loaders/index.ts`]: `export * from "./${entity}.loader";
@@ -245,6 +264,214 @@ export const ${entityCamel}AdminResource: AdminResourceDefinition = {
 assertResourceCompatibility(${camel}Module, ${entityCamel}AdminResource);
 `,
 
+  // ── Socle Effect du module (abstractions core) ────────────────────────
+  // Schéma, workflow, verrou, garde de permission, service et actions : un module
+  // généré utilise d'emblée core/locks, core/workflow, dbTry et les prologues Effect.
+  [`${moduleDir}/schema/index.ts`]: `/**
+ * Tables du domaine ${name} : contenu, révisions et verrous d'édition.
+ *
+ * À exporter depuis \`src/database/schemas/index.ts\` puis \`pnpm db:generate\`
+ * pour produire la migration (le générateur n'écrit aucune migration).
+ */
+import { index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { user } from "@database/schemas/auth.schema";
+import { ${upper}_STATUSES } from "../domain/workflow";
+
+export const ${camel} = pgTable("${snake}", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: text("organization_id"),
+  slug: text("slug").notNull(),
+  title: text("title").notNull(),
+  status: text("status", { enum: ${upper}_STATUSES }).default("DRAFT").notNull(),
+  createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
+}, (table) => [uniqueIndex("${snake}_org_slug_uidx").on(table.organizationId, table.slug)]);
+
+/** Révisions (core/revision) : une ligne par écriture, pour l'historique et la restauration. */
+export const ${camel}Revisions = pgTable("${snake}_revisions", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  resourceId: text("resource_id").notNull().references(() => ${camel}.id, { onDelete: "cascade" }),
+  authorId: text("author_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  slug: text("slug").notNull(),
+  status: text("status", { enum: ${upper}_STATUSES }).notNull(),
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [index("${snake}_revisions_resource_idx").on(table.resourceId)]);
+
+/** Verrous d'édition (core/locks) : une ligne par ressource, propriétaire utilisateur + session. */
+export const ${camel}Locks = pgTable("${snake}_locks", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  resourceId: text("resource_id").notNull().unique().references(() => ${camel}.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  sessionId: text("session_id").notNull(),
+  lockedAt: timestamp("locked_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+`,
+
+  [`${moduleDir}/domain/workflow.ts`]: `/**
+ * Workflow éditorial du domaine ${name} (core/workflow) : états et transitions
+ * autorisées. Le service refuse toute transition absente de cette table.
+ */
+import type { WorkflowDefinition } from "@/core/workflow";
+
+export const ${upper}_STATUSES = ["DRAFT", "PUBLISHED", "ARCHIVED"] as const;
+export type ${pascal}Status = (typeof ${upper}_STATUSES)[number];
+
+export const ${camel}Workflow: WorkflowDefinition<${pascal}Status> = {
+  states: ${upper}_STATUSES,
+  transitions: [
+    { from: "DRAFT", to: "PUBLISHED" },
+    { from: "PUBLISHED", to: "DRAFT" },
+    { from: "DRAFT", to: "ARCHIVED" },
+    { from: "PUBLISHED", to: "ARCHIVED" },
+    { from: "ARCHIVED", to: "DRAFT" },
+  ],
+};
+`,
+
+  [`${moduleDir}/locks.ts`]: `/**
+ * Verrou d'édition du domaine ${name}, déclaré auprès du verrou générique
+ * \`src/core/locks\` : politique utilisateur + session, reprise par soi depuis
+ * une autre session (\`takeOver\`), TTL, purge des verrous expirés, erreurs typées.
+ */
+import { defineLockResource, drizzleLockStore } from "@/core/locks/service";
+import { ${camel}Locks } from "./schema";
+
+export const ${camel}Lock = defineLockResource("${name}", drizzleLockStore("${name}", ${camel}Locks, "resourceId"));
+`,
+
+  [`${moduleDir}/permissions/index.ts`]: `/**
+ * Garde de permission Effect du domaine ${name} (RBAC better-auth). Le namespace
+ * « ${name} » doit être déclaré dans le contrôle d'accès (\`src/lib/permissions\`).
+ */
+import type { ActionAPIContext } from "astro:actions";
+import { requireActionPermission } from "@/lib/effect/action";
+
+export type ${pascal}Permission = "create" | "read" | "update" | "publish" | "delete";
+
+export const require${pascal}Permission = (context: ActionAPIContext, permissions: readonly ${pascal}Permission[]) =>
+  requireActionPermission(context, { "${name}": [...permissions] });
+`,
+
+  [`${moduleDir}/services/${entity}.service.ts`]: `/**
+ * Service Effect du domaine ${name} : mutations (création, mise à jour,
+ * transition de workflow, verrou). Accès base via \`dbTry\` (DbError typé),
+ * verrou via core/locks, transitions via core/workflow, révisions à chaque écriture.
+ */
+import { Effect } from "effect";
+import { eq } from "drizzle-orm";
+import { getDrizzle } from "@database/drizzle";
+import { dbTry } from "@/lib/effect/run";
+import { fail } from "@/lib/effect/action";
+import { canTransition } from "@/core/workflow";
+import type { LockOwner } from "@/core/locks/policy";
+import { ${camel}, ${camel}Revisions } from "../schema";
+import { ${camel}Lock } from "../locks";
+import { ${camel}Workflow, type ${pascal}Status } from "../domain/workflow";
+
+type Row = typeof ${camel}.$inferSelect;
+
+const findById = (id: string) =>
+  dbTry("${name}.findById", () => getDrizzle().select().from(${camel}).where(eq(${camel}.id, id)).limit(1)).pipe(Effect.map((rows): Row | null => rows[0] ?? null));
+
+const required = (id: string) =>
+  Effect.flatMap(findById(id), (row) => (row ? Effect.succeed(row) : fail("NOT_FOUND", "Élément introuvable.")));
+
+const revision = (row: Row, authorId: string, note: string) =>
+  dbTry("${name}.revision", () => getDrizzle().insert(${camel}Revisions).values({ resourceId: row.id, authorId, title: row.title, slug: row.slug, status: row.status, note }));
+
+export const ${camel}Service = {
+  create: (input: { title: string; slug: string; organizationId: string | null }, authorId: string) =>
+    Effect.gen(function* () {
+      const [row] = yield* dbTry("${name}.create", () => getDrizzle().insert(${camel}).values({ ...input, createdBy: authorId }).returning());
+      yield* revision(row, authorId, "Création");
+      return row;
+    }),
+
+  update: (id: string, patch: { title?: string; slug?: string }, owner: LockOwner, locale?: string) =>
+    Effect.gen(function* () {
+      yield* ${camel}Lock.ensureNotLockedByOther(id, owner, locale);
+      yield* required(id);
+      const [row] = yield* dbTry("${name}.update", () => getDrizzle().update(${camel}).set(patch).where(eq(${camel}.id, id)).returning());
+      yield* revision(row, owner.userId, "Mise à jour");
+      return row;
+    }),
+
+  transition: (id: string, to: ${pascal}Status, owner: LockOwner, locale?: string) =>
+    Effect.gen(function* () {
+      yield* ${camel}Lock.ensureNotLockedByOther(id, owner, locale);
+      const current = yield* required(id);
+      if (!canTransition(${camel}Workflow, current.status, to)) return yield* fail("BAD_REQUEST", "Transition de statut invalide : " + current.status + " → " + to + ".");
+      const [row] = yield* dbTry("${name}.transition", () => getDrizzle().update(${camel}).set({ status: to }).where(eq(${camel}.id, id)).returning());
+      yield* revision(row, owner.userId, "Transition " + current.status + " → " + to);
+      return row;
+    }),
+
+  lock: (id: string, owner: LockOwner, options: { takeOver?: boolean; locale?: string } = {}) => ${camel}Lock.acquire(id, owner, options),
+  unlock: (id: string, owner: LockOwner) => ${camel}Lock.release(id, owner),
+};
+`,
+
+  [`${moduleDir}/actions/index.ts`]: `/**
+ * Actions Astro du domaine ${name} : prologue Effect (garde de permission,
+ * verrou, validations) puis service. À ré-exporter depuis \`src/actions/index.ts\`.
+ */
+import { defineAction } from "astro:actions";
+import { z } from "astro/zod";
+import { Effect } from "effect";
+import { effectHandler } from "@/lib/effect/action";
+import { lockOwnerFrom } from "@/core/locks/service";
+import { lockLocaleFrom } from "@/core/locks/errors";
+import { require${pascal}Permission } from "../permissions";
+import { ${camel}Service } from "../services/${entity}.service";
+import { ${upper}_STATUSES } from "../domain/workflow";
+
+const idInput = z.object({ id: z.uuid() });
+
+export const ${camel}Actions = {
+  create: defineAction({
+    input: z.object({ title: z.string().min(1).max(200), slug: z.string().min(1).max(200), organizationId: z.string().nullable().default(null) }),
+    handler: effectHandler((input, context) => Effect.gen(function* () {
+      const user = yield* require${pascal}Permission(context, ["create"]);
+      return yield* ${camel}Service.create(input, user.id);
+    })),
+  }),
+  update: defineAction({
+    input: idInput.extend({ title: z.string().min(1).max(200).optional(), slug: z.string().min(1).max(200).optional() }),
+    handler: effectHandler(({ id, ...patch }, context) => Effect.gen(function* () {
+      const user = yield* require${pascal}Permission(context, ["update"]);
+      return yield* ${camel}Service.update(id, patch, lockOwnerFrom(user.id, context.locals.session?.id), lockLocaleFrom(context.request.headers));
+    })),
+  }),
+  transition: defineAction({
+    input: idInput.extend({ to: z.enum(${upper}_STATUSES) }),
+    handler: effectHandler((input, context) => Effect.gen(function* () {
+      const user = yield* require${pascal}Permission(context, input.to === "PUBLISHED" ? ["publish"] : ["update"]);
+      return yield* ${camel}Service.transition(input.id, input.to, lockOwnerFrom(user.id, context.locals.session?.id), lockLocaleFrom(context.request.headers));
+    })),
+  }),
+  lock: defineAction({
+    input: idInput.extend({ takeOver: z.boolean().optional() }),
+    handler: effectHandler((input, context) => Effect.gen(function* () {
+      const user = yield* require${pascal}Permission(context, ["update"]);
+      // Même utilisateur dans une autre session → LockHeldError { sameUser } : confirmer côté UI puis renvoyer takeOver.
+      return yield* ${camel}Service.lock(input.id, lockOwnerFrom(user.id, context.locals.session?.id), { takeOver: input.takeOver, locale: lockLocaleFrom(context.request.headers) });
+    })),
+  }),
+  unlock: defineAction({
+    input: idInput,
+    handler: effectHandler((input, context) => Effect.gen(function* () {
+      const user = yield* require${pascal}Permission(context, ["update"]);
+      yield* ${camel}Service.unlock(input.id, lockOwnerFrom(user.id, context.locals.session?.id));
+      return { success: true };
+    })),
+  }),
+};
+`,
+
   // ── Composants ────────────────────────────────────────────────────────
   [`${compDir}/${pascal}Card.astro`]: `---
 /**
@@ -329,12 +556,9 @@ const { items } = Astro.props as Props;
 
 const optionalDirs = [
   "actions",
-  "domain",
   "engagement",
   "i18n",
-  "permissions",
   "repositories",
-  "schema",
   "search",
   "seo",
   "utils",
@@ -351,10 +575,12 @@ console.log(`
 Module « ${name} » généré.
 
 Étapes suivantes :
-  1. implémenter load${pascal}()            (src/modules/${name}/loaders/${entity}.loader.ts)
+  1. exporter le schéma et générer la migration  (src/modules/${name}/schema → src/database/schemas/index.ts, pnpm db:generate)
+     puis déclarer le namespace « ${name} » dans le contrôle d'accès (permissions/index.ts)
+     compléter ${camel}Loader / load${pascal}()      (src/modules/${name}/loaders/${entity}.loader.ts)
   2. déclarer les capacités réelles         (capabilities.ts + module.ts)
   3. ajouter les libellés des 4 locales     (modules/${name}/i18n/)
-  4. enchaîner les actions                  (src/actions/${name}/ + modules/${name}/actions/index.ts)
+  4. ré-exporter les actions générées      (modules/${name}/actions/index.ts → src/actions/index.ts)
   5. si le domaine a des avis/commentaires : engagement/ + components/${name}/engagement/
      (copier la forme de blog, services ou trips — les trois sont alignés)
   6. enregistrer la page                    (src/pages/[lang]/${name}/[slug].astro)
