@@ -206,127 +206,130 @@ async function hydrateBlogPostListItems(
 
 // ─── Posts ───────────────────────────────────────────────────────────────────
 
+/**
+ * Article public par slug traduit : la ligne principale, puis toutes les lectures dépendantes
+ * (auteur, images, catégories, tags, galeries + médias, SEO, réactions) en parallèle.
+ */
+const blogPostBySlugEffect = (organizationId: string | null, locale: Locale, slug: string) =>
+  !isValidLocale(locale)
+    ? Effect.succeed(null)
+    : Effect.gen(function* () {
+        const [row] = yield* dbTry("blog.postBySlug", () =>
+          getDrizzle()
+            .select({ post: blogPosts, translation: blogPostTranslations })
+            .from(blogPostTranslations)
+            .innerJoin(blogPosts, eq(blogPosts.id, blogPostTranslations.postId))
+            .where(
+              and(
+                eq(blogPostTranslations.locale, locale),
+                eq(blogPostTranslations.slug, slug),
+                orgScope(blogPosts, organizationId),
+                publicBlogPostScope(blogPosts),
+              ),
+            )
+            .limit(1),
+        );
+        if (!row) return null;
+        const { post, translation } = row;
+        const db = getDrizzle();
+        const first = <T>(rows: T[]) => rows[0] ?? null;
+
+        const parts = yield* Effect.all(
+          {
+            author: post.authorId
+              ? dbTry("blog.postAuthor", () =>
+                  db.select({ id: user.id, name: user.name, image: user.image }).from(user).where(eq(user.id, post.authorId!)).limit(1),
+                ).pipe(Effect.map(first))
+              : Effect.succeed(null),
+            featuredImage: post.featuredImageId
+              ? dbTry("blog.postFeaturedImage", () =>
+                  db
+                    .select({ id: mediaFiles.id, url: mediaFiles.url, width: mediaFiles.width, height: mediaFiles.height })
+                    .from(mediaFiles)
+                    .where(eq(mediaFiles.id, post.featuredImageId!))
+                    .limit(1),
+                ).pipe(Effect.map(first))
+              : Effect.succeed(null),
+            ogImage: translation.ogImageId
+              ? dbTry("blog.postOgImage", () =>
+                  db.select({ id: mediaFiles.id, url: mediaFiles.url }).from(mediaFiles).where(eq(mediaFiles.id, translation.ogImageId!)).limit(1),
+                ).pipe(Effect.map(first))
+              : Effect.succeed(null),
+            categories: dbTry("blog.postCategories", () =>
+              db
+                .select({
+                  id: blogCategories.id,
+                  slug: sql<string>`coalesce(${blogCategoryTranslations.slug}, ${blogCategories.slug})`,
+                  color: blogCategories.color,
+                  name: blogCategoryTranslations.name,
+                })
+                .from(blogPostCategories)
+                .innerJoin(blogCategories, eq(blogPostCategories.categoryId, blogCategories.id))
+                .leftJoin(
+                  blogCategoryTranslations,
+                  and(eq(blogCategoryTranslations.categoryId, blogCategories.id), eq(blogCategoryTranslations.locale, locale)),
+                )
+                .where(eq(blogPostCategories.postId, post.id))
+                .orderBy(
+                  asc(blogCategories.sortOrder),
+                  asc(sql<string>`coalesce(${blogCategoryTranslations.slug}, ${blogCategories.slug})`),
+                  asc(blogCategories.id),
+                ),
+            ),
+            tags: dbTry("blog.postTags", () =>
+              db
+                .select({
+                  id: blogTags.id,
+                  slug: sql<string>`coalesce(${blogTagTranslations.slug}, ${blogTags.slug})`,
+                  color: blogTags.color,
+                  name: blogTagTranslations.name,
+                })
+                .from(blogPostTags)
+                .innerJoin(blogTags, eq(blogPostTags.tagId, blogTags.id))
+                .leftJoin(blogTagTranslations, and(eq(blogTagTranslations.tagId, blogTags.id), eq(blogTagTranslations.locale, locale)))
+                .where(eq(blogPostTags.postId, post.id)),
+            ),
+            galleries: dbTry("blog.postGalleries", () =>
+              db.select().from(blogPostGalleries).where(eq(blogPostGalleries.postId, post.id)).orderBy(asc(blogPostGalleries.sortOrder)),
+            ).pipe(
+              Effect.flatMap((galleries) =>
+                blogGalleriesWithMediaEffect(galleries.map((g) => g.id)).pipe(
+                  Effect.map((mediaByGallery) => galleries.map((gallery) => ({ ...gallery, media: mediaByGallery.get(gallery.id) ?? [] }))),
+                ),
+              ),
+            ),
+            seo: dbTry("blog.postSeo", () =>
+              db.select().from(blogPostSeo).where(and(eq(blogPostSeo.postId, post.id), eq(blogPostSeo.locale, locale))).limit(1),
+            ).pipe(Effect.map(first)),
+            reactionCounts: dbTry("blog.postReactions", () =>
+              db
+                .select({ reactionType: blogPostReactions.reactionType, count: count() })
+                .from(blogPostReactions)
+                .where(eq(blogPostReactions.postId, post.id))
+                .groupBy(blogPostReactions.reactionType),
+            ),
+          },
+          { concurrency: "unbounded" },
+        );
+
+        return {
+          post,
+          translation,
+          author: parts.author,
+          featuredImage: parts.featuredImage,
+          ogImage: parts.ogImage,
+          categories: parts.categories,
+          tags: parts.tags,
+          galleries: parts.galleries,
+          seo: parts.seo,
+          reactionCounts: parts.reactionCounts,
+        };
+      });
+
 export const getBlogPostBySlug = cached(
   (organizationId: string | null, locale: Locale, slug: string) =>
     `blog:post:${organizationId ?? "global"}:${locale}:${slug}`,
-  async (
-    organizationId: string | null,
-    locale: Locale,
-    slug: string,
-  ) => {
-    if (!isValidLocale(locale)) return null;
-    const db = getDrizzle();
-
-    const [row] = await db
-      .select({
-        post: blogPosts,
-        translation: blogPostTranslations,
-      })
-      .from(blogPostTranslations)
-      .innerJoin(blogPosts, eq(blogPosts.id, blogPostTranslations.postId))
-      .where(
-        and(
-          eq(blogPostTranslations.locale, locale),
-          eq(blogPostTranslations.slug, slug),
-          orgScope(blogPosts, organizationId),
-          publicBlogPostScope(blogPosts),
-        ),
-      )
-      .limit(1);
-
-    if (!row) return null;
-    const { post, translation } = row;
-
-    const author = post.authorId
-      ? await db.select({ id: user.id, name: user.name, image: user.image }).from(user).where(eq(user.id, post.authorId)).limit(1).then(r => r[0] ?? null)
-      : null;
-
-    const featuredImage = post.featuredImageId
-      ? await db.select({ id: mediaFiles.id, url: mediaFiles.url, width: mediaFiles.width, height: mediaFiles.height }).from(mediaFiles).where(eq(mediaFiles.id, post.featuredImageId)).limit(1).then(r => r[0] ?? null)
-      : null;
-
-    const ogImage = translation.ogImageId
-      ? await db.select({ id: mediaFiles.id, url: mediaFiles.url }).from(mediaFiles).where(eq(mediaFiles.id, translation.ogImageId)).limit(1).then(r => r[0] ?? null)
-      : null;
-
-    const categories = await db
-      .select({
-        id: blogCategories.id,
-        slug: sql<string>`coalesce(${blogCategoryTranslations.slug}, ${blogCategories.slug})`,
-        color: blogCategories.color,
-        name: blogCategoryTranslations.name,
-      })
-      .from(blogPostCategories)
-      .innerJoin(blogCategories, eq(blogPostCategories.categoryId, blogCategories.id))
-      .leftJoin(
-        blogCategoryTranslations,
-        and(
-          eq(blogCategoryTranslations.categoryId, blogCategories.id),
-          eq(blogCategoryTranslations.locale, locale),
-        ),
-      )
-      .where(eq(blogPostCategories.postId, post.id))
-      .orderBy(
-        asc(blogCategories.sortOrder),
-        asc(sql<string>`coalesce(${blogCategoryTranslations.slug}, ${blogCategories.slug})`),
-        asc(blogCategories.id),
-      );
-
-    const tags = await db
-      .select({
-        id: blogTags.id,
-        slug: sql<string>`coalesce(${blogTagTranslations.slug}, ${blogTags.slug})`,
-        color: blogTags.color,
-        name: blogTagTranslations.name,
-      })
-      .from(blogPostTags)
-      .innerJoin(blogTags, eq(blogPostTags.tagId, blogTags.id))
-      .leftJoin(
-        blogTagTranslations,
-        and(eq(blogTagTranslations.tagId, blogTags.id), eq(blogTagTranslations.locale, locale)),
-      )
-      .where(eq(blogPostTags.postId, post.id));
-
-    const galleries = await db
-      .select()
-      .from(blogPostGalleries)
-      .where(eq(blogPostGalleries.postId, post.id))
-      .orderBy(asc(blogPostGalleries.sortOrder));
-
-    const galleriesWithMedia = await (async () => {
-      const mediaByGallery = await getBlogGalleriesWithMedia(galleries.map((g) => g.id));
-      return galleries.map((gallery) => ({ ...gallery, media: mediaByGallery.get(gallery.id) ?? [] }));
-    })();
-
-    const seo = await db
-      .select()
-      .from(blogPostSeo)
-      .where(and(eq(blogPostSeo.postId, post.id), eq(blogPostSeo.locale, locale)))
-      .limit(1)
-      .then(r => r[0] ?? null);
-
-    const reactionCounts = await db
-      .select({
-        reactionType: blogPostReactions.reactionType,
-        count: count(),
-      })
-      .from(blogPostReactions)
-      .where(eq(blogPostReactions.postId, post.id))
-      .groupBy(blogPostReactions.reactionType);
-
-    return {
-      post,
-      translation,
-      author,
-      featuredImage,
-      ogImage,
-      categories,
-      tags,
-      galleries: galleriesWithMedia,
-      seo,
-      reactionCounts,
-    };
-  },
+  (organizationId: string | null, locale: Locale, slug: string) => runOrThrow(blogPostBySlugEffect(organizationId, locale, slug)),
 );
 
 export const getBlogPosts = cached(
@@ -1325,10 +1328,11 @@ export const getBlogValidLinkTargets = cached(
 );
 
 /**
- * Lectures taxonomie/auteur/liens Effect-natives NON mises en cache. `effect.ts` continue d'exposer
+ * Lectures publiques Effect-natives (article, auteur, taxonomie, liens) NON mises en cache. `effect.ts` continue d'exposer
  * les versions `cached` (via `liftLoader`) pour conserver le cache côté pages.
  */
-export const blogTaxonomyEffects = {
+export const blogPublicReadEffects = {
+  getBlogPostBySlug: blogPostBySlugEffect,
   getBlogAuthorByUsername: blogAuthorByUsernameEffect,
   getBlogCategories: blogCategoriesEffect,
   getBlogCategoryBySlug: blogCategoryBySlugEffect,

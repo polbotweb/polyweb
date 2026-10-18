@@ -107,7 +107,7 @@ describe('blog.loader Effect-natif', () => {
     await db.insert(blogPostCategories).values([{ postId: post, categoryId: cat }, { postId: draft, categoryId: cat }]);
     await db.insert(blogPostTags).values([{ postId: post, tagId: tag }, { postId: draft, tagId: tag }]);
     try {
-      const fx = blog.blogTaxonomyEffects;
+      const fx = blog.blogPublicReadEffects;
       const cats = await Effect.runPromise(fx.getBlogCategories(null, 'fr'));
       expect(cats.find((c) => c.id === cat)).toMatchObject({ slug: `${t}-cat`, translation: null, postCount: 1 });
       const tags = await Effect.runPromise(fx.getBlogTags(null, 'fr'));
@@ -140,10 +140,31 @@ describe('blog.loader Effect-natif', () => {
     const db = getDrizzle();
     const { eq } = await import('drizzle-orm');
     await db.update(user).set({ username: author }).where(eq(user.id, author));
-    const fx = blog.blogTaxonomyEffects.getBlogAuthorByUsername;
+    const fx = blog.blogPublicReadEffects.getBlogAuthorByUsername;
     expect(await Effect.runPromise(fx(null, author))).toMatchObject({ id: author, name: 'Author', postCount: 1 });
     expect(await Effect.runPromise(fx(null, `${t}-nobody`))).toBeNull();
     expect(await blog.getBlogAuthorByUsername(null, author)).toEqual(await Effect.runPromise(fx(null, author)));
+  });
+
+  it('article par slug : parties dépendantes, brouillon invisible, Promise = Effect', async () => {
+    const db = getDrizzle();
+    await db.insert(blogPostTranslations).values([
+      { postId: post, locale: 'fr', title: 'Publié', slug: `${t}-slug`, content: 'x' },
+      { postId: draft, locale: 'fr', title: 'Brouillon', slug: `${t}-slug-draft`, content: 'x' },
+    ] as never);
+    try {
+      const fx = blog.blogPublicReadEffects.getBlogPostBySlug;
+      const res = await Effect.runPromise(fx(null, 'fr', `${t}-slug`));
+      expect(res).toMatchObject({
+        post: { id: post }, translation: { slug: `${t}-slug` }, author: { id: author, name: 'Author' },
+        featuredImage: null, ogImage: null, categories: [], tags: [], galleries: [], seo: null, reactionCounts: [],
+      });
+      expect(await Effect.runPromise(fx(null, 'fr', `${t}-slug-draft`))).toBeNull();
+      expect(await Effect.runPromise(fx(null, 'xx' as never, `${t}-slug`))).toBeNull();
+      expect(await blog.getBlogPostBySlug(null, 'fr', `${t}-slug`)).toEqual(res);
+    } finally {
+      await db.delete(blogPostTranslations).where(inArray(blogPostTranslations.postId, [post, draft]));
+    }
   });
 });
 
