@@ -6,6 +6,7 @@ import { pages, pageSections, pageVersions } from "@database/schemas";
 import { invalidateCache } from "@database/cache";
 import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
 import { LOCALES } from "@i18n/config";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 const localeEnum = z.enum(LOCALES, {
   message: `La locale doit être l'une des suivantes : ${LOCALES.join(", ")}.`,
@@ -53,7 +54,7 @@ export const createPage = defineAction({
     template: z.string().max(50, "Le template ne peut pas dépasser 50 caractères.").optional(),
     sortOrder: z.number().int("L'ordre doit être un nombre entier.").min(0, "L'ordre doit être positif.").max(10000, "L'ordre ne peut pas dépasser 10 000.").nullable().optional(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/pages.createPage", async () => {
     const user = await assertPermission(context, { page: ["create"] });
     adminRateLimit(context, user.id, "pages");
 
@@ -91,7 +92,7 @@ export const createPage = defineAction({
 
     invalidateCache("page:");
     return created;
-  },
+  })),
 });
 
 export const updatePage = defineAction({
@@ -114,7 +115,7 @@ export const updatePage = defineAction({
     sortOrder: z.number().int("L'ordre doit être un nombre entier.").min(0, "L'ordre doit être positif.").max(10000, "L'ordre ne peut pas dépasser 10 000.").optional(),
     expectedUpdatedAt: z.string().optional(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/pages.updatePage", async () => {
     const user = await assertPermission(context, { page: ["update"] });
     adminRateLimit(context, user.id, "pages");
 
@@ -176,14 +177,14 @@ export const updatePage = defineAction({
 
     invalidateCache("page:");
     return updated;
-  },
+  })),
 });
 
 export const deletePage = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/pages.deletePage", async () => {
     const user = await assertPermission(context, { page: ["delete"] });
     adminRateLimit(context, user.id, "pages");
 
@@ -209,7 +210,7 @@ export const deletePage = defineAction({
 
     invalidateCache("page:");
     return { success: true as const };
-  },
+  })),
 });
 
 export const publishPage = defineAction({
@@ -217,7 +218,7 @@ export const publishPage = defineAction({
     id: z.string().min(1, "L'identifiant est requis."),
     isPublished: z.boolean(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/pages.publishPage", async () => {
     const user = await assertPermission(context, { page: ["publish"] });
     adminRateLimit(context, user.id, "pages");
 
@@ -277,7 +278,7 @@ export const publishPage = defineAction({
 
     invalidateCache("page:");
     return updated;
-  },
+  })),
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -292,7 +293,7 @@ export const schedulePage = defineAction({
       "La date de publication programmée doit être dans le futur.",
     ),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/pages.schedulePage", async () => {
     const user = await assertPermission(context, { page: ["publish"] });
     adminRateLimit(context, user.id, "pages");
 
@@ -315,14 +316,14 @@ export const schedulePage = defineAction({
 
     invalidateCache("page:");
     return updated;
-  },
+  })),
 });
 
 export const unschedulePage = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/pages.unschedulePage", async () => {
     const user = await assertPermission(context, { page: ["publish"] });
     adminRateLimit(context, user.id, "pages");
 
@@ -344,7 +345,7 @@ export const unschedulePage = defineAction({
 
     invalidateCache("page:");
     return updated;
-  },
+  })),
 });
 
 export const scheduleUnpublishPage = defineAction({
@@ -355,7 +356,7 @@ export const scheduleUnpublishPage = defineAction({
       "La date de dépublication programmée doit être dans le futur.",
     ),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/pages.scheduleUnpublishPage", async () => {
     const user = await assertPermission(context, { page: ["publish"] });
     adminRateLimit(context, user.id, "pages");
 
@@ -378,14 +379,14 @@ export const scheduleUnpublishPage = defineAction({
 
     invalidateCache("page:");
     return updated;
-  },
+  })),
 });
 
 export const unscheduleUnpublishPage = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/pages.unscheduleUnpublishPage", async () => {
     const user = await assertPermission(context, { page: ["publish"] });
     adminRateLimit(context, user.id, "pages");
 
@@ -407,7 +408,7 @@ export const unscheduleUnpublishPage = defineAction({
 
     invalidateCache("page:");
     return updated;
-  },
+  })),
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -418,7 +419,7 @@ export const restoreFromTrash = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/pages.restoreFromTrash", async () => {
     const user = await assertPermission(context, { page: ["update"] });
     adminRateLimit(context, user.id, "pages");
 
@@ -441,14 +442,14 @@ export const restoreFromTrash = defineAction({
 
     invalidateCache("page:");
     return { success: true as const };
-  },
+  })),
 });
 
 export const permanentlyDeletePage = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/pages.permanentlyDeletePage", async () => {
     const user = await assertPermission(context, { page: ["delete"] });
     adminRateLimit(context, user.id, "pages");
 
@@ -481,7 +482,7 @@ export const permanentlyDeletePage = defineAction({
 
     invalidateCache("page:");
     return { success: true as const };
-  },
+  })),
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -493,7 +494,7 @@ export const bulkPublishPages = defineAction({
     ids: z.array(z.string().min(1)).min(1, "Au moins une page est requise.").max(100, "Maximum 100 pages."),
     isPublished: z.boolean(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/pages.bulkPublishPages", async () => {
     const user = await assertPermission(context, { page: ["publish"] });
     adminRateLimit(context, user.id, "pages");
 
@@ -550,14 +551,14 @@ export const bulkPublishPages = defineAction({
 
     invalidateCache("page:");
     return { success: true as const, count: updated.length };
-  },
+  })),
 });
 
 export const bulkArchivePages = defineAction({
   input: z.object({
     ids: z.array(z.string().min(1)).min(1, "Au moins une page est requise.").max(100, "Maximum 100 pages."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/pages.bulkArchivePages", async () => {
     const user = await assertPermission(context, { page: ["delete"] });
     adminRateLimit(context, user.id, "pages");
 
@@ -576,14 +577,14 @@ export const bulkArchivePages = defineAction({
 
     invalidateCache("page:");
     return { success: true as const, count: updated.length };
-  },
+  })),
 });
 
 export const bulkRestorePages = defineAction({
   input: z.object({
     ids: z.array(z.string().min(1)).min(1, "Au moins une page est requise.").max(100, "Maximum 100 pages."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/pages.bulkRestorePages", async () => {
     const user = await assertPermission(context, { page: ["update"] });
     adminRateLimit(context, user.id, "pages");
 
@@ -601,14 +602,14 @@ export const bulkRestorePages = defineAction({
 
     invalidateCache("page:");
     return { success: true as const, count: restored.length };
-  },
+  })),
 });
 
 export const bulkDeletePages = defineAction({
   input: z.object({
     ids: z.array(z.string().min(1)).min(1, "Au moins une page est requise.").max(100, "Maximum 100 pages."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/pages.bulkDeletePages", async () => {
     const user = await assertPermission(context, { page: ["delete"] });
     adminRateLimit(context, user.id, "pages");
 
@@ -626,7 +627,7 @@ export const bulkDeletePages = defineAction({
 
     invalidateCache("page:");
     return { success: true as const, count: deleted.length };
-  },
+  })),
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -644,7 +645,7 @@ export const clonePage = defineAction({
       .regex(slugRegex, "Le slug ne peut contenir que des lettres minuscules, chiffres et tirets."),
     title: z.string().trim().min(1, "Le titre est requis.").max(200, "Le titre ne peut pas dépasser 200 caractères."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/pages.clonePage", async () => {
     const user = await assertPermission(context, { page: ["create"] });
     adminRateLimit(context, user.id, "pages");
 
@@ -724,7 +725,7 @@ export const clonePage = defineAction({
 
     invalidateCache("page:");
     return cloned;
-  },
+  })),
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -738,7 +739,7 @@ export const lockPage = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/pages.lockPage", async () => {
     const user = await assertPermission(context, { page: ["update"] });
     adminRateLimit(context, user.id, "pages");
 
@@ -774,14 +775,14 @@ export const lockPage = defineAction({
       .where(eq(pages.id, input.id));
 
     return { success: true as const, lockedBy: user.id, lockedAt: now.toISOString() };
-  },
+  })),
 });
 
 export const unlockPage = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/pages.unlockPage", async () => {
     await assertPermission(context, { page: ["update"] });
     const db = getDrizzle();
 
@@ -792,7 +793,7 @@ export const unlockPage = defineAction({
       .where(eq(pages.id, input.id));
 
     return { success: true as const };
-  },
+  })),
 });
 
 /** Helper: check if page is locked by another user. Throws on conflict. */

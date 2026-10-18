@@ -5,6 +5,7 @@ import { user } from "@database/schemas";
 import { userProfileSchema } from "@/lib/blog/validation";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { logAuditEvent, extractIp } from "@/lib/audit";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 /**
  * Updates the current user's public profile (bio + social links).
@@ -13,7 +14,7 @@ import { logAuditEvent, extractIp } from "@/lib/audit";
  */
 export const updateUserProfile = defineAction({
   input: userProfileSchema,
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/profile.updateUserProfile", async () => {
     const currentUser = context.locals.user;
     if (!currentUser) {
       throw new ActionError({ code: "UNAUTHORIZED", message: "Vous devez être connecté." });
@@ -51,5 +52,5 @@ export const updateUserProfile = defineAction({
     }).catch(() => {});
 
     return { success: true };
-  },
+  })),
 });

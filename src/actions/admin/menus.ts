@@ -5,6 +5,7 @@ import { getDrizzle } from "@database/drizzle";
 import { navigationMenus } from "@database/schemas";
 import { invalidateCache } from "@database/cache";
 import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 /** Core menus required by BaseLayout — cannot be deleted or renamed. */
 export const PROTECTED_MENU_NAMES = ["header", "footer_primary", "footer_secondary", "footer_legal"] as const;
@@ -23,7 +24,7 @@ export const createNavigationMenu = defineAction({
       .nullable()
       .optional(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/menus.createNavigationMenu", async () => {
     const user = await assertPermission(context, { navigation: ["update"] });
     adminRateLimit(context, user.id, "menus");
 
@@ -53,7 +54,7 @@ export const createNavigationMenu = defineAction({
 
     invalidateCache("nav:");
     return created;
-  },
+  })),
 });
 
 export const updateNavigationMenu = defineAction({
@@ -75,7 +76,7 @@ export const updateNavigationMenu = defineAction({
     displayLabel: z.string().trim().max(200).nullable().optional(),
     showHeading: z.boolean().optional(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/menus.updateNavigationMenu", async () => {
     const user = await assertPermission(context, { navigation: ["update"] });
     adminRateLimit(context, user.id, "menus");
 
@@ -130,14 +131,14 @@ export const updateNavigationMenu = defineAction({
 
     invalidateCache("nav:");
     return updated;
-  },
+  })),
 });
 
 export const deleteNavigationMenu = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/menus.deleteNavigationMenu", async () => {
     const user = await assertPermission(context, { navigation: ["update"] });
     adminRateLimit(context, user.id, "menus");
 
@@ -184,5 +185,5 @@ export const deleteNavigationMenu = defineAction({
 
     invalidateCache("nav:");
     return { success: true as const };
-  },
+  })),
 });

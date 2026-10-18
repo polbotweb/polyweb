@@ -12,6 +12,7 @@ import { deleteUpload } from "@/media/delete";
 import { UPLOAD_DIRS } from "@/media/types";
 import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
 import { LOCALES } from "@i18n/config";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 const localeEnum = z.enum(LOCALES, {
   message: `La locale doit être l'une des suivantes : ${LOCALES.join(", ")}.`,
@@ -139,7 +140,7 @@ export const createMediaFolder = defineAction({
     parentId: z.string().nullable().optional(),
     organizationId: z.uuid().optional().nullable(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/media.createMediaFolder", async () => {
     const tenant = resolveMediaTenant(input);
     const user = await assertMediaPermission(context, tenant, { media: ["upload"] });
     adminRateLimit(context, user.id, "media");
@@ -176,7 +177,7 @@ export const createMediaFolder = defineAction({
 
     invalidateCache("media:");
     return created;
-  },
+  })),
 });
 
 export const updateMediaFolder = defineAction({
@@ -191,7 +192,7 @@ export const updateMediaFolder = defineAction({
     parentId: z.string().nullable().optional(),
     organizationId: z.uuid().optional().nullable(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/media.updateMediaFolder", async () => {
     const tenant = resolveMediaTenant(input);
     const user = await assertMediaPermission(context, tenant, { media: ["upload"] });
     adminRateLimit(context, user.id, "media");
@@ -253,7 +254,7 @@ export const updateMediaFolder = defineAction({
 
     invalidateCache("media:");
     return updated;
-  },
+  })),
 });
 
 export const deleteMediaFolder = defineAction({
@@ -261,7 +262,7 @@ export const deleteMediaFolder = defineAction({
     id: z.string().min(1, "L'identifiant est requis."),
     organizationId: z.uuid().optional().nullable(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/media.deleteMediaFolder", async () => {
     const tenant = resolveMediaTenant(input);
     const user = await assertMediaPermission(context, tenant, { media: ["delete"] });
     adminRateLimit(context, user.id, "media");
@@ -313,7 +314,7 @@ export const deleteMediaFolder = defineAction({
 
     invalidateCache("media:");
     return { success: true };
-  },
+  })),
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -327,7 +328,7 @@ export const uploadMediaFile = defineAction({
     folderId: z.string().nullable().optional(),
     organizationId: z.uuid().optional().nullable(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/media.uploadMediaFile", async () => {
     const tenant = resolveMediaTenant(input);
     const user = await assertMediaPermission(context, tenant, { media: ["upload"] });
     adminRateLimit(context, user.id, "media");
@@ -375,7 +376,7 @@ export const uploadMediaFile = defineAction({
 
     invalidateCache("media:");
     return created;
-  },
+  })),
 });
 
 export const renameMediaFile = defineAction({
@@ -392,7 +393,7 @@ export const renameMediaFile = defineAction({
       ),
     organizationId: z.uuid().optional().nullable(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/media.renameMediaFile", async () => {
     const tenant = resolveMediaTenant(input);
     const user = await assertMediaPermission(context, tenant, { media: ["upload"] });
     adminRateLimit(context, user.id, "media");
@@ -458,7 +459,7 @@ export const renameMediaFile = defineAction({
 
     invalidateCache("media:");
     return updated;
-  },
+  })),
 });
 
 export const moveMediaFile = defineAction({
@@ -467,7 +468,7 @@ export const moveMediaFile = defineAction({
     folderId: z.string().nullable(),
     organizationId: z.uuid().optional().nullable(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/media.moveMediaFile", async () => {
     const tenant = resolveMediaTenant(input);
     const user = await assertMediaPermission(context, tenant, { media: ["upload"] });
     adminRateLimit(context, user.id, "media");
@@ -498,7 +499,7 @@ export const moveMediaFile = defineAction({
 
     invalidateCache("media:");
     return updated;
-  },
+  })),
 });
 
 export const deleteMediaFile = defineAction({
@@ -506,7 +507,7 @@ export const deleteMediaFile = defineAction({
     id: z.string().min(1, "L'identifiant est requis."),
     organizationId: z.uuid().optional().nullable(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/media.deleteMediaFile", async () => {
     const tenant = resolveMediaTenant(input);
     const user = await assertMediaPermission(context, tenant, { media: ["delete"] });
     adminRateLimit(context, user.id, "media");
@@ -533,7 +534,7 @@ export const deleteMediaFile = defineAction({
 
     invalidateCache("media:");
     return { success: true };
-  },
+  })),
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -548,7 +549,7 @@ export const upsertMediaFileAlt = defineAction({
     title: z.string().trim().max(500, "500 caractères maximum.").nullable().optional(),
     organizationId: z.uuid().optional().nullable(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/media.upsertMediaFileAlt", async () => {
     const tenant = resolveMediaTenant(input);
     const user = await assertMediaPermission(context, tenant, { media: ["upload"] });
     adminRateLimit(context, user.id, "media");
@@ -597,7 +598,7 @@ export const upsertMediaFileAlt = defineAction({
 
     invalidateCache("media:");
     return result;
-  },
+  })),
 });
 
 export const deleteMediaFileAlt = defineAction({
@@ -606,7 +607,7 @@ export const deleteMediaFileAlt = defineAction({
     locale: localeEnum,
     organizationId: z.uuid().optional().nullable(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/media.deleteMediaFileAlt", async () => {
     const tenant = resolveMediaTenant(input);
     const user = await assertMediaPermission(context, tenant, { media: ["delete"] });
     adminRateLimit(context, user.id, "media");
@@ -637,5 +638,5 @@ export const deleteMediaFileAlt = defineAction({
 
     invalidateCache("media:");
     return { success: true };
-  },
+  })),
 });

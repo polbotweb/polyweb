@@ -7,6 +7,7 @@ import { invalidateCache } from "@database/cache";
 import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { validateSectionContent as validateStructure } from "@/lib/section-schemas";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 /** Maximum total size of serialized section content (500 KB). */
 const MAX_CONTENT_SIZE = 500 * 1024;
@@ -88,7 +89,7 @@ export const createSection = defineAction({
       .optional(),
     isVisible: z.boolean().optional(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/sections.createSection", async () => {
     const user = await assertPermission(context, { section: ["create"] });
     adminRateLimit(context, user.id, "sections");
 
@@ -138,7 +139,7 @@ export const createSection = defineAction({
 
     invalidateCache("page:");
     return created;
-  },
+  })),
 });
 
 export const updateSection = defineAction({
@@ -173,7 +174,7 @@ export const updateSection = defineAction({
     isVisible: z.boolean().optional(),
     expectedUpdatedAt: z.string().optional(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/sections.updateSection", async () => {
     const user = await assertPermission(context, { section: ["update"] });
     adminRateLimit(context, user.id, "sections");
 
@@ -240,14 +241,14 @@ export const updateSection = defineAction({
 
     invalidateCache("page:");
     return updated;
-  },
+  })),
 });
 
 export const deleteSection = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/sections.deleteSection", async () => {
     const user = await assertPermission(context, { section: ["delete"] });
     adminRateLimit(context, user.id, "sections");
 
@@ -272,7 +273,7 @@ export const deleteSection = defineAction({
 
     invalidateCache("page:");
     return { success: true as const };
-  },
+  })),
 });
 
 export const reorderSections = defineAction({
@@ -291,7 +292,7 @@ export const reorderSections = defineAction({
         "Les ordres de tri doivent être uniques.",
       ),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/sections.reorderSections", async () => {
     const user = await assertPermission(context, { section: ["update"] });
     adminRateLimit(context, user.id, "sections");
 
@@ -335,5 +336,5 @@ export const reorderSections = defineAction({
 
     invalidateCache("page:");
     return { success: true as const };
-  },
+  })),
 });

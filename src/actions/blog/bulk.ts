@@ -5,6 +5,7 @@ import { getDrizzle } from "@database/drizzle";
 import { blogPostLocks, blogPostRevisions, blogPostTranslations, blogPosts } from "@database/schemas";
 import { BLOG_POST_TRANSITIONS, type BlogPostStatus } from "@/lib/blog/constants";
 import { assertBlogPermission, blogOrganizationIdSchema, resolveBlogTenant, invalidateBlogCache, auditBlog } from "./_helpers";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 const bulkInput = z.object({ ids: z.array(z.uuid()).min(1).max(100), organizationId: blogOrganizationIdSchema, operation: z.enum(["publish", "archive", "restore", "delete"]) });
 type BulkOperation = z.infer<typeof bulkInput>["operation"];
@@ -19,7 +20,7 @@ function assertTransition(from: BlogPostStatus, to: BlogPostStatus) {
 
 export const bulkBlogPostLifecycle = defineAction({
   input: bulkInput,
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/bulk.bulkBlogPostLifecycle", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blog: [permissionFor[input.operation]] });
     const db = getDrizzle();
@@ -40,5 +41,5 @@ export const bulkBlogPostLifecycle = defineAction({
     for (const row of rows) auditBlog(context, user.id, auditFor[input.operation], { resource: "blog_posts", resourceId: row.id, metadata: { organizationId: tenant.organizationId, bulk: true, from: row.status, to } });
     invalidateBlogCache();
     return { updated: rows.length };
-  },
+  })),
 });

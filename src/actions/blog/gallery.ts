@@ -15,6 +15,7 @@ import {
   auditBlog,
   blogOrganizationIdSchema,
 } from "./_helpers";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 export const createBlogGallery = defineAction({
   input: z.object({
@@ -24,7 +25,7 @@ export const createBlogGallery = defineAction({
     sortOrder: z.number().int().min(0).default(0),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/gallery.createBlogGallery", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
     blogRateLimit(context, user.id, "gallery-create");
@@ -49,7 +50,7 @@ export const createBlogGallery = defineAction({
     });
 
     return { id: gallery.id };
-  },
+  })),
 });
 
 export const updateBlogGallery = defineAction({
@@ -60,7 +61,7 @@ export const updateBlogGallery = defineAction({
     sortOrder: z.number().int().min(0).optional(),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/gallery.updateBlogGallery", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
     blogRateLimit(context, user.id, "gallery-update");
@@ -91,7 +92,7 @@ export const updateBlogGallery = defineAction({
     });
 
     return { success: true };
-  },
+  })),
 });
 
 export const deleteBlogGallery = defineAction({
@@ -99,7 +100,7 @@ export const deleteBlogGallery = defineAction({
     id: z.uuid(),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/gallery.deleteBlogGallery", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
     blogRateLimit(context, user.id, "gallery-delete");
@@ -123,7 +124,7 @@ export const deleteBlogGallery = defineAction({
     });
 
     return { success: true };
-  },
+  })),
 });
 
 export const addGalleryMedia = defineAction({
@@ -135,7 +136,7 @@ export const addGalleryMedia = defineAction({
     sortOrder: z.number().int().min(0).default(0),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/gallery.addGalleryMedia", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
     blogRateLimit(context, user.id, "gallery-media-add");
@@ -170,7 +171,7 @@ export const addGalleryMedia = defineAction({
     });
 
     return { success: true };
-  },
+  })),
 });
 
 export const removeGalleryMedia = defineAction({
@@ -179,7 +180,7 @@ export const removeGalleryMedia = defineAction({
     mediaId: z.uuid(),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/gallery.removeGalleryMedia", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
     blogRateLimit(context, user.id, "gallery-media-remove");
@@ -211,5 +212,5 @@ export const removeGalleryMedia = defineAction({
     });
 
     return { success: true };
-  },
+  })),
 });

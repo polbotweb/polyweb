@@ -7,6 +7,7 @@ import { invalidateCache } from "@database/cache";
 import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
 import { LOCALES } from "@i18n/config";
 import type { DrizzleDB } from "@database/drizzle";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 /** Walk up the parent chain to detect circular references (with depth limit). */
 export async function assertNoCycle(
@@ -89,7 +90,7 @@ const navItemBase = z.object({
 
 export const createNavigationItem = defineAction({
   input: navItemBase,
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/navigation.createNavigationItem", async () => {
     const user = await assertPermission(context, { navigation: ["update"] });
     adminRateLimit(context, user.id, "nav");
 
@@ -138,14 +139,14 @@ export const createNavigationItem = defineAction({
 
     invalidateCache("nav:");
     return created;
-  },
+  })),
 });
 
 export const updateNavigationItem = defineAction({
   input: navItemBase.partial().extend({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/navigation.updateNavigationItem", async () => {
     const user = await assertPermission(context, { navigation: ["update"] });
     adminRateLimit(context, user.id, "nav");
 
@@ -180,14 +181,14 @@ export const updateNavigationItem = defineAction({
 
     invalidateCache("nav:");
     return updated;
-  },
+  })),
 });
 
 export const deleteNavigationItem = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/navigation.deleteNavigationItem", async () => {
     const user = await assertPermission(context, { navigation: ["update"] });
     adminRateLimit(context, user.id, "nav");
 
@@ -212,7 +213,7 @@ export const deleteNavigationItem = defineAction({
 
     invalidateCache("nav:");
     return { success: true as const };
-  },
+  })),
 });
 
 export const reorderNavigationItems = defineAction({
@@ -228,7 +229,7 @@ export const reorderNavigationItems = defineAction({
       .min(1, "La liste ne peut pas être vide.")
       .max(200, "Maximum 200 éléments par réordonnancement."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/navigation.reorderNavigationItems", async () => {
     const user = await assertPermission(context, { navigation: ["update"] });
     adminRateLimit(context, user.id, "nav");
 
@@ -291,5 +292,5 @@ export const reorderNavigationItems = defineAction({
 
     invalidateCache("nav:");
     return { success: true as const };
-  },
+  })),
 });

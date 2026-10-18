@@ -3,6 +3,7 @@ import { z } from "astro/zod";
 import { isValidLocale } from "@i18n/utils";
 import { registerInternalLinkResolver } from "@/lib/content/internal-link-resolver";
 import { serviceInternalLinkResolver } from "@/lib/services/services-internal-link";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 registerInternalLinkResolver(serviceInternalLinkResolver);
 
@@ -14,9 +15,9 @@ export const resolveServiceInternalLink = defineAction({
     organizationId: z.string().trim().min(1).optional().nullable(),
     locale: z.string().refine(isValidLocale, "Unsupported locale"),
   }),
-  handler: async (input) => {
+  handler: effectHandler((input) => actionTry("services/internal-link.resolveServiceInternalLink", async () => {
     const ctx = { locale: input.locale, organizationId: input.organizationId ?? null };
     if (input.mode === "search") return { results: await serviceInternalLinkResolver.search(input.query ?? "", { ...ctx, limit: 10 }) };
     return { resolution: await serviceInternalLinkResolver.resolve(input.target, ctx) };
-  },
+  })),
 });

@@ -14,6 +14,7 @@ import {
   auditBlog,
   blogOrganizationIdSchema,
 } from "./_helpers";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 function tagTenantScope(organizationId: string | null) {
   return organizationId === null ? isNull(blogTags.organizationId) : eq(blogTags.organizationId, organizationId);
@@ -76,7 +77,7 @@ export const createBlogTag = defineAction({
   input: blogTagFormSchema.extend({
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/tag.createBlogTag", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blogTag: ["create"] });
     blogRateLimit(context, user.id, "tag-create");
@@ -111,14 +112,14 @@ export const createBlogTag = defineAction({
 
     invalidateCache("blog:tags");
     return { id: tag.id, slug: input.slug };
-  },
+  })),
 });
 
 export const updateBlogTag = defineAction({
   input: blogTagUpdateSchema.extend({
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/tag.updateBlogTag", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blogTag: ["update"] });
     blogRateLimit(context, user.id, "tag-update");
@@ -179,7 +180,7 @@ export const updateBlogTag = defineAction({
 
     invalidateCache("blog:tags");
     return { id };
-  },
+  })),
 });
 
 export const deleteBlogTag = defineAction({
@@ -187,7 +188,7 @@ export const deleteBlogTag = defineAction({
     id: z.uuid(),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/tag.deleteBlogTag", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blogTag: ["delete"] });
     blogRateLimit(context, user.id, "tag-delete");
@@ -206,5 +207,5 @@ export const deleteBlogTag = defineAction({
 
     invalidateCache("blog:tags");
     return { success: true };
-  },
+  })),
 });

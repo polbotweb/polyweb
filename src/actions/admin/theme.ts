@@ -6,6 +6,7 @@ import { themeSettings } from "@database/schemas";
 import { invalidateCache } from "@database/cache";
 import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
 import { THEME_TOKEN_KEYS, isValidOklch } from "@/lib/theme-tokens";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 const oklchRegex = /^oklch\(\s*[\d.]+%?\s+[\d.]+\s+[\d.]+(?:\s*\/\s*[\d.]+%?)?\s*\)$/;
 const colorField = (label: string) =>
@@ -50,7 +51,7 @@ export const createTheme = defineAction({
   input: z.object({
     name: z.string().min(1, "Le nom du thème est requis.").max(50),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/theme.createTheme", async () => {
     const user = await assertPermission(context, { theme: ["update"] });
     adminRateLimit(context, user.id, "theme");
     const db = getDrizzle();
@@ -78,7 +79,7 @@ export const createTheme = defineAction({
     invalidateCache("site:theme:css");
     invalidateCache("site:themes");
     return created;
-  },
+  })),
 });
 
 export const updateTheme = defineAction({
@@ -117,7 +118,7 @@ export const updateTheme = defineAction({
       .nullable()
       .optional(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/theme.updateTheme", async () => {
     const user = await assertPermission(context, { theme: ["update"] });
     adminRateLimit(context, user.id, "theme");
 
@@ -178,14 +179,14 @@ export const updateTheme = defineAction({
     invalidateCache("site:theme:css");
     invalidateCache("site:themes");
     return updated;
-  },
+  })),
 });
 
 export const deleteTheme = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/theme.deleteTheme", async () => {
     const user = await assertPermission(context, { theme: ["update"] });
     adminRateLimit(context, user.id, "theme");
     const db = getDrizzle();
@@ -222,5 +223,5 @@ export const deleteTheme = defineAction({
     invalidateCache("site:theme:css");
     invalidateCache("site:themes");
     return { success: true as const };
-  },
+  })),
 });

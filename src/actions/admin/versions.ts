@@ -6,6 +6,7 @@ import { pages, pageSections, pageVersions } from "@database/schemas";
 import { invalidateCache } from "@database/cache";
 import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
 import { sanitizeSectionContent } from "./sections";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 /**
  * Create a snapshot of the current state of a page + all its sections.
@@ -21,7 +22,7 @@ export const createPageVersion = defineAction({
       .nullable()
       .optional(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/versions.createPageVersion", async () => {
     const user = await assertPermission(context, { page: ["update"] });
     adminRateLimit(context, user.id, "pages");
 
@@ -78,7 +79,7 @@ export const createPageVersion = defineAction({
     });
 
     return created;
-  },
+  })),
 });
 
 /**
@@ -88,7 +89,7 @@ export const listPageVersions = defineAction({
   input: z.object({
     pageId: z.string().min(1, "L'identifiant de la page est requis."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/versions.listPageVersions", async () => {
     await assertPermission(context, { page: ["read"] });
 
     const db = getDrizzle();
@@ -107,7 +108,7 @@ export const listPageVersions = defineAction({
       .limit(100);
 
     return versions;
-  },
+  })),
 });
 
 /**
@@ -118,7 +119,7 @@ export const restorePageVersion = defineAction({
   input: z.object({
     versionId: z.string().min(1, "L'identifiant de la version est requis."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/versions.restorePageVersion", async () => {
     const user = await assertPermission(context, { page: ["update"] });
     adminRateLimit(context, user.id, "pages");
 
@@ -232,5 +233,5 @@ export const restorePageVersion = defineAction({
 
     invalidateCache("page:");
     return { success: true, restoredVersion: version.versionNumber };
-  },
+  })),
 });

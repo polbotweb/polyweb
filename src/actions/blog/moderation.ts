@@ -6,10 +6,11 @@ import { getDrizzle } from "@database/drizzle";
 import { blogReports, blogComments, blogPostReviews, blogPosts } from "@database/schemas";
 import { blogReportFormSchema, blogReportStatusSchema } from "@/lib/blog/validation";
 import { publicBlogPostScope } from "@/lib/blog/public-visibility";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 export const createBlogReport = defineAction({
   input: blogReportFormSchema,
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/moderation.createBlogReport", async () => {
     blogPublicRateLimit(context, "report-create", { window: 600, max: 10 });
     const user = context.locals.user;
     const db = getDrizzle();
@@ -78,7 +79,7 @@ export const createBlogReport = defineAction({
 
     invalidateBlogCache();
     return { id: report.id };
-  },
+  })),
 });
 
 export const updateBlogReport = defineAction({
@@ -87,7 +88,7 @@ export const updateBlogReport = defineAction({
     status: blogReportStatusSchema,
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/moderation.updateBlogReport", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blogComment: ["moderate"] });
 
@@ -162,7 +163,7 @@ export const updateBlogReport = defineAction({
 
     invalidateBlogCache();
     return { success: true };
-  },
+  })),
 });
 
 export const getBlogModerationQueue = defineAction({
@@ -171,7 +172,7 @@ export const getBlogModerationQueue = defineAction({
     page: z.number().int().min(1).default(1),
     limit: z.number().int().min(1).max(100).default(20),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/moderation.getBlogModerationQueue", async () => {
     const tenant = resolveBlogTenant(input);
     await assertBlogPermission(context, tenant, { blogComment: ["moderate"] });
 
@@ -228,5 +229,5 @@ export const getBlogModerationQueue = defineAction({
       .offset(offset);
 
     return { comments: pendingComments, reviews: pendingReviews, reports: pendingReports };
-  },
+  })),
 });

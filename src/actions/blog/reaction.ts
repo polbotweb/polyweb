@@ -6,10 +6,11 @@ import { getDrizzle } from "@database/drizzle";
 import { blogPostReactions, blogPostFavorites, blogPosts } from "@database/schemas";
 import { blogReactionFormSchema } from "@/lib/blog/validation";
 import { publicBlogPostScope } from "@/lib/blog/public-visibility";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 export const toggleBlogReaction = defineAction({
   input: blogReactionFormSchema,
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/reaction.toggleBlogReaction", async () => {
     const user = context.locals.user;
     if (!user) throw new ActionError({ code: "UNAUTHORIZED", message: "Connexion requise." });
     blogRateLimit(context, user.id, "reaction-toggle", { window: 60, max: 60 });
@@ -57,12 +58,12 @@ export const toggleBlogReaction = defineAction({
       metadata: { reactionType: input.reactionType },
     });
     return { active, count: total };
-  },
+  })),
 });
 
 export const toggleBlogFavorite = defineAction({
   input: z.object({ postId: z.uuid() }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/reaction.toggleBlogFavorite", async () => {
     const user = context.locals.user;
     if (!user) throw new ActionError({ code: "UNAUTHORIZED", message: "Connexion requise." });
     blogRateLimit(context, user.id, "favorite-toggle", { window: 60, max: 60 });
@@ -96,5 +97,5 @@ export const toggleBlogFavorite = defineAction({
       resourceId: input.postId,
     });
     return { active, count: total };
-  },
+  })),
 });

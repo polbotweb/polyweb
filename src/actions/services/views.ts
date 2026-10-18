@@ -6,6 +6,7 @@ import { services, serviceViewStats } from "@database/schemas";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { extractIp } from "@/lib/audit";
 import { resolveServiceTenant, assertServiceInTenant, serviceOrganizationIdSchema } from "./_helpers";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 export const recordServiceView = defineAction({
   input: z.object({
@@ -14,7 +15,7 @@ export const recordServiceView = defineAction({
     referrer: z.string().url().optional().nullable(),
     country: z.string().length(2).optional().nullable(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("services/views.recordServiceView", async () => {
     const tenant = resolveServiceTenant(input);
     const service = await assertServiceInTenant(input.serviceId, tenant);
     if (service.status !== "PUBLISHED") return { success: false };
@@ -39,5 +40,5 @@ export const recordServiceView = defineAction({
       .set({ viewCount: sql`${services.viewCount} + 1` })
       .where(eq(services.id, input.serviceId));
     return { success: true };
-  },
+  })),
 });

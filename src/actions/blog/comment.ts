@@ -7,6 +7,7 @@ import { sanitizeHtml } from "@/lib/sanitize";
 import { blogCommentFormSchema, blogCommentModerationSchema } from "@/lib/blog/validation";
 import { publicBlogPostScope } from "@/lib/blog/public-visibility";
 import { extractIp } from "@/lib/audit";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 // Public loaders render roots plus one reply level; reject deeper trees so no
 // accepted comment becomes unreachable in the public thread.
@@ -14,7 +15,7 @@ const MAX_COMMENT_REPLY_DEPTH = 1;
 
 export const createBlogComment = defineAction({
   input: blogCommentFormSchema,
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/comment.createBlogComment", async () => {
     blogPublicRateLimit(context, "comment-create", { window: 300, max: 5 });
     const db = getDrizzle();
     const [post] = await db
@@ -91,14 +92,14 @@ export const createBlogComment = defineAction({
     // comment that is not visible until approved. Notification is sent on
     // approval in moderateBlogComment.
     return { id: comment.id, status: comment.status };
-  },
+  })),
 });
 
 export const moderateBlogComment = defineAction({
   input: blogCommentModerationSchema.extend({
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/comment.moderateBlogComment", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blogComment: ["moderate"] });
 
@@ -227,5 +228,5 @@ export const moderateBlogComment = defineAction({
 
     invalidateBlogCache();
     return { success: true };
-  },
+  })),
 });

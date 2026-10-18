@@ -28,10 +28,11 @@ import {
   invalidateBlogCache,
   blogOrganizationIdSchema,
 } from "./_helpers";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 export const createBlogPost = defineAction({
   input: blogPostFormSchema.extend({ organizationId: blogOrganizationIdSchema }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/post.createBlogPost", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, {
       blog: input.status === "PUBLISHED" ? ["create", "publish"] : ["create"],
@@ -139,7 +140,7 @@ export const createBlogPost = defineAction({
     });
     invalidateBlogCache();
     return { id: post.id, slug: input.slug };
-  },
+  })),
 });
 
 export const updateBlogPost = defineAction({
@@ -148,7 +149,7 @@ export const updateBlogPost = defineAction({
     categoryIds: z.array(z.uuid()).max(10).optional(),
     tagIds: z.array(z.uuid()).max(20).optional(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/post.updateBlogPost", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
     blogRateLimit(context, user.id, "post-update");
@@ -317,12 +318,12 @@ export const updateBlogPost = defineAction({
     });
     invalidateBlogCache();
     return { id };
-  },
+  })),
 });
 
 export const lockBlogPost = defineAction({
   input: z.object({ id: z.uuid(), organizationId: blogOrganizationIdSchema }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/post.lockBlogPost", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
     await assertPostInTenant(input.id, tenant);
@@ -346,12 +347,12 @@ export const lockBlogPost = defineAction({
     });
 
     return { success: true, expiresAt };
-  },
+  })),
 });
 
 export const unlockBlogPost = defineAction({
   input: z.object({ id: z.uuid(), organizationId: blogOrganizationIdSchema }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/post.unlockBlogPost", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
     await assertPostInTenant(input.id, tenant);
@@ -360,17 +361,17 @@ export const unlockBlogPost = defineAction({
     await db.delete(blogPostLocks).where(and(eq(blogPostLocks.postId, input.id), eq(blogPostLocks.userId, user.id)));
     invalidateBlogCache();
     return { success: true };
-  },
+  })),
 });
 
 export const listBlogPostRevisions = defineAction({
   input: z.object({ postId: z.uuid(), organizationId: blogOrganizationIdSchema }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/post.listBlogPostRevisions", async () => {
     const tenant = resolveBlogTenant(input);
     await assertBlogPermission(context, tenant, { blog: ["read"] });
     await assertPostInTenant(input.postId, tenant);
 
     const db = getDrizzle();
     return db.select().from(blogPostRevisions).where(eq(blogPostRevisions.postId, input.postId)).orderBy(desc(blogPostRevisions.createdAt)).limit(50);
-  },
+  })),
 });

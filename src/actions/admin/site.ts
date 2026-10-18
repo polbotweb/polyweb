@@ -6,6 +6,7 @@ import { siteSettings } from "@database/schemas";
 import { invalidateCache } from "@database/cache";
 import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
 import { isValidLocale } from "@i18n/utils";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 const urlField = z.string().max(500).refine((v) => !v || /^(https?:\/\/|\/(?!\/))/.test(v), "L'URL doit commencer par http://, https:// ou /").nullable().optional();
 
@@ -35,7 +36,7 @@ export const upsertSiteSettings = defineAction({
     footerNavSecondaryHeading: z.string().trim().max(100).nullable().optional(),
     footerLegalHeading: z.string().trim().max(100).nullable().optional(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/site.upsertSiteSettings", async () => {
     const user = await assertPermission(context, { site: ["update"] });
     adminRateLimit(context, user.id, "site");
 
@@ -78,7 +79,7 @@ export const upsertSiteSettings = defineAction({
 
     invalidateCache(`site:settings:${locale}`);
     return result;
-  },
+  })),
 });
 
 export const updateSiteSettings = defineAction({
@@ -94,7 +95,7 @@ export const updateSiteSettings = defineAction({
     favicon: urlField,
     ogImage: urlField,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/site.updateSiteSettings", async () => {
     const user = await assertPermission(context, { site: ["update"] });
     adminRateLimit(context, user.id, "site");
 
@@ -121,5 +122,5 @@ export const updateSiteSettings = defineAction({
 
     invalidateCache(`site:settings:${updated.locale}`);
     return updated;
-  },
+  })),
 });

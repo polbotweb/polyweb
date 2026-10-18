@@ -13,12 +13,13 @@ import {
   invalidateBlogCache,
   blogOrganizationIdSchema,
 } from "./_helpers";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 export const createBlogLink = defineAction({
   input: blogLinkFormSchema.extend({
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/link.createBlogLink", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
     blogRateLimit(context, user.id, "link-create");
@@ -52,14 +53,14 @@ export const createBlogLink = defineAction({
 
     invalidateBlogCache();
     return { id: link.id };
-  },
+  })),
 });
 
 export const updateBlogLink = defineAction({
   input: blogLinkUpdateSchema.extend({
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/link.updateBlogLink", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
     blogRateLimit(context, user.id, "link-update");
@@ -90,7 +91,7 @@ export const updateBlogLink = defineAction({
 
     invalidateBlogCache();
     return { success: true };
-  },
+  })),
 });
 
 export const deleteBlogLink = defineAction({
@@ -98,7 +99,7 @@ export const deleteBlogLink = defineAction({
     id: z.uuid(),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/link.deleteBlogLink", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
     blogRateLimit(context, user.id, "link-delete");
@@ -123,5 +124,5 @@ export const deleteBlogLink = defineAction({
 
     invalidateBlogCache();
     return { success: true };
-  },
+  })),
 });

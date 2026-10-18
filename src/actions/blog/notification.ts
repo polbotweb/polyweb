@@ -4,6 +4,7 @@ import { eq, and, isNull } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { blogNotifications } from "@database/schemas";
 import { blogOrganizationIdSchema } from "./_helpers";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 function notificationOrganizationScope(organizationId: string | null | undefined) {
   if (organizationId === undefined) return undefined;
@@ -18,7 +19,7 @@ export const markBlogNotificationRead = defineAction({
     id: z.uuid(),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/notification.markBlogNotificationRead", async () => {
     const user = context.locals.user;
     if (!user) throw new ActionError({ code: "UNAUTHORIZED", message: "Connexion requise." });
 
@@ -35,7 +36,7 @@ export const markBlogNotificationRead = defineAction({
       );
 
     return { success: true };
-  },
+  })),
 });
 
 /** Marks every unread notification belonging to the requesting user as read. */
@@ -43,7 +44,7 @@ export const markAllBlogNotificationsRead = defineAction({
   input: z.object({
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/notification.markAllBlogNotificationsRead", async () => {
     const user = context.locals.user;
     if (!user) throw new ActionError({ code: "UNAUTHORIZED", message: "Connexion requise." });
 
@@ -60,5 +61,5 @@ export const markAllBlogNotificationsRead = defineAction({
       );
 
     return { success: true };
-  },
+  })),
 });

@@ -7,10 +7,11 @@ import { generateExcerpt } from "@/core/content/text";
 import { serviceFormSchema, serviceUpdateSchema, calculateServiceSeoScore } from "@/modules/services/validation";
 import { serviceRateLimit, assertServicePermission, resolveServiceTenant, assertServiceInTenant, assertServiceLockOwner, assertServiceCategoryInTenant, assertServiceTagInTenant, assertServiceMediaInTenant } from "@/modules/services/permissions";
 import { auditService, invalidateServicesCache } from "./_helpers";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 export const createService = defineAction({
   input: serviceFormSchema,
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("services/service.createService", async () => {
     const tenant = resolveServiceTenant(input);
     const user = await assertServicePermission(context, tenant, { service: ["create"] });
     serviceRateLimit(context, user.id, "create");
@@ -42,12 +43,12 @@ export const createService = defineAction({
     auditService(context, user.id, "SERVICE_CREATE", { resource: "services", resourceId: createdId, metadata: { organizationId: tenant.organizationId } });
     invalidateServicesCache();
     return { id: createdId };
-  },
+  })),
 });
 
 export const updateService = defineAction({
   input: serviceUpdateSchema,
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("services/service.updateService", async () => {
     const tenant = resolveServiceTenant(input);
     const user = await assertServicePermission(context, tenant, { service: ["update"] });
     serviceRateLimit(context, user.id, "update");
@@ -129,5 +130,5 @@ export const updateService = defineAction({
     auditService(context, user.id, "SERVICE_UPDATE", { resource: "services", resourceId: input.id, metadata: { organizationId: tenant.organizationId } });
     invalidateServicesCache();
     return { id: input.id };
-  },
+  })),
 });

@@ -8,6 +8,7 @@ import { DEFAULT_LOCALE, type Locale } from "@i18n/config";
 import { blogCategoryFormSchema, blogCategoryUpdateSchema } from "@/lib/blog/validation";
 import { assertAcyclicParent } from "@/lib/cms/taxonomy";
 import { assertBlogPermission, resolveBlogTenant, assertCategoryInTenant, blogRateLimit, auditBlog, blogOrganizationIdSchema } from "./_helpers";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 function categoryTenantScope(organizationId: string | null) {
   return organizationId === null ? isNull(blogCategories.organizationId) : eq(blogCategories.organizationId, organizationId);
@@ -42,7 +43,7 @@ async function assertCategoryParentIsAcyclic(categoryId: string | null, parentId
 
 export const createBlogCategory = defineAction({
   input: blogCategoryFormSchema.extend({ organizationId: blogOrganizationIdSchema }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/category.createBlogCategory", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blogCategory: ["create"] });
     blogRateLimit(context, user.id, "category-create");
@@ -58,12 +59,12 @@ export const createBlogCategory = defineAction({
     auditBlog(context, user.id, "BLOG_CATEGORY_CREATE", { resource: "blog_categories", resourceId: category.id, metadata: { organizationId: tenant.organizationId, locale: input.locale, slug: input.slug } });
     invalidateCache("blog:categories");
     return { id: category.id, slug: input.slug };
-  },
+  })),
 });
 
 export const updateBlogCategory = defineAction({
   input: blogCategoryUpdateSchema.extend({ organizationId: blogOrganizationIdSchema }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/category.updateBlogCategory", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blogCategory: ["update"] });
     blogRateLimit(context, user.id, "category-update");
@@ -86,12 +87,12 @@ export const updateBlogCategory = defineAction({
     auditBlog(context, user.id, "BLOG_CATEGORY_UPDATE", { resource: "blog_categories", resourceId: id, metadata: { organizationId: tenant.organizationId, locale: data.locale, slug: data.slug } });
     invalidateCache("blog:categories");
     return { id };
-  },
+  })),
 });
 
 export const deleteBlogCategory = defineAction({
   input: z.object({ id: z.uuid(), organizationId: blogOrganizationIdSchema, reassignToId: z.uuid().optional() }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/category.deleteBlogCategory", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blogCategory: ["delete"] });
     blogRateLimit(context, user.id, "category-delete");
@@ -111,5 +112,5 @@ export const deleteBlogCategory = defineAction({
     auditBlog(context, user.id, "BLOG_CATEGORY_DELETE", { resource: "blog_categories", resourceId: input.id, metadata: { organizationId: tenant.organizationId, reassignToId: input.reassignToId } });
     invalidateCache("blog:categories");
     return { success: true };
-  },
+  })),
 });

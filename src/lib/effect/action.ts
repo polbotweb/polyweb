@@ -26,7 +26,9 @@ export const fail = (code: ActionErrorCode, message: string) => Effect.fail(new 
 
 /** Appel Promise dans une action : `ActionError` conservée, autre rejet → `OperationError`. */
 export const actionTry = <A>(operation: string, f: () => Promise<A>) =>
-  Effect.tryPromise({ try: f, catch: (cause) => (cause instanceof ActionError ? new ActionFailure({ code: cause.code, message: cause.message }) : new OperationError({ operation, cause })) });
+  Effect.tryPromise({ try: f, catch: (cause) => (cause instanceof ActionError ? new ActionFailure({ code: cause.code, message: cause.message }) : new OperationError({ operation, cause })) }).pipe(
+    Effect.withSpan(`action ${operation}`),
+  );
 
 const STATUS: Record<string, ActionErrorCode> = {
   UnauthorizedError: 'UNAUTHORIZED',

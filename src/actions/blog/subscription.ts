@@ -9,6 +9,7 @@ import {
   NewsletterDeliveryError,
   NewsletterOrganizationNotFoundError,
 } from "@/lib/newsletter/blog-newsletter-service";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 const blogSubscriptionSchema = z.object({
   email: z.email("Email invalide").trim().toLowerCase(),
@@ -32,7 +33,7 @@ function auditContext(context: {
 
 export const subscribeBlogNewsletter = defineAction({
   input: blogSubscriptionSchema,
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/subscription.subscribeBlogNewsletter", async () => {
     blogPublicRateLimit(context, "newsletter-subscribe", { window: 3600, max: 10 });
 
     try {
@@ -63,12 +64,12 @@ export const subscribeBlogNewsletter = defineAction({
     }
 
     return { success: true };
-  },
+  })),
 });
 
 export const confirmBlogSubscription = defineAction({
   input: blogTokenSchema,
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/subscription.confirmBlogSubscription", async () => {
     blogPublicRateLimit(context, "newsletter-confirm", { window: 3600, max: 20 });
     await blogNewsletterService.confirm({
       token: input.token,
@@ -77,12 +78,12 @@ export const confirmBlogSubscription = defineAction({
 
     // Deliberately state-independent for the public Action API.
     return { success: true };
-  },
+  })),
 });
 
 export const unsubscribeBlogNewsletter = defineAction({
   input: blogTokenSchema,
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/subscription.unsubscribeBlogNewsletter", async () => {
     blogPublicRateLimit(context, "newsletter-unsubscribe", { window: 3600, max: 20 });
     await blogNewsletterService.unsubscribe({
       token: input.token,
@@ -91,7 +92,7 @@ export const unsubscribeBlogNewsletter = defineAction({
 
     // Deliberately state-independent for the public Action API.
     return { success: true };
-  },
+  })),
 });
 
 export { blogSubscriptionSchema };

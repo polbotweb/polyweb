@@ -1,6 +1,7 @@
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { assertOrgAdmin, orgRateLimit, auditOrg } from "./_helpers";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 /**
  * Organization-level role management actions.
@@ -12,7 +13,7 @@ export const orgListRoles = defineAction({
   input: z.object({
     organizationId: z.string().min(1, "L'identifiant de l'organisation est requis."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("org/roles.orgListRoles", async () => {
     await assertOrgAdmin(context, input.organizationId);
 
     const { auth } = await import("@/lib/auth");
@@ -22,7 +23,7 @@ export const orgListRoles = defineAction({
     });
 
     return result;
-  },
+  })),
 });
 
 export const orgCreateRole = defineAction({
@@ -36,7 +37,7 @@ export const orgCreateRole = defineAction({
       .regex(/^[a-z0-9-]+$/, "Le nom du rôle ne peut contenir que des lettres minuscules, chiffres et tirets."),
     permission: z.record(z.string(), z.array(z.string())),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("org/roles.orgCreateRole", async () => {
     const user = await assertOrgAdmin(context, input.organizationId);
     orgRateLimit(context, user.id, "org-roles");
 
@@ -66,7 +67,7 @@ export const orgCreateRole = defineAction({
       const msg = err instanceof Error ? err.message : "Erreur lors de la création du rôle.";
       throw new ActionError({ code: "BAD_REQUEST", message: msg });
     }
-  },
+  })),
 });
 
 export const orgUpdateRole = defineAction({
@@ -88,7 +89,7 @@ export const orgUpdateRole = defineAction({
     (d) => d.roleId || d.roleName,
     "roleId ou roleName est requis.",
   ),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("org/roles.orgUpdateRole", async () => {
     const user = await assertOrgAdmin(context, input.organizationId);
     orgRateLimit(context, user.id, "org-roles");
 
@@ -120,7 +121,7 @@ export const orgUpdateRole = defineAction({
       const msg = err instanceof Error ? err.message : "Erreur lors de la mise à jour du rôle.";
       throw new ActionError({ code: "BAD_REQUEST", message: msg });
     }
-  },
+  })),
 });
 
 export const orgDeleteRole = defineAction({
@@ -132,7 +133,7 @@ export const orgDeleteRole = defineAction({
     (d) => d.roleId || d.roleName,
     "roleId ou roleName est requis.",
   ),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("org/roles.orgDeleteRole", async () => {
     const user = await assertOrgAdmin(context, input.organizationId);
     orgRateLimit(context, user.id, "org-roles");
 
@@ -163,7 +164,7 @@ export const orgDeleteRole = defineAction({
       const msg = err instanceof Error ? err.message : "Erreur lors de la suppression du rôle.";
       throw new ActionError({ code: "BAD_REQUEST", message: msg });
     }
-  },
+  })),
 });
 
 export const orgUpdateMemberRole = defineAction({
@@ -172,7 +173,7 @@ export const orgUpdateMemberRole = defineAction({
     role: z.union([z.string(), z.array(z.string())]),
     organizationId: z.string().min(1, "L'identifiant de l'organisation est requis."),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("org/roles.orgUpdateMemberRole", async () => {
     const user = await assertOrgAdmin(context, input.organizationId);
     orgRateLimit(context, user.id, "org-member-role");
 
@@ -203,5 +204,5 @@ export const orgUpdateMemberRole = defineAction({
       const msg = err instanceof Error ? err.message : "Erreur lors du changement de rôle.";
       throw new ActionError({ code: "BAD_REQUEST", message: msg });
     }
-  },
+  })),
 });

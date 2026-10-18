@@ -8,10 +8,11 @@ import { sanitizeHtml } from "@/lib/sanitize";
 import { blogReviewFormSchema, blogReviewModerationSchema } from "@/lib/blog/validation";
 import { publicBlogPostScope } from "@/lib/blog/public-visibility";
 import { extractIp } from "@/lib/audit";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 export const createBlogReview = defineAction({
   input: blogReviewFormSchema,
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/review.createBlogReview", async () => {
     const user = context.locals.user;
     if (!user) {
       throw new ActionError({ code: "UNAUTHORIZED", message: "Vous devez être connecté pour laisser un avis." });
@@ -68,14 +69,14 @@ export const createBlogReview = defineAction({
 
     invalidateBlogCache();
     return { id: review.id, status: review.status };
-  },
+  })),
 });
 
 export const moderateBlogReview = defineAction({
   input: blogReviewModerationSchema.extend({
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/review.moderateBlogReview", async () => {
     const tenant = resolveBlogTenant(input);
     const user = await assertBlogPermission(context, tenant, { blogReview: ["moderate"] });
 
@@ -132,7 +133,7 @@ export const moderateBlogReview = defineAction({
 
     invalidateBlogCache();
     return { success: true };
-  },
+  })),
 });
 
 export const voteBlogReviewHelpful = defineAction({
@@ -140,7 +141,7 @@ export const voteBlogReviewHelpful = defineAction({
     reviewId: z.uuid(),
     isHelpful: z.boolean(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/review.voteBlogReviewHelpful", async () => {
     const user = context.locals.user;
     if (!user) throw new ActionError({ code: "UNAUTHORIZED", message: "Connexion requise." });
 
@@ -182,5 +183,5 @@ export const voteBlogReviewHelpful = defineAction({
 
     invalidateBlogCache();
     return { success: true };
-  },
+  })),
 });

@@ -6,6 +6,7 @@ import { consentSettings } from "@database/schemas";
 import { invalidateCache } from "@database/cache";
 import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
 import { isValidLocale } from "@i18n/utils";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 export const updateConsentSettings = defineAction({
   input: z.object({
@@ -31,7 +32,7 @@ export const updateConsentSettings = defineAction({
       .optional(),
     isActive: z.boolean().optional(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("admin/consent.updateConsentSettings", async () => {
     const user = await assertPermission(context, { site: ["update"] });
     adminRateLimit(context, user.id, "consent");
 
@@ -69,5 +70,5 @@ export const updateConsentSettings = defineAction({
 
     invalidateCache(`consent:settings:${locale}`);
     return result;
-  },
+  })),
 });

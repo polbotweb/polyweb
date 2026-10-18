@@ -6,6 +6,7 @@ import { blogPosts, blogPostViewStats } from "@database/schemas";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { publicBlogPostScope } from "@/lib/blog/public-visibility";
 import { extractIp } from "@/lib/audit";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 type DeviceType = "DESKTOP" | "MOBILE" | "TABLET";
 
@@ -40,7 +41,7 @@ export const recordBlogPostView = defineAction({
     postId: z.uuid(),
     referrer: z.string().trim().max(500).optional(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => actionTry("blog/view.recordBlogPostView", async () => {
     const db = getDrizzle();
     const [visiblePost] = await db
       .select({ id: blogPosts.id })
@@ -105,5 +106,5 @@ export const recordBlogPostView = defineAction({
     // fire-and-forget event, not a security/significant action, and logging
     // every view would bloat audit_log and slow real audit queries.
     return { recorded: true };
-  },
+  })),
 });
