@@ -476,41 +476,38 @@ export const getBlogPosts = cached(
 
 // ─── Authors ─────────────────────────────────────────────────────────────────
 
+/** Profil public d'un auteur + nombre de posts publiés dans le tenant (null si inconnu). */
+const blogAuthorByUsernameEffect = (organizationId: string | null, username: string) =>
+  Effect.gen(function* () {
+    const [author] = yield* dbTry("blog.authorByUsername", () =>
+      getDrizzle()
+        .select({
+          id: user.id,
+          name: user.name,
+          image: user.image,
+          bio: user.bio,
+          website: user.website,
+          twitter: user.twitter,
+          linkedin: user.linkedin,
+        })
+        .from(user)
+        .where(eq(user.username, username))
+        .limit(1),
+    );
+    if (!author) return null;
+    const [{ value: postCount }] = yield* dbTry("blog.authorPostCount", () =>
+      getDrizzle()
+        .select({ value: count() })
+        .from(blogPosts)
+        .where(and(eq(blogPosts.authorId, author.id), orgScope(blogPosts, organizationId), publishedScope(blogPosts))),
+    );
+    return { ...author, postCount: Number(postCount) };
+  });
+
 export const getBlogAuthorByUsername = cached(
   (organizationId: string | null, username: string) =>
     `blog:author:${organizationId ?? "global"}:${username}`,
-  async (organizationId: string | null, username: string) => {
-    const db = getDrizzle();
-
-    const [author] = await db
-      .select({
-        id: user.id,
-        name: user.name,
-        image: user.image,
-        bio: user.bio,
-        website: user.website,
-        twitter: user.twitter,
-        linkedin: user.linkedin,
-      })
-      .from(user)
-      .where(eq(user.username, username))
-      .limit(1);
-
-    if (!author) return null;
-
-    const [{ value: postCount }] = await db
-      .select({ value: count() })
-      .from(blogPosts)
-      .where(
-        and(
-          eq(blogPosts.authorId, author.id),
-          orgScope(blogPosts, organizationId),
-          publishedScope(blogPosts),
-        ),
-      );
-
-    return { ...author, postCount: Number(postCount) };
-  },
+  (organizationId: string | null, username: string) => runOrThrow(blogAuthorByUsernameEffect(organizationId, username)),
 );
 
 export const getRelatedBlogPosts = cached(
@@ -1328,10 +1325,11 @@ export const getBlogValidLinkTargets = cached(
 );
 
 /**
- * Lectures taxonomie/liens Effect-natives NON mises en cache. `effect.ts` continue d'exposer
+ * Lectures taxonomie/auteur/liens Effect-natives NON mises en cache. `effect.ts` continue d'exposer
  * les versions `cached` (via `liftLoader`) pour conserver le cache côté pages.
  */
 export const blogTaxonomyEffects = {
+  getBlogAuthorByUsername: blogAuthorByUsernameEffect,
   getBlogCategories: blogCategoriesEffect,
   getBlogCategoryBySlug: blogCategoryBySlugEffect,
   getBlogTags: blogTagsEffect,

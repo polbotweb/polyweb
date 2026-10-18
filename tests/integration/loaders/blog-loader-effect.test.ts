@@ -135,5 +135,15 @@ describe('blog.loader Effect-natif', () => {
       await db.delete(blogTags).where(inArray(blogTags.id, [tag]));
     }
   });
+
+  it('auteur par username : compte des posts publiés seulement, null si inconnu', async () => {
+    const db = getDrizzle();
+    const { eq } = await import('drizzle-orm');
+    await db.update(user).set({ username: author }).where(eq(user.id, author));
+    const fx = blog.blogTaxonomyEffects.getBlogAuthorByUsername;
+    expect(await Effect.runPromise(fx(null, author))).toMatchObject({ id: author, name: 'Author', postCount: 1 });
+    expect(await Effect.runPromise(fx(null, `${t}-nobody`))).toBeNull();
+    expect(await blog.getBlogAuthorByUsername(null, author)).toEqual(await Effect.runPromise(fx(null, author)));
+  });
 });
 
