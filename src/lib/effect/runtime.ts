@@ -1,0 +1,22 @@
+/**
+ * The shared ManagedRuntime. All Astro boundaries (routes, pages, middleware,
+ * scripts) run Effects through it so that layers (DB pool, config, storage,
+ * telemetry…) are built once per process.
+ *
+ * To add a service: create `Foo` + `FooLive` next to its domain, then merge
+ * `FooLive` into `AppLayer` below and add `Foo` to `AppServices`.
+ */
+import { Layer, ManagedRuntime } from 'effect';
+import { AppConfig, AppConfigLive } from './config';
+import { Db, DbLive } from './db';
+
+export const AppLayer = Layer.mergeAll(DbLive, AppConfigLive);
+
+export type AppServices = Db | AppConfig;
+
+type Runtime = ManagedRuntime.ManagedRuntime<AppServices, never>;
+const globalKey = Symbol.for('polyweb.effect.runtime');
+const g = globalThis as unknown as Record<symbol, Runtime | undefined>;
+
+/** Survives Vite HMR in dev: one runtime per process. */
+export const appRuntime: Runtime = g[globalKey] ?? (g[globalKey] = ManagedRuntime.make(AppLayer));

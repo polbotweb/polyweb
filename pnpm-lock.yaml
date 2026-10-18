@@ -92,6 +92,9 @@ importers:
       easymde:
         specifier: ^2.21.0
         version: 2.21.0
+      effect:
+        specifier: ^4.0.5
+        version: 4.0.5
       embla-carousel:
         specifier: ^8.6.0
         version: 8.6.0
@@ -3753,6 +3756,9 @@ packages:
 
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
+
+  effect@4.0.5:
+    resolution: {integrity: sha512-BY4/28NlpOd99yzmV741xbVGmp+1U7tks4oB7F/Png64bTa5tm5eCA6W0RiXsnuLDDoJpjfVSo4Dnq4BZb/89Q==}
 
   embla-carousel-autoplay@8.6.0:
     resolution: {integrity: sha512-OBu5G3nwaSXkZCo1A6LTaFMZ8EpkYbwIaH+bPqdBnDGQ2fh4+NbzjXjs2SktoPNKCtflfVMc75njaDHOYXcrsA==}
@@ -10231,6 +10237,8 @@ snapshots:
       marked: 4.3.0
 
   ee-first@1.1.1: {}
+
+  effect@4.0.5: {}
 
   embla-carousel-autoplay@8.6.0(embla-carousel@8.6.0):
     dependencies:

@@ -1,0 +1,84 @@
+# Effect dans Polyweb — conventions
+
+Polyweb utilise [Effect](https://effect.website) (`effect` v4) comme **modèle standard pour tout le code serveur** : domaine, services, accès DB, intégrations externes, scripts. Ce document est la référence pour les humains comme pour les agents IA.
+
+## Principes
+
+1. **Le domaine est en Effect, les frontières sont fines.** Les routes Astro (`APIRoute`), le frontmatter des pages, le middleware et les scripts CLI ne contiennent pas de logique : ils construisent un programme Effect et l'exécutent via le runtime partagé.
+2. **Erreurs typées.** Toute erreur qu'un appelant peut vouloir traiter est une `Data.TaggedError`. Les bugs restent des *defects* (`Effect.die`, `Effect.orDie`).
+3. **Dépendances via services.** Un service = un `Context.Service` + un `Layer` `XxxLive`. Pas d'import direct de singletons (pool DB, client S3, fetch…) dans le code Effect.
+4. **Validation par `Schema`.** Toute entrée non fiable (JSON, FormData, query, env, payload webhook) passe par `decode(Schema)` → `ValidationError` avec issues par champ.
+5. **Résilience explicite.** Les appels réseau ont un `Effect.timeout` et, s'ils sont idempotents, un `Effect.retry` avec `Schedule.exponential` + `Schedule.recurs`.
+
+## Briques fournies (`src/lib/effect/`)
+
+| Fichier | Rôle |
+| --- | --- |
+| `errors.ts` | Erreurs partagées : `DbError`, `NotFoundError`, `ValidationError`, `UnauthorizedError`, `ForbiddenError`, `ConflictError`, `RateLimitedError`, `UpstreamError`, `ConfigError` |
+| `schema.ts` | `decode(schema)(input)`, `readJson(request)`, `formDataToRecord`, schémas communs (`Slug`, `NonEmptyTrimmed`) |
+| `db.ts` | Service `Db` + `query(op, f)` + `transaction(op, f)` (rollback si l'Effect échoue, erreur typée re-propagée) |
+| `config.ts` | Service `AppConfig` (env validé : `siteUrl`, `signingSecret`, `trustProxy`…) |
+| `runtime.ts` | `AppLayer`, type `AppServices`, `appRuntime` (`ManagedRuntime` unique par process, survit au HMR) |
+| `http.ts` | `apiRoute(handler)`, `runApp`, `runAppResult`, `json`, `errorResponse` (tag → statut HTTP) |
+
+## Écrire un service
+
+```ts
+import { Context, Effect, Layer, Schema } from 'effect';
+import { query } from '@/lib/effect/db';
+import { NotFoundError } from '@/lib/effect/errors';
+
+export class Widgets extends Context.Service<Widgets, {
+  readonly get: (id: string) => Effect.Effect<Widget, NotFoundError | DbError>;
+}>()('polyweb/Widgets') {}
+
+export const WidgetsLive = Layer.effect(Widgets, Effect.gen(function* () {
+  const db = yield* Db;
+  return {
+    get: (id) => Effect.gen(function* () {
+      const [row] = yield* db.query('widgets.get', (d) => d.select().from(widgets).where(eq(widgets.id, id)));
+      if (!row) return yield* new NotFoundError({ entity: 'Widget', id });
+      return row;
+    }),
+  };
+}));
+```
+
+Pour du code de domaine sans état propre, de simples fonctions qui retournent `Effect<A, E, Db>` (via `query`) suffisent — pas besoin d'un service pour chaque module.
+
+Ajout au runtime : fusionner `WidgetsLive` dans `AppLayer` (`src/lib/effect/runtime.ts`) et ajouter `Widgets` à `AppServices`.
+
+## Frontières Astro
+
+```ts
+// src/pages/api/v1/widgets/[id].ts
+import { apiRoute, json } from '@/lib/effect/http';
+export const GET = apiRoute(({ params }) =>
+  Effect.gen(function* () {
+    const w = yield* Widgets.use((s) => s.get(params.id!));
+    return json({ data: w });
+  }),
+);
+```
+
+- `apiRoute` convertit `ValidationError` → 400 (avec `issues`), `UnauthorizedError` → 401, `ForbiddenError` → 403, `NotFoundError` → 404, `ConflictError` → 409, `RateLimitedError` → 429 (+ `Retry-After`), `UpstreamError` → 502, `DbError`/`ConfigError`/defects → 500 **sans détail interne**.
+- Dans une page `.astro` : `const r = await runAppResult(programme)` puis `if (!r.ok) …` (les defects sont relancés → page d'erreur Astro).
+- Dans un script CLI : `await runApp(programme)` puis `await appRuntime.dispose()`.
+
+## Tests
+
+- Unitaires : `Effect.runPromise(programme)` quand le programme n'a pas de dépendances, sinon `Effect.provide(programme, Layer.succeed(Service, fake))`.
+- Intégration : `appRuntime.runPromise(...)` (vraie base de test).
+- Vérifier une erreur typée : `await Effect.runPromise(Effect.flip(programme))` puis `expect(e).toBeInstanceOf(XxxError)`.
+
+## À ne pas faire
+
+- `try/catch` autour d'un `Effect.runPromise` dans le domaine (utiliser `Effect.catchTag`).
+- `throw` dans un `Effect.gen` pour une erreur attendue (utiliser `yield* new XxxError(...)`).
+- Créer un nouveau `ManagedRuntime` ailleurs que dans `runtime.ts`.
+- Lire `process.env` dans le domaine (passer par `AppConfig`).
+- Utiliser `zod` dans du nouveau code serveur : `Schema` d'Effect est la norme (zod reste pour `astro:content` et le code legacy en cours de migration).
+
+## Migration du code existant
+
+Le code antérieur (core, modules, lib, auth, médias, smtp, scripts) est migré **par zones**, chaque zone gardant typecheck/tests/build verts. Une façade `async` peut être conservée temporairement pour les appelants non migrés : elle se contente d'appeler `runApp(programmeEffect)`. Voir l'état de la migration dans le README (section « Effect »).
