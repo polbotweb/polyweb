@@ -106,9 +106,10 @@ module.exports = {
       },
     },
     upload: {
-      // Rapports écrits localement (jamais de stockage public) : versionnés dans tests/reports/lighthouse.
+      // Sortie brute locale (ignorée par git, jamais de stockage public) ; seules les copies
+      // renommées et caviardées par tests/helpers/lighthouse-report.cjs sont versionnées.
       target: 'filesystem',
-      outputDir: 'tests/reports/lighthouse',
+      outputDir: '.lighthouseci/filesystem',
     },
   },
   // Exported for use by CI scripts to run separate authenticated batches

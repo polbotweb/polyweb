@@ -260,7 +260,7 @@ env:
   1. Public (28 URLs) — pas de cookie
   2. Authenticated (8 URLs) — cookie user via fichier config temporaire
   3. Admin (16 URLs) — cookie admin via fichier config temporaire
-- **Upload** : `filesystem` → `tests/reports/lighthouse/` (aucun envoi public)
+- **Upload** : `filesystem` → `.lighthouseci/filesystem/` (brut, ignoré par git, aucun envoi public) ; seules les copies renommées et caviardées (cookies/en-têtes de session) sont versionnées dans `tests/reports/lighthouse/` — `tests/helpers/lighthouse-report.cjs` échoue si un cookie subsiste
 - **Rapports** : renommés en noms lisibles (`fr--home.html`, `ar--auth--تسجيل-الدخول.html`)
 
 ---

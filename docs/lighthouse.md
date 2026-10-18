@@ -28,7 +28,7 @@ Audits automatisés Lighthouse sur les 4 locales (fr, en, es, ar) avec des gates
 | `collect.settings.chromeFlags` | `--no-sandbox --disable-setuid-sandbox` | Requis en CI (conteneur Docker) |
 | `collect.settings.chromePath` | Auto-détecté | Chromium de Playwright (via `findChrome()`) |
 | `assert.assertions` | ≥ 0.9 sur 4 catégories | Échoue si un score descend sous 90% |
-| `upload.target` | `filesystem` (`outputDir: tests/reports/lighthouse`) | Rapports locaux versionnés, aucun envoi public |
+| `upload.target` | `filesystem` (`outputDir: .lighthouseci/filesystem`) | Sortie brute locale ignorée par git, aucun envoi public ; copies renommées et caviardées versionnées dans `tests/reports/lighthouse/` |
 
 ### Gates (seuils d'erreur)
 
