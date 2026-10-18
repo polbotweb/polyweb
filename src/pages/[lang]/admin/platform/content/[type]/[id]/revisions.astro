@@ -1,0 +1,122 @@
+---
+/**
+ * Historique d'une entrée (brique f) : liste des révisions, différences
+ * champ par champ entre deux versions (mots ajoutés/supprimés), diff JSON
+ * brut, aperçu signé d'une version figée et restauration.
+ */
+import { requirePermission } from '@/lib/auth-guards';
+import PlatformAdminShell from '@organisms/PlatformAdmin/PlatformAdminShell.astro';
+import { getPlatformAdminUrl } from '@/core/localization/platform-labels';
+import { getAdminSite, userCan, formatDate } from '@/lib/platform/admin';
+import { logAuditEvent, extractIp } from '@/lib/audit';
+import { getContentType } from '@/modules/content/domain/content-types';
+import { getEntry } from '@/modules/content/domain/entries';
+import { listRevisions, getRevision, diffSnapshots, rawSnapshotDiff, restoreRevision } from '@/modules/content/domain/revisions';
+import { createPreviewToken, PREVIEW_TTL_CHOICES } from '@/modules/content/domain/preview';
+import { runApp } from '@/lib/effect/http';
+
+export const prerender = false;
+const result = await requirePermission(Astro, { contentEntry: ['read'] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT, user } = result;
+const site = await getAdminSite(Astro);
+const type = await getContentType(site.id, Astro.params.type!);
+if (!type) return Astro.redirect(getPlatformAdminUrl(locale, 'content'));
+const entry = await getEntry(type, Astro.params.id!);
+if (!entry) return Astro.redirect(getPlatformAdminUrl(locale, 'content', type.slug));
+const editUrl = getPlatformAdminUrl(locale, 'content', type.slug, entry.id);
+const selfUrl = `${editUrl}/revisions`;
+const locales = site.locales.length ? site.locales : [site.defaultLocale];
+
+let error: string | null = null;
+let previewUrl: string | null = null;
+if (Astro.request.method === 'POST') {
+  const fd = await Astro.request.formData();
+  const intent = String(fd.get('intent') ?? '');
+  const version = Number(fd.get('version'));
+  const meta = { ipAddress: extractIp(Astro.request.headers, Astro.clientAddress), userAgent: Astro.request.headers.get('user-agent') };
+  try {
+    if (!Number.isInteger(version)) throw new Error('Version invalide');
+    if (intent === 'restore') {
+      if (!(await userCan(user.id, { contentEntry: ['update'] }))) throw new Error('Permission refusée');
+      const restored = await restoreRevision(type, entry.id, version, { authorId: user.id, allowedLocales: locales });
+      void logAuditEvent({ userId: user.id, action: 'CONTENT_ENTRY_REVISION_RESTORE', resource: 'content_entry', resourceId: entry.id, metadata: { type: type.slug, from: version, newVersion: restored.version }, ...meta });
+      return Astro.redirect(`${selfUrl}?restored=${version}`, 303);
+    }
+    if (intent === 'preview') {
+      const { token } = await runApp(createPreviewToken({ entryId: entry.id, locale: site.defaultLocale, ttlSeconds: PREVIEW_TTL_CHOICES['24h'], version }));
+      previewUrl = `/${site.defaultLocale}/preview/${token}`;
+      void logAuditEvent({ userId: user.id, action: 'CONTENT_PREVIEW_LINK_CREATE', resource: 'content_entry', resourceId: entry.id, metadata: { type: type.slug, version }, ...meta });
+    }
+  } catch (e) {
+    error = (e as Error).message;
+  }
+}
+
+const revisions = await listRevisions(entry.id, 100);
+const latest = revisions[0]?.version ?? entry.version;
+const toV = Number(Astro.url.searchParams.get('to') ?? latest);
+const fromV = Number(Astro.url.searchParams.get('from') ?? Math.max(1, toV - 1));
+const [revFrom, revTo] = await Promise.all([getRevision(entry.id, fromV), getRevision(entry.id, toV)]);
+const diffs = revFrom && revTo && fromV !== toV ? diffSnapshots(revFrom.snapshot, revTo.snapshot) : [];
+const showRaw = Astro.url.searchParams.get('raw') === '1';
+const raw = showRaw && revFrom && revTo ? rawSnapshotDiff(revFrom.snapshot, revTo.snapshot) : [];
+const restored = Astro.url.searchParams.get('restored');
+const canRestore = await userCan(user.id, { contentEntry: ['update'] });
+---
+<PlatformAdminShell t={authT} locale={locale} section="content" title={`Historique — ${entry.slug}`}>
+  <a slot="actions" class="rounded-md border px-3 py-2 text-sm" href={editUrl}>← Retour à l’entrée</a>
+  {restored && <p class="rounded-md border border-success bg-success/10 p-3 text-sm" role="status">Version {restored} restaurée (nouvelle version créée, historique conservé).</p>}
+  {error && <p class="rounded-md border border-error bg-error/10 p-3 text-sm" role="alert">{error}</p>}
+  {previewUrl && <p class="rounded-md border border-warning bg-warning/10 p-3 text-sm" role="status" data-preview-link>Aperçu de la version figée (24 h) : <a class="underline break-all" href={previewUrl} target="_blank" rel="noopener noreferrer">{previewUrl}</a></p>}
+
+  <form method="get" class="flex flex-wrap items-end gap-3 text-sm" aria-label="Comparer deux versions">
+    <label class="grid gap-1">De<select name="from" class="rounded-md border bg-background px-2 py-1">{revisions.map((r) => <option value={r.version} selected={r.version === fromV}>v{r.version}</option>)}</select></label>
+    <label class="grid gap-1">À<select name="to" class="rounded-md border bg-background px-2 py-1">{revisions.map((r) => <option value={r.version} selected={r.version === toV}>v{r.version}</option>)}</select></label>
+    <label class="flex items-center gap-1"><input type="checkbox" name="raw" value="1" checked={showRaw} /> diff JSON brut</label>
+    <button class="rounded-md border px-3 py-1.5">Comparer</button>
+  </form>
+
+  <section aria-labelledby="diff-h" class="grid gap-2">
+    <h2 id="diff-h" class="font-semibold">Différences v{fromV} → v{toV}</h2>
+    {fromV === toV ? <p class="text-sm">Choisissez deux versions différentes.</p> : diffs.length === 0 ? <p class="text-sm">Aucune différence.</p> : (
+      <table class="w-full text-sm" data-testid="revision-diff">
+        <thead><tr class="border-b"><th class="py-2 text-start">Champ</th><th class="text-start">Changement</th></tr></thead>
+        <tbody>
+          {diffs.map((d) => (
+            <tr class="border-b align-top">
+              <td class="py-2 pe-4 font-mono text-xs">{d.path}<span class="text-muted-foreground block">{d.kind === 'added' ? 'ajouté' : d.kind === 'removed' ? 'supprimé' : 'modifié'}</span></td>
+              <td class="whitespace-pre-wrap break-words">{d.parts.map((p) => p.added ? <ins class="bg-success/20 no-underline">{p.value}</ins> : p.removed ? <del class="bg-error/20">{p.value}</del> : <span>{p.value}</span>)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+    {showRaw && <pre class="overflow-x-auto rounded-md border p-3 text-xs">{raw.map((p) => p.added ? <ins class="bg-success/20 no-underline">{p.value}</ins> : p.removed ? <del class="bg-error/20">{p.value}</del> : <span>{p.value}</span>)}</pre>}
+  </section>
+
+  <section aria-labelledby="revs-h" class="grid gap-2">
+    <h2 id="revs-h" class="font-semibold">Révisions ({revisions.length})</h2>
+    <table class="w-full text-sm">
+      <thead><tr class="border-b"><th class="py-2 text-start">Version</th><th class="text-start">Date</th><th class="text-start">Statut</th><th class="text-start">Note</th><th></th></tr></thead>
+      <tbody>
+        {revisions.map((r) => (
+          <tr class="border-b">
+            <td class="py-2 font-mono">v{r.version}{r.version === entry.version && <span class="text-muted-foreground ms-1 text-xs">(courante)</span>}</td>
+            <td>{formatDate(r.createdAt, locale)}</td>
+            <td>{r.snapshot.status}</td>
+            <td class="text-muted-foreground">{r.message}</td>
+            <td class="flex justify-end gap-2">
+              <form method="post"><input type="hidden" name="intent" value="preview" /><input type="hidden" name="version" value={r.version} /><button class="hover:underline">Aperçu</button></form>
+              {canRestore && r.version !== entry.version && <form method="post"><input type="hidden" name="intent" value="restore" /><input type="hidden" name="version" value={r.version} /><button class="hover:underline" data-confirm={`Restaurer la version ${r.version} ?`}>Restaurer</button></form>}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+</PlatformAdminShell>
+<script>
+  import { initConfirmButtons } from '@/lib/platform/confirm';
+  initConfirmButtons();
+</script>

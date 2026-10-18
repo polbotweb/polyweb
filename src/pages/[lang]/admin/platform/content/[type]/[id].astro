@@ -10,6 +10,8 @@ import { logAuditEvent, extractIp } from '@/lib/audit';
 import { getContentType } from '@/modules/content/domain/content-types';
 import { getEntry, createEntry, updateEntry, setEntryStatus, deleteEntry, EntryValidationError, EntryConflictError, type SaveEntryInput } from '@/modules/content/domain/entries';
 import { listRevisions } from '@/modules/content/domain/revisions';
+import { createPreviewToken, PREVIEW_TTL_CHOICES } from '@/modules/content/domain/preview';
+import { runApp } from '@/lib/effect/http';
 import type { BlocksDocument } from '@/core/blocks';
 import type { EntrySeo } from '@database/schemas/content.schema';
 
@@ -31,6 +33,7 @@ const sharedFields = type.fields.filter((f) => !f.localized);
 
 let errors: Record<string, string> = {};
 let message: string | null = null;
+let previewLink: { url: string; expires: Date } | null = null;
 let values: { slug: string; shared: Record<string, unknown>; tr: Record<string, { title: string; data: Record<string, unknown>; blocks: BlocksDocument | null; seo: EntrySeo }> } = {
   slug: entry?.slug ?? '',
   shared: entry?.sharedData ?? {},
@@ -51,13 +54,20 @@ if (Astro.request.method === 'POST') {
       void logAuditEvent({ userId: user.id, action: 'CONTENT_ENTRY_DELETE', resource: 'content_entry', resourceId: entry.id, metadata: { type: type.slug, slug: entry.slug }, ...meta });
       return Astro.redirect(getPlatformAdminUrl(locale, 'content', type.slug), 303);
     }
-    if ((intent === 'publish' || intent === 'unpublish' || intent === 'archive') && entry) {
+    if (intent === 'preview-link' && entry) {
+      const ttlKey = String(fd.get('ttl') ?? '24h') as keyof typeof PREVIEW_TTL_CHOICES;
+      const previewLocale = locales.includes(String(fd.get('previewLocale'))) ? String(fd.get('previewLocale')) : site.defaultLocale;
+      const { token, claims } = await runApp(createPreviewToken({ entryId: entry.id, locale: previewLocale, ttlSeconds: PREVIEW_TTL_CHOICES[ttlKey] ?? PREVIEW_TTL_CHOICES['24h'] }));
+      previewLink = { url: new URL(`/${previewLocale}/preview/${token}`, process.env.SITE_URL || Astro.url.origin).toString(), expires: new Date(claims.x * 1000) };
+      void logAuditEvent({ userId: user.id, action: 'CONTENT_PREVIEW_LINK_CREATE', resource: 'content_entry', resourceId: entry.id, metadata: { type: type.slug, locale: previewLocale, ttl: ttlKey }, ...meta });
+    } else if ((intent === 'publish' || intent === 'unpublish' || intent === 'archive') && entry) {
       if (!(await userCan(user.id, { contentEntry: ['publish'] }))) throw new Error('Permission refusée');
       const status = intent === 'publish' ? 'published' : intent === 'archive' ? 'archived' : 'draft';
       await setEntryStatus(type, entry.id, status, user.id);
       void logAuditEvent({ userId: user.id, action: intent === 'publish' ? 'CONTENT_ENTRY_PUBLISH' : 'CONTENT_ENTRY_UNPUBLISH', resource: 'content_entry', resourceId: entry.id, metadata: { type: type.slug, status }, ...meta });
       return Astro.redirect(`${getPlatformAdminUrl(locale, 'content', type.slug, entry.id)}?saved=${intent}`, 303);
     }
+    if (intent !== 'preview-link') {
     if (!(await userCan(user.id, { contentEntry: [isNew ? 'create' : 'update'] }))) throw new Error('Permission refusée');
     const translations: SaveEntryInput['translations'] = {};
     for (const l of locales) {
@@ -85,6 +95,7 @@ if (Astro.request.method === 'POST') {
       : await updateEntry(type, entry!.id, input, { authorId: user.id, allowedLocales: locales, expectedVersion: Number.isFinite(version) ? version : undefined });
     void logAuditEvent({ userId: user.id, action: isNew ? 'CONTENT_ENTRY_CREATE' : 'CONTENT_ENTRY_UPDATE', resource: 'content_entry', resourceId: saved.id, metadata: { type: type.slug, version: saved.version }, ...meta });
     return Astro.redirect(`${getPlatformAdminUrl(locale, 'content', type.slug, saved.id)}?saved=1`, 303);
+    }
   } catch (e) {
     if (e instanceof EntryValidationError) { errors = e.errors; message = 'Certains champs sont invalides.'; }
     else message = e instanceof EntryConflictError ? e.message : (e as Error).message;
@@ -108,6 +119,21 @@ void extraTabs;
       Statut : <strong data-entry-status>{statusLabel[entry.status]}</strong> · version {entry.version}
       {entry.publishedAt && <> · publié le {formatDate(entry.publishedAt, locale)}</>}
     </p>
+  )}
+  {previewLink && (
+    <div class="rounded-md border border-warning bg-warning/10 p-3 text-sm" role="status" data-preview-link>
+      <p class="font-medium">Lien de prévisualisation (valable jusqu’au {formatDate(previewLink.expires, locale)}) :</p>
+      <a class="mt-1 block break-all font-mono underline" href={previewLink.url} target="_blank" rel="noopener noreferrer">{previewLink.url}</a>
+    </div>
+  )}
+  {entry && (
+    <form method="post" class="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm" aria-label="Prévisualisation">
+      <input type="hidden" name="intent" value="preview-link" />
+      <label class="grid gap-1">Langue<select name="previewLocale" class="rounded-md border bg-background px-2 py-1">{locales.map((l) => <option value={l} selected={l === site.defaultLocale}>{l.toUpperCase()}</option>)}</select></label>
+      <label class="grid gap-1">Validité<select name="ttl" class="rounded-md border bg-background px-2 py-1">{Object.keys(PREVIEW_TTL_CHOICES).map((k) => <option value={k} selected={k === '24h'}>{k}</option>)}</select></label>
+      <button class="rounded-md border px-3 py-1.5">Créer un lien de prévisualisation</button>
+      <a class="ms-auto hover:underline" href={`${getPlatformAdminUrl(locale, 'content', type.slug, entry.id)}/revisions`}>Historique et différences →</a>
+    </form>
   )}
   <MediaPicker id="pw-media" locale={locale} />
   <form method="post" class="grid gap-6" id="entry-form">
