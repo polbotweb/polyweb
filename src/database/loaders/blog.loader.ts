@@ -65,12 +65,12 @@ type BlogPostListRow = {
   featuredImage: { id: string; url: string } | null;
 };
 
-async function hydrateBlogPostListItems(
+/** Hydrate une page de liste en 5 requêtes groupées parallèles (pas de N+1 par ligne). */
+const hydrateBlogPostListItemsEffect = (
   rows: BlogPostListRow[],
   locale: Locale,
-): Promise<BlogPostListItem[]> {
-  if (rows.length === 0) return [];
-
+): Effect.Effect<BlogPostListItem[], DbError> =>
+  rows.length === 0 ? Effect.succeed([]) : Effect.gen(function* () {
   const db = getDrizzle();
   const postIds = rows.map((row) => row.post.id);
 
@@ -78,67 +78,80 @@ async function hydrateBlogPostListItems(
   // post row — avoids an N+1 pattern on listing pages. SQL-level ORDER BY is
   // still correct per-post after grouping in JS: a stable multi-key sort over
   // category attributes preserves each post's relative order once filtered.
-  const [categoryRows, tagRows, commentRows, reviewRows, reactionRows] = await Promise.all([
-    db
-      .select({
-        postId: blogPostCategories.postId,
-        id: blogCategories.id,
-        slug: sql<string>`coalesce(${blogCategoryTranslations.slug}, ${blogCategories.slug})`,
-        name: blogCategoryTranslations.name,
-      })
-      .from(blogPostCategories)
-      .innerJoin(blogCategories, eq(blogPostCategories.categoryId, blogCategories.id))
-      .leftJoin(
-        blogCategoryTranslations,
-        and(
-          eq(blogCategoryTranslations.categoryId, blogCategories.id),
-          eq(blogCategoryTranslations.locale, locale),
-        ),
-      )
-      .where(inArray(blogPostCategories.postId, postIds))
-      .orderBy(
-        asc(blogCategories.sortOrder),
-        asc(sql<string>`coalesce(${blogCategoryTranslations.slug}, ${blogCategories.slug})`),
-        asc(blogCategories.id),
+  const [categoryRows, tagRows, commentRows, reviewRows, reactionRows] = yield* Effect.all(
+    [
+      dbTry("blog.listCategories", () =>
+        db
+          .select({
+            postId: blogPostCategories.postId,
+            id: blogCategories.id,
+            slug: sql<string>`coalesce(${blogCategoryTranslations.slug}, ${blogCategories.slug})`,
+            name: blogCategoryTranslations.name,
+          })
+          .from(blogPostCategories)
+          .innerJoin(blogCategories, eq(blogPostCategories.categoryId, blogCategories.id))
+          .leftJoin(
+            blogCategoryTranslations,
+            and(
+              eq(blogCategoryTranslations.categoryId, blogCategories.id),
+              eq(blogCategoryTranslations.locale, locale),
+            ),
+          )
+          .where(inArray(blogPostCategories.postId, postIds))
+          .orderBy(
+            asc(blogCategories.sortOrder),
+            asc(sql<string>`coalesce(${blogCategoryTranslations.slug}, ${blogCategories.slug})`),
+            asc(blogCategories.id),
+          ),
       ),
-    db
-      .select({
-        postId: blogPostTags.postId,
-        id: blogTags.id,
-        slug: sql<string>`coalesce(${blogTagTranslations.slug}, ${blogTags.slug})`,
-        name: blogTagTranslations.name,
-      })
-      .from(blogPostTags)
-      .innerJoin(blogTags, eq(blogPostTags.tagId, blogTags.id))
-      .leftJoin(
-        blogTagTranslations,
-        and(eq(blogTagTranslations.tagId, blogTags.id), eq(blogTagTranslations.locale, locale)),
-      )
-      .where(inArray(blogPostTags.postId, postIds)),
-    db
-      .select({ postId: blogComments.postId, value: count() })
-      .from(blogComments)
-      .where(and(inArray(blogComments.postId, postIds), eq(blogComments.status, "APPROVED")))
-      .groupBy(blogComments.postId),
-    db
-      .select({
-        postId: blogPostReviews.postId,
-        avgRating: sql<string>`avg(${blogPostReviews.rating})`,
-        reviewCount: count(),
-      })
-      .from(blogPostReviews)
-      .where(and(inArray(blogPostReviews.postId, postIds), eq(blogPostReviews.status, "APPROVED")))
-      .groupBy(blogPostReviews.postId),
-    db
-      .select({
-        postId: blogPostReactions.postId,
-        reactionType: blogPostReactions.reactionType,
-        value: count(),
-      })
-      .from(blogPostReactions)
-      .where(inArray(blogPostReactions.postId, postIds))
-      .groupBy(blogPostReactions.postId, blogPostReactions.reactionType),
-  ]);
+      dbTry("blog.listTags", () =>
+        db
+          .select({
+            postId: blogPostTags.postId,
+            id: blogTags.id,
+            slug: sql<string>`coalesce(${blogTagTranslations.slug}, ${blogTags.slug})`,
+            name: blogTagTranslations.name,
+          })
+          .from(blogPostTags)
+          .innerJoin(blogTags, eq(blogPostTags.tagId, blogTags.id))
+          .leftJoin(
+            blogTagTranslations,
+            and(eq(blogTagTranslations.tagId, blogTags.id), eq(blogTagTranslations.locale, locale)),
+          )
+          .where(inArray(blogPostTags.postId, postIds)),
+      ),
+      dbTry("blog.listCommentCounts", () =>
+        db
+          .select({ postId: blogComments.postId, value: count() })
+          .from(blogComments)
+          .where(and(inArray(blogComments.postId, postIds), eq(blogComments.status, "APPROVED")))
+          .groupBy(blogComments.postId),
+      ),
+      dbTry("blog.listReviewStats", () =>
+        db
+          .select({
+            postId: blogPostReviews.postId,
+            avgRating: sql<string>`avg(${blogPostReviews.rating})`,
+            reviewCount: count(),
+          })
+          .from(blogPostReviews)
+          .where(and(inArray(blogPostReviews.postId, postIds), eq(blogPostReviews.status, "APPROVED")))
+          .groupBy(blogPostReviews.postId),
+      ),
+      dbTry("blog.listReactionCounts", () =>
+        db
+          .select({
+            postId: blogPostReactions.postId,
+            reactionType: blogPostReactions.reactionType,
+            value: count(),
+          })
+          .from(blogPostReactions)
+          .where(inArray(blogPostReactions.postId, postIds))
+          .groupBy(blogPostReactions.postId, blogPostReactions.reactionType),
+      ),
+    ],
+    { concurrency: "unbounded" },
+  );
 
   const categoriesByPost = new Map<string, typeof categoryRows>();
   for (const row of categoryRows) {
@@ -201,8 +214,7 @@ async function hydrateBlogPostListItems(
       reviewCount: reviewAgg?.reviewCount ?? 0,
     };
   });
-}
-
+});
 
 // ─── Posts ───────────────────────────────────────────────────────────────────
 
@@ -332,17 +344,18 @@ export const getBlogPostBySlug = cached(
   (organizationId: string | null, locale: Locale, slug: string) => runOrThrow(blogPostBySlugEffect(organizationId, locale, slug)),
 );
 
-export const getBlogPosts = cached(
-  (organizationId: string | null, locale: Locale, filters: BlogPostFilters) =>
-    `blog:list:${organizationId ?? "global"}:${locale}:${JSON.stringify(filters)}`,
-  async (
-    organizationId: string | null,
-    locale: Locale,
-    filters: BlogPostFilters,
-  ): Promise<{ items: BlogPostListItem[]; meta: BlogPaginationMeta }> => {
-    if (!isValidLocale(locale)) return { items: [], meta: emptyMeta(filters) };
+type BlogPostListResult = { items: BlogPostListItem[]; meta: BlogPaginationMeta };
+
+/** Liste publique paginée et filtrée ; page et total en parallèle, puis hydratation groupée. */
+const blogPostsEffect = (
+  organizationId: string | null,
+  locale: Locale,
+  filters: BlogPostFilters,
+): Effect.Effect<BlogPostListResult, DbError> =>
+  Effect.suspend(() => {
+    if (!isValidLocale(locale)) return Effect.succeed({ items: [] as BlogPostListItem[], meta: emptyMeta(filters) });
     if (filters.status && filters.status !== "PUBLISHED") {
-      return { items: [], meta: emptyMeta(filters) };
+      return Effect.succeed({ items: [] as BlogPostListItem[], meta: emptyMeta(filters) });
     }
     const db = getDrizzle();
 
@@ -439,7 +452,11 @@ export const getBlogPosts = cached(
 
     const stickyOrder = [desc(blogPosts.isSticky), ...orderBy];
 
-    const rows = await db
+    return Effect.gen(function* () {
+      const [rows, [{ value: total }]] = yield* Effect.all(
+        [
+          dbTry("blog.posts", () =>
+            db
       .select({
         post: blogPosts,
         translation: blogPostTranslations,
@@ -453,28 +470,38 @@ export const getBlogPosts = cached(
       .where(and(...conditions))
       .orderBy(...stickyOrder)
       .limit(limit)
-      .offset(offset);
-
-    const [{ value: total }] = await db
+      .offset(offset),
+          ),
+          dbTry("blog.postsCount", () =>
+            db
       .select({ value: count() })
       .from(blogPosts)
       .innerJoin(blogPostTranslations, eq(blogPostTranslations.postId, blogPosts.id))
-      .where(and(...conditions));
+      .where(and(...conditions)),
+          ),
+        ],
+        { concurrency: "unbounded" },
+      );
+      const items = yield* hydrateBlogPostListItemsEffect(rows, locale);
+      return {
+        items,
+        meta: {
+          total: Number(total),
+          page,
+          limit,
+          totalPages: Math.ceil(Number(total) / limit),
+          hasNextPage: offset + limit < Number(total),
+          hasPrevPage: page > 1,
+        },
+      };
+    });
+  });
 
-    const items = await hydrateBlogPostListItems(rows, locale);
-
-    return {
-      items,
-      meta: {
-        total: Number(total),
-        page,
-        limit,
-        totalPages: Math.ceil(Number(total) / limit),
-        hasNextPage: offset + limit < Number(total),
-        hasPrevPage: page > 1,
-      },
-    };
-  },
+export const getBlogPosts = cached(
+  (organizationId: string | null, locale: Locale, filters: BlogPostFilters) =>
+    `blog:list:${organizationId ?? "global"}:${locale}:${JSON.stringify(filters)}`,
+  (organizationId: string | null, locale: Locale, filters: BlogPostFilters): Promise<BlogPostListResult> =>
+    runOrThrow(blogPostsEffect(organizationId, locale, filters)),
 );
 
 // ─── Authors ─────────────────────────────────────────────────────────────────
@@ -513,6 +540,113 @@ export const getBlogAuthorByUsername = cached(
   (organizationId: string | null, username: string) => runOrThrow(blogAuthorByUsernameEffect(organizationId, username)),
 );
 
+/** Candidats liés (catégorie = 2 points, tag = 1) hors post courant, publiés dans la locale. */
+const relatedScores = (organizationId: string | null, locale: Locale, postId: string, categoryIds: string[], tagIds: string[]) => {
+  const db = getDrizzle();
+  const translated = and(eq(blogPostTranslations.postId, blogPosts.id), eq(blogPostTranslations.locale, locale));
+  return Effect.all(
+    [
+      categoryIds.length === 0
+        ? Effect.succeed([] as { postId: string }[])
+        : dbTry("blog.relatedByCategory", () =>
+            db
+              .select({ postId: blogPostCategories.postId })
+              .from(blogPostCategories)
+              .innerJoin(blogPosts, eq(blogPostCategories.postId, blogPosts.id))
+              .innerJoin(blogPostTranslations, translated)
+              .where(and(orgScope(blogPosts, organizationId), publishedScope(blogPosts), inArray(blogPostCategories.categoryId, categoryIds))),
+          ),
+      tagIds.length === 0
+        ? Effect.succeed([] as { postId: string }[])
+        : dbTry("blog.relatedByTag", () =>
+            db
+              .select({ postId: blogPostTags.postId })
+              .from(blogPostTags)
+              .innerJoin(blogPosts, eq(blogPostTags.postId, blogPosts.id))
+              .innerJoin(blogPostTranslations, translated)
+              .where(and(orgScope(blogPosts, organizationId), publishedScope(blogPosts), inArray(blogPostTags.tagId, tagIds))),
+          ),
+    ],
+    { concurrency: "unbounded" },
+  ).pipe(
+    Effect.map(([categoryMatches, tagMatches]) => {
+      const scoreMap = new Map<string, number>();
+      for (const match of categoryMatches) {
+        if (match.postId !== postId) scoreMap.set(match.postId, (scoreMap.get(match.postId) ?? 0) + 2);
+      }
+      for (const match of tagMatches) {
+        if (match.postId !== postId) scoreMap.set(match.postId, (scoreMap.get(match.postId) ?? 0) + 1);
+      }
+      return scoreMap;
+    }),
+  );
+};
+
+/** Posts liés classés par score puis date ; complétés par les plus récents si besoin. */
+const relatedBlogPostsEffect = (
+  organizationId: string | null,
+  locale: Locale,
+  postId: string,
+  categoryIds: string[],
+  tagIds: string[],
+  limit = 3,
+): Effect.Effect<BlogPostListItem[], DbError> =>
+  !isValidLocale(locale) || limit < 1
+    ? Effect.succeed([])
+    : Effect.gen(function* () {
+        const scoreMap = yield* relatedScores(organizationId, locale, postId, categoryIds, tagIds);
+        const rankedIds = [...scoreMap.entries()].sort((left, right) => right[1] - left[1]).map(([id]) => id);
+
+        if (rankedIds.length === 0) {
+          const { items } = yield* blogPostsEffect(organizationId, locale, { limit: limit + 1 });
+          return items.filter((item) => item.post.id !== postId).slice(0, limit);
+        }
+
+        const rows = yield* dbTry("blog.relatedPosts", () =>
+          getDrizzle()
+            .select({
+              post: blogPosts,
+              translation: blogPostTranslations,
+              author: { id: user.id, name: user.name, image: user.image },
+              featuredImage: { id: mediaFiles.id, url: mediaFiles.url },
+            })
+            .from(blogPosts)
+            .innerJoin(blogPostTranslations, eq(blogPostTranslations.postId, blogPosts.id))
+            .leftJoin(user, eq(user.id, blogPosts.authorId))
+            .leftJoin(mediaFiles, eq(mediaFiles.id, blogPosts.featuredImageId))
+            .where(
+              and(
+                orgScope(blogPosts, organizationId),
+                publishedScope(blogPosts),
+                eq(blogPostTranslations.locale, locale),
+                inArray(blogPosts.id, rankedIds),
+              ),
+            )
+            .orderBy(desc(blogPosts.publishedAt)),
+        );
+
+        const items = (yield* hydrateBlogPostListItemsEffect(rows, locale))
+          .filter((item) => item.post.id !== postId)
+          .sort((left, right) => {
+            const scoreDiff = (scoreMap.get(right.post.id) ?? 0) - (scoreMap.get(left.post.id) ?? 0);
+            if (scoreDiff !== 0) return scoreDiff;
+            return Number(right.post.publishedAt?.getTime() ?? 0) - Number(left.post.publishedAt?.getTime() ?? 0);
+          })
+          .slice(0, limit);
+        if (items.length >= limit) return items;
+
+        const seen = new Set(items.map((item) => item.post.id));
+        seen.add(postId);
+        const { items: recentItems } = yield* blogPostsEffect(organizationId, locale, { limit: limit + seen.size });
+        for (const item of recentItems) {
+          if (seen.has(item.post.id)) continue;
+          items.push(item);
+          seen.add(item.post.id);
+          if (items.length >= limit) break;
+        }
+        return items;
+      });
+
 export const getRelatedBlogPosts = cached(
   (
     organizationId: string | null,
@@ -523,126 +657,8 @@ export const getRelatedBlogPosts = cached(
     limit: number,
   ) =>
     `blog:related:${organizationId ?? "global"}:${locale}:${postId}:${categoryIds.join(",")}:${tagIds.join(",")}:${limit}`,
-  async (
-    organizationId: string | null,
-    locale: Locale,
-    postId: string,
-    categoryIds: string[],
-    tagIds: string[],
-    limit = 3,
-  ): Promise<BlogPostListItem[]> => {
-    if (!isValidLocale(locale) || limit < 1) return [];
-
-    const db = getDrizzle();
-    const scoreMap = new Map<string, number>();
-
-    if (categoryIds.length > 0) {
-      const categoryMatches = await db
-        .select({ postId: blogPostCategories.postId })
-        .from(blogPostCategories)
-        .innerJoin(blogPosts, eq(blogPostCategories.postId, blogPosts.id))
-        .innerJoin(
-          blogPostTranslations,
-          and(eq(blogPostTranslations.postId, blogPosts.id), eq(blogPostTranslations.locale, locale)),
-        )
-        .where(
-          and(
-            orgScope(blogPosts, organizationId),
-            publishedScope(blogPosts),
-            inArray(blogPostCategories.categoryId, categoryIds),
-          ),
-        );
-
-      for (const match of categoryMatches) {
-        if (match.postId === postId) continue;
-        scoreMap.set(match.postId, (scoreMap.get(match.postId) ?? 0) + 2);
-      }
-    }
-
-    if (tagIds.length > 0) {
-      const tagMatches = await db
-        .select({ postId: blogPostTags.postId })
-        .from(blogPostTags)
-        .innerJoin(blogPosts, eq(blogPostTags.postId, blogPosts.id))
-        .innerJoin(
-          blogPostTranslations,
-          and(eq(blogPostTranslations.postId, blogPosts.id), eq(blogPostTranslations.locale, locale)),
-        )
-        .where(
-          and(
-            orgScope(blogPosts, organizationId),
-            publishedScope(blogPosts),
-            inArray(blogPostTags.tagId, tagIds),
-          ),
-        );
-
-      for (const match of tagMatches) {
-        if (match.postId === postId) continue;
-        scoreMap.set(match.postId, (scoreMap.get(match.postId) ?? 0) + 1);
-      }
-    }
-
-    const rankedIds = [...scoreMap.entries()]
-      .sort((left, right) => right[1] - left[1])
-      .map(([id]) => id);
-
-    if (rankedIds.length === 0) {
-      const { items } = await getBlogPosts(organizationId, locale, { limit: limit + 1 });
-      return items.filter((item) => item.post.id !== postId).slice(0, limit);
-    }
-
-    const rows = await db
-      .select({
-        post: blogPosts,
-        translation: blogPostTranslations,
-        author: { id: user.id, name: user.name, image: user.image },
-        featuredImage: { id: mediaFiles.id, url: mediaFiles.url },
-      })
-      .from(blogPosts)
-      .innerJoin(blogPostTranslations, eq(blogPostTranslations.postId, blogPosts.id))
-      .leftJoin(user, eq(user.id, blogPosts.authorId))
-      .leftJoin(mediaFiles, eq(mediaFiles.id, blogPosts.featuredImageId))
-      .where(
-        and(
-          orgScope(blogPosts, organizationId),
-          publishedScope(blogPosts),
-          eq(blogPostTranslations.locale, locale),
-          inArray(blogPosts.id, rankedIds),
-        ),
-      )
-      .orderBy(desc(blogPosts.publishedAt));
-
-    let items = await hydrateBlogPostListItems(rows, locale);
-
-    items = items
-      .filter((item) => item.post.id !== postId)
-      .sort((left, right) => {
-        const scoreDiff = (scoreMap.get(right.post.id) ?? 0) - (scoreMap.get(left.post.id) ?? 0);
-        if (scoreDiff !== 0) return scoreDiff;
-        return Number(right.post.publishedAt?.getTime() ?? 0) - Number(left.post.publishedAt?.getTime() ?? 0);
-      })
-      .slice(0, limit);
-
-    if (items.length >= limit) {
-      return items;
-    }
-
-    const seen = new Set(items.map((item) => item.post.id));
-    seen.add(postId);
-
-    const { items: recentItems } = await getBlogPosts(organizationId, locale, {
-      limit: limit + seen.size,
-    });
-
-    for (const item of recentItems) {
-      if (seen.has(item.post.id)) continue;
-      items.push(item);
-      seen.add(item.post.id);
-      if (items.length >= limit) break;
-    }
-
-    return items;
-  },
+  (organizationId: string | null, locale: Locale, postId: string, categoryIds: string[], tagIds: string[], limit = 3) =>
+    runOrThrow(relatedBlogPostsEffect(organizationId, locale, postId, categoryIds, tagIds, limit)),
 );
 
 function emptyMeta(filters: BlogPostFilters): BlogPaginationMeta {
@@ -1332,6 +1348,8 @@ export const getBlogValidLinkTargets = cached(
  * les versions `cached` (via `liftLoader`) pour conserver le cache côté pages.
  */
 export const blogPublicReadEffects = {
+  getBlogPosts: blogPostsEffect,
+  getRelatedBlogPosts: relatedBlogPostsEffect,
   getBlogPostBySlug: blogPostBySlugEffect,
   getBlogAuthorByUsername: blogAuthorByUsernameEffect,
   getBlogCategories: blogCategoriesEffect,

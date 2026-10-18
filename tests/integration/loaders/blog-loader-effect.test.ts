@@ -166,5 +166,43 @@ describe('blog.loader Effect-natif', () => {
       await db.delete(blogPostTranslations).where(inArray(blogPostTranslations.postId, [post, draft]));
     }
   });
+
+  it('liste publique hydratée et posts liés (score catégorie), Promise = Effect', async () => {
+    const db = getDrizzle();
+    const post2 = crypto.randomUUID();
+    const cat = crypto.randomUUID();
+    await db.insert(blogPosts).values({ id: post2, authorId: author, slug: `${t}-pub2`, status: 'PUBLISHED', publishedAt: new Date(Date.now() - 120_000) });
+    await db.insert(blogCategories).values({ id: cat, slug: `${t}-lcat` } as never);
+    await db.insert(blogPostTranslations).values([
+      { postId: post, locale: 'fr', title: 'Un', slug: `${t}-l1`, content: 'x' },
+      { postId: post2, locale: 'fr', title: 'Deux', slug: `${t}-l2`, content: 'x' },
+      { postId: draft, locale: 'fr', title: 'Brouillon', slug: `${t}-ld`, content: 'x' },
+    ] as never);
+    await db.insert(blogPostCategories).values([{ postId: post, categoryId: cat }, { postId: post2, categoryId: cat }]);
+    try {
+      const fx = blog.blogPublicReadEffects;
+      const list = await Effect.runPromise(fx.getBlogPosts(null, 'fr', { authorId: author, limit: 10 }));
+      expect(list.items.map((i) => i.post.id)).toEqual([post, post2]);
+      expect(list.meta).toMatchObject({ total: 2, page: 1, totalPages: 1, hasNextPage: false });
+      const first = list.items[0];
+      expect(first.categories).toEqual([{ id: cat, slug: `${t}-lcat`, name: `${t}-lcat` }]);
+      expect(first).toMatchObject({ commentCount: 2, reviewCount: 2, rating: 4.5, tags: [] });
+      expect(first.reactionCounts).toEqual({ LIKE: 0, LOVE: 0, FIRE: 0, CLAP: 0, LAUGH: 0, SAD: 0 });
+      expect(await blog.getBlogPosts(null, 'fr', { authorId: author, limit: 10 })).toEqual(list);
+      expect((await Effect.runPromise(fx.getBlogPosts(null, 'fr', { status: 'DRAFT' } as never))).items).toEqual([]);
+
+      const related = await Effect.runPromise(fx.getRelatedBlogPosts(null, 'fr', post, [cat], [], 1));
+      expect(related.map((i) => i.post.id)).toEqual([post2]);
+      expect(await Effect.runPromise(fx.getRelatedBlogPosts(null, 'fr', post, [], [], 0))).toEqual([]);
+      // Sans score : complété par les plus récents, jamais le post courant.
+      const fallback = await Effect.runPromise(fx.getRelatedBlogPosts(null, 'fr', post, [], [], 3));
+      expect(fallback.some((i) => i.post.id === post)).toBe(false);
+      expect(await blog.getRelatedBlogPosts(null, 'fr', post, [cat], [], 1)).toEqual(related);
+    } finally {
+      await db.delete(blogPostTranslations).where(inArray(blogPostTranslations.postId, [post, post2, draft]));
+      await db.delete(blogCategories).where(inArray(blogCategories.id, [cat]));
+      await db.delete(blogPosts).where(inArray(blogPosts.id, [post2]));
+    }
+  });
 });
 
