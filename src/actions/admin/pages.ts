@@ -578,6 +578,13 @@ function runPageBulk(context: ActionAPIContext, operation: PageBulkOperation, id
   }, { ids, operation })).pipe(Effect.map((r) => ({ success: true as const, count: r.updated, batchId: r.batchId })));
 }
 
+/** Point d'entrée unique pour la barre générique AdminBulkBar ({ ids, operation }). */
+export const PAGE_BULK_OPERATIONS = ["publish", "unpublish", "archive", "restore", "delete"] as const;
+export const bulkPageLifecycle = defineAction({
+  input: z.object({ ids: bulkIdsSchema, operation: z.enum(PAGE_BULK_OPERATIONS), organizationId: z.string().nullable().optional() }),
+  handler: effectHandler((input, context) => runPageBulk(context, input.operation, input.ids).pipe(Effect.map((r) => ({ ...r, updated: r.count })))),
+});
+
 export const bulkPublishPages = defineAction({
   input: z.object({ ids: bulkIdsSchema, isPublished: z.boolean() }),
   handler: effectHandler((input, context) => runPageBulk(context, input.isPublished ? "publish" : "unpublish", input.ids)),

@@ -44,7 +44,10 @@ const t = getBulkUiTranslations(locale);
     const organizationId = root.dataset.organizationId || null;
     let selection: BulkSelection = emptySelection(Number(root.dataset.max) || 100);
     const items = () => [...root.querySelectorAll<HTMLInputElement>("input[data-bulk-item]")];
-    const pageIds = () => [...new Set(items().map((input) => input.value))];
+    // « Toute la page » = éléments VISIBLES seulement (vue tableau/cartes active, filtres client) :
+    // jamais de sélection implicite d'éléments masqués.
+    const visible = (el: HTMLElement) => (typeof el.checkVisibility === "function" ? el.checkVisibility() : el.offsetParent !== null);
+    const pageIds = () => [...new Set(items().filter(visible).map((input) => input.value))];
     const count = root.querySelector<HTMLElement>("[data-bulk-count]");
     const opButtons = [...root.querySelectorAll<HTMLButtonElement>("[data-bulk-op]")];
     const clearButton = root.querySelector<HTMLButtonElement>("[data-bulk-clear]");

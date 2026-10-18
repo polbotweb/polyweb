@@ -13,6 +13,8 @@ import { Input } from '@atoms/input';
 import { NativeSelect, NativeSelectOption } from '@atoms/native-select';
 import { DataView } from '@molecules/DataView';
 import AdminPagination from '@molecules/AdminPagination/AdminPagination.astro';
+import AdminBulkBar from '@organisms/AdminBulkBar.astro';
+import { formatBulk, getBulkOperationLabels, getBulkUiTranslations } from '@/core/bulk/i18n';
 
 type PageRow = Pick<
   typeof pages.$inferSelect,
@@ -38,6 +40,15 @@ interface Props {
 const { t, locale, pages: allPages, currentPage, totalPages, baseUrl } = Astro.props;
 const cms = t.admin.cms.pages;
 const LOCK_TTL_MS = 5 * 60 * 1000;
+// Actions groupées (core/bulk → bulkPageLifecycle) : la liste ne montre que les pages hors corbeille.
+const bulkT = getBulkUiTranslations(locale);
+const bulkOps = getBulkOperationLabels(locale);
+const bulkOperations = [
+  { id: 'publish', label: cms.publish, requiresConfirmation: false },
+  { id: 'unpublish', label: cms.unpublish, requiresConfirmation: false },
+  { id: 'archive', label: bulkOps.trash, requiresConfirmation: true, destructive: true },
+];
+const rowLabel = (page: PageRow) => formatBulk(bulkT.selectRow, { title: page.title });
 
 function isLocked(page: PageRow) {
   if (!page.lockedBy || !page.lockedAt) return false;
@@ -72,6 +83,7 @@ function isoDate(d: Date | string | null) {
     <Button id="create-page-btn" size="sm">{cms.createPage}</Button>
   </div>
 
+  <AdminBulkBar action="bulkPageLifecycle" locale={locale} operations={bulkOperations}>
   <DataView>
     <Fragment slot="toolbar-start">
       <Input
@@ -112,6 +124,7 @@ function isoDate(d: Date | string | null) {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead class="w-12"><input type="checkbox" class="size-6" data-bulk-page aria-label={bulkT.selectPage} /></TableHead>
             <TableHead>{cms.columns.locale}</TableHead>
             <TableHead>{cms.columns.title}</TableHead>
             <TableHead>{cms.columns.slug}</TableHead>
@@ -125,7 +138,7 @@ function isoDate(d: Date | string | null) {
         <TableBody id="admin-pages-tbody">
           {allPages.length === 0 ? (
             <TableRow>
-              <TableCell colspan={8} class="text-center text-muted-foreground py-8">
+              <TableCell colspan={9} class="text-center text-muted-foreground py-8">
                 {cms.noResults}
               </TableCell>
             </TableRow>
@@ -141,6 +154,7 @@ function isoDate(d: Date | string | null) {
                 data-published={String(page.isPublished)}
                 data-date={isoDate(page.publishedAt)}
               >
+                <TableCell><input type="checkbox" class="size-6" data-bulk-item value={page.id} aria-label={rowLabel(page)} /></TableCell>
                 <TableCell>
                   <Badge variant="outline" size="sm">{page.locale.toUpperCase()}</Badge>
                 </TableCell>
@@ -201,6 +215,7 @@ function isoDate(d: Date | string | null) {
             data-date={isoDate(page.publishedAt)}
           >
             <CardContent class="p-4">
+              <label class="mb-2 flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" class="size-6" data-bulk-item value={page.id} />{rowLabel(page)}</label>
               <div class="flex items-center justify-between mb-2">
                 <div class="flex-1 min-w-0">
                   <p class="font-medium text-sm truncate">{page.title}</p>
@@ -242,6 +257,7 @@ function isoDate(d: Date | string | null) {
       )}
     </div>
   </DataView>
+  </AdminBulkBar>
 
   <AdminPagination currentPage={currentPage} totalPages={totalPages} baseUrl={baseUrl} />
 </pages-manager>

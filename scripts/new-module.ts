@@ -656,12 +656,12 @@ const bulkEnabled = bulkOperations.length > 0;
       <p class="text-sm text-muted-foreground">Aucun élément.</p>
     ) : (
       <>
-        {bulkEnabled && <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" class="size-5" data-bulk-page />{bulkT.selectPage}</label>}
+        {bulkEnabled && <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" class="size-6" data-bulk-page />{bulkT.selectPage}</label>}
         <ul class="flex flex-col gap-2">
           {items.map((item) => (
             <li class="flex items-center justify-between gap-3 border px-4 py-3">
               {bulkEnabled ? (
-                <label class="flex min-h-11 items-center gap-2"><input type="checkbox" class="size-5" data-bulk-item value={item.id} aria-label={formatBulk(bulkT.selectRow, { title: item.title })} />{item.title}</label>
+                <label class="flex min-h-11 items-center gap-2"><input type="checkbox" class="size-6" data-bulk-item value={item.id} aria-label={formatBulk(bulkT.selectRow, { title: item.title })} />{item.title}</label>
               ) : item.title}
               {canForceReleaseLock && item.lockedByOther && <ForceReleaseLockButton resourceType="${name}" resourceId={item.id} locale={locale} />}
             </li>

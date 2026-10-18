@@ -4,7 +4,7 @@ import { updateContactInfo } from "./admin/contact";
 import { updateOpeningHours } from "./admin/hours";
 import { createNavigationMenu, updateNavigationMenu, deleteNavigationMenu } from "./admin/menus";
 import { createNavigationItem, updateNavigationItem, deleteNavigationItem, reorderNavigationItems } from "./admin/navigation";
-import { createPage, updatePage, deletePage, publishPage, schedulePage, unschedulePage, scheduleUnpublishPage, unscheduleUnpublishPage, restoreFromTrash, permanentlyDeletePage, bulkPublishPages, bulkArchivePages, bulkRestorePages, bulkDeletePages, clonePage, lockPage, unlockPage } from "./admin/pages";
+import { createPage, updatePage, deletePage, publishPage, schedulePage, unschedulePage, scheduleUnpublishPage, unscheduleUnpublishPage, restoreFromTrash, permanentlyDeletePage, bulkPublishPages, bulkArchivePages, bulkRestorePages, bulkDeletePages, bulkPageLifecycle, clonePage, lockPage, unlockPage } from "./admin/pages";
 import { createSection, updateSection, deleteSection, reorderSections } from "./admin/sections";
 import { createTheme, updateTheme, deleteTheme } from "./admin/theme";
 import { updateConsentSettings } from "./admin/consent";
@@ -31,7 +31,7 @@ import { resolveServiceInternalLink } from "./services/internal-link";
 export const server = {
   updateSiteSettings, upsertSiteSettings, createSocialLink, updateSocialLink, deleteSocialLink, reorderSocialLinks, updateContactInfo, updateOpeningHours,
   createNavigationMenu, updateNavigationMenu, deleteNavigationMenu, createNavigationItem, updateNavigationItem, deleteNavigationItem, reorderNavigationItems,
-  createPage, updatePage, deletePage, publishPage, schedulePage, unschedulePage, scheduleUnpublishPage, unscheduleUnpublishPage, restoreFromTrash, permanentlyDeletePage, bulkPublishPages, bulkArchivePages, bulkRestorePages, bulkDeletePages, clonePage, lockPage, unlockPage,
+  createPage, updatePage, deletePage, publishPage, schedulePage, unschedulePage, scheduleUnpublishPage, unscheduleUnpublishPage, restoreFromTrash, permanentlyDeletePage, bulkPublishPages, bulkArchivePages, bulkRestorePages, bulkDeletePages, bulkPageLifecycle, clonePage, lockPage, unlockPage,
   forceReleaseLock,
   createSection, updateSection, deleteSection, reorderSections, createTheme, updateTheme, deleteTheme, updateConsentSettings,
   createMediaFolder, updateMediaFolder, deleteMediaFolder, uploadMediaFile, renameMediaFile, moveMediaFile, deleteMediaFile, upsertMediaFileAlt, deleteMediaFileAlt,

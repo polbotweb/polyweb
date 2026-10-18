@@ -27,3 +27,13 @@ const BULK_UI: Record<Locale, BulkUiTranslations> = {
 export const getBulkUiTranslations = (locale: Locale): BulkUiTranslations => BULK_UI[locale] ?? BULK_UI.fr;
 export const formatBulk = (template: string, values: Record<string, string | number>): string =>
   template.replace(/\{(\w+)\}/g, (_, key: string) => (key in values ? String(values[key]) : `{${key}}`));
+
+/** Libellés génériques des opérations groupées usuelles (repli quand un module n'a pas le sien). */
+export type BulkOperationLabel = "publish" | "unpublish" | "archive" | "restore" | "delete" | "trash";
+const BULK_OPERATION_LABELS: Record<Locale, Record<BulkOperationLabel, string>> = {
+  fr: { publish: "Publier", unpublish: "Dépublier", archive: "Archiver", restore: "Restaurer", delete: "Supprimer définitivement", trash: "Mettre à la corbeille" },
+  en: { publish: "Publish", unpublish: "Unpublish", archive: "Archive", restore: "Restore", delete: "Delete permanently", trash: "Move to trash" },
+  es: { publish: "Publicar", unpublish: "Despublicar", archive: "Archivar", restore: "Restaurar", delete: "Eliminar definitivamente", trash: "Mover a la papelera" },
+  ar: { publish: "نشر", unpublish: "إلغاء النشر", archive: "أرشفة", restore: "استعادة", delete: "حذف نهائي", trash: "نقل إلى سلة المهملات" },
+};
+export const getBulkOperationLabels = (locale: Locale): Record<BulkOperationLabel, string> => BULK_OPERATION_LABELS[locale] ?? BULK_OPERATION_LABELS.fr;
