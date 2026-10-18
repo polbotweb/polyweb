@@ -6,7 +6,7 @@ import { getDrizzle } from "@database/drizzle";
 import { blogPosts, blogPostTranslations, blogPostCategories, blogPostTags, blogPostRevisions, blogPostSeo, blogPostGalleries, blogPostGalleryMedia, blogPostLinks, blogPostLocks } from "@database/schemas";
 import { LOCALES, type Locale } from "@i18n/config";
 import { BLOG_POST_TRANSITIONS, type BlogPostStatus } from "@/lib/blog/constants";
-import { assertBlogPermission, assertPostInTenant, auditBlog, blogOrganizationIdSchema, blogRateLimit, invalidateBlogCache, resolveBlogTenant, blogRateLimitEffect, postInTenant, requireBlogPermission } from "./_helpers";
+import { assertBlogPermission, auditBlog, blogOrganizationIdSchema, invalidateBlogCache, resolveBlogTenant, blogRateLimitEffect, postInTenant, requireBlogPermission } from "./_helpers";
 import { actionTry, effectHandler } from "@/lib/effect/action";
 
 type Db = ReturnType<typeof getDrizzle>;
@@ -25,16 +25,20 @@ async function appendRevision(tx: DbTransaction, postId: string, userId: string,
   await tx.insert(blogPostRevisions).values({ postId, authorId: userId, locale: translation.locale, title: translation.title, slug: translation.slug, content: translation.content, excerpt: translation.excerpt, status: revisionStatus(status), revisionNote });
 }
 
-async function performTransition(input: z.infer<typeof lifecycleInput>, context: ActionAPIContext, to: BlogPostStatus, permission: "publish" | "update", action: "BLOG_POST_PUBLISH" | "BLOG_POST_UNPUBLISH" | "BLOG_POST_ARCHIVE" | "BLOG_POST_RESTORE", note: string) {
-  const tenant = resolveBlogTenant(input); const user = await assertBlogPermission(context, tenant, { blog: [permission] }); blogRateLimit(context, user.id, `post-${action.toLowerCase()}`); const post = await assertPostInTenant(input.id, tenant); assertTransition(post.status as BlogPostStatus, to);
+function performTransition(input: z.infer<typeof lifecycleInput>, context: ActionAPIContext, to: BlogPostStatus, permission: "publish" | "update", action: "BLOG_POST_PUBLISH" | "BLOG_POST_UNPUBLISH" | "BLOG_POST_ARCHIVE" | "BLOG_POST_RESTORE", note: string) {
+  return Effect.gen(function* () {
+  const tenant = resolveBlogTenant(input); const user = yield* requireBlogPermission(context, tenant, { blog: [permission] }); yield* blogRateLimitEffect(user.id, `post-${action.toLowerCase()}`); const post = yield* postInTenant(input.id, tenant);
+  return yield* actionTry(`blog/lifecycle.${action}`, async () => { assertTransition(post.status as BlogPostStatus, to);
   await getDrizzle().transaction(async (tx) => { await tx.update(blogPosts).set({ status: to, publishedAt: to === "PUBLISHED" ? new Date() : null, updatedBy: user.id }).where(eq(blogPosts.id, input.id)); await appendRevision(tx, input.id, user.id, to, note); });
   auditBlog(context, user.id, action, { resource: "blog_posts", resourceId: input.id, metadata: { organizationId: tenant.organizationId, from: post.status, to } }); invalidateBlogCache(); return { success: true };
+  });
+  });
 }
 
-export const publishBlogPost = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => actionTry("blog/lifecycle.publishBlogPost", () => performTransition(input, context, "PUBLISHED", "publish", "BLOG_POST_PUBLISH", "Publication"))) });
-export const unpublishBlogPost = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => actionTry("blog/lifecycle.unpublishBlogPost", () => performTransition(input, context, "DRAFT", "publish", "BLOG_POST_UNPUBLISH", "Dépublication"))) });
-export const archiveBlogPost = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => actionTry("blog/lifecycle.archiveBlogPost", () => performTransition(input, context, "ARCHIVED", "update", "BLOG_POST_ARCHIVE", "Archivage"))) });
-export const restoreBlogPost = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => actionTry("blog/lifecycle.restoreBlogPost", () => performTransition(input, context, "DRAFT", "update", "BLOG_POST_RESTORE", "Restauration"))) });
+export const publishBlogPost = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => performTransition(input, context, "PUBLISHED", "publish", "BLOG_POST_PUBLISH", "Publication")) });
+export const unpublishBlogPost = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => performTransition(input, context, "DRAFT", "publish", "BLOG_POST_UNPUBLISH", "Dépublication")) });
+export const archiveBlogPost = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => performTransition(input, context, "ARCHIVED", "update", "BLOG_POST_ARCHIVE", "Archivage")) });
+export const restoreBlogPost = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => performTransition(input, context, "DRAFT", "update", "BLOG_POST_RESTORE", "Restauration")) });
 
 export const deleteBlogPost = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => Effect.gen(function* () { const tenant = resolveBlogTenant(input); const user = yield* requireBlogPermission(context, tenant, { blog: ["delete"] }); yield* blogRateLimitEffect(user.id, "post-delete"); const post = yield* postInTenant(input.id, tenant); return yield* actionTry("blog/lifecycle.deleteBlogPost", async () => { assertTransition(post.status as BlogPostStatus, "DELETED"); await getDrizzle().transaction(async (tx) => { await tx.update(blogPosts).set({ status: "DELETED", publishedAt: null, updatedBy: user.id }).where(eq(blogPosts.id, input.id)); await appendRevision(tx, input.id, user.id, "DELETED", "Suppression"); }); auditBlog(context, user.id, "BLOG_POST_DELETE", { resource: "blog_posts", resourceId: input.id, metadata: { organizationId: tenant.organizationId, from: post.status, to: "DELETED" } }); invalidateBlogCache(); return { success: true }; }); })) });
 

@@ -5,14 +5,14 @@ import { z } from "astro/zod";
 import { getDrizzle } from "@database/drizzle";
 import { services, serviceTranslations, serviceRevisions, serviceCategoryLinks, serviceTagLinks, serviceMedia, serviceAvailability, serviceSeo, serviceLocks, serviceAttributeValues } from "@database/schemas";
 import { LOCALES, type Locale } from "@i18n/config";
-import { assertServicePermission, assertServiceInTenant, resolveServiceTenant, serviceOrganizationIdSchema, assertServiceLockOwner } from "@/modules/services/permissions";
+import { resolveServiceTenant, serviceOrganizationIdSchema, assertServiceLockOwner } from "@/modules/services/permissions";
 import { assertServiceRevisionRestore, assertValidServiceTransition } from "@/modules/services/workflow";
 import type { ServiceStatus } from "@/modules/services/domain";
 import { auditService, invalidateServicesCache } from "./_helpers";
 import { createServiceNotification } from "./notification";
 import { getServiceNotificationTranslations } from "@/modules/services/i18n/notifications";
 import { getServiceTranslations } from "@/modules/services/i18n";
-import { actionTry, effectHandler } from "@/lib/effect/action";
+import { actionTry, effectHandler, fail } from "@/lib/effect/action";
 import { requireServicePermission, serviceInTenant } from "@/modules/services/permissions";
 
 const lifecycleInput = z.object({ id: z.uuid(), organizationId: serviceOrganizationIdSchema });
@@ -28,10 +28,11 @@ function translationTenantPredicate(organizationId: string | null) { return orga
 async function uniqueServiceSlug(organizationId: string | null, sourceSlug: string): Promise<string> { const rows = await getDrizzle().select({ slug: services.slug }).from(services).where(serviceTenantPredicate(organizationId)); const used = new Set(rows.map((row) => row.slug)); const base = `${sourceSlug}-copy`; let candidate = base; let suffix = 2; while (used.has(candidate)) candidate = `${base}-${suffix++}`; return candidate; }
 async function uniqueTranslationSlug(organizationId: string | null, locale: Locale, sourceSlug: string): Promise<string> { const rows = await getDrizzle().select({ slug: serviceTranslations.slug }).from(serviceTranslations).where(and(translationTenantPredicate(organizationId), eq(serviceTranslations.locale, locale))); const used = new Set(rows.map((row) => row.slug)); const base = `${sourceSlug}-copy`; let candidate = base; let suffix = 2; while (used.has(candidate)) candidate = `${base}-${suffix++}`; return candidate; }
 
-async function transitionService(id: string, organizationId: string | null | undefined, to: ServiceStatus, context: ActionAPIContext, permission: LifecyclePermission, auditAction: LifecycleAuditAction) {
+const transitionService = (id: string, organizationId: string | null | undefined, to: ServiceStatus, context: ActionAPIContext, permission: LifecyclePermission, auditAction: LifecycleAuditAction) => Effect.gen(function* () {
   const tenant = resolveServiceTenant({ organizationId });
-  const user = await assertServicePermission(context, tenant, { service: [permission] });
-  const current = await assertServiceInTenant(id, tenant);
+  const user = yield* requireServicePermission(context, tenant, { service: [permission] });
+  const current = yield* serviceInTenant(id, tenant);
+  return yield* actionTry(`services/lifecycle.${auditAction}`, async () => {
   assertValidServiceTransition(current.status as ServiceStatus, to);
   await assertServiceLockOwner(id, user.id, context.locals.session?.id);
   await getDrizzle().transaction(async (tx) => { await tx.update(services).set({ status: to, publishedAt: to === "PUBLISHED" ? new Date() : null, updatedBy: user.id }).where(eq(services.id, id)); });
@@ -39,13 +40,14 @@ async function transitionService(id: string, organizationId: string | null | und
   auditService(context, user.id, auditAction, { resource: "services", resourceId: id, metadata: { organizationId: tenant.organizationId, from: current.status, to } });
   invalidateServicesCache();
   return { success: true };
-}
+  });
+});
 
-export const publishService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => actionTry("services/lifecycle.publishService", () => transitionService(input.id, input.organizationId, "PUBLISHED", context, "publish", "SERVICE_PUBLISH"))) });
-export const unpublishService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => actionTry("services/lifecycle.unpublishService", () => transitionService(input.id, input.organizationId, "DRAFT", context, "publish", "SERVICE_UNPUBLISH"))) });
-export const archiveService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => actionTry("services/lifecycle.archiveService", () => transitionService(input.id, input.organizationId, "ARCHIVED", context, "update", "SERVICE_ARCHIVE"))) });
-export const restoreService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => actionTry("services/lifecycle.restoreService", () => transitionService(input.id, input.organizationId, "DRAFT", context, "update", "SERVICE_RESTORE"))) });
-export const deleteService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => actionTry("services/lifecycle.deleteService", () => transitionService(input.id, input.organizationId, "DELETED", context, "delete", "SERVICE_DELETE"))) });
+export const publishService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => transitionService(input.id, input.organizationId, "PUBLISHED", context, "publish", "SERVICE_PUBLISH")) });
+export const unpublishService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => transitionService(input.id, input.organizationId, "DRAFT", context, "publish", "SERVICE_UNPUBLISH")) });
+export const archiveService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => transitionService(input.id, input.organizationId, "ARCHIVED", context, "update", "SERVICE_ARCHIVE")) });
+export const restoreService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => transitionService(input.id, input.organizationId, "DRAFT", context, "update", "SERVICE_RESTORE")) });
+export const deleteService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => transitionService(input.id, input.organizationId, "DELETED", context, "delete", "SERVICE_DELETE")) });
 
 export const duplicateService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => Effect.gen(function* () {
   const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["create"] }); const source = yield* serviceInTenant(input.id, tenant); return yield* actionTry("services/lifecycle.duplicateService", async () => { await assertServiceLockOwner(input.id, user.id, context.locals.session?.id); const db = getDrizzle();
@@ -74,11 +76,12 @@ export const duplicateService = defineAction({ input: lifecycleInput, handler: e
 
 export const lockService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => Effect.gen(function* () { const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["update"] }); yield* serviceInTenant(input.id, tenant); return yield* actionTry("services/lifecycle.lockService", async () => { const db = getDrizzle(); const existing = (await db.select().from(serviceLocks).where(eq(serviceLocks.serviceId, input.id)).limit(1))[0]; const now = new Date(); const sessionId = context.locals.session?.id ?? ""; if (existing && existing.expiresAt > now && (existing.userId !== user.id || existing.sessionId !== sessionId)) throw new ActionError({ code: "CONFLICT", message: getServiceTranslations(requestLocale(context.request.headers)).admin.errors.conflict }); const expiresAt = new Date(Date.now() + 30 * 60 * 1000); await db.insert(serviceLocks).values({ serviceId: input.id, userId: user.id, sessionId, expiresAt }).onConflictDoUpdate({ target: serviceLocks.serviceId, set: { userId: user.id, sessionId, lockedAt: now, expiresAt } }); auditService(context, user.id, "SERVICE_LOCK", { resource: "services", resourceId: input.id }); return { success: true, expiresAt }; }); })) });
 export const unlockService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => Effect.gen(function* () { const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["update"] }); yield* serviceInTenant(input.id, tenant); return yield* actionTry("services/lifecycle.unlockService", async () => { await getDrizzle().delete(serviceLocks).where(and(eq(serviceLocks.serviceId, input.id), eq(serviceLocks.userId, user.id), eq(serviceLocks.sessionId, context.locals.session?.id ?? ""))); auditService(context, user.id, "SERVICE_UNLOCK", { resource: "services", resourceId: input.id }); return { success: true }; }); })) });
-export const listServiceRevisions = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => actionTry("services/lifecycle.listServiceRevisions", async () => { const tenant = resolveServiceTenant(input); await assertServicePermission(context, tenant, { service: ["read"] }); await assertServiceInTenant(input.id, tenant); return getDrizzle().select().from(serviceRevisions).where(eq(serviceRevisions.serviceId, input.id)).orderBy(desc(serviceRevisions.createdAt)).limit(50); })) });
-export const restoreServiceRevision = defineAction({ input: z.object({ revisionId: z.uuid(), serviceId: z.uuid(), organizationId: serviceOrganizationIdSchema }), handler: effectHandler((input, context) => actionTry("services/lifecycle.restoreServiceRevision", async () => {
-  const tenant = resolveServiceTenant(input); const current = await assertServiceInTenant(input.serviceId, tenant); const db = getDrizzle(); const [revision] = await db.select().from(serviceRevisions).where(and(eq(serviceRevisions.id, input.revisionId), eq(serviceRevisions.serviceId, input.serviceId))).limit(1); const locale = requestLocale(context.request.headers);
-  if (!revision) throw new ActionError({ code: "NOT_FOUND", message: getServiceTranslations(locale).admin.errors.notFound }); const user = await assertServicePermission(context, tenant, { service: [revision.status === "PUBLISHED" ? "publish" : "update"] }); await assertServiceLockOwner(input.serviceId, user.id, context.locals.session?.id); assertServiceRevisionRestore(current.status as ServiceStatus, revision.status as ServiceStatus);
+export const listServiceRevisions = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => Effect.gen(function* () { const tenant = resolveServiceTenant(input); yield* requireServicePermission(context, tenant, { service: ["read"] }); yield* serviceInTenant(input.id, tenant); return yield* actionTry("services/lifecycle.listServiceRevisions", () => getDrizzle().select().from(serviceRevisions).where(eq(serviceRevisions.serviceId, input.id)).orderBy(desc(serviceRevisions.createdAt)).limit(50)); })) });
+export const restoreServiceRevision = defineAction({ input: z.object({ revisionId: z.uuid(), serviceId: z.uuid(), organizationId: serviceOrganizationIdSchema }), handler: effectHandler((input, context) => Effect.gen(function* () {
+  const tenant = resolveServiceTenant(input); const current = yield* serviceInTenant(input.serviceId, tenant); const db = getDrizzle(); const [revision] = yield* actionTry("services/lifecycle.restoreServiceRevision.load", () => db.select().from(serviceRevisions).where(and(eq(serviceRevisions.id, input.revisionId), eq(serviceRevisions.serviceId, input.serviceId))).limit(1)); const locale = requestLocale(context.request.headers);
+  if (!revision) return yield* fail("NOT_FOUND", getServiceTranslations(locale).admin.errors.notFound); const user = yield* requireServicePermission(context, tenant, { service: [revision.status === "PUBLISHED" ? "publish" : "update"] });
+  return yield* actionTry("services/lifecycle.restoreServiceRevision", async () => { await assertServiceLockOwner(input.serviceId, user.id, context.locals.session?.id); assertServiceRevisionRestore(current.status as ServiceStatus, revision.status as ServiceStatus);
   await db.transaction(async (tx) => { await tx.update(services).set({ status: revision.status, publishedAt: revision.status === "PUBLISHED" ? (current.status === "PUBLISHED" ? current.publishedAt : new Date()) : null, updatedBy: user.id }).where(eq(services.id, input.serviceId)); await tx.insert(serviceTranslations).values({ serviceId: input.serviceId, organizationId: tenant.organizationId, locale: revision.locale, title: revision.title, slug: revision.slug, content: revision.content, excerpt: revision.excerpt, metaTitle: revision.title }).onConflictDoUpdate({ target: [serviceTranslations.serviceId, serviceTranslations.locale], set: { title: revision.title, slug: revision.slug, content: revision.content, excerpt: revision.excerpt, metaTitle: revision.title, organizationId: tenant.organizationId } }); await tx.insert(serviceRevisions).values({ serviceId: input.serviceId, authorId: user.id, locale: revision.locale, title: revision.title, slug: revision.slug, content: revision.content, excerpt: revision.excerpt, status: revision.status, revisionNote: "Revision restore" }); });
   if (revision.status === "PUBLISHED") { const t = getServiceNotificationTranslations(locale); await createServiceNotification({ recipientId: current.providerId, serviceId: input.serviceId, actorId: user.id, type: "SERVICE_PUBLISHED", title: t.publishedTitle, message: t.publishedMessage, locale }); }
   auditService(context, user.id, "SERVICE_REVISION_RESTORE", { resource: "services", resourceId: input.serviceId, metadata: { organizationId: tenant.organizationId, restoredRevisionId: input.revisionId } }); invalidateServicesCache(); return { success: true };
-})) });
+}); })) });
