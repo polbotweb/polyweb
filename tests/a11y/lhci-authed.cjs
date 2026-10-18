@@ -33,7 +33,9 @@ function buildTempConfig(urls, cookie) {
         },
       },
       upload: {
-        target: 'temporary-public-storage',
+        // Rapports écrits localement (jamais de stockage public, pages authentifiées comprises).
+        target: 'filesystem',
+        outputDir: 'tests/reports/lighthouse',
       },
     },
   };

@@ -106,7 +106,9 @@ module.exports = {
       },
     },
     upload: {
-      target: 'temporary-public-storage',
+      // Rapports écrits localement (jamais de stockage public) : versionnés dans tests/reports/lighthouse.
+      target: 'filesystem',
+      outputDir: 'tests/reports/lighthouse',
     },
   },
   // Exported for use by CI scripts to run separate authenticated batches
