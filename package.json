@@ -50,7 +50,11 @@
     "qa:offline": "node scripts/qa.mjs offline",
     "db:backfill-variants": "npx tsx src/database/commands/db.backfill-variants.ts",
     "module:new": "tsx scripts/new-module.ts",
-    "api:generate": "tsx scripts/api-generator.ts"
+    "api:generate": "tsx scripts/api-generator.ts",
+    "db:wait": "npx tsx src/database/commands/db.wait.ts",
+    "db:baseline": "npx tsx src/database/commands/db.baseline.ts",
+    "admin:create": "npx tsx src/database/commands/db.create-admin.ts",
+    "build:vercel": "ASTRO_ADAPTER=vercel astro build"
   },
   "dependencies": {
     "@astrojs/node": "11.1.5",

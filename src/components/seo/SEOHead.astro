@@ -1,0 +1,14 @@
+---
+/**
+ * SEOHead — balises SEO complémentaires (repris de les-rochers-blancs, généralisé).
+ * À placer dans le slot "head" de BaseLayout :
+ *   <BaseLayout …><SEOHead slot="head" locale={locale} ogType="article" publishedTime={…} /></BaseLayout>
+ * BaseLayout émet déjà title/description/canonical/hreflang/og/twitter ; ce
+ * composant ajoute article:*, og:locale:alternate, robots et dimensions og:image.
+ */
+import { buildSeoExtraMeta, type SeoExtraInput } from "@/lib/seo/seo-meta";
+
+type Props = SeoExtraInput;
+const tags = buildSeoExtraMeta(Astro.props);
+---
+{tags.map((t) => (t.property ? <meta property={t.property} content={t.content} /> : <meta name={t.name} content={t.content} />))}

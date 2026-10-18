@@ -1,0 +1,15 @@
+{
+  "name": "Polyweb — Dev Container",
+  "dockerComposeFile": ["../docker-compose.yml", "docker-compose.yml"],
+  "service": "workspace",
+  "runServices": ["db", "mailpit", "workspace"],
+  "workspaceFolder": "/workspaces/polyweb",
+  "shutdownAction": "stopCompose",
+  "postCreateCommand": "corepack enable && pnpm install && pnpm db:wait && pnpm db:baseline && pnpm db:migrate && pnpm db:infra",
+  "forwardPorts": [4321, 8025, 5432],
+  "customizations": {
+    "vscode": {
+      "extensions": ["astro-build.astro-vscode", "bradlc.vscode-tailwindcss", "dbaeumer.vscode-eslint", "vitest.explorer"]
+    }
+  }
+}

@@ -60,7 +60,26 @@ services:
       - "1025:1025"   # SMTP
       - "8025:8025"   # Web UI
 
+  # Optional: HTTPS reverse proxy — `docker compose --profile proxy up -d`
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["proxy"]
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
 volumes:
   pgdata:
   uploads:
   logs:
+  caddy_data:
+  caddy_config:

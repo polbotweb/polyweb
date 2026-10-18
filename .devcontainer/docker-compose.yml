@@ -1,0 +1,21 @@
+# Service de développement (repris de les-rochers-blancs, adapté) :
+# conteneur Node 22 monté sur le dépôt, branché sur le Postgres et Mailpit du compose principal.
+services:
+  workspace:
+    image: mcr.microsoft.com/devcontainers/javascript-node:22
+    volumes:
+      - ..:/workspaces/polyweb:cached
+    command: sleep infinity
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_ENV: LOCAL
+      DATABASE_URL_LOCAL: postgresql://polyweb:polyweb_dev_password@db:5432/polyweb_local
+      BETTER_AUTH_SECRET: dev-secret-replace-in-production-min-32-characters
+      BETTER_AUTH_URL: http://localhost:4321
+      SITE_URL: http://localhost:4321
+      SMTP_PROVIDER: NODEMAILER
+      SMTP_FROM_EMAIL: noreply@localhost
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"

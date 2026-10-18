@@ -123,6 +123,7 @@ const canonicalUrl = Astro.url.pathname;
     {jsonLd && <script type="application/ld+json" set:html={safeJsonLd(jsonLd)} />}
     {/* eslint-disable-next-line astro/no-set-html-directive -- theme CSS is generated server-side from validated OKLCH tokens */}
     {themeCss && <style set:html={themeCss} />}
+    <slot name="head" />
 </head>
 
 <body class="flex min-h-screen flex-col">
