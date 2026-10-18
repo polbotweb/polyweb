@@ -216,6 +216,15 @@ const ${entityCamel}ListDefinition = {
   filters: [{ id: "search", kind: "search", queryParam: "search" }],
   sorts: [{ id: "createdAt", queryParam: "sortBy", directions: ["asc", "desc"] }],
   defaultSort: "createdAt",
+  // Actions groupées (core/bulk, \`actions/bulk.ts\`) : ids = opérations du moteur ;
+  // la barre générique \`AdminBulkBar\` les affiche (confirmation si archive).
+  selection: true,
+  bulkActions: [
+    { id: "publish", permission: "${name}:publish" },
+    { id: "unpublish", permission: "${name}:publish" },
+    { id: "archive", permission: "${name}:update", confirmationKey: "${name}.bulk.archive" },
+    { id: "restore", permission: "${name}:update" },
+  ],
 } as const;
 
 assertAdminResourceListDefinition(${entityCamel}ListDefinition);
@@ -238,6 +247,7 @@ export const ${entityCamel}AdminResource: AdminResourceDefinition = {
     sort: true,
     pagination: true,
     stats: false,
+    selection: true,
   },
   list: ${entityCamel}ListDefinition,
   actions: {
@@ -250,7 +260,7 @@ export const ${entityCamel}AdminResource: AdminResourceDefinition = {
     archive: false,
     restore: false,
     delete: false,
-    bulk: false,
+    bulk: true,
   },
   presentation: {
     card: ["default"],
@@ -439,10 +449,13 @@ import { lockLocaleFrom } from "@/core/locks/errors";
 import { require${pascal}Permission } from "../permissions";
 import { ${camel}Service } from "../services/${entity}.service";
 import { ${upper}_STATUSES } from "../domain/workflow";
+import { bulk${pascal}Lifecycle } from "./bulk";
 
 const idInput = z.object({ id: z.uuid() });
 
 export const ${camel}Actions = {
+  // Actions groupées (core/bulk) — voir ./bulk.ts.
+  bulk: bulk${pascal}Lifecycle,
   create: defineAction({
     input: z.object({ title: z.string().min(1).max(200), slug: z.string().min(1).max(200), organizationId: z.string().nullable().default(null) }),
     handler: effectHandler((input, context) => Effect.gen(function* () {
@@ -481,6 +494,74 @@ export const ${camel}Actions = {
     })),
   }),
 };
+`,
+
+  [`${moduleDir}/actions/bulk.ts`]: `/**
+ * Actions groupées du domaine ${name} sur le moteur générique \`src/core/bulk\` :
+ * sélection validée (non vide, sans doublon, bornée), permission par opération,
+ * périmètre tenant (hors périmètre → FORBIDDEN), verrous d'édition, transitions du
+ * workflow par ligne (tout ou rien), une transaction, révision + audit par ligne
+ * (batchId commun). Ids alignés sur \`admin/resource.ts\` (\`list.bulkActions\`).
+ */
+import { defineAction } from "astro:actions";
+import { z } from "astro/zod";
+import { Effect } from "effect";
+import { and, eq, inArray, isNull } from "drizzle-orm";
+import { getDrizzle } from "@database/drizzle";
+import { BulkActionError, DEFAULT_BULK_MAX_ITEMS, runBulkAction, type BulkOperationDefinition } from "@/core/bulk";
+import { canTransition } from "@/core/workflow";
+import { lockOwnerFrom } from "@/core/locks/service";
+import { lockLocaleFrom } from "@/core/locks/errors";
+import { logAuditEvent, extractIp } from "@/lib/audit";
+import { ActionFailure, actionTry, effectHandler } from "@/lib/effect/action";
+import { require${pascal}Permission, type ${pascal}Permission } from "../permissions";
+import { ${camel}, ${camel}Revisions } from "../schema";
+import { ${camel}Lock } from "../locks";
+import { ${camel}Workflow, type ${pascal}Status } from "../domain/workflow";
+
+type Row = typeof ${camel}.$inferSelect;
+type Db = ReturnType<typeof getDrizzle>;
+type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+type Actor = { id: string };
+
+export const ${upper}_BULK_OPERATIONS = ["publish", "unpublish", "archive", "restore"] as const;
+export type ${pascal}BulkOperation = (typeof ${upper}_BULK_OPERATIONS)[number];
+
+const TARGET: Record<${pascal}BulkOperation, ${pascal}Status> = { publish: "PUBLISHED", unpublish: "DRAFT", archive: "ARCHIVED", restore: "DRAFT" };
+const PERMISSION: Record<${pascal}BulkOperation, ${pascal}Permission> = { publish: "publish", unpublish: "publish", archive: "update", restore: "update" };
+
+const transition = (op: ${pascal}BulkOperation): BulkOperationDefinition<Row, Tx, Actor> => ({
+  validate: (row) => (canTransition(${camel}Workflow, row.status, TARGET[op]) ? null : "Transition de statut invalide : " + row.status + " → " + TARGET[op] + "."),
+  apply: async (tx, row, actor) => {
+    await tx.update(${camel}).set({ status: TARGET[op] }).where(eq(${camel}.id, row.id));
+    await tx.insert(${camel}Revisions).values({ resourceId: row.id, authorId: actor.id, title: row.title, slug: row.slug, status: TARGET[op], note: "Action groupée : " + op });
+  },
+  auditAction: "BULK_ACTION",
+  auditMetadata: (row) => ({ operation: op, from: row.status, to: TARGET[op] }),
+  confirmationKey: op === "archive" ? "${name}.bulk.archive" : undefined,
+});
+
+export const ${camel}BulkOperations = Object.fromEntries(${upper}_BULK_OPERATIONS.map((op) => [op, transition(op)])) as Record<${pascal}BulkOperation, BulkOperationDefinition<Row, Tx, Actor>>;
+
+export const bulk${pascal}Lifecycle = defineAction({
+  input: z.object({ ids: z.array(z.uuid()).min(1).max(DEFAULT_BULK_MAX_ITEMS), organizationId: z.string().nullable().default(null), operation: z.enum(${upper}_BULK_OPERATIONS) }),
+  handler: effectHandler((input, context) => {
+    const db = getDrizzle();
+    const inTenant = input.organizationId === null ? isNull(${camel}.organizationId) : eq(${camel}.organizationId, input.organizationId);
+    return runBulkAction({
+      resource: "${snake}",
+      operations: ${camel}BulkOperations,
+      authorize: (op: ${pascal}BulkOperation) => require${pascal}Permission(context, [PERMISSION[op]]).pipe(Effect.map((user) => ({ id: user.id }))),
+      load: (ids) => actionTry("${name}.bulk.load", () => db.select().from(${camel}).where(and(inTenant, inArray(${camel}.id, [...ids])))),
+      guard: (ids, actor) => ${camel}Lock.ensureNoneLockedByOther(ids, lockOwnerFrom(actor.id, context.locals.session?.id), lockLocaleFrom(context.request.headers)),
+      transaction: (body) => db.transaction((tx) => body(tx)),
+      audit: (actor, _action, entry) => void logAuditEvent({ userId: actor.id, action: "BULK_ACTION", ...entry, ipAddress: extractIp(context.request.headers, context.clientAddress), userAgent: context.request.headers.get("user-agent") }),
+    }, { ids: input.ids, operation: input.operation }).pipe(
+      Effect.mapError((e) => (e instanceof BulkActionError ? new ActionFailure({ code: e.code, message: e.message }) : e)),
+      Effect.map((result) => ({ updated: result.updated, batchId: result.batchId })),
+    );
+  }),
+});
 `,
 
   // ── Composants ────────────────────────────────────────────────────────
@@ -543,33 +624,53 @@ const { item } = Astro.props as Props;
  * Les mutations passent par un module client : un \`<form method="post">\` enverrait
  * un GET vers l'URL courante, ce qui exposerait les valeurs saisies dans la
  * chaîne de requête, l'historique et les journaux.
+ *
+ * Actions groupées : barre générique \`AdminBulkBar\` (core/bulk) — cases par ligne,
+ * case « page », compteur annoncé, confirmation modale. Les opérations affichées sont
+ * celles de la ressource admin, filtrées par la page selon les permissions.
  */
 import ForceReleaseLockButton from "@/components/admin/ForceReleaseLockButton.astro";
+import AdminBulkBar from "@organisms/AdminBulkBar.astro";
+import type { AdminBulkBarOperation } from "@/core/bulk/ui";
+import { formatBulk, getBulkUiTranslations } from "@/core/bulk/i18n";
+import type { Locale } from "@i18n/config";
 
 interface Props {
   items: Array<{ id: string; title: string; lockedByOther?: boolean }>;
-  locale: string;
+  locale: Locale;
+  organizationId?: string | null;
+  /** Opérations groupées autorisées (dérivées de \`${entityCamel}AdminResource.list.bulkActions\`). */
+  bulkOperations?: AdminBulkBarOperation[];
   /** Calculé par la page : \`canAdministerTenant(Astro.locals.user, organizationId)\` (core/permissions/tenant). */
   canForceReleaseLock?: boolean;
 }
 
-const { items, locale, canForceReleaseLock = false } = Astro.props as Props;
+const { items, locale, organizationId = null, bulkOperations = [], canForceReleaseLock = false } = Astro.props as Props;
+const bulkT = getBulkUiTranslations(locale);
+const bulkEnabled = bulkOperations.length > 0;
 ---
 
-<div class="flex flex-col gap-4">
-  {items.length === 0 ? (
-    <p class="text-sm text-muted-foreground">Aucun élément.</p>
-  ) : (
-    <ul class="flex flex-col gap-2">
-      {items.map((item) => (
-        <li class="flex items-center justify-between border px-4 py-3">
-          {item.title}
-          {canForceReleaseLock && item.lockedByOther && <ForceReleaseLockButton resourceType="${name}" resourceId={item.id} locale={locale} />}
-        </li>
-      ))}
-    </ul>
-  )}
-</div>
+<AdminBulkBar action="${camel}.bulk" locale={locale} organizationId={organizationId} operations={bulkOperations}>
+  <div class="flex flex-col gap-4">
+    {items.length === 0 ? (
+      <p class="text-sm text-muted-foreground">Aucun élément.</p>
+    ) : (
+      <>
+        {bulkEnabled && <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" class="size-5" data-bulk-page />{bulkT.selectPage}</label>}
+        <ul class="flex flex-col gap-2">
+          {items.map((item) => (
+            <li class="flex items-center justify-between gap-3 border px-4 py-3">
+              {bulkEnabled ? (
+                <label class="flex min-h-11 items-center gap-2"><input type="checkbox" class="size-5" data-bulk-item value={item.id} aria-label={formatBulk(bulkT.selectRow, { title: item.title })} />{item.title}</label>
+              ) : item.title}
+              {canForceReleaseLock && item.lockedByOther && <ForceReleaseLockButton resourceType="${name}" resourceId={item.id} locale={locale} />}
+            </li>
+          ))}
+        </ul>
+      </>
+    )}
+  </div>
+</AdminBulkBar>
 `,
 };
 

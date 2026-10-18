@@ -52,12 +52,14 @@ describe("Polyweb module contracts", () => {
       sort: true,
       pagination: true,
       stats: true,
+      selection: true,
     });
     expect(blogPostAdminResource.actions.create).toBe(true);
     expect(blogPostAdminResource.actions.publish).toBe(true);
     expect(blogPostAdminResource.actions.duplicate).toBe(true);
     expect(blogPostAdminResource.actions.delete).toBe(true);
-    expect(blogPostAdminResource.actions.bulk).toBe(false);
+    expect(blogPostAdminResource.actions.bulk).toBe(true);
+    expect(blogPostAdminResource.list?.bulkActions?.map((a) => a.id)).toEqual(["publish", "archive", "restore", "delete"]);
     expect(blogPostAdminResource.permissionNamespace).toBe("blog");
   });
 });
