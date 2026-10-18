@@ -1,9 +1,11 @@
 import { createHash, randomBytes } from "node:crypto";
+import { Effect } from "effect";
 import { and, eq, gte, isNull, or, sql } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { blogSubscribers, organization } from "@database/schemas";
 import type { Locale } from "@i18n/config";
 import { logAuditEvent } from "@/lib/audit";
+import { DbError } from "@/lib/effect/errors";
 import { sendEmail } from "@/smtp/send";
 import { blogNewsletterConfirmTemplate } from "@/smtp/templates/blog-newsletter";
 
@@ -112,18 +114,42 @@ function safeOperationalError(error: unknown): { name: string; code: string | nu
   return { name: error.name, code: typeof code === "string" ? code : null };
 }
 
-async function subscribe(input: SubscribeBlogNewsletterInput): Promise<void> {
+/** Échec d'infrastructure (base, journal d'audit) : la cause d'origine est conservée. */
+const io = <A>(operation: string, f: () => Promise<A>) =>
+  Effect.tryPromise({ try: f, catch: (cause) => new DbError({ operation: `newsletter.${operation}`, cause }) });
+
+const audit = (event: Parameters<typeof logAuditEvent>[0]) => io("audit", () => logAuditEvent(event));
+
+/** Exécute un programme du service et rejette l'erreur métier ou la cause d'origine. */
+async function run<A, E>(program: Effect.Effect<A, E | DbError>): Promise<A> {
+  const r = await Effect.runPromise(Effect.result(program));
+  if (r._tag === "Success") return r.success;
+  throw r.failure instanceof DbError ? r.failure.cause : r.failure;
+}
+
+/**
+ * Inscription double opt-in (Effect). Erreurs typées :
+ * `NewsletterConfigurationError`, `NewsletterOrganizationNotFoundError`,
+ * `NewsletterDeliveryError`, `DbError`.
+ */
+const subscribeEffect = (input: SubscribeBlogNewsletterInput) => Effect.gen(function* () {
   const email = input.email.trim().toLowerCase();
   const confirmationToken = createPurposeToken(CONFIRMATION_TOKEN_PREFIX);
   const unsubscribeToken = createPurposeToken(UNSUBSCRIBE_TOKEN_PREFIX);
   const confirmationExpiresAt = new Date(Date.now() + CONFIRMATION_TTL_MS);
   const confirmationTokenHash = hashToken(confirmationToken);
   const unsubscribeTokenHash = hashToken(unsubscribeToken);
-  const origin = getConfiguredOrigin(input.configuredSite);
+  const origin = yield* Effect.try({
+    try: () => getConfiguredOrigin(input.configuredSite),
+    catch: (e) => (e instanceof NewsletterConfigurationError ? e : new NewsletterConfigurationError()),
+  });
   const now = new Date();
   const db = getDrizzle();
 
-  const subscriberId = await db.transaction(async (tx) => {
+  const subscriberId = yield* Effect.tryPromise({
+    catch: (cause) =>
+      cause instanceof NewsletterOrganizationNotFoundError ? cause : new DbError({ operation: "newsletter.subscribe", cause }),
+    try: () => db.transaction(async (tx) => {
     // PostgreSQL treats NULL values as distinct in the current
     // (organization_id, email) unique index. The advisory lock prevents two
     // application instances from concurrently creating duplicate global rows.
@@ -193,9 +219,10 @@ async function subscribe(input: SubscribeBlogNewsletterInput): Promise<void> {
       .returning({ id: blogSubscribers.id });
     if (!created) throw new Error("Newsletter subscriber was not created");
     return created.id;
+  }),
   });
 
-  await logAuditEvent({
+  yield* audit({
     userId: null,
     action: "BLOG_NEWSLETTER_SUBSCRIBE",
     resource: "blogSubscriber",
@@ -219,20 +246,20 @@ async function subscribe(input: SubscribeBlogNewsletterInput): Promise<void> {
     unsubscribeUrl: unsubscribeUrl.toString(),
   });
 
-  try {
-    await sendEmail({
-      to: email,
-      subject: template.subject,
-      html: template.html,
-      text: template.text,
-    });
-  } catch (error) {
+  const delivery = yield* Effect.result(
+    Effect.tryPromise({
+      try: () => sendEmail({ to: email, subject: template.subject, html: template.html, text: template.text }),
+      catch: (error) => error,
+    }),
+  );
+  if (delivery._tag === "Failure") {
+    const error = delivery.failure;
     console.error("[newsletter] Confirmation delivery failed", {
       subscriberId,
       organizationId: input.organizationId,
       ...safeOperationalError(error),
     });
-    await logAuditEvent({
+    yield* audit({
       userId: null,
       action: "EMAIL_SEND_FAILED",
       resource: "blogSubscriber",
@@ -244,13 +271,14 @@ async function subscribe(input: SubscribeBlogNewsletterInput): Promise<void> {
       ipAddress: input.audit?.ipAddress,
       userAgent: input.audit?.userAgent,
     });
-    throw new NewsletterDeliveryError(error);
+    return yield* Effect.fail(new NewsletterDeliveryError(error));
   }
-}
+}).pipe(Effect.withSpan("newsletter.subscribe"));
 
-async function confirm(
+/** Confirmation d'inscription (jeton à usage unique). */
+const confirmEffect = (
   input: ConsumeNewsletterTokenInput,
-): Promise<NewsletterTokenConsumption> {
+): Effect.Effect<NewsletterTokenConsumption, DbError> => Effect.gen(function* () {
   const parsed = parsePurposeToken(input.token, CONFIRMATION_TOKEN_PREFIX);
   if (parsed.kind === "invalid") return { consumed: false };
 
@@ -265,7 +293,7 @@ async function confirm(
           gte(blogSubscribers.confirmationTokenExpiresAt, now),
         );
 
-  const [updated] = await db
+  const [updated] = yield* io("update", () => db
     .update(blogSubscribers)
     .set({
       status: "CONFIRMED",
@@ -297,11 +325,11 @@ async function confirm(
     .returning({
       id: blogSubscribers.id,
       organizationId: blogSubscribers.organizationId,
-    });
+    }));
 
   if (!updated) return { consumed: false };
 
-  await logAuditEvent({
+  yield* audit({
     userId: null,
     action: "BLOG_NEWSLETTER_CONFIRM",
     resource: "blogSubscriber",
@@ -314,11 +342,12 @@ async function confirm(
     userAgent: input.audit?.userAgent,
   });
   return { consumed: true };
-}
+}).pipe(Effect.withSpan("newsletter.consume"));
 
-async function unsubscribe(
+/** Désinscription (jeton dédié, ou jeton legacy). */
+const unsubscribeEffect = (
   input: ConsumeNewsletterTokenInput,
-): Promise<NewsletterTokenConsumption> {
+): Effect.Effect<NewsletterTokenConsumption, DbError> => Effect.gen(function* () {
   const parsed = parsePurposeToken(input.token, UNSUBSCRIBE_TOKEN_PREFIX);
   if (parsed.kind === "invalid") return { consumed: false };
 
@@ -341,7 +370,7 @@ async function unsubscribe(
           isNull(blogSubscribers.unsubscribeTokenUsedAt),
         );
 
-  const [updated] = await db
+  const [updated] = yield* io("update", () => db
     .update(blogSubscribers)
     .set({
       status: "UNSUBSCRIBED",
@@ -364,11 +393,11 @@ async function unsubscribe(
     .returning({
       id: blogSubscribers.id,
       organizationId: blogSubscribers.organizationId,
-    });
+    }));
 
   if (!updated) return { consumed: false };
 
-  await logAuditEvent({
+  yield* audit({
     userId: null,
     action: "BLOG_NEWSLETTER_UNSUBSCRIBE",
     resource: "blogSubscriber",
@@ -381,10 +410,18 @@ async function unsubscribe(
     userAgent: input.audit?.userAgent,
   });
   return { consumed: true };
-}
+}).pipe(Effect.withSpan("newsletter.consume"));
 
+/** Version Effect du service (routes API, actions). */
+export const blogNewsletterServiceEffect = {
+  subscribe: subscribeEffect,
+  confirm: confirmEffect,
+  unsubscribe: unsubscribeEffect,
+};
+
+/** Adaptateurs Promise (rejettent les classes d'erreur historiques). */
 export const blogNewsletterService = {
-  subscribe,
-  confirm,
-  unsubscribe,
+  subscribe: (input: SubscribeBlogNewsletterInput): Promise<void> => run(subscribeEffect(input)),
+  confirm: (input: ConsumeNewsletterTokenInput): Promise<NewsletterTokenConsumption> => run(confirmEffect(input)),
+  unsubscribe: (input: ConsumeNewsletterTokenInput): Promise<NewsletterTokenConsumption> => run(unsubscribeEffect(input)),
 };

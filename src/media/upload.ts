@@ -6,7 +6,7 @@ import { runApp } from '@/lib/effect/http';
 import DOMPurify from 'isomorphic-dompurify';
 import type { UploadOptions, UploadResult, AllowedMimeType } from './types';
 import { ALLOWED_MIME_TYPES, DEFAULT_MAX_SIZE } from './types';
-import { renderResponsiveVariants, decodeAndValidate, UndecodableImageError, ImageTooLargeError, type ImageVariant } from './variants';
+import { renderResponsiveVariantsEffect, decodeAndValidate, UndecodableImageError, ImageTooLargeError, type ImageVariant } from './variants';
 
 // ─── Magic bytes signatures for allowed image types ────────────────
 const MAGIC_BYTES: Record<string, { offset: number; bytes: number[] }[]> = {
@@ -86,8 +86,8 @@ export const storeUpload = (p: PreparedUpload) =>
   Effect.gen(function* () {
     const storage = yield* Storage;
     const stored = yield* storage.put(p.key, p.buffer, { contentType: p.mimeType, cacheControl: IMMUTABLE_CACHE });
-    const rendered = yield* Effect.promise(() =>
-      renderResponsiveVariants({ buffer: p.buffer, mimeType: p.mimeType, url: stored.url, sourceWidth: p.dimensions.width, sourceHeight: p.dimensions.height }),
+    const rendered = yield* (
+      renderResponsiveVariantsEffect({ buffer: p.buffer, mimeType: p.mimeType, url: stored.url, sourceWidth: p.dimensions.width, sourceHeight: p.dimensions.height })
     );
     const dirKey = p.key.slice(0, p.key.lastIndexOf('/') + 1);
     const variants: ImageVariant[] = yield* Effect.forEach(

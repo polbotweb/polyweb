@@ -1,5 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
+import { Effect } from 'effect';
 import sharp from 'sharp';
 
 /**
@@ -76,15 +77,13 @@ export interface ImageDimensions {
  * Le décodage `.raw()` (et non un simple `metadata()`, qui ne lit que
  * l'en-tête) est ce qui détecte un fichier tronqué au milieu des pixels.
  */
-export async function decodeAndValidate(
+export const decodeAndValidateEffect = (
   buffer: Buffer,
   mimeType: string,
-): Promise<ImageDimensions> {
+): Effect.Effect<ImageDimensions, UndecodableImageError | ImageTooLargeError> => {
   // Les formats non rasterisables (SVG…) sont déjà validés par sanitisation
   // DOMPurify : il n'y a pas de dimensions intrinsèques à vérifier.
-  if (!RASTER_MIME_TYPES.has(mimeType)) {
-    return { width: 0, height: 0 };
-  }
+  if (!RASTER_MIME_TYPES.has(mimeType)) return Effect.succeed({ width: 0, height: 0 });
 
   const image = sharp(buffer, { limitInputPixels: MAX_IMAGE_PIXELS, failOn: 'error' });
 
@@ -93,40 +92,52 @@ export async function decodeAndValidate(
   // ces erreurs sortent brutes : l'appelant ne peut plus distinguer « fichier
   // corrompu » d'« image trop grande », et le détail technique de libvips
   // fuit jusqu'au client.
-  try {
-    const { width, height } = await image.metadata();
+  const fromSharp = (err: unknown): UndecodableImageError | ImageTooLargeError => {
+    // Les erreurs déjà typées sont propagées telles quelles.
+    if (err instanceof UndecodableImageError || err instanceof ImageTooLargeError) return err;
+    const message = err instanceof Error ? err.message : String(err);
+    if (/pixel limit|exceeds pixel/i.test(message)) {
+      return new ImageTooLargeError(
+        `Image trop grande : elle dépasse la limite de ${Math.floor(MAX_IMAGE_PIXELS / 1_000_000)} Mpx.`,
+      );
+    }
+    return new UndecodableImageError(
+      "L'image n'a pas pu être décodée. Le fichier est probablement corrompu, tronqué ou d'un format non pris en charge.",
+    );
+  };
+
+  return Effect.gen(function* () {
+    const { width, height } = yield* Effect.tryPromise({ try: () => image.metadata(), catch: fromSharp });
 
     if (!width || !height) {
-      throw new UndecodableImageError(
-        "L'image est illisible : ses dimensions sont introuvables. Le fichier est probablement tronqué ou corrompu.",
+      return yield* Effect.fail(
+        new UndecodableImageError(
+          "L'image est illisible : ses dimensions sont introuvables. Le fichier est probablement tronqué ou corrompu.",
+        ),
       );
     }
 
     if (width * height > MAX_IMAGE_PIXELS) {
-      throw new ImageTooLargeError(
-        `Image trop grande : ${width}×${height} px dépasse la limite de ${Math.floor(MAX_IMAGE_PIXELS / 1_000_000)} Mpx.`,
+      return yield* Effect.fail(
+        new ImageTooLargeError(
+          `Image trop grande : ${width}×${height} px dépasse la limite de ${Math.floor(MAX_IMAGE_PIXELS / 1_000_000)} Mpx.`,
+        ),
       );
     }
 
     // Décodage réel des pixels : c'est ici qu'un fichier tronqué se révèle.
     // `raw()` sans format de sortie évite toute ré-encodage.
-    await image.raw().toBuffer();
+    yield* Effect.tryPromise({ try: () => image.raw().toBuffer(), catch: fromSharp });
 
     return { width, height };
-  } catch (err) {
-    // Les erreurs déjà typées sont propagées telles quelles.
-    if (err instanceof UndecodableImageError || err instanceof ImageTooLargeError) throw err;
+  }).pipe(Effect.withSpan('media.decodeAndValidate', { attributes: { 'media.mime': mimeType } }));
+};
 
-    const message = err instanceof Error ? err.message : String(err);
-    if (/pixel limit|exceeds pixel/i.test(message)) {
-      throw new ImageTooLargeError(
-        `Image trop grande : elle dépasse la limite de ${Math.floor(MAX_IMAGE_PIXELS / 1_000_000)} Mpx.`,
-      );
-    }
-    throw new UndecodableImageError(
-      "L'image n'a pas pu être décodée. Le fichier est probablement corrompu, tronqué ou d'un format non pris en charge.",
-    );
-  }
+/** Adaptateur Promise de `decodeAndValidateEffect` (rejette les mêmes classes d'erreur). */
+export async function decodeAndValidate(buffer: Buffer, mimeType: string): Promise<ImageDimensions> {
+  const r = await Effect.runPromise(Effect.result(decodeAndValidateEffect(buffer, mimeType)));
+  if (r._tag === 'Success') return r.success;
+  throw r.failure;
 }
 
 /** Image dont les pixels ne peuvent pas être décodés (tronquée, corrompue). */
@@ -225,19 +236,25 @@ export interface VariantInput {
  * (l'original reste servable). Les erreurs sont journalisées et un tableau
  * vide est renvoyé — l'appelant retombe alors sur l'original.
  */
-export async function generateResponsiveVariants(input: VariantInput): Promise<ImageVariant[]> {
-  const rendered = await renderResponsiveVariants(input);
-  const variants: ImageVariant[] = [];
-  try {
-    for (const v of rendered) {
-      await writeFile(join(input.dir, v.filename), v.data, { mode: 0o644 });
-      variants.push(v.variant);
-    }
-  } catch (err) {
-    console.warn(`[variants] Could not write variants for ${input.url}: ${(err as Error).message}`);
-    return [];
-  }
-  return variants;
+export const generateResponsiveVariantsEffect = (input: VariantInput): Effect.Effect<ImageVariant[]> =>
+  Effect.gen(function* () {
+    const rendered = yield* renderResponsiveVariantsEffect(input);
+    return yield* Effect.forEach(rendered, (v) =>
+      Effect.tryPromise(() => writeFile(join(input.dir, v.filename), v.data, { mode: 0o644 })).pipe(Effect.as(v.variant)),
+    ).pipe(
+      Effect.catch((err) =>
+        Effect.sync(() => {
+          const cause = (err as { cause?: unknown }).cause ?? err;
+          console.warn(`[variants] Could not write variants for ${input.url}: ${(cause as Error).message}`);
+          return [] as ImageVariant[];
+        }),
+      ),
+    );
+  }).pipe(Effect.withSpan('media.generateResponsiveVariants'));
+
+/** Adaptateur Promise de `generateResponsiveVariantsEffect`. */
+export function generateResponsiveVariants(input: VariantInput): Promise<ImageVariant[]> {
+  return Effect.runPromise(generateResponsiveVariantsEffect(input));
 }
 
 /** Variante encodée en mémoire, prête à être écrite par un driver de stockage. */
@@ -253,17 +270,21 @@ export interface RenderedVariant {
  * Mêmes garanties que `generateResponsiveVariants` (jamais d'agrandissement,
  * ne lève pas).
  */
-export async function renderResponsiveVariants(input: Omit<VariantInput, 'dir'> & { dir?: string }): Promise<RenderedVariant[]> {
+export const renderResponsiveVariantsEffect = (
+  input: Omit<VariantInput, 'dir'> & { dir?: string },
+): Effect.Effect<RenderedVariant[]> => {
   const { buffer, mimeType, url } = input;
 
-  if (!RASTER_MIME_TYPES.has(mimeType)) return [];
+  if (!RASTER_MIME_TYPES.has(mimeType)) return Effect.succeed([]);
 
-  try {
+  return Effect.gen(function* () {
     // Une seule instance sharp, clonée par largeur : sans `clone()`, chaque
     // appel re-parserait l'en-tête et rouvrirait le décodeur.
-    const base = sharp(buffer, { failOn: 'none' });
-    const sourceWidth = input.sourceWidth ?? (await base.metadata()).width;
-    const sourceHeight = input.sourceHeight ?? (await base.metadata()).height;
+    const base = yield* Effect.try(() => sharp(buffer, { failOn: 'none' }));
+    const meta =
+      input.sourceWidth && input.sourceHeight ? null : yield* Effect.tryPromise(() => base.metadata());
+    const sourceWidth = input.sourceWidth ?? meta?.width;
+    const sourceHeight = input.sourceHeight ?? meta?.height;
     if (!sourceWidth || !sourceHeight) return [];
 
     const stem = safeStem(url);
@@ -276,27 +297,38 @@ export async function renderResponsiveVariants(input: Omit<VariantInput, 'dir'> 
       .sort((a, b) => a - b);
 
     const publicDir = url.slice(0, url.lastIndexOf('/') + 1);
-    const out: RenderedVariant[] = [];
-    for (const width of targets) {
-      const filename = `${stem}-${width}.webp`;
-      const { data, info } = await base
-        .clone()
-        .resize({ width, withoutEnlargement: true })
-        .webp({ quality: WEBP_QUALITY })
-        .toBuffer({ resolveWithObject: true });
-      out.push({
-        filename,
-        data,
-        variant: { width: info.width, height: info.height, mimeType: 'image/webp', url: `${publicDir}${filename}`, size: info.size },
-      });
-    }
-    return out;
-  } catch (err) {
-    // libvips remonte des diagnostics multilignes : on ne garde que la première ligne.
-    const reason = err instanceof Error ? err.message.split('\n')[0] : String(err);
-    console.warn(`[variants] No responsive variant for ${url} (${reason}). Serving the original.`);
-    return [];
-  }
+    // Séquentiel volontairement : libvips parallélise déjà en interne.
+    return yield* Effect.forEach(targets, (width) =>
+      Effect.tryPromise(() =>
+        base.clone().resize({ width, withoutEnlargement: true }).webp({ quality: WEBP_QUALITY }).toBuffer({ resolveWithObject: true }),
+      ).pipe(
+        Effect.map(({ data, info }): RenderedVariant => {
+          const filename = `${stem}-${width}.webp`;
+          return {
+            filename,
+            data,
+            variant: { width: info.width, height: info.height, mimeType: 'image/webp', url: `${publicDir}${filename}`, size: info.size },
+          };
+        }),
+      ),
+    );
+  }).pipe(
+    Effect.catch((err) =>
+      Effect.sync(() => {
+        // libvips remonte des diagnostics multilignes : on ne garde que la première ligne.
+        const cause = (err as { cause?: unknown }).cause ?? err;
+        const reason = cause instanceof Error ? cause.message.split('\n')[0] : String(cause);
+        console.warn(`[variants] No responsive variant for ${url} (${reason}). Serving the original.`);
+        return [] as RenderedVariant[];
+      }),
+    ),
+    Effect.withSpan('media.renderResponsiveVariants'),
+  );
+};
+
+/** Adaptateur Promise de `renderResponsiveVariantsEffect` (ne rejette jamais). */
+export function renderResponsiveVariants(input: Omit<VariantInput, 'dir'> & { dir?: string }): Promise<RenderedVariant[]> {
+  return Effect.runPromise(renderResponsiveVariantsEffect(input));
 }
 
 /**
