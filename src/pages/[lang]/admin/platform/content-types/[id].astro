@@ -55,7 +55,7 @@ const title = isNew ? 'Nouveau type de contenu' : `Type : ${type!.name}`;
 ---
 <PlatformAdminShell t={authT} locale={locale} section="content-types" title={title}>
   <a slot="actions" class="rounded-md border px-3 py-2 text-sm" href={getPlatformAdminUrl(locale, 'content-types')}>← {getPlatformLabel('content-types', locale)}</a>
-  {saved && <p class="rounded-md border border-success bg-success/10 p-3 text-sm" role="status">Enregistré.</p>}
+  {saved && <output class="block rounded-md border border-success bg-success/10 p-3 text-sm">Enregistré.</output>}
   {error && <p class="rounded-md border border-error bg-error/10 p-3 text-sm" role="alert">{error}</p>}
   <form method="post" class="grid gap-4">
     <div class="grid gap-4 sm:grid-cols-2">

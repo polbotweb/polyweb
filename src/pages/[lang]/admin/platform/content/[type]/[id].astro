@@ -112,7 +112,7 @@ void extraTabs;
 ---
 <PlatformAdminShell t={authT} locale={locale} section="content" title={title}>
   <a slot="actions" class="rounded-md border px-3 py-2 text-sm" href={getPlatformAdminUrl(locale, 'content', type.slug)}>← {type.name}</a>
-  {saved && <p class="rounded-md border border-success bg-success/10 p-3 text-sm" role="status">{saved === 'publish' ? 'Publié.' : saved === 'unpublish' ? 'Repassé en brouillon.' : saved === 'archive' ? 'Archivé.' : 'Enregistré.'}</p>}
+  {saved && <output class="block rounded-md border border-success bg-success/10 p-3 text-sm">{saved === 'publish' ? 'Publié.' : saved === 'unpublish' ? 'Repassé en brouillon.' : saved === 'archive' ? 'Archivé.' : 'Enregistré.'}</output>}
   {message && <div class="rounded-md border border-error bg-error/10 p-3 text-sm" role="alert"><p>{message}</p>{Object.keys(errors).length > 0 && <ul class="mt-1 list-disc ps-5">{Object.entries(errors).map(([k, v]) => <li><code>{k}</code> : {v}</li>)}</ul>}</div>}
   {entry && (
     <p class="text-muted-foreground text-sm" data-entry-meta>
@@ -121,7 +121,7 @@ void extraTabs;
     </p>
   )}
   {previewLink && (
-    <div class="rounded-md border border-warning bg-warning/10 p-3 text-sm" role="status" data-preview-link>
+    <div class="rounded-md border border-warning bg-warning/10 p-3 text-sm" aria-live="polite" data-preview-link>
       <p class="font-medium">Lien de prévisualisation (valable jusqu’au {formatDate(previewLink.expires, locale)}) :</p>
       <a class="mt-1 block break-all font-mono underline" href={previewLink.url} target="_blank" rel="noopener noreferrer">{previewLink.url}</a>
     </div>

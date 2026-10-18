@@ -66,9 +66,9 @@ const canRestore = await userCan(user.id, { contentEntry: ['update'] });
 ---
 <PlatformAdminShell t={authT} locale={locale} section="content" title={`Historique — ${entry.slug}`}>
   <a slot="actions" class="rounded-md border px-3 py-2 text-sm" href={editUrl}>← Retour à l’entrée</a>
-  {restored && <p class="rounded-md border border-success bg-success/10 p-3 text-sm" role="status">Version {restored} restaurée (nouvelle version créée, historique conservé).</p>}
+  {restored && <output class="block rounded-md border border-success bg-success/10 p-3 text-sm">Version {restored} restaurée (nouvelle version créée, historique conservé).</output>}
   {error && <p class="rounded-md border border-error bg-error/10 p-3 text-sm" role="alert">{error}</p>}
-  {previewUrl && <p class="rounded-md border border-warning bg-warning/10 p-3 text-sm" role="status" data-preview-link>Aperçu de la version figée (24 h) : <a class="underline break-all" href={previewUrl} target="_blank" rel="noopener noreferrer">{previewUrl}</a></p>}
+  {previewUrl && <output class="block rounded-md border border-warning bg-warning/10 p-3 text-sm" data-preview-link>Aperçu de la version figée (24 h) : <a class="underline break-all" href={previewUrl} target="_blank" rel="noopener noreferrer">{previewUrl}</a></output>}
 
   <form method="get" class="flex flex-wrap items-end gap-3 text-sm" aria-label="Comparer deux versions">
     <label class="grid gap-1">De<select name="from" class="rounded-md border bg-background px-2 py-1">{revisions.map((r) => <option value={r.version} selected={r.version === fromV}>v{r.version}</option>)}</select></label>

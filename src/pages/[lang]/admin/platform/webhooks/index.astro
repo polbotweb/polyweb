@@ -39,7 +39,7 @@ const hooks = listed.ok ? listed.value : [];
 <PlatformAdminShell t={authT} locale={locale} section="webhooks" title={getPlatformLabel('webhooks', locale)}>
   {error && <p class="rounded-md border border-error bg-error/10 p-3 text-sm" role="alert">{error}</p>}
   {created && (
-    <div class="rounded-md border border-warning bg-warning/10 p-4 text-sm" role="status">
+    <div class="rounded-md border border-warning bg-warning/10 p-4 text-sm" aria-live="polite">
       <p class="font-medium">Webhook créé. Secret de signature (affiché une seule fois) :</p>
       <code class="mt-2 block break-all rounded bg-background p-2 font-mono" data-secret>{created.secret}</code>
       <p class="mt-2"><a class="underline" href={getPlatformAdminUrl(locale, 'webhooks', created.id)}>Voir le webhook</a></p>

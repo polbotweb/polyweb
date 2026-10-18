@@ -28,7 +28,10 @@ Migrations : modifier `src/database/schemas/*.schema.ts`, puis `pnpm drizzle-kit
 
 ## Arborescence utile
 
-- `src/lib/effect/` — runtime, Db, AppConfig, erreurs, adaptateurs HTTP.
+- `src/lib/effect/` — runtime, Db, AppConfig, erreurs (`OperationError` inclus), adaptateurs HTTP (`http.ts`, `route.ts`), Actions (`action.ts` : `effectHandler`), cron, auth.
+- Services Effect du runtime : `Db`, `AppConfig`, `Storage`, `Mailer`, `WebhookHttp`, `SearchIndex`, `ErrorReporter` (+ couche `TelemetryLive`). Scripts `db:*` : `runScript` (`src/database/commands/_effect.ts`).
+- Nouvelle action Astro : `handler: effectHandler((input, ctx) => Effect.gen(...))` avec `requireActionPermission` / `actionRateLimit` / `fail(code, message)`.
+- État de la migration Effect (zones encore en Promise) : tableau en fin de `docs/effect.md`.
 - `src/core/` — contrats de plateforme (modules, blocs, types de contenu, événements…).
 - `src/modules/<module>/` — modules métier (`module.ts` = définition `PolywebModuleDefinition`, `domain/` = logique).
 - `src/pages/[lang]/admin/` — back-office (POST traité dans le frontmatter → redirection 303 `?saved=`).

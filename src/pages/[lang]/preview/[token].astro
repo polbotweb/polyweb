@@ -30,7 +30,7 @@ const expires = new Date(claims.x * 1000);
 <BaseLayout title={`Aperçu — ${translation.title}`} description={translation.seo.metaDescription || translation.title}>
   <SEOHead slot="head" locale={locale} noindex={true} />
   <div class="mx-auto mt-4 max-w-3xl px-4">
-    <p class="rounded-md border border-warning bg-warning/10 p-3 text-sm" role="status" data-preview-banner>
+    <p class="rounded-md border border-warning bg-warning/10 p-3 text-sm" aria-live="polite" data-preview-banner>
       Prévisualisation — {pinned ? `version ${version} (figée)` : `état courant (statut : ${entry.status}, version ${version})`} · lien valable jusqu’au {expires.toLocaleString(locale)}
     </p>
   </div>

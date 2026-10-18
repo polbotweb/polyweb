@@ -68,10 +68,10 @@ const scopeLabels: Record<string, string> = {
 ---
 <PlatformAdminShell t={authT} locale={locale} section="api-tokens" title={getPlatformLabel('api-tokens', locale)}>
   <a slot="actions" class="rounded-md border px-3 py-2 text-sm" href="/api/v1/openapi.json">Spec OpenAPI</a>
-  {saved === 'revoked' && <p class="rounded-md border border-success bg-success/10 p-3 text-sm" role="status">Jeton révoqué.</p>}
+  {saved === 'revoked' && <output class="block rounded-md border border-success bg-success/10 p-3 text-sm">Jeton révoqué.</output>}
   {error && <p class="rounded-md border border-error bg-error/10 p-3 text-sm" role="alert">{error}</p>}
   {createdToken && (
-    <div class="rounded-md border border-warning bg-warning/10 p-4 text-sm" role="status" data-testid="new-token">
+    <div class="rounded-md border border-warning bg-warning/10 p-4 text-sm" aria-live="polite" data-testid="new-token">
       <p class="font-medium">Jeton créé — copiez-le maintenant, il ne sera plus affiché :</p>
       <code class="mt-2 block break-all rounded bg-background p-2 font-mono" data-token>{createdToken}</code>
       <p class="mt-2 text-muted-foreground">Utilisation : <code>Authorization: Bearer &lt;jeton&gt;</code> sur <code>/api/v1/…</code></p>

@@ -14,12 +14,31 @@ Polyweb utilise [Effect](https://effect.website) (`effect` v4) comme **modèle s
 
 | Fichier | Rôle |
 | --- | --- |
-| `errors.ts` | Erreurs partagées : `DbError`, `NotFoundError`, `ValidationError`, `UnauthorizedError`, `ForbiddenError`, `ConflictError`, `RateLimitedError`, `UpstreamError`, `ConfigError` |
+| `errors.ts` | Erreurs partagées : `DbError`, `NotFoundError`, `ValidationError`, `UnauthorizedError`, `ForbiddenError`, `ConflictError`, `RateLimitedError`, `UpstreamError`, `ConfigError`, `OperationError` (échec d'un appel Promise historique → 500) |
 | `schema.ts` | `decode(schema)(input)`, `readJson(request)`, `formDataToRecord`, schémas communs (`Slug`, `NonEmptyTrimmed`) |
 | `db.ts` | Service `Db` + `query(op, f)` + `transaction(op, f)` (rollback si l'Effect échoue, erreur typée re-propagée) |
 | `config.ts` | Service `AppConfig` (env validé : `siteUrl`, `signingSecret`, `trustProxy`…) |
 | `runtime.ts` | `AppLayer`, type `AppServices`, `appRuntime` (`ManagedRuntime` unique par process, survit au HMR) |
-| `http.ts` | `apiRoute(handler)`, `runApp`, `runAppResult`, `json`, `errorResponse` (tag → statut HTTP) |
+| `http.ts` | `apiRoute(handler)`, `runApp`, `runAppResult`, `json`, `errorResponse` (tag → statut HTTP) ; span par route, capture Sentry des defects et des 5xx |
+| `route.ts` | Routes migrées qui gardent leur contrat HTTP historique : `legacyJson`, `attempt(op, f)` (Promise → `OperationError`), `rateLimit`, `retryAfterSeconds` |
+| `action.ts` | Astro Actions : `effectHandler`, `ActionFailure`/`fail(code, message)`, `actionTry`, `requireActionPermission`, `actionRateLimit` (erreurs typées → `ActionError`) |
+| `auth.ts` | `requireSessionPermission(locals, permissions)` pour les routes internes à session |
+| `cron.ts` | `isCronAuthorized`, `requireCron` (Bearer `CRON_SECRET`, comparaison à temps constant) |
+
+### Services du runtime (`AppLayer`)
+
+| Service | Fichier | Rôle |
+| --- | --- | --- |
+| `Db` | `src/lib/effect/db.ts` | Accès Drizzle (`query`, `transaction`) |
+| `AppConfig` | `src/lib/effect/config.ts` | Configuration validée |
+| `Storage` | `src/lib/storage/` | Stockage médias local / S3 |
+| `Mailer` | `src/smtp/mailer.ts` | Envoi email (pipeline `sendEmailEffect` : retries + dead-letter) ; `makeMemoryMailer` en test |
+| `WebhookHttp` | `src/modules/webhooks/domain/http.ts` | Livraisons HTTP signées des webhooks sortants |
+| `SearchIndex` | `src/lib/search/` | Recherche (`SEARCH_DRIVER` = postgres / meilisearch / pagefind) |
+| `ErrorReporter` | `src/lib/observability/errors.ts` | Envoi des erreurs à Sentry (enveloppe HTTP, sans SDK) |
+| (couche) `TelemetryLive` | `src/lib/observability/telemetry.ts` | Export OTLP des spans si `OTEL_EXPORTER_OTLP_ENDPOINT` |
+
+Scripts `db:*` : `src/database/commands/_effect.ts` fournit `runScript(name, programme, { dispose })` et `step(name, f)` (`ScriptError`).
 
 ## Écrire un service
 
@@ -81,4 +100,18 @@ export const GET = apiRoute(({ params }) =>
 
 ## Migration du code existant
 
-Le code antérieur (core, modules, lib, auth, médias, smtp, scripts) est migré **par zones**, chaque zone gardant typecheck/tests/build verts. Une façade `async` peut être conservée temporairement pour les appelants non migrés : elle se contente d'appeler `runApp(programmeEffect)`. Voir l'état de la migration dans le README (section « Effect »).
+Le code antérieur est migré **par zones**, chaque zone gardant typecheck/tests/build verts. Quand des appelants non migrés existent (pages `.astro`, tests historiques), la zone expose l'implémentation Effect (`xxxEffect`) **et** un adaptateur Promise fin qui l'exécute et relève les classes d'erreur historiques.
+
+État (vérifié le 18/10/2026, fichiers `.ts` important `effect` ou `@/lib/effect/*` / total) :
+
+| Zone | État |
+| --- | --- |
+| `src/pages/api/**` (26/27) | Toutes les routes passent par `apiRoute` ; seule `auth/[...all].ts` délègue directement à better-auth (adaptateur imposé par la lib). |
+| Briques plateforme (contenu, API v1, webhooks, formulaires, plugins, sites, recherche, observabilité, sauvegarde, CLI) | Effect natif. |
+| `src/modules/content/domain/entries.ts`, `revisions.ts` | Effect natif + adaptateurs Promise (`runContent`). `content-types.ts` reste en Promise derrière la façade `content.effect.ts`. |
+| `src/modules/payments/domain/payment-service.ts` | Effect natif (timeout fournisseur 20 s, compensation) + adaptateurs. `providers.ts` (Stripe/mock) reste en Promise. |
+| `src/modules/sites` | Façade Effect (`sites.effect.ts`) sur des fonctions Promise. |
+| `src/smtp/send.ts`, `src/core/events`, `src/lib/audit.ts` | Effect natif + adaptateurs Promise. |
+| `src/database/commands` (8/23) | `db:wait`, `db:cleanup-audit`, `db:backup`, `db:restore` sur `runScript` ; les autres (`migrate`, `seed`, `sync`, `compare`…) restent en Promise. |
+| `src/actions` (3/49) | Adaptateur `effectHandler` prêt ; migrées : `admin/social`, `admin/contact`, `admin/hours`. **Les ~46 autres fichiers d'actions restent en Promise.** |
+| `src/database/loaders`, `src/lib/auth*.ts`, `src/media/variants.ts`, `src/core/*` (hors events), modules historiques blog/services | **Non migrés** (Promise). |

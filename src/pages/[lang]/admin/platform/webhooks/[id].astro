@@ -71,9 +71,9 @@ const messages: Record<string, string> = { saved: 'Enregistré.', 'ping-ok': 'Pi
 ---
 <PlatformAdminShell t={authT} locale={locale} section="webhooks" title={`Webhook : ${hook.name}`}>
   <a slot="actions" class="rounded-md border px-3 py-2 text-sm" href={listUrl}>← {getPlatformLabel('webhooks', locale)}</a>
-  {saved && messages[saved] && <p class="rounded-md border border-success bg-success/10 p-3 text-sm" role="status">{messages[saved]}</p>}
+  {saved && messages[saved] && <output class="block rounded-md border border-success bg-success/10 p-3 text-sm">{messages[saved]}</output>}
   {error && <p class="rounded-md border border-error bg-error/10 p-3 text-sm" role="alert">{error}</p>}
-  {newSecret && <div class="rounded-md border border-warning bg-warning/10 p-4 text-sm" role="status"><p class="font-medium">Nouveau secret (affiché une seule fois) :</p><code class="mt-2 block break-all font-mono">{newSecret}</code></div>}
+  {newSecret && <div class="rounded-md border border-warning bg-warning/10 p-4 text-sm" aria-live="polite"><p class="font-medium">Nouveau secret (affiché une seule fois) :</p><code class="mt-2 block break-all font-mono">{newSecret}</code></div>}
 
   <form method="post" class="grid gap-3 rounded-md border p-4">
     <input type="hidden" name="intent" value="save" />

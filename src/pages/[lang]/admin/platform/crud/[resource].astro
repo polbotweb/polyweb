@@ -49,7 +49,7 @@ const fmt = (v: unknown) => v === null || v === undefined ? '—' : v instanceof
            <input class="rounded-md border px-2 py-1" name={c.key} data-type={c.type} type={c.type === 'number' ? 'number' : c.type === 'date' ? 'datetime-local' : 'text'} required={c.notNull && !c.hasDefault} />}
         </label>
       ))}
-      <div class="sm:col-span-2"><Button type="submit">Enregistrer</Button> <span data-crud-status role="status" class="text-sm"></span></div>
+      <div class="sm:col-span-2"><Button type="submit">Enregistrer</Button> <output data-crud-status class="text-sm"></output></div>
     </form>
   )}
   <div data-crud-root data-resource={def.id} hidden></div>
