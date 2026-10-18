@@ -1,0 +1,111 @@
+---
+import { buildSrcSet } from "@media/variants";
+
+/**
+ * Image de média CMS servie en `srcset`.
+ *
+ * ─── Pourquoi ce composant existe ──────────────────────────────────────
+ *
+ * `astro:assets` n'optimise pas nos médias : ils sont dans `public/uploads/`,
+ * donc « never optimized », et passés à `<Image>` sous forme de chaîne ils
+ * tombent dans `RemoteImageProps` — non optimisés non plus. Le seul bénéfice
+ * restant d'<Image> était le width/height anti-CLS, au prix d'un composant
+ * trompeur qui donne l'impression d'une optimisation.
+ *
+ * Ce composant rend donc explicitement ce qu'Astro ne fait pas ici :
+ *
+ *   <picture>
+ *     <source type="image/webp" srcset="…-320.webp 320w, …-960.webp 960w">
+ *     <img src="original.jpg" srcset="…" sizes="…">
+ *   </picture>
+ *
+ * ─── Repli ────────────────────────────────────────────────────────────
+ *
+ * Sans variantes (média ancien, SVG, icône, ou Sharp indisponible), on rend
+ * un `<img>` nu avec l'original : le composant dégrade proprement au lieu de
+ * casser. `width`/`height` restent obligatoires pour le CLS.
+ */
+
+type Variant = { width: number; height: number; url: string };
+
+interface Props {
+  /** URL publique de l'original (repli). */
+  src: string;
+  /** Texte alternatif. `""` si purement décorative. */
+  alt: string;
+  /** Variantes responsive connues (colonnes `variants`). */
+  variants?: Variant[] | null;
+  /** Largeur de l'original en px — obligatoire pour éviter le CLS. */
+  width: number;
+  /** Hauteur de l'original en px — obligatoire pour éviter le CLS. */
+  height: number;
+  /**
+   * Attribut `sizes` : la largeur d'affichage selon le viewport.
+   * Defaut : pleine largeur du conteneur.
+   */
+  sizes?: string;
+  /** `loading` — defaut `lazy`. Passer `eager` sur l'image LCP. */
+  loading?: "lazy" | "eager";
+  /** `fetchpriority` — `high` sur l'image LCP. */
+  fetchpriority?: "high" | "low" | "auto";
+  class?: string;
+  [key: string]: unknown;
+}
+
+const {
+  src,
+  alt,
+  variants,
+  width,
+  height,
+  sizes = "100vw",
+  loading = "lazy",
+  fetchpriority,
+  class: className,
+  ...rest
+} = Astro.props;
+
+// On ne sert que les variantes strictement plus petites que l'original : au-delà,
+// le navigateur servirait un fichier plus gros que la source pour rien.
+const usable = (variants ?? [])
+  .filter((v) => v && typeof v.width === "number" && v.width > 0 && v.width < width)
+  .sort((a, b) => a.width - b.width);
+
+const srcSet = usable.length > 0 ? buildSrcSet(usable) : undefined;
+---
+
+{
+  srcSet ? (
+    <picture>
+      <source type="image/webp" srcset={srcSet} sizes={sizes} />
+      <img
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        loading={loading}
+        decoding="async"
+        fetchpriority={fetchpriority}
+        sizes={sizes}
+        class={className}
+        data-slot="responsive-image"
+        {...rest}
+      />
+    </picture>
+  ) : (
+    <img
+      src={src}
+      alt={alt}
+      width={width}
+      height={height}
+      loading={loading}
+      decoding="async"
+      fetchpriority={fetchpriority}
+      sizes={sizes}
+      class={className}
+      data-slot="responsive-image"
+      data-variants="none"
+      {...rest}
+    />
+  )
+}

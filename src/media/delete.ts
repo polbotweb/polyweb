@@ -1,5 +1,5 @@
-import { unlink } from 'node:fs/promises';
-import { join, resolve, sep } from 'node:path';
+import { readdir, unlink } from 'node:fs/promises';
+import { basename, dirname, extname, join, resolve, sep } from 'node:path';
 
 /**
  * Supprime un fichier uploadé à partir de son URL publique.
@@ -27,9 +27,26 @@ export async function deleteUpload(url: string): Promise<void> {
 
   await unlink(resolved);
 
-  // Also remove the companion WebP variant if it exists (generated for JPEG/PNG uploads)
-  const webpPath = resolved.replace(/\.[^.]+$/, '.webp');
-  if (webpPath !== resolved) {
-    await unlink(webpPath).catch(() => {});
+  // Retire aussi les variantes responsive générées à l'upload.
+  //
+  // Elles suivent la convention `<stem>-<largeur>.webp` (voir
+  // src/media/variants.ts) et partagent le dossier de l'original. Sans ce
+  // nettoyage, supprimer un média laisserait des fichiers orphelins sur le
+  // disque ET des entrées `srcset` mortes pointant sur des 404.
+  //
+  // On filtre sur le préfixe exact `<stem>-` : sans cela, supprimer
+  // `photo.jpg` effacerait aussi les variantes de `photo-grand.webp`.
+  const stem = basename(resolved, extname(resolved));
+  const prefix = `${stem}-`;
+
+  try {
+    const entries = await readdir(dirname(resolved));
+    await Promise.all(
+      entries
+        .filter((entry) => entry.startsWith(prefix) && entry.endsWith('.webp'))
+        .map((entry) => unlink(join(dirname(resolved), entry)).catch(() => {})),
+    );
+  } catch {
+    // Dossier illisible : l'original est déjà supprimé, on ne bloque pas.
   }
 }

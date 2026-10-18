@@ -44,4 +44,14 @@ export interface UploadResult {
   path: string;
   /** URL publique accessible depuis le navigateur */
   url: string;
+  /**
+   * Dimensions vérifiées par décodage réel, ou `null` pour un format non
+   * rasterisable (SVG). Fournies ici pour éviter que l'appelant relise et
+   * redécode le fichier sur disque.
+   */
+  dimensions: { width: number; height: number } | null;
+  /** Variantes WebP redimensionnées, prêtes pour un `srcset`.
+   *  Vide si le média n'est pas rasterisable (SVG, icône…) ou si la
+   *  génération a échoué — l'original reste alors le seul servi. */
+  variants: import('./variants').ImageVariant[];
 }

@@ -2,9 +2,9 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import DOMPurify from 'isomorphic-dompurify';
-import sharp from 'sharp';
 import type { UploadOptions, UploadResult, AllowedMimeType } from './types';
 import { ALLOWED_MIME_TYPES, DEFAULT_MAX_SIZE } from './types';
+import { generateResponsiveVariants, decodeAndValidate, UndecodableImageError, ImageTooLargeError } from './variants';
 
 // ─── Magic bytes signatures for allowed image types ────────────────
 const MAGIC_BYTES: Record<string, { offset: number; bytes: number[] }[]> = {
@@ -110,24 +110,57 @@ export async function processUpload(
     buffer = Buffer.from(sanitized, 'utf-8');
   }
 
+  // ─── Décodage réel (sécurité) ──────────────────────────────────────
+  // La validation par magic bytes ne prouve QUE les 4 premiers octets. Un
+  // JPEG tronqué, un PNG corrompu ou une « bombe de pixels » (2 Mo highly
+  // compressés = 50 000×50 000) la passent sans problème — et se retrouve
+  // ensuite stocké, illisible, ou capable d'épuiser la mémoire du serveur au
+  // premier décodage.
+  //
+  // On force donc un décodage COMPLET avant d'écrire quoi que ce soit :
+  // un fichier qu'on ne sait pas décoder n'est jamais écrit sur le disque.
+  const dimensions = await decodeAndValidate(buffer, file.type).catch((err: unknown) => {
+    if (err instanceof UndecodableImageError) {
+      throw new UploadError(err.message, 'UNDECODABLE_IMAGE');
+    }
+    if (err instanceof ImageTooLargeError) {
+      throw new UploadError(err.message, 'IMAGE_TOO_LARGE');
+    }
+    // sharp peut jeter une erreur brute (format non supporté, flux tronqué
+    // détecté au décodage) : on ne veut jamais laisser fuiter le détail
+    // technique de libvips au client.
+    throw new UploadError(
+      "L'image n'a pas pu être décodée. Le fichier est probablement corrompu ou d'un format non pris en charge.",
+      'UNDECODABLE_IMAGE',
+    );
+  });
+
   await writeFile(filePath, buffer, { mode: 0o644 });
 
-  // Generate WebP variant for raster images (JPEG/PNG) for next-gen format serving
-  const RASTER_TYPES = new Set(['image/jpeg', 'image/png']);
-  if (RASTER_TYPES.has(file.type)) {
-    const webpFilename = filename.replace(/\.[^.]+$/, '.webp');
-    const webpPath = join(dir, webpFilename);
-    try {
-      await sharp(buffer).webp({ quality: 80 }).toFile(webpPath);
-    } catch (err) {
-      console.error(`[upload] WebP generation failed for ${filename}:`, err);
-    }
-  }
+  // ─── Variantes responsive (WebP redimensionné) ────────────────────────
+  // L'original seul est trop lourd pour le web : une photo de voyage 4737px
+  // en JPEG (3 Mo) était servie telle quelle et mesurée 5,7 Mo/page par
+  // Lighthouse (LCP 4,6 s). On fige ici les variantes — le coût sharp est
+  // payé une fois, à l'upload, et le rendu ne sert plus que du statique.
+  //
+  // Les dimensions validées plus haut sont réutilisées : on ne ré-analyse pas
+  // l'en-tête, et le pipeline sharp est cloné plutôt que reconstruit.
+  const variants = await generateResponsiveVariants({
+    buffer,
+    mimeType: file.type,
+    url: `/uploads/${subDir}/${filename}`,
+    dir,
+    sourceWidth: dimensions.width,
+    sourceHeight: dimensions.height,
+  });
 
   return {
     filename,
     path: filePath,
     url: `/uploads/${subDir}/${filename}`,
+    // 0×0 = format non rasterisable (SVG) : pas de dimensions à stocker.
+    dimensions: dimensions.width > 0 ? dimensions : null,
+    variants,
   };
 }
 

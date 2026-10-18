@@ -3,6 +3,7 @@ import {
   pgTable,
   text,
   timestamp,
+  jsonb,
   integer,
   uniqueIndex,
   index,
@@ -24,6 +25,9 @@ export const mediaFolders = pgTable(
     name: text("name").notNull(),
     parentId: text("parent_id"),
     sortOrder: integer("sort_order").default(0).notNull(),
+    // Variantes WebP responsive générées à l'upload (voir src/media/variants.ts).
+    // `[{ width, height, url }]` — NULL / [] = aucune variante : le rendu retombe sur `url`.
+    variants: jsonb("variants").$type<Array<{ width: number; height: number; url: string }>>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

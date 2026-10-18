@@ -7,6 +7,7 @@ import { getDrizzle } from "@database/drizzle";
 import { mediaFolders, mediaFiles, mediaFileAlts } from "@database/schemas";
 import { invalidateCache } from "@database/cache";
 import { processUpload } from "@/media/upload";
+import { serializeVariants } from "@/media/variants";
 import { deleteUpload } from "@/media/delete";
 import { UPLOAD_DIRS } from "@/media/types";
 import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
@@ -341,20 +342,9 @@ export const uploadMediaFile = defineAction({
     // Upload file to disk via the existing media pipeline
     const result = await processUpload(input.file, { subDir: UPLOAD_DIRS.media });
 
-    // Try reading image dimensions via sharp
-    let width: number | null = null;
-    let height: number | null = null;
-    const RASTER_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
-    if (RASTER_TYPES.has(input.file.type)) {
-      try {
-        const sharp = (await import("sharp")).default;
-        const metadata = await sharp(result.path).metadata();
-        width = metadata.width ?? null;
-        height = metadata.height ?? null;
-      } catch {
-        // Non-blocking — dimensions are optional
-      }
-    }
+    // Dimensions vérifiées par décodage réel dans processUpload (voir src/media/variants.ts)
+    const width: number | null = result.dimensions?.width ?? null;
+    const height: number | null = result.dimensions?.height ?? null;
 
     const [created] = await db
       .insert(mediaFiles)
@@ -367,6 +357,7 @@ export const uploadMediaFile = defineAction({
         size: input.file.size,
         width,
         height,
+        variants: serializeVariants(result.variants),
       })
       .returning();
 
