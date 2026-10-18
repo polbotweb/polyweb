@@ -47,6 +47,9 @@ async function renderMetrics(page: Page) {
   return { userAgent: await page.evaluate(() => navigator.userAgent), styles, platformFonts, sections, scrollHeight: await page.evaluate(() => document.documentElement.scrollHeight) };
 }
 
+/** Familles disponibles sur le runner CI et en local (latin : Liberation Sans ; arabe : DejaVu Sans). */
+const PINNED_FONTS_CSS = `html, body, body * { font-family: "Liberation Sans", "DejaVu Sans", sans-serif !important; }`;
+
 test.skip(({ browserName }) => browserName !== 'chromium', 'Snapshots visuels : Chromium uniquement');
 
 const SHOTS: Array<{ name: string; path: string; viewport?: { width: number; height: number } }> = [
@@ -64,6 +67,16 @@ test.beforeEach(async ({ page }) => {
   });
   // Ressources externes neutralisées pour des captures déterministes (comme antx).
   await page.route(/\.(woff2?|ttf)$/, (route) => route.fulfill({ status: 200, body: '', contentType: 'font/woff2' }));
+  // Polices système figées : la pile du thème (-apple-system, …, Roboto, "Noto Sans", Arial…) se résout
+  // selon les polices installées — Roboto sur le poste qui avait produit les références, Liberation Sans
+  // sur le runner CI (pas de Roboto) → +20/36 px de hauteur (prouvé par render-metrics, cf. ci-dessous).
+  // On impose les familles présentes dans les deux environnements (Playwright --with-deps installe
+  // fonts-liberation + DejaVu) en complétant les feuilles /_astro/*.css (pas de <style> inline : CSP
+  // stricte ; /theme.css n'est pas toujours servi — absent sans thème actif, cas de la base de test).
+  await page.route(/\/_astro\/[^?]*\.css(\?|$)/, async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: `${await response.text()}\n${PINNED_FONTS_CSS}` });
+  });
 });
 
 for (const shot of SHOTS) {
