@@ -1,6 +1,6 @@
 # Polyweb CMS Module System
 
-Ce document est la référence normative pour la frontière entre le socle Polyweb et les modules métier. Le `README.md` n'est pas une source éditoriale : il est généré par `pnpm run readme:generate` depuis `readme-builder/`.
+Ce document est la référence normative pour la frontière entre le socle Polyweb et les modules métier. Le `README.md` (en français) donne la vue d'ensemble et l'état vérifié ; ce document reste la référence pour la frontière socle/modules.
 
 ## Architecture
 
