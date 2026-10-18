@@ -66,12 +66,13 @@ describe('core/locks sur Postgres (service_locks)', () => {
     await run(serviceLock.acquire(serviceId, { userId: alice, sessionId: 'tab-1' }));
     const prompt = await flip(serviceLock.acquire(serviceId, { userId: alice, sessionId: 'tab-2' }, { locale: 'fr' }));
     expect(prompt).toBeInstanceOf(LockHeldError);
-    expect(prompt.sameUser).toBe(true);
+    expect((prompt as LockHeldError).sameUser).toBe(true);
     expect(prompt.message).toBe('Vous éditez déjà ce contenu dans une autre session — reprendre ici ?');
     const taken = await run(serviceLock.acquire(serviceId, { userId: alice, sessionId: 'tab-2' }, { takeOver: true }));
     expect(taken.tookOverFrom).toBe('tab-1');
     const bobTry = await flip(serviceLock.acquire(serviceId, { userId: bob, sessionId: 'sb' }, { takeOver: true }));
-    expect(bobTry.sameUser).toBe(false);
+    expect(bobTry).toBeInstanceOf(LockHeldError);
+    expect((bobTry as LockHeldError).sameUser).toBe(false);
     await run(serviceLock.requireOwn(serviceId, { userId: alice, sessionId: 'tab-2' }));
     expect(await flip(serviceLock.requireOwn(serviceId, { userId: alice, sessionId: 'tab-1' }))).toBeInstanceOf(LockHeldError);
     await run(serviceLock.forceRelease(serviceId));
