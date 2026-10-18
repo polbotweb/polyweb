@@ -4,7 +4,13 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { getLazyDrizzle, getDrizzle, schema } from "@database/drizzle";
 import { session as sessionTable } from "@database/schemas";
 import { eq } from "drizzle-orm";
-import { username, admin, organization, testUtils } from "better-auth/plugins";
+import { username, admin, organization, testUtils, twoFactor, emailOTP } from "better-auth/plugins";
+import { passkey } from "@better-auth/passkey";
+import {
+  getSocialProvidersConfig, getPasskeyConfig, getTwoFactorIssuer, isEmailOtpEnabled,
+  EMAIL_OTP_EXPIRES_IN_SECONDS, rememberOtpForTests,
+} from "@/lib/auth-providers";
+import { signInOtpTemplate } from "@smtp/templates/sign-in-otp";
 import { ac, adminRole, editorRole, userRole, orgOwnerRole, orgAdminRole, orgMemberRole } from "@/lib/permissions";
 
 const isTest = process.env.NODE_ENV === 'test';
@@ -46,6 +52,11 @@ export const auth = betterAuth({
       "/delete-user/*": { window: 60, max: 2 },
       "/organization/create": { window: 60, max: 5 },
     },
+  },
+  // OAuth (brique h) — GitHub / Google activés uniquement si configurés.
+  socialProviders: getSocialProvidersConfig(),
+  account: {
+    accountLinking: { enabled: true, trustedProviders: ["github", "google"] },
   },
   emailAndPassword: {
     enabled: true,
@@ -260,6 +271,36 @@ export const auth = betterAuth({
         },
       },
     }),
+    // ─── Brique h : 2FA TOTP, passkeys, connexion par code e-mail ───
+    twoFactor({
+      issuer: getTwoFactorIssuer(),
+      // Codes de secours générés à l'activation ; TOTP 6 chiffres / 30 s (défaut).
+    }),
+    passkey(getPasskeyConfig()),
+    ...(isEmailOtpEnabled()
+      ? [emailOTP({
+          expiresIn: EMAIL_OTP_EXPIRES_IN_SECONDS,
+          // Pas de création de compte implicite via OTP : seuls les comptes existants.
+          disableSignUp: true,
+          async sendVerificationOTP({ email, otp, type }, ctx) {
+            rememberOtpForTests(email, otp);
+            const referer = ctx?.request?.headers.get("referer") ?? "";
+            const locale = extractLocale(referer || "http://x/");
+            const base = (process.env.BETTER_AUTH_URL || process.env.SITE_URL || "http://localhost:4321").replace(/\/$/, "");
+            const { subject, html, text } = signInOtpTemplate({
+              locale,
+              code: otp,
+              purpose: type,
+              signInUrl: `${base}/${locale}/auth/${locale === "fr" ? "connexion" : "sign-in"}`,
+              expiresInMinutes: Math.round(EMAIL_OTP_EXPIRES_IN_SECONDS / 60),
+            });
+            if (!isTest) import("@smtp/send").then(m => m.sendEmail({ to: email, subject, html, text })).catch(err => {
+              console.error("[SMTP] OTP email failed:", err);
+              void logAuditEvent({ action: "EMAIL_SEND_FAILED", resource: "email", metadata: { template: "sign-in-otp", to: email, error: String(err) } });
+            });
+          },
+        })]
+      : []),
     ...(isTest ? [testUtils()] : []),
   ],
 });

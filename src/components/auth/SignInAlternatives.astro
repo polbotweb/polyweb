@@ -1,0 +1,132 @@
+---
+/**
+ * SignInAlternatives — méthodes de connexion additionnelles (brique h) :
+ *  - étape 2FA (TOTP ou code de secours) déclenchée par `polyweb:two-factor-required`
+ *  - connexion par code e-mail (plugin emailOTP — remplace l'OTP maison d'annuaire2)
+ *  - passkey (WebAuthn)
+ *  - OAuth GitHub / Google (boutons affichés uniquement si configurés)
+ */
+import type { Locale } from '@i18n/config';
+import { getAuthExtStrings } from '@i18n/auth-extensions';
+import { getEnabledSocialProviders, isEmailOtpEnabled } from '@/lib/auth-providers';
+import Label from '@atoms/label/Label.astro';
+import Input from '@atoms/input/Input.astro';
+import Button from '@atoms/button/Button.astro';
+
+interface Props { locale: Locale; redirectUrl: string }
+const { locale, redirectUrl } = Astro.props;
+const s = getAuthExtStrings(locale);
+const social = getEnabledSocialProviders();
+const otp = isEmailOtpEnabled();
+const providerLabel: Record<string, string> = { github: 'GitHub', google: 'Google' };
+---
+
+<div id="signin-alternatives" class="grid gap-3" data-redirect={redirectUrl} data-error={s.error} data-success={s.success} data-otp-sent={s.otpSent}>
+  <!-- Étape 2FA (masquée par défaut) -->
+  <form id="two-factor-step" class="hidden grid gap-3 rounded-lg border p-4" novalidate>
+    <h2 class="text-base font-semibold">{s.twoFactorTitle}</h2>
+    <p class="text-muted-foreground text-sm">{s.twoFactorHelp}</p>
+    <Label for="two-factor-code">{s.twoFactorCode}</Label>
+    <Input id="two-factor-code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength={16} required />
+    <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="two-factor-backup" /> {s.useBackupCode}</label>
+    <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="two-factor-trust" /> {s.trustDevice}</label>
+    <Button type="submit">{s.twoFactorVerify}</Button>
+  </form>
+
+  <div class="text-muted-foreground flex items-center gap-3 text-xs uppercase" aria-hidden="true">
+    <span class="h-px flex-1 bg-border"></span>{s.or}<span class="h-px flex-1 bg-border"></span>
+  </div>
+
+  <Button type="button" variant="outline" id="passkey-sign-in">{s.passkeySignIn}</Button>
+
+  {social.map((p) => (
+    <Button type="button" variant="outline" data-social-provider={p}>{s.socialContinue.replace('{provider}', providerLabel[p] ?? p)}</Button>
+  ))}
+
+  {otp && (
+    <details class="rounded-lg border p-3">
+      <summary class="cursor-pointer text-sm font-medium">{s.otpTitle}</summary>
+      <form id="email-otp-form" class="mt-3 grid gap-3" novalidate>
+        <Label for="otp-email">{s.otpEmail}</Label>
+        <Input id="otp-email" name="email" type="email" autocomplete="email" required />
+        <Button type="button" variant="outline" id="otp-send">{s.otpSend}</Button>
+        <div id="otp-code-group" class="hidden grid gap-2">
+          <Label for="otp-code">{s.otpCode}</Label>
+          <Input id="otp-code" name="otp" inputmode="numeric" autocomplete="one-time-code" maxlength={6} />
+          <Button type="submit">{s.otpVerify}</Button>
+        </div>
+      </form>
+    </details>
+  )}
+</div>
+
+<script>
+  import { authClient } from '@lib/auth-client';
+  import { toast } from '@atoms/toast';
+
+  function init() {
+    const root = document.getElementById('signin-alternatives');
+    if (!root || root.dataset.ready === 'true') return;
+    root.dataset.ready = 'true';
+    const redirect = () => { window.location.href = root.dataset.redirect || '/'; };
+    const fail = (msg?: string) => toast.error(msg || root.dataset.error || '');
+
+    // ── 2FA ──
+    const tf = document.getElementById('two-factor-step') as HTMLFormElement;
+    document.addEventListener('polyweb:two-factor-required', () => {
+      tf.classList.remove('hidden');
+      document.getElementById('sign-in-form')?.classList.add('hidden');
+      (document.getElementById('two-factor-code') as HTMLInputElement).focus();
+    });
+    tf.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const code = (document.getElementById('two-factor-code') as HTMLInputElement).value.trim();
+      const backup = (document.getElementById('two-factor-backup') as HTMLInputElement).checked;
+      const trustDevice = (document.getElementById('two-factor-trust') as HTMLInputElement).checked;
+      const { error } = backup
+        ? await authClient.twoFactor.verifyBackupCode({ code, trustDevice })
+        : await authClient.twoFactor.verifyTotp({ code, trustDevice });
+      if (error) return fail(error.message);
+      toast.success(root.dataset.success || '');
+      redirect();
+    });
+
+    // ── Passkey ──
+    document.getElementById('passkey-sign-in')?.addEventListener('click', async () => {
+      const res = await authClient.signIn.passkey();
+      if (res?.error) return fail(res.error.message);
+      redirect();
+    });
+
+    // ── OAuth ──
+    root.querySelectorAll<HTMLElement>('[data-social-provider]').forEach((btn) => btn.addEventListener('click', async () => {
+      const { error } = await authClient.signIn.social({ provider: btn.dataset.socialProvider as 'github' | 'google', callbackURL: root.dataset.redirect });
+      if (error) fail(error.message);
+    }));
+
+    // ── Email OTP ──
+    const otpForm = document.getElementById('email-otp-form') as HTMLFormElement | null;
+    if (otpForm) {
+      const email = () => (document.getElementById('otp-email') as HTMLInputElement).value.trim();
+      document.getElementById('otp-send')?.addEventListener('click', async () => {
+        if (!email()) return fail();
+        const { error } = await authClient.emailOtp.sendVerificationOtp({ email: email(), type: 'sign-in' });
+        if (error) return fail(error.message);
+        toast.success(root.dataset.otpSent || '');
+        document.getElementById('otp-code-group')?.classList.remove('hidden');
+        (document.getElementById('otp-code') as HTMLInputElement).focus();
+      });
+      otpForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const otp = (document.getElementById('otp-code') as HTMLInputElement).value.trim();
+        const { error } = await authClient.signIn.emailOtp({ email: email(), otp });
+        if (error) return fail(error.message);
+        toast.success(root.dataset.success || '');
+        redirect();
+      });
+    }
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+  document.addEventListener('astro:after-swap', init);
+</script>

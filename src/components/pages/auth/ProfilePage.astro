@@ -10,6 +10,7 @@ import { Checkbox } from '@atoms/checkbox';
 import Separator from '@atoms/separator/Separator.astro';
 import Button from '@atoms/button/Button.astro';
 import { safeUrl } from '@lib/sanitize';
+import SecuritySettings from '@/components/auth/SecuritySettings.astro';
 
 interface Props {
   t: AuthTranslations;
@@ -155,6 +156,7 @@ const initials = user?.name
         </div>
       </CardContent>
     </Card>
+    {user && <SecuritySettings locale={locale} userId={user.id} />}
   </div>
 </section>
 

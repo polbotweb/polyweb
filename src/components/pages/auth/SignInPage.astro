@@ -7,6 +7,7 @@ import Label from '@atoms/label/Label.astro';
 import Input from '@atoms/input/Input.astro';
 import Separator from '@atoms/separator/Separator.astro';
 import AsyncButton from '@wow/AsyncButton.astro';
+import SignInAlternatives from '@/components/auth/SignInAlternatives.astro';
 
 interface Props {
   t: AuthTranslations;
@@ -54,6 +55,7 @@ const forgotPasswordUrl = getAuthUrl(locale, 'forgot-password', t);
           type="submit"
         />
       </form>
+      <SignInAlternatives locale={locale} redirectUrl={getAuthUrl(locale, 'dashboard', t)} />
     </CardContent>
     <CardFooter class="flex-col gap-4">
       <Separator />
@@ -126,7 +128,7 @@ const forgotPasswordUrl = getAuthUrl(locale, 'forgot-password', t);
       }, 15000);
 
       try {
-        const { error } = await authClient.signIn.email({
+        const { data, error } = await authClient.signIn.email({
           email: inputs.email.value.trim(),
           password: inputs.password.value,
         });
@@ -140,6 +142,12 @@ const forgotPasswordUrl = getAuthUrl(locale, 'forgot-password', t);
           inputs.email.setAttribute('aria-invalid', 'true');
           toast.error(getErrorMsg(error.code));
           return reject();
+        }
+        // 2FA activée : le plugin client déclenche `polyweb:two-factor-required`
+        // et SignInAlternatives affiche l'étape TOTP — pas de redirection ici.
+        if (data && 'twoFactorRedirect' in data && data.twoFactorRedirect) {
+          resolve();
+          return;
         }
         toast.success(successMsg);
         resolve();

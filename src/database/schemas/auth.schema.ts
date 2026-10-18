@@ -6,6 +6,7 @@ import {
   boolean,
   index,
   uniqueIndex,
+  integer,
 } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
@@ -29,6 +30,8 @@ export const user = pgTable("user", {
   banned: boolean("banned").default(false),
   banReason: text("ban_reason"),
   banExpires: timestamp("ban_expires"),
+  // Better Auth twoFactor plugin
+  twoFactorEnabled: boolean("two_factor_enabled").default(false),
 });
 
 export const session = pgTable(
@@ -231,4 +234,56 @@ export const organizationRoleRelations = relations(organizationRole, ({ one }) =
     fields: [organizationRole.organizationId],
     references: [organization.id],
   }),
+}));
+
+// ─── Better Auth twoFactor plugin (TOTP + codes de secours) ──────────
+export const twoFactor = pgTable(
+  "two_factor",
+  {
+    id: text("id").primaryKey(),
+    secret: text("secret").notNull(),
+    backupCodes: text("backup_codes").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    verified: boolean("verified").default(true),
+    failedVerificationCount: integer("failed_verification_count").default(0),
+    lockedUntil: timestamp("locked_until"),
+  },
+  (table) => [
+    index("two_factor_secret_idx").on(table.secret),
+    index("two_factor_user_id_idx").on(table.userId),
+  ],
+);
+
+// ─── @better-auth/passkey plugin (WebAuthn) ──────────────────────────
+export const passkey = pgTable(
+  "passkey",
+  {
+    id: text("id").primaryKey(),
+    name: text("name"),
+    publicKey: text("public_key").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    credentialID: text("credential_id").notNull(),
+    counter: integer("counter").notNull(),
+    deviceType: text("device_type").notNull(),
+    backedUp: boolean("backed_up").notNull(),
+    transports: text("transports"),
+    createdAt: timestamp("created_at"),
+    aaguid: text("aaguid"),
+  },
+  (table) => [
+    index("passkey_user_id_idx").on(table.userId),
+    index("passkey_credential_id_idx").on(table.credentialID),
+  ],
+);
+
+export const twoFactorRelations = relations(twoFactor, ({ one }) => ({
+  user: one(user, { fields: [twoFactor.userId], references: [user.id] }),
+}));
+
+export const passkeyRelations = relations(passkey, ({ one }) => ({
+  user: one(user, { fields: [passkey.userId], references: [user.id] }),
 }));

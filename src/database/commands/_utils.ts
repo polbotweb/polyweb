@@ -81,7 +81,9 @@ export async function resetAllTables(client: import('pg').PoolClient): Promise<v
 export async function truncateAllTables(client: import('pg').PoolClient): Promise<void> {
   console.log(c.yellow('Vidage des tables en cours...'));
   await client.query('SET session_replication_role = replica;');
-  const { rows: tables } = await client.query(`SELECT tablename FROM pg_tables WHERE schemaname = 'public'`);
+  // L'historique des migrations n'est PAS des données : le vider ferait ré-appliquer
+  // toutes les migrations au prochain db:migrate.
+  const { rows: tables } = await client.query(`SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '__drizzle_migrations'`);
   for (const { tablename } of tables) {
     try {
       await client.query(`TRUNCATE TABLE "${tablename}" RESTART IDENTITY CASCADE;`);

@@ -20,6 +20,10 @@ const SHOTS: Array<{ name: string; path: string; viewport?: { width: number; hei
 ];
 
 test.beforeEach(async ({ page }) => {
+  // Bandeau cookies masqué : consentement pré-enregistré (format de CookieConsent.astro).
+  await page.addInitScript(() => {
+    localStorage.setItem('cookie-consent', JSON.stringify({ necessary: true, analytics: false, marketing: false, timestamp: Date.now() }));
+  });
   // Ressources externes neutralisées pour des captures déterministes (comme antx).
   await page.route(/\.(woff2?|ttf)$/, (route) => route.fulfill({ status: 200, body: '', contentType: 'font/woff2' }));
 });

@@ -1,0 +1,137 @@
+---
+/**
+ * SecuritySettings — gestion 2FA TOTP (QR code via uqr, codes de secours) et
+ * passkeys, intégrée à la page profil (brique h).
+ */
+import type { Locale } from '@i18n/config';
+import { getAuthExtStrings } from '@i18n/auth-extensions';
+import { eq } from 'drizzle-orm';
+import { getDrizzle, schema } from '@database/drizzle';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@atoms/card';
+import Label from '@atoms/label/Label.astro';
+import Input from '@atoms/input/Input.astro';
+import Button from '@atoms/button/Button.astro';
+
+interface Props { locale: Locale; userId: string }
+const { locale, userId } = Astro.props;
+const s = getAuthExtStrings(locale);
+const db = getDrizzle();
+const [u] = await db.select({ twoFactorEnabled: schema.user.twoFactorEnabled }).from(schema.user).where(eq(schema.user.id, userId));
+const passkeys = await db
+  .select({ id: schema.passkey.id, name: schema.passkey.name, createdAt: schema.passkey.createdAt, deviceType: schema.passkey.deviceType })
+  .from(schema.passkey)
+  .where(eq(schema.passkey.userId, userId));
+const enabled = !!u?.twoFactorEnabled;
+---
+
+<Card id="security-settings" data-enabled={enabled ? 'true' : 'false'} data-error={s.error} data-msg-enabled={s.totpEnabled} data-msg-disabled={s.totpDisabled} data-msg-passkey={s.passkeyAdded}>
+  <CardHeader>
+    <CardTitle>{s.securityTitle}</CardTitle>
+    <CardDescription>{s.securityDescription}</CardDescription>
+  </CardHeader>
+  <CardContent class="grid gap-6">
+    <section class="grid gap-3" aria-labelledby="totp-heading">
+      <h3 id="totp-heading" class="font-semibold">TOTP</h3>
+      <div class="grid gap-2 max-w-sm">
+        <Label for="totp-password">{s.passwordPrompt}</Label>
+        <Input id="totp-password" type="password" autocomplete="current-password" />
+      </div>
+      <div class="flex gap-2">
+        {enabled
+          ? <Button type="button" variant="outline" id="totp-disable">{s.totpDisable}</Button>
+          : <Button type="button" id="totp-enable">{s.totpEnable}</Button>}
+      </div>
+      <div id="totp-setup" class="hidden grid gap-3">
+        <p class="text-sm">{s.totpScan}</p>
+        <div id="totp-qr" class="size-48 rounded bg-white p-2" role="img" aria-label="QR code TOTP"></div>
+        <code id="totp-uri" class="text-muted-foreground break-all text-xs"></code>
+        <div class="grid gap-2 max-w-xs">
+          <Label for="totp-verify-code">Code</Label>
+          <Input id="totp-verify-code" inputmode="numeric" autocomplete="one-time-code" maxlength={6} />
+        </div>
+        <Button type="button" id="totp-verify">{s.totpConfirm}</Button>
+        <div>
+          <h4 class="font-medium">{s.backupCodesTitle}</h4>
+          <p class="text-muted-foreground text-sm">{s.backupCodesHelp}</p>
+          <ul id="totp-backup-codes" class="mt-2 grid grid-cols-2 gap-1 font-mono text-sm"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid gap-3" aria-labelledby="passkeys-heading">
+      <h3 id="passkeys-heading" class="font-semibold">{s.passkeysTitle}</h3>
+      {passkeys.length === 0 && <p class="text-muted-foreground text-sm">{s.passkeyNone}</p>}
+      <ul class="grid gap-2">
+        {passkeys.map((p) => (
+          <li class="flex items-center justify-between rounded border px-3 py-2 text-sm">
+            <span>{p.name || p.deviceType} {p.createdAt && <time class="text-muted-foreground ms-2" datetime={p.createdAt.toISOString()}>{p.createdAt.toLocaleDateString(locale)}</time>}</span>
+            <Button type="button" size="sm" variant="outline" data-passkey-delete={p.id}>{s.passkeyDelete}</Button>
+          </li>
+        ))}
+      </ul>
+      <div class="flex items-end gap-2 max-w-md">
+        <div class="grid flex-1 gap-2">
+          <Label for="passkey-name">{s.passkeyName}</Label>
+          <Input id="passkey-name" maxlength={64} />
+        </div>
+        <Button type="button" id="passkey-add">{s.passkeyAdd}</Button>
+      </div>
+    </section>
+  </CardContent>
+</Card>
+
+<script>
+  import { authClient } from '@lib/auth-client';
+  import { toast } from '@atoms/toast';
+  import { renderSVG } from 'uqr';
+
+  function init() {
+    const root = document.getElementById('security-settings');
+    if (!root || root.dataset.ready === 'true') return;
+    root.dataset.ready = 'true';
+    const fail = (m?: string) => toast.error(m || root.dataset.error || '');
+    const pw = () => (document.getElementById('totp-password') as HTMLInputElement).value;
+
+    document.getElementById('totp-enable')?.addEventListener('click', async () => {
+      const { data, error } = await authClient.twoFactor.enable({ password: pw() });
+      if (error || !data || data.method !== 'totp') return fail(error?.message);
+      document.getElementById('totp-setup')!.classList.remove('hidden');
+      // SVG généré localement (aucun service tiers) à partir de l'URI otpauth://
+      document.getElementById('totp-qr')!.innerHTML = renderSVG(data.totpURI);
+      document.getElementById('totp-uri')!.textContent = data.totpURI;
+      const list = document.getElementById('totp-backup-codes')!;
+      list.replaceChildren(...data.backupCodes.map((c) => Object.assign(document.createElement('li'), { textContent: c })));
+    });
+
+    document.getElementById('totp-verify')?.addEventListener('click', async () => {
+      const code = (document.getElementById('totp-verify-code') as HTMLInputElement).value.trim();
+      const { error } = await authClient.twoFactor.verifyTotp({ code });
+      if (error) return fail(error.message);
+      toast.success(root.dataset.msgEnabled || '');
+      setTimeout(() => window.location.reload(), 800);
+    });
+
+    document.getElementById('totp-disable')?.addEventListener('click', async () => {
+      const { error } = await authClient.twoFactor.disable({ password: pw() });
+      if (error) return fail(error.message);
+      toast.success(root.dataset.msgDisabled || '');
+      setTimeout(() => window.location.reload(), 800);
+    });
+
+    document.getElementById('passkey-add')?.addEventListener('click', async () => {
+      const name = (document.getElementById('passkey-name') as HTMLInputElement).value.trim() || undefined;
+      const res = await authClient.passkey.addPasskey({ name });
+      if (res?.error) return fail(res.error.message);
+      toast.success(root.dataset.msgPasskey || '');
+      setTimeout(() => window.location.reload(), 800);
+    });
+
+    root.querySelectorAll<HTMLElement>('[data-passkey-delete]').forEach((b) => b.addEventListener('click', async () => {
+      const { error } = await authClient.passkey.deletePasskey({ id: b.dataset.passkeyDelete! });
+      if (error) return fail(error.message);
+      b.closest('li')?.remove();
+    }));
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+  document.addEventListener('astro:after-swap', init);
+</script>
