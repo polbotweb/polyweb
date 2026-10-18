@@ -5,6 +5,13 @@ export interface AdminResourceFilterDefinition {
   readonly kind: AdminFilterKind;
   readonly queryParam: string;
   readonly multiple?: boolean;
+  /** Valeurs autorisées (select / multi-select) : toute autre valeur d'URL est ignorée. Absent → valeur libre bornée. */
+  readonly options?: readonly string[];
+  /** Bornes (number-range). */
+  readonly min?: number;
+  readonly max?: number;
+  /** Facette : compter les résultats par valeur (select / multi-select / boolean). */
+  readonly facet?: boolean;
 }
 
 export interface AdminResourceSortDefinition {
