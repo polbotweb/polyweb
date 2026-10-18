@@ -28,6 +28,10 @@ export interface LockStore {
   readonly tryAcquire: (resourceId: string, owner: LockOwner, expiresAt: Date, now: Date) => Effect.Effect<boolean, DbError>;
   readonly release: (resourceId: string, owner: LockOwner) => Effect.Effect<void, DbError>;
   readonly purgeExpired: (resourceId: string, now: Date) => Effect.Effect<void, DbError>;
+  /** Reprise par le même utilisateur depuis une autre session (atomique) ; session précédente ou `null`. */
+  readonly takeOver: (resourceId: string, owner: LockOwner, expiresAt: Date, now: Date) => Effect.Effect<string | null, DbError>;
+  /** Libération administrative (quel que soit le propriétaire). */
+  readonly forceRelease: (resourceId: string) => Effect.Effect<void, DbError>;
 }
 
 type LockColumns = { userId: AnyPgColumn; sessionId: AnyPgColumn; lockedAt: AnyPgColumn; expiresAt: AnyPgColumn };
@@ -42,6 +46,7 @@ export function drizzleLockStore<T extends PgTable & LockColumns, K extends keyo
     select: (fields?: unknown) => { from: (t: PgTable) => { where: (w: SQL | undefined) => Promise<Record<string, unknown>[]> & { limit: (n: number) => Promise<Record<string, unknown>[]> } } };
     insert: (t: PgTable) => { values: (v: Record<string, unknown>) => { onConflictDoUpdate: (c: { target: AnyPgColumn; set: Record<string, unknown>; setWhere: SQL }) => { returning: (f: Record<string, AnyPgColumn>) => Promise<unknown[]> } } };
     delete: (t: PgTable) => { where: (w: SQL | undefined) => Promise<unknown> };
+    update: (t: PgTable) => { set: (v: Record<string, unknown>) => { where: (w: SQL | undefined) => { returning: (f: Record<string, AnyPgColumn>) => Promise<{ sessionId: string }[]> } } };
   };
   const fields = { resourceId: resource, userId: table.userId, sessionId: table.sessionId, lockedAt: table.lockedAt, expiresAt: table.expiresAt };
   return {
@@ -69,6 +74,15 @@ export function drizzleLockStore<T extends PgTable & LockColumns, K extends keyo
       ).pipe(Effect.map((rows) => rows.length === 1)),
     release: (resourceId, owner) => dbTry(op('release'), () => db().delete(table).where(and(eq(resource, resourceId), ownerMatch(owner)))).pipe(Effect.asVoid),
     purgeExpired: (resourceId, now) => dbTry(op('purge'), () => db().delete(table).where(and(eq(resource, resourceId), lte(table.expiresAt, now)))).pipe(Effect.asVoid),
+    takeOver: (resourceId, owner, expiresAt, now) =>
+      Effect.gen(function* () {
+        const [before] = yield* dbTry(op('takeOver.read'), () => db().select({ sessionId: table.sessionId }).from(table).where(and(eq(resource, resourceId), eq(table.userId, owner.userId))).limit(1));
+        const rows = yield* dbTry(op('takeOver'), () =>
+          db().update(table).set({ sessionId: owner.sessionId ?? '', lockedAt: now, expiresAt }).where(and(eq(resource, resourceId), eq(table.userId, owner.userId))).returning({ sessionId: table.sessionId }),
+        );
+        return rows.length === 1 ? ((before?.sessionId as string | undefined) ?? null) : null;
+      }),
+    forceRelease: (resourceId) => dbTry(op('forceRelease'), () => db().delete(table).where(eq(resource, resourceId))).pipe(Effect.asVoid),
   };
 }
 
@@ -93,15 +107,30 @@ export interface LockRequest {
   readonly locale?: string;
 }
 
-/** Acquiert ou renouvelle le verrou ; `LockHeldError` si un autre propriétaire le détient. */
-export const acquireLock = ({ resourceType, resourceId, owner, locale }: LockRequest, now = new Date()) =>
+/**
+ * Acquiert ou renouvelle le verrou. Détenu par un autre utilisateur → `LockHeldError`.
+ * Détenu par le même utilisateur dans une autre session → `LockHeldError { sameUser: true }`
+ * (message de confirmation « reprendre ici ? »), sauf si `takeOver` : la session courante
+ * reprend le verrou et `tookOverFrom` indique la session évincée (à auditer par l'appelant).
+ */
+export const acquireLock = ({ resourceType, resourceId, owner, locale }: LockRequest, options: { takeOver?: boolean; now?: Date } = {}) =>
   Effect.gen(function* () {
+    const now = options.now ?? new Date();
     const { store, ttlMs } = yield* entry(resourceType);
     const expiresAt = new Date(now.getTime() + ttlMs);
-    if (yield* store.tryAcquire(resourceId, owner, expiresAt, now)) return { expiresAt };
+    if (yield* store.tryAcquire(resourceId, owner, expiresAt, now)) return { expiresAt, tookOverFrom: null as string | null };
     const current = yield* store.read(resourceId);
-    return yield* Effect.fail(new LockHeldError({ resourceType, resourceId, expiresAt: current?.expiresAt ?? expiresAt, locale }));
+    const sameUser = !!current && current.userId === owner.userId && current.expiresAt > now;
+    if (sameUser && options.takeOver) {
+      const previous = yield* store.takeOver(resourceId, owner, expiresAt, now);
+      if (previous !== null) return { expiresAt, tookOverFrom: previous };
+    }
+    return yield* Effect.fail(new LockHeldError({ resourceType, resourceId, expiresAt: current?.expiresAt ?? expiresAt, sameUser, locale }));
   }).pipe(Effect.withSpan(`lock.acquire ${resourceType}`));
+
+/** Libération administrative (verrou d'un autre éditeur) — à réserver aux administrateurs et à auditer. */
+export const forceReleaseLock = (resourceType: string, resourceId: string) =>
+  Effect.flatMap(entry(resourceType), ({ store }) => store.forceRelease(resourceId));
 
 /** Libère le verrou s'il appartient à `owner` (sans effet sinon). */
 export const releaseLock = ({ resourceType, resourceId, owner }: LockRequest) =>
@@ -117,7 +146,7 @@ export const ensureNotLockedByOther = ({ resourceType, resourceId, owner, locale
     const lock = yield* store.read(resourceId);
     const state = lockState(lock, owner, now);
     if (state === 'expired') yield* store.purgeExpired(resourceId, now);
-    if (state === 'held') return yield* Effect.fail(new LockHeldError({ resourceType, resourceId, expiresAt: lock!.expiresAt, locale }));
+    if (state === 'held') return yield* Effect.fail(new LockHeldError({ resourceType, resourceId, expiresAt: lock!.expiresAt, sameUser: lock!.userId === owner.userId, locale }));
   });
 
 /** Variante groupée (actions en masse) : échoue au premier verrou actif d'un autre. */
@@ -142,3 +171,24 @@ export const requireOwnLock = ({ resourceType, resourceId, owner, locale }: Lock
 
 /** Propriétaire courant d'une action Astro (utilisateur + session si connue). */
 export const lockOwnerFrom = (userId: string, sessionId: string | null | undefined): LockOwner => ({ userId, sessionId: sessionId ?? null });
+
+/**
+ * Déclare un type de ressource verrouillable et renvoie ses opérations liées —
+ * c'est le point d'entrée des modules (et du scaffolding `pnpm module:new`) :
+ *
+ *   export const serviceLock = defineLockResource('service', drizzleLockStore('service', serviceLocks, 'serviceId'));
+ *   yield* serviceLock.ensureNotLockedByOther(id, lockOwnerFrom(user.id, session?.id));
+ */
+export function defineLockResource(resourceType: string, store: LockStore, options: { ttlMs?: number } = {}) {
+  registerLockStore(resourceType, store, options);
+  const req = (resourceId: string, owner: LockOwner, locale?: string): LockRequest => ({ resourceType, resourceId, owner, locale });
+  return {
+    resourceType,
+    acquire: (resourceId: string, owner: LockOwner, opts: { takeOver?: boolean; locale?: string; now?: Date } = {}) => acquireLock(req(resourceId, owner, opts.locale), opts),
+    release: (resourceId: string, owner: LockOwner) => releaseLock(req(resourceId, owner)),
+    forceRelease: (resourceId: string) => forceReleaseLock(resourceType, resourceId),
+    ensureNotLockedByOther: (resourceId: string, owner: LockOwner, locale?: string) => ensureNotLockedByOther(req(resourceId, owner, locale)),
+    ensureNoneLockedByOther: (resourceIds: readonly string[], owner: LockOwner, locale?: string) => ensureNoneLockedByOther(resourceType, resourceIds, owner, locale),
+    requireOwn: (resourceId: string, owner: LockOwner, locale?: string) => requireOwnLock(req(resourceId, owner, locale)),
+  };
+}
