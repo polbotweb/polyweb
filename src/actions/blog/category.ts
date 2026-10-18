@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { eq, and, isNull, or } from "drizzle-orm";
@@ -7,7 +8,7 @@ import { invalidateCache } from "@database/cache";
 import { DEFAULT_LOCALE, type Locale } from "@i18n/config";
 import { blogCategoryFormSchema, blogCategoryUpdateSchema } from "@/lib/blog/validation";
 import { assertAcyclicParent } from "@/lib/cms/taxonomy";
-import { assertBlogPermission, resolveBlogTenant, assertCategoryInTenant, blogRateLimit, auditBlog, blogOrganizationIdSchema } from "./_helpers";
+import { resolveBlogTenant, assertCategoryInTenant, auditBlog, blogOrganizationIdSchema, blogRateLimitEffect, categoryInTenant, requireBlogPermission } from "./_helpers";
 import { actionTry, effectHandler } from "@/lib/effect/action";
 
 function categoryTenantScope(organizationId: string | null) {
@@ -43,10 +44,11 @@ async function assertCategoryParentIsAcyclic(categoryId: string | null, parentId
 
 export const createBlogCategory = defineAction({
   input: blogCategoryFormSchema.extend({ organizationId: blogOrganizationIdSchema }),
-  handler: effectHandler((input, context) => actionTry("blog/category.createBlogCategory", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blogCategory: ["create"] });
-    blogRateLimit(context, user.id, "category-create");
+    const user = yield* requireBlogPermission(context, tenant, { blogCategory: ["create"] });
+    yield* blogRateLimitEffect(user.id, "category-create");
+    return yield* actionTry("blog/category.createBlogCategory", async () => {
     await assertCategoryParentIsAcyclic(null, input.parentId ?? null, tenant.organizationId);
     await assertBaseCategorySlugAvailable(tenant.organizationId, input.slug);
     await assertLocalizedCategorySlugAvailable(tenant.organizationId, input.locale, input.slug);
@@ -59,15 +61,16 @@ export const createBlogCategory = defineAction({
     auditBlog(context, user.id, "BLOG_CATEGORY_CREATE", { resource: "blog_categories", resourceId: category.id, metadata: { organizationId: tenant.organizationId, locale: input.locale, slug: input.slug } });
     invalidateCache("blog:categories");
     return { id: category.id, slug: input.slug };
-  })),
+  }); })),
 });
 
 export const updateBlogCategory = defineAction({
   input: blogCategoryUpdateSchema.extend({ organizationId: blogOrganizationIdSchema }),
-  handler: effectHandler((input, context) => actionTry("blog/category.updateBlogCategory", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blogCategory: ["update"] });
-    blogRateLimit(context, user.id, "category-update");
+    const user = yield* requireBlogPermission(context, tenant, { blogCategory: ["update"] });
+    yield* blogRateLimitEffect(user.id, "category-update");
+    return yield* actionTry("blog/category.updateBlogCategory", async () => {
     const { id, organizationId: _, ...data } = input;
     await assertCategoryInTenant(id, tenant);
     await assertCategoryParentIsAcyclic(id, data.parentId ?? null, tenant.organizationId);
@@ -87,16 +90,17 @@ export const updateBlogCategory = defineAction({
     auditBlog(context, user.id, "BLOG_CATEGORY_UPDATE", { resource: "blog_categories", resourceId: id, metadata: { organizationId: tenant.organizationId, locale: data.locale, slug: data.slug } });
     invalidateCache("blog:categories");
     return { id };
-  })),
+  }); })),
 });
 
 export const deleteBlogCategory = defineAction({
   input: z.object({ id: z.uuid(), organizationId: blogOrganizationIdSchema, reassignToId: z.uuid().optional() }),
-  handler: effectHandler((input, context) => actionTry("blog/category.deleteBlogCategory", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blogCategory: ["delete"] });
-    blogRateLimit(context, user.id, "category-delete");
-    await assertCategoryInTenant(input.id, tenant);
+    const user = yield* requireBlogPermission(context, tenant, { blogCategory: ["delete"] });
+    yield* blogRateLimitEffect(user.id, "category-delete");
+    yield* categoryInTenant(input.id, tenant);
+    return yield* actionTry("blog/category.deleteBlogCategory", async () => {
     if (input.reassignToId) await assertCategoryInTenant(input.reassignToId, tenant);
     const db = getDrizzle();
     await db.transaction(async (tx) => {
@@ -112,5 +116,5 @@ export const deleteBlogCategory = defineAction({
     auditBlog(context, user.id, "BLOG_CATEGORY_DELETE", { resource: "blog_categories", resourceId: input.id, metadata: { organizationId: tenant.organizationId, reassignToId: input.reassignToId } });
     invalidateCache("blog:categories");
     return { success: true };
-  })),
+  }); })),
 });

@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { eq, and, isNull, or } from "drizzle-orm";
@@ -7,12 +8,13 @@ import { invalidateCache } from "@database/cache";
 import { DEFAULT_LOCALE, type Locale } from "@i18n/config";
 import { blogTagFormSchema, blogTagUpdateSchema } from "@/lib/blog/validation";
 import {
-  assertBlogPermission,
   resolveBlogTenant,
   assertTagInTenant,
-  blogRateLimit,
   auditBlog,
   blogOrganizationIdSchema,
+  blogRateLimitEffect,
+  requireBlogPermission,
+  tagInTenant,
 } from "./_helpers";
 import { actionTry, effectHandler } from "@/lib/effect/action";
 
@@ -77,10 +79,11 @@ export const createBlogTag = defineAction({
   input: blogTagFormSchema.extend({
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: effectHandler((input, context) => actionTry("blog/tag.createBlogTag", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blogTag: ["create"] });
-    blogRateLimit(context, user.id, "tag-create");
+    const user = yield* requireBlogPermission(context, tenant, { blogTag: ["create"] });
+    yield* blogRateLimitEffect(user.id, "tag-create");
+    return yield* actionTry("blog/tag.createBlogTag", async () => {
 
     const db = getDrizzle();
 
@@ -112,17 +115,18 @@ export const createBlogTag = defineAction({
 
     invalidateCache("blog:tags");
     return { id: tag.id, slug: input.slug };
-  })),
+  }); })),
 });
 
 export const updateBlogTag = defineAction({
   input: blogTagUpdateSchema.extend({
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: effectHandler((input, context) => actionTry("blog/tag.updateBlogTag", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blogTag: ["update"] });
-    blogRateLimit(context, user.id, "tag-update");
+    const user = yield* requireBlogPermission(context, tenant, { blogTag: ["update"] });
+    yield* blogRateLimitEffect(user.id, "tag-update");
+    return yield* actionTry("blog/tag.updateBlogTag", async () => {
 
     const { id, organizationId: _, ...data } = input;
     await assertTagInTenant(id, tenant);
@@ -180,7 +184,7 @@ export const updateBlogTag = defineAction({
 
     invalidateCache("blog:tags");
     return { id };
-  })),
+  }); })),
 });
 
 export const deleteBlogTag = defineAction({
@@ -188,12 +192,13 @@ export const deleteBlogTag = defineAction({
     id: z.uuid(),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: effectHandler((input, context) => actionTry("blog/tag.deleteBlogTag", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blogTag: ["delete"] });
-    blogRateLimit(context, user.id, "tag-delete");
+    const user = yield* requireBlogPermission(context, tenant, { blogTag: ["delete"] });
+    yield* blogRateLimitEffect(user.id, "tag-delete");
 
-    await assertTagInTenant(input.id, tenant);
+    yield* tagInTenant(input.id, tenant);
+    return yield* actionTry("blog/tag.deleteBlogTag", async () => {
     const db = getDrizzle();
 
     await db.delete(blogPostTags).where(eq(blogPostTags.tagId, input.id));
@@ -207,5 +212,5 @@ export const deleteBlogTag = defineAction({
 
     invalidateCache("blog:tags");
     return { success: true };
-  })),
+  }); })),
 });

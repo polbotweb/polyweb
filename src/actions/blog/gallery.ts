@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { eq, and } from "drizzle-orm";
@@ -7,13 +8,14 @@ import {
   blogPostGalleryMedia,
 } from "@database/schemas";
 import {
-  assertBlogPermission,
   resolveBlogTenant,
   assertPostInTenant,
   assertMediaInTenant,
-  blogRateLimit,
   auditBlog,
   blogOrganizationIdSchema,
+  blogRateLimitEffect,
+  postInTenant,
+  requireBlogPermission,
 } from "./_helpers";
 import { actionTry, effectHandler } from "@/lib/effect/action";
 
@@ -25,12 +27,13 @@ export const createBlogGallery = defineAction({
     sortOrder: z.number().int().min(0).default(0),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: effectHandler((input, context) => actionTry("blog/gallery.createBlogGallery", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    blogRateLimit(context, user.id, "gallery-create");
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* blogRateLimitEffect(user.id, "gallery-create");
 
-    await assertPostInTenant(input.postId, tenant);
+    yield* postInTenant(input.postId, tenant);
+    return yield* actionTry("blog/gallery.createBlogGallery", async () => {
 
     const db = getDrizzle();
     const [gallery] = await db
@@ -50,7 +53,7 @@ export const createBlogGallery = defineAction({
     });
 
     return { id: gallery.id };
-  })),
+  }); })),
 });
 
 export const updateBlogGallery = defineAction({
@@ -61,10 +64,11 @@ export const updateBlogGallery = defineAction({
     sortOrder: z.number().int().min(0).optional(),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: effectHandler((input, context) => actionTry("blog/gallery.updateBlogGallery", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    blogRateLimit(context, user.id, "gallery-update");
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* blogRateLimitEffect(user.id, "gallery-update");
+    return yield* actionTry("blog/gallery.updateBlogGallery", async () => {
 
     const db = getDrizzle();
     const [gallery] = await db
@@ -92,7 +96,7 @@ export const updateBlogGallery = defineAction({
     });
 
     return { success: true };
-  })),
+  }); })),
 });
 
 export const deleteBlogGallery = defineAction({
@@ -100,10 +104,11 @@ export const deleteBlogGallery = defineAction({
     id: z.uuid(),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: effectHandler((input, context) => actionTry("blog/gallery.deleteBlogGallery", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    blogRateLimit(context, user.id, "gallery-delete");
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* blogRateLimitEffect(user.id, "gallery-delete");
+    return yield* actionTry("blog/gallery.deleteBlogGallery", async () => {
 
     const db = getDrizzle();
     const [gallery] = await db
@@ -124,7 +129,7 @@ export const deleteBlogGallery = defineAction({
     });
 
     return { success: true };
-  })),
+  }); })),
 });
 
 export const addGalleryMedia = defineAction({
@@ -136,10 +141,11 @@ export const addGalleryMedia = defineAction({
     sortOrder: z.number().int().min(0).default(0),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: effectHandler((input, context) => actionTry("blog/gallery.addGalleryMedia", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    blogRateLimit(context, user.id, "gallery-media-add");
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* blogRateLimitEffect(user.id, "gallery-media-add");
+    return yield* actionTry("blog/gallery.addGalleryMedia", async () => {
 
     const db = getDrizzle();
     const [gallery] = await db
@@ -171,7 +177,7 @@ export const addGalleryMedia = defineAction({
     });
 
     return { success: true };
-  })),
+  }); })),
 });
 
 export const removeGalleryMedia = defineAction({
@@ -180,10 +186,11 @@ export const removeGalleryMedia = defineAction({
     mediaId: z.uuid(),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: effectHandler((input, context) => actionTry("blog/gallery.removeGalleryMedia", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    blogRateLimit(context, user.id, "gallery-media-remove");
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* blogRateLimitEffect(user.id, "gallery-media-remove");
+    return yield* actionTry("blog/gallery.removeGalleryMedia", async () => {
 
     const db = getDrizzle();
     const [gallery] = await db
@@ -212,5 +219,5 @@ export const removeGalleryMedia = defineAction({
     });
 
     return { success: true };
-  })),
+  }); })),
 });

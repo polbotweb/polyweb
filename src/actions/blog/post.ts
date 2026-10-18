@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { eq, and, desc, isNull, ne } from "drizzle-orm";
@@ -17,27 +18,29 @@ import { blogPostFormSchema, blogPostUpdateSchema, calculateSeoScore } from "@/l
 import { generateExcerpt, getOgLocale } from "@/lib/blog/utils";
 import { BLOG_DEFAULTS } from "@/lib/blog/constants";
 import {
-  assertBlogPermission,
   resolveBlogTenant,
   assertPostInTenant,
   assertCategoryInTenant,
   assertTagInTenant,
   assertMediaInTenant,
-  blogRateLimit,
   auditBlog,
   invalidateBlogCache,
   blogOrganizationIdSchema,
+  blogRateLimitEffect,
+  postInTenant,
+  requireBlogPermission,
 } from "./_helpers";
 import { actionTry, effectHandler } from "@/lib/effect/action";
 
 export const createBlogPost = defineAction({
   input: blogPostFormSchema.extend({ organizationId: blogOrganizationIdSchema }),
-  handler: effectHandler((input, context) => actionTry("blog/post.createBlogPost", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, {
+    const user = yield* requireBlogPermission(context, tenant, {
       blog: input.status === "PUBLISHED" ? ["create", "publish"] : ["create"],
     });
-    blogRateLimit(context, user.id, "post-create");
+    yield* blogRateLimitEffect(user.id, "post-create");
+    return yield* actionTry("blog/post.createBlogPost", async () => {
 
     const db = getDrizzle();
     await Promise.all([
@@ -140,7 +143,7 @@ export const createBlogPost = defineAction({
     });
     invalidateBlogCache();
     return { id: post.id, slug: input.slug };
-  })),
+  }); })),
 });
 
 export const updateBlogPost = defineAction({
@@ -149,10 +152,11 @@ export const updateBlogPost = defineAction({
     categoryIds: z.array(z.uuid()).max(10).optional(),
     tagIds: z.array(z.uuid()).max(20).optional(),
   }),
-  handler: effectHandler((input, context) => actionTry("blog/post.updateBlogPost", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    blogRateLimit(context, user.id, "post-update");
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* blogRateLimitEffect(user.id, "post-update");
+    return yield* actionTry("blog/post.updateBlogPost", async () => {
 
     const { id, organizationId: _, categoryIds, tagIds, seo, status: _status, publishedAt: _publishedAt, ...data } = input;
     const existingPost = await assertPostInTenant(id, tenant);
@@ -318,15 +322,16 @@ export const updateBlogPost = defineAction({
     });
     invalidateBlogCache();
     return { id };
-  })),
+  }); })),
 });
 
 export const lockBlogPost = defineAction({
   input: z.object({ id: z.uuid(), organizationId: blogOrganizationIdSchema }),
-  handler: effectHandler((input, context) => actionTry("blog/post.lockBlogPost", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    await assertPostInTenant(input.id, tenant);
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* postInTenant(input.id, tenant);
+    return yield* actionTry("blog/post.lockBlogPost", async () => {
 
     const db = getDrizzle();
     const now = new Date();
@@ -347,31 +352,33 @@ export const lockBlogPost = defineAction({
     });
 
     return { success: true, expiresAt };
-  })),
+  }); })),
 });
 
 export const unlockBlogPost = defineAction({
   input: z.object({ id: z.uuid(), organizationId: blogOrganizationIdSchema }),
-  handler: effectHandler((input, context) => actionTry("blog/post.unlockBlogPost", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    await assertPostInTenant(input.id, tenant);
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* postInTenant(input.id, tenant);
+    return yield* actionTry("blog/post.unlockBlogPost", async () => {
 
     const db = getDrizzle();
     await db.delete(blogPostLocks).where(and(eq(blogPostLocks.postId, input.id), eq(blogPostLocks.userId, user.id)));
     invalidateBlogCache();
     return { success: true };
-  })),
+  }); })),
 });
 
 export const listBlogPostRevisions = defineAction({
   input: z.object({ postId: z.uuid(), organizationId: blogOrganizationIdSchema }),
-  handler: effectHandler((input, context) => actionTry("blog/post.listBlogPostRevisions", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    await assertBlogPermission(context, tenant, { blog: ["read"] });
-    await assertPostInTenant(input.postId, tenant);
+    yield* requireBlogPermission(context, tenant, { blog: ["read"] });
+    yield* postInTenant(input.postId, tenant);
+    return yield* actionTry("blog/post.listBlogPostRevisions", async () => {
 
     const db = getDrizzle();
     return db.select().from(blogPostRevisions).where(eq(blogPostRevisions.postId, input.postId)).orderBy(desc(blogPostRevisions.createdAt)).limit(50);
-  })),
+  }); })),
 });

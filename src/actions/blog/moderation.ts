@@ -1,4 +1,5 @@
-import { assertBlogPermission, resolveBlogTenant, auditBlog, blogOrganizationIdSchema, blogPublicRateLimit, invalidateBlogCache } from "./_helpers";
+import { Effect } from "effect";
+import { resolveBlogTenant, auditBlog, blogOrganizationIdSchema, blogPublicRateLimit, invalidateBlogCache, requireBlogPermission } from "./_helpers";
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { eq, and, desc, isNull, or } from "drizzle-orm";
@@ -88,9 +89,10 @@ export const updateBlogReport = defineAction({
     status: blogReportStatusSchema,
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: effectHandler((input, context) => actionTry("blog/moderation.updateBlogReport", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blogComment: ["moderate"] });
+    const user = yield* requireBlogPermission(context, tenant, { blogComment: ["moderate"] });
+    return yield* actionTry("blog/moderation.updateBlogReport", async () => {
 
     const db = getDrizzle();
 
@@ -163,7 +165,7 @@ export const updateBlogReport = defineAction({
 
     invalidateBlogCache();
     return { success: true };
-  })),
+  }); })),
 });
 
 export const getBlogModerationQueue = defineAction({
@@ -172,9 +174,10 @@ export const getBlogModerationQueue = defineAction({
     page: z.number().int().min(1).default(1),
     limit: z.number().int().min(1).max(100).default(20),
   }),
-  handler: effectHandler((input, context) => actionTry("blog/moderation.getBlogModerationQueue", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    await assertBlogPermission(context, tenant, { blogComment: ["moderate"] });
+    yield* requireBlogPermission(context, tenant, { blogComment: ["moderate"] });
+    return yield* actionTry("blog/moderation.getBlogModerationQueue", async () => {
 
     const db = getDrizzle();
     const offset = (input.page - 1) * input.limit;
@@ -229,5 +232,5 @@ export const getBlogModerationQueue = defineAction({
       .offset(offset);
 
     return { comments: pendingComments, reviews: pendingReviews, reports: pendingReports };
-  })),
+  }); })),
 });

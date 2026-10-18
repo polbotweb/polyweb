@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { eq } from "drizzle-orm";
@@ -5,13 +6,14 @@ import { getDrizzle } from "@database/drizzle";
 import { blogPostLinks } from "@database/schemas";
 import { blogLinkFormSchema, blogLinkUpdateSchema } from "@/lib/blog/validation";
 import {
-  assertBlogPermission,
   resolveBlogTenant,
   assertPostInTenant,
-  blogRateLimit,
   auditBlog,
   invalidateBlogCache,
   blogOrganizationIdSchema,
+  blogRateLimitEffect,
+  postInTenant,
+  requireBlogPermission,
 } from "./_helpers";
 import { actionTry, effectHandler } from "@/lib/effect/action";
 
@@ -19,13 +21,14 @@ export const createBlogLink = defineAction({
   input: blogLinkFormSchema.extend({
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: effectHandler((input, context) => actionTry("blog/link.createBlogLink", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    blogRateLimit(context, user.id, "link-create");
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* blogRateLimitEffect(user.id, "link-create");
 
-    await assertPostInTenant(input.sourcePostId, tenant);
-    await assertPostInTenant(input.targetPostId, tenant);
+    yield* postInTenant(input.sourcePostId, tenant);
+    yield* postInTenant(input.targetPostId, tenant);
+    return yield* actionTry("blog/link.createBlogLink", async () => {
     if (input.sourcePostId === input.targetPostId) {
       throw new ActionError({
         code: "BAD_REQUEST",
@@ -53,17 +56,18 @@ export const createBlogLink = defineAction({
 
     invalidateBlogCache();
     return { id: link.id };
-  })),
+  }); })),
 });
 
 export const updateBlogLink = defineAction({
   input: blogLinkUpdateSchema.extend({
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: effectHandler((input, context) => actionTry("blog/link.updateBlogLink", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    blogRateLimit(context, user.id, "link-update");
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* blogRateLimitEffect(user.id, "link-update");
+    return yield* actionTry("blog/link.updateBlogLink", async () => {
 
     const db = getDrizzle();
     const [link] = await db
@@ -91,7 +95,7 @@ export const updateBlogLink = defineAction({
 
     invalidateBlogCache();
     return { success: true };
-  })),
+  }); })),
 });
 
 export const deleteBlogLink = defineAction({
@@ -99,10 +103,11 @@ export const deleteBlogLink = defineAction({
     id: z.uuid(),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: effectHandler((input, context) => actionTry("blog/link.deleteBlogLink", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    blogRateLimit(context, user.id, "link-delete");
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* blogRateLimitEffect(user.id, "link-delete");
+    return yield* actionTry("blog/link.deleteBlogLink", async () => {
 
     const db = getDrizzle();
     const [link] = await db
@@ -124,5 +129,5 @@ export const deleteBlogLink = defineAction({
 
     invalidateBlogCache();
     return { success: true };
-  })),
+  }); })),
 });

@@ -1,4 +1,5 @@
-import { assertBlogPermission, resolveBlogTenant, auditBlog, blogOrganizationIdSchema, blogPublicRateLimit, invalidateBlogCache } from "./_helpers";
+import { Effect } from "effect";
+import { resolveBlogTenant, auditBlog, blogOrganizationIdSchema, blogPublicRateLimit, invalidateBlogCache, requireBlogPermission } from "./_helpers";
 import { defineAction, ActionError } from "astro:actions";
 import { eq, and, isNull } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
@@ -99,9 +100,10 @@ export const moderateBlogComment = defineAction({
   input: blogCommentModerationSchema.extend({
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: effectHandler((input, context) => actionTry("blog/comment.moderateBlogComment", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blogComment: ["moderate"] });
+    const user = yield* requireBlogPermission(context, tenant, { blogComment: ["moderate"] });
+    return yield* actionTry("blog/comment.moderateBlogComment", async () => {
 
     const db = getDrizzle();
     const { newStatus } = await db.transaction(async (tx) => {
@@ -228,5 +230,5 @@ export const moderateBlogComment = defineAction({
 
     invalidateBlogCache();
     return { success: true };
-  })),
+  }); })),
 });

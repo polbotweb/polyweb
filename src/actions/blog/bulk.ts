@@ -1,10 +1,11 @@
+import { Effect } from "effect";
 import { ActionError, defineAction } from "astro:actions";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "astro/zod";
 import { getDrizzle } from "@database/drizzle";
 import { blogPostLocks, blogPostRevisions, blogPostTranslations, blogPosts } from "@database/schemas";
 import { BLOG_POST_TRANSITIONS, type BlogPostStatus } from "@/lib/blog/constants";
-import { assertBlogPermission, blogOrganizationIdSchema, resolveBlogTenant, invalidateBlogCache, auditBlog } from "./_helpers";
+import { blogOrganizationIdSchema, resolveBlogTenant, invalidateBlogCache, auditBlog, requireBlogPermission } from "./_helpers";
 import { actionTry, effectHandler } from "@/lib/effect/action";
 
 const bulkInput = z.object({ ids: z.array(z.uuid()).min(1).max(100), organizationId: blogOrganizationIdSchema, operation: z.enum(["publish", "archive", "restore", "delete"]) });
@@ -20,9 +21,10 @@ function assertTransition(from: BlogPostStatus, to: BlogPostStatus) {
 
 export const bulkBlogPostLifecycle = defineAction({
   input: bulkInput,
-  handler: effectHandler((input, context) => actionTry("blog/bulk.bulkBlogPostLifecycle", async () => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: [permissionFor[input.operation]] });
+    const user = yield* requireBlogPermission(context, tenant, { blog: [permissionFor[input.operation]] });
+    return yield* actionTry("blog/bulk.bulkBlogPostLifecycle", async () => {
     const db = getDrizzle();
     const rows = await db.select().from(blogPosts).where(and(tenantPredicate(tenant.organizationId), inArray(blogPosts.id, input.ids)));
     if (rows.length !== input.ids.length) throw new ActionError({ code: "FORBIDDEN", message: "Un ou plusieurs articles ne sont pas accessibles dans ce tenant." });
@@ -41,5 +43,5 @@ export const bulkBlogPostLifecycle = defineAction({
     for (const row of rows) auditBlog(context, user.id, auditFor[input.operation], { resource: "blog_posts", resourceId: row.id, metadata: { organizationId: tenant.organizationId, bulk: true, from: row.status, to } });
     invalidateBlogCache();
     return { updated: rows.length };
-  })),
+  }); })),
 });
