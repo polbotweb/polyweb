@@ -1,0 +1,345 @@
+---
+import type { AuthTranslations, Locale } from '@i18n/config';
+import type { AppUser } from '@/lib/types';
+import type { Invitation } from '@/lib/auth-data';
+import { getAuthUrl, getOrgUrl } from '@i18n/utils';
+import { Card, CardHeader, CardTitle, CardContent } from '@atoms/card';
+import { Avatar, AvatarImage, AvatarFallback } from '@atoms/avatar';
+import { Input } from '@atoms/input';
+import { Label } from '@atoms/label';
+import Badge from '@atoms/badge/Badge.astro';
+import Separator from '@atoms/separator/Separator.astro';
+import Button from '@atoms/button/Button.astro';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+  DialogClose,
+  DialogFooter,
+} from '@atoms/dialog';
+import { safeUrl } from '@lib/sanitize';
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  user: AppUser;
+  organizations?: unknown[];
+  userInvitations?: Invitation[];
+}
+
+const { t, locale, user, organizations = [], userInvitations = [] } = Astro.props;
+const signInUrl = getAuthUrl(locale, 'sign-in', t);
+const profileUrl = getAuthUrl(locale, 'profile', t);
+const initials = user?.name
+  ? user.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
+  : '?';
+
+const pendingInvitations = userInvitations.filter((inv) => inv.status === 'pending');
+const roleLabels: Record<string, string> = {
+  owner: t.organizations.members.owner,
+  admin: t.organizations.members.admin,
+  member: t.organizations.members.member,
+};
+---
+
+<section class="mx-auto w-full max-w-3xl">
+  <h1 class="text-3xl font-bold mb-8">{t.dashboard.welcome}, {user?.name ?? ''}</h1>
+
+  <div class="grid gap-6">
+    <!-- Profile card -->
+    <Card>
+      <CardHeader>
+        <CardTitle>{t.dashboard.profile.title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div class="flex items-center gap-4 mb-6">
+          <Avatar size="lg">
+            {user?.image && safeUrl(user.image) && <AvatarImage src={safeUrl(user.image)!} alt={user.name ?? ''} />}
+            <AvatarFallback>{initials}</AvatarFallback>
+          </Avatar>
+          <div>
+            <p class="text-lg font-medium">{user?.name}</p>
+            <p class="text-muted-foreground text-sm">@{user?.username ?? '—'}</p>
+          </div>
+        </div>
+
+        <Separator class="mb-4" />
+
+        <dl class="grid gap-3 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-muted-foreground">{t.dashboard.profile.email}</dt>
+            <dd>{user?.email}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-muted-foreground">{t.dashboard.profile.username}</dt>
+            <dd>@{user?.username ?? '—'}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-muted-foreground">{t.dashboard.profile.role}</dt>
+            <dd><Badge variant="outline" size="sm">{user?.role ?? 'user'}</Badge></dd>
+          </div>
+        </dl>
+
+        <div class="mt-4">
+          <a href={profileUrl} class="text-sm text-primary-deep hover:underline font-medium">
+            {t.dashboard.editProfile} &rarr;
+          </a>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- Pending invitations -->
+    {pendingInvitations.length > 0 && (
+      <Card>
+        <CardHeader>
+          <CardTitle>{t.organizations.pendingInvitations.title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="divide-y" id="pending-invitations">
+            {pendingInvitations.map((inv: any) => (
+              <div class="flex items-center justify-between py-3 gap-4" data-invitation-id={inv.id}>
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-medium truncate">{inv.organizationName ?? inv.organizationId}</p>
+                  <p class="text-xs text-muted-foreground">
+                    {t.organizations.pendingInvitations.role}: {roleLabels[inv.role] ?? inv.role}
+                  </p>
+                </div>
+                <div class="flex gap-2 shrink-0">
+                  <Button size="sm" class="accept-invitation-btn" data-id={inv.id}>
+                    {t.organizations.pendingInvitations.accept}
+                  </Button>
+                  <Button size="sm" variant="outline" class="reject-invitation-btn" data-id={inv.id}>
+                    {t.organizations.pendingInvitations.reject}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    )}
+
+    <!-- Organizations card -->
+    <Card>
+      <CardHeader>
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <CardTitle class="min-w-0">{t.dashboard.organizations.title}</CardTitle>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button size="sm">{t.dashboard.organizations.create}</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t.organizations.create.title}</DialogTitle>
+                <DialogDescription class="sr-only">{t.organizations.create.title}</DialogDescription>
+              </DialogHeader>
+              <form id="create-org-form" class="grid gap-4">
+                <div>
+                  <Label for="org-name">{t.organizations.create.name}</Label>
+                  <Input id="org-name" name="name" placeholder={t.organizations.create.namePlaceholder} required />
+                </div>
+                <div>
+                  <Label for="org-slug">{t.organizations.create.slug}</Label>
+                  <Input id="org-slug" name="slug" placeholder={t.organizations.create.slugPlaceholder} required />
+                  <p id="slug-status" class="text-xs mt-1 h-4"></p>
+                </div>
+                <div>
+                  <Label>{t.organizations.create.logo}</Label>
+                  <input type="file" id="org-logo-input" accept="image/*" class="block w-full text-sm file:mr-4 file:rounded-md file:border-0 file:bg-muted file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-muted/80 cursor-pointer" />
+                </div>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="outline" type="button">Cancel</Button>
+                  </DialogClose>
+                  <Button type="submit" id="create-org-submit">{t.organizations.create.submit}</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {organizations.length === 0 ? (
+          <p class="text-muted-foreground text-sm">{t.dashboard.organizations.empty}</p>
+        ) : (
+          <div class="divide-y">
+            {organizations.map((org: any) => (
+              <a href={getOrgUrl(locale, org.slug, 'members')} class="flex items-center gap-4 py-3 hover:bg-muted/50 -mx-3 px-3 rounded-md transition-colors">
+                <Avatar size="sm">
+                  {org.logo && safeUrl(org.logo) && <AvatarImage src={safeUrl(org.logo)!} alt={org.name} />}
+                  <AvatarFallback>{org.name.charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium truncate">{org.name}</p>
+                  <p class="text-xs text-muted-foreground">/{org.slug}</p>
+                </div>
+                <span class="text-xs text-muted-foreground shrink-0">
+                  {t.dashboard.organizations.viewDetails} &rarr;
+                </span>
+              </a>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+
+    <!-- Sign out -->
+    <div>
+      <Button
+        id="sign-out-btn"
+        variant="outline"
+        data-redirect={signInUrl}
+      >
+        {t.dashboard.signOut}
+      </Button>
+    </div>
+  </div>
+</section>
+
+<div
+  id="dashboard-data"
+  class="hidden"
+  data-locale={locale}
+  data-t-created={t.organizations.create.success}
+  data-t-accepted={t.organizations.pendingInvitations.accepted}
+  data-t-rejected={t.organizations.pendingInvitations.rejected}
+  data-t-slug-available={t.organizations.create.slugAvailable}
+  data-t-slug-taken={t.organizations.create.slugTaken}
+  data-t-slug-checking={t.organizations.create.slugChecking}
+></div>
+
+<script>
+  import { authClient } from '@lib/auth-client';
+  import { toast } from '@atoms/toast';
+
+  function init() {
+    const el = document.getElementById('dashboard-data');
+    const d = el?.dataset ?? {};
+    const locale = d.locale ?? 'en';
+
+    // ─── Sign out ───
+    const btn = document.getElementById('sign-out-btn');
+    if (btn) {
+      const redirectUrl = btn.dataset.redirect!;
+      btn.addEventListener('click', async () => {
+        try {
+          await authClient.signOut();
+          window.location.href = redirectUrl;
+        } catch {
+          toast.error('Sign out failed');
+        }
+      });
+    }
+
+    // ─── Create organization ───
+    let slugTimer: ReturnType<typeof setTimeout>;
+    async function checkSlug(input: HTMLInputElement, statusEl: HTMLElement | null) {
+      const slug = input.value.trim();
+      if (!slug) { if (statusEl) statusEl.textContent = ''; return; }
+      if (statusEl) {
+        statusEl.textContent = d.tSlugChecking ?? '';
+        statusEl.className = 'text-xs mt-1 h-4 text-muted-foreground';
+      }
+      clearTimeout(slugTimer);
+      slugTimer = setTimeout(async () => {
+        const { data } = await authClient.organization.checkSlug({ slug });
+        if (statusEl) {
+          if (data?.status) {
+            statusEl.textContent = d.tSlugAvailable ?? '';
+            statusEl.className = 'text-xs mt-1 h-4 text-success';
+          } else {
+            statusEl.textContent = d.tSlugTaken ?? '';
+            statusEl.className = 'text-xs mt-1 h-4 text-error';
+          }
+        }
+      }, 500);
+    }
+
+    const orgNameInput = document.getElementById('org-name') as HTMLInputElement | null;
+    const orgSlugInput = document.getElementById('org-slug') as HTMLInputElement | null;
+    const slugStatus = document.getElementById('slug-status');
+    let slugManuallyEdited = false;
+
+    orgSlugInput?.addEventListener('input', () => {
+      slugManuallyEdited = true;
+      checkSlug(orgSlugInput!, slugStatus);
+    });
+
+    orgNameInput?.addEventListener('input', () => {
+      if (!slugManuallyEdited && orgSlugInput) {
+        orgSlugInput.value = orgNameInput.value
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+        checkSlug(orgSlugInput, slugStatus);
+      }
+    });
+
+    const createForm = document.getElementById('create-org-form') as HTMLFormElement | null;
+    createForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = (createForm.querySelector('[name="name"]') as HTMLInputElement).value.trim();
+      const slug = (createForm.querySelector('[name="slug"]') as HTMLInputElement).value.trim();
+      if (!name || !slug) return;
+
+      let logoUrl: string | undefined;
+      const logoInput = document.getElementById('org-logo-input') as HTMLInputElement;
+      if (logoInput?.files?.[0]) {
+        const formData = new FormData();
+        formData.append('file', logoInput.files[0]);
+        formData.append('type', 'brand');
+        const resp = await fetch('/api/upload', { method: 'POST', body: formData });
+        if (resp.ok) {
+          const json = await resp.json();
+          logoUrl = json.url;
+        }
+      }
+
+      const { error } = await authClient.organization.create({
+        name,
+        slug,
+        logo: logoUrl,
+      });
+      if (error) {
+        toast.error(error.message ?? 'Error');
+      } else {
+        toast.success(d.tCreated ?? '');
+        window.location.href = `/${locale}/organizations/${slug}/members`;
+      }
+    });
+
+    // ─── Accept / Reject invitations ───
+    document.querySelectorAll<HTMLButtonElement>('.accept-invitation-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const invId = btn.dataset.id!;
+        const { error } = await authClient.organization.acceptInvitation({ invitationId: invId });
+        if (error) {
+          toast.error(error.message ?? 'Error');
+        } else {
+          toast.success(d.tAccepted ?? '');
+          window.location.reload();
+        }
+      });
+    });
+    document.querySelectorAll<HTMLButtonElement>('.reject-invitation-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const invId = btn.dataset.id!;
+        const { error } = await authClient.organization.rejectInvitation({ invitationId: invId });
+        if (error) {
+          toast.error(error.message ?? 'Error');
+        } else {
+          toast.success(d.tRejected ?? '');
+          btn.closest('[data-invitation-id]')?.remove();
+        }
+      });
+    });
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

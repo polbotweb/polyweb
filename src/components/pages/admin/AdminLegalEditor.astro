@@ -1,0 +1,740 @@
+---
+/**
+ * AdminLegalEditor — Structured editor for legal page sections (template=legal).
+ * Replaces the generic AdminSectionsEditor for legal pages.
+ * Each FAQ section = one tab with title, intro, and Q&A items as form fields.
+ */
+import type { AuthTranslations, Locale } from '@i18n/config';
+import type { pages, pageSections } from '@database/schemas';
+import { Card, CardContent, CardHeader, CardTitle } from '@atoms/card';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@atoms/collapsible';
+import Button from '@atoms/button/Button.astro';
+import { Input } from '@atoms/input';
+import { Label } from '@atoms/label';
+import Badge from '@atoms/badge/Badge.astro';
+import { Textarea } from '@atoms/textarea';
+
+type PageRow = typeof pages.$inferSelect;
+type SectionRow = typeof pageSections.$inferSelect;
+
+interface FaqItem { question: string; answer: string; }
+interface FaqSection { title: string; intro?: string; items: FaqItem[]; }
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  page: PageRow;
+  sections: SectionRow[];
+  templateVars?: Record<string, string>;
+}
+
+const { t, locale, page, sections, templateVars = {} } = Astro.props;
+const cms = t.admin.cms.pages;
+const legal = cms.legal;
+
+const backUrl = new URL(Astro.url);
+backUrl.searchParams.delete('edit');
+
+// Build labelled template variables list for the picker
+const varLabelMap: Record<string, string> = {
+  siteName: legal.varSiteName,
+  email: legal.varEmail,
+  phone: legal.varPhone,
+  address: legal.varAddress,
+  city: legal.varCity,
+  postalCode: legal.varPostalCode,
+  country: legal.varCountry,
+};
+
+const templateVarEntries = Object.entries(varLabelMap).map(([key, label]) => ({
+  key,
+  label,
+  syntax: `{{${key}}}`,
+  value: templateVars[key] ?? '',
+}));
+
+// Parse sections into structured FAQ data
+const parsedSections = sections
+  .filter((s) => s.type === 'faq')
+  .map((s) => {
+    let parsed: FaqSection = { title: '', items: [] };
+    try {
+      const raw = s.content;
+      parsed = (typeof raw === 'string' ? JSON.parse(raw) : raw) as FaqSection;
+    } catch { /* keep default */ }
+    return { id: s.id, isVisible: s.isVisible, sortOrder: s.sortOrder, data: parsed };
+  });
+---
+
+<legal-editor
+  id="legal-editor"
+  data-page-id={page.id}
+  data-locale={locale}
+  data-t-saved={cms.saved}
+  data-t-deleted={cms.deleted}
+  data-t-error={t.admin.cms.common.error}
+  data-t-confirm-tab={legal.confirmDeleteTab}
+  data-t-confirm-item={legal.confirmDeleteItem}
+  data-t-new-tab-title={legal.newTabTitle}
+  data-t-question={legal.question}
+  data-t-answer={legal.answer}
+  data-t-variable-unknown={legal.variableUnknown}
+  data-t-variable-empty={legal.variableEmpty}
+  data-t-variable-trimmed-spaces={legal.variableTrimmedSpaces}
+  data-t-variable-spaces-in-name={legal.variableSpacesInName}
+  data-t-variable-invalid-braces={legal.variableInvalidBraces}
+  data-template-vars={JSON.stringify(templateVarEntries)}
+>
+  <!-- Back link -->
+  <a href={backUrl.pathname + backUrl.search} class="text-sm text-muted-foreground hover:underline mb-4 inline-block">
+    ← {cms.title}
+  </a>
+
+  <!-- Autocomplete dropdown (positioned absolutely, hidden by default) -->
+  {/* eslint-disable-next-line astro/jsx-a11y/prefer-tag-over-role -- WAI-ARIA "listbox" is the correct role for a combobox-autocomplete popup that inserts {{variable}} tokens at the cursor position inside a textarea; native <select>/<datalist> cannot do that */}
+  <div
+    id="var-autocomplete"
+    class="fixed z-9999 hidden rounded-lg border bg-popover text-popover-foreground shadow-lg overflow-hidden"
+    role="listbox"
+    aria-label={legal.variables}
+  >
+    <div class="px-3 py-1.5 border-b bg-muted/30">
+      <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">{legal.variables}</span>
+    </div>
+    <div id="var-autocomplete-list" class="py-1 max-h-56 overflow-y-auto"></div>
+  </div>
+
+  <!-- ─── Page metadata ─── -->
+  <Card class="mb-6">
+    <CardHeader>
+      <CardTitle>{cms.editPage} — {page.title}</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <form id="page-meta-form" class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="page-title">{cms.pageTitle}</Label>
+          <Input id="page-title" name="title" value={page.title} required />
+        </div>
+        <div>
+          <Label htmlFor="page-slug">{cms.slug}</Label>
+          <Input id="page-slug" name="slug" value={page.slug} required />
+        </div>
+        <div>
+          <Label htmlFor="page-meta-title">{cms.metaTitle}</Label>
+          <Input id="page-meta-title" name="metaTitle" value={page.metaTitle ?? ''} />
+        </div>
+        <div>
+          <Label htmlFor="page-meta-description">{cms.metaDescription}</Label>
+          <Input id="page-meta-description" name="metaDescription" value={page.metaDescription ?? ''} />
+        </div>
+        <div class="flex items-end">
+          <Button type="submit" id="save-page-btn">{cms.save}</Button>
+        </div>
+      </form>
+    </CardContent>
+  </Card>
+
+  <!-- ─── Sections (tabs) ─── -->
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="text-base font-semibold">{cms.sections}</h3>
+    <Button id="add-tab-btn" size="sm">{legal.addTab}</Button>
+  </div>
+
+  {parsedSections.length === 0 ? (
+    <p class="text-muted-foreground text-sm">{cms.noSections}</p>
+  ) : (
+    <div class="space-y-6" id="sections-list">
+      {parsedSections.map((section, idx) => (
+        <Card class="section-card" data-section-id={section.id} data-sort-order={section.sortOrder}>
+          <Collapsible defaultOpen={false}>
+            <CardHeader>
+              <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <CollapsibleTrigger class="flex items-center gap-2 cursor-pointer hover:opacity-80 min-w-0">
+                  <Badge variant="outline" size="sm">#{idx + 1}</Badge>
+                  <span class="text-sm font-medium truncate">{section.data.title || `Section ${idx + 1}`}</span>
+                  {!section.isVisible && <Badge variant="secondary" size="sm">{cms.hidden}</Badge>}
+                  <span class="text-muted-foreground text-xs shrink-0" aria-hidden="true">▸</span>
+                </CollapsibleTrigger>
+                <div class="flex flex-wrap gap-1 shrink-0">
+                  {idx > 0 && (
+                    <Button size="icon-sm" variant="outline" class="move-up-btn" data-section-id={section.id} aria-label={legal.moveUp}>
+                      <span aria-hidden="true">↑</span>
+                    </Button>
+                  )}
+                  {idx < parsedSections.length - 1 && (
+                    <Button size="icon-sm" variant="outline" class="move-down-btn" data-section-id={section.id} aria-label={legal.moveDown}>
+                      <span aria-hidden="true">↓</span>
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    class="toggle-visible-btn"
+                    data-section-id={section.id}
+                    data-visible={String(section.isVisible)}
+                  >
+                    {section.isVisible ? cms.hide : cms.show}
+                  </Button>
+                  <Button size="sm" variant="error" class="delete-tab-btn" data-section-id={section.id}>
+                    {legal.deleteTab}
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent>
+                <div class="space-y-4">
+                  <!-- Tab title -->
+                  <div>
+                    <Label>{legal.tabTitle}</Label>
+                    <Input
+                      class="section-title-input"
+                      data-section-id={section.id}
+                      value={section.data.title}
+                    />
+                  </div>
+
+                  <!-- Tab intro -->
+                  <div>
+                    <Label>{legal.tabIntro}</Label>
+                    <Textarea
+                      class="section-intro-input min-h-20"
+                      data-section-id={section.id}
+                      defaultValue={section.data.intro ?? ''}
+                    />
+                  </div>
+
+                  <!-- Q&A items -->
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <Label>{legal.question} / {legal.answer}</Label>
+                      <Button size="sm" variant="outline" class="add-item-btn" data-section-id={section.id}>
+                        {legal.addItem}
+                      </Button>
+                    </div>
+
+                    {section.data.items.length === 0 ? (
+                      <p class="text-muted-foreground text-sm">{legal.noItems}</p>
+                    ) : (
+                      <div class="items-list space-y-3" data-section-id={section.id}>
+                        {section.data.items.map((item, j) => (
+                          <div class="item-row border rounded-md p-3 sm:p-4" data-item-index={j}>
+                            <div class="flex items-center justify-between mb-2">
+                              <span class="text-xs text-muted-foreground font-medium">{legal.itemIndex} {j + 1}</span>
+                              <Button size="sm" variant="error" class="remove-item-btn" data-section-id={section.id} data-item-index={j}>
+                                {legal.removeItem}
+                              </Button>
+                            </div>
+                            <div class="space-y-2">
+                              <Input
+                                class="item-question"
+                                placeholder={legal.question}
+                                value={item.question}
+                              />
+                              <Textarea
+                                class="item-answer min-h-16"
+                                placeholder={legal.answer}
+                                defaultValue={item.answer}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <!-- Save section button -->
+                  <div class="flex justify-end">
+                    <Button size="sm" class="save-section-btn" data-section-id={section.id}>
+                      {cms.save}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+      ))}
+    </div>
+  )}
+</legal-editor>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { toast } from '@atoms/toast';
+
+  class LegalEditor extends HTMLElement {
+    connectedCallback() {
+      const pageId = this.dataset.pageId!;
+      const tSaved = this.dataset.tSaved ?? '';
+      const tDeleted = this.dataset.tDeleted ?? '';
+      const tError = this.dataset.tError ?? '';
+      const tConfirmTab = this.dataset.tConfirmTab ?? '';
+      const tConfirmItem = this.dataset.tConfirmItem ?? '';
+      const tNewTabTitle = this.dataset.tNewTabTitle ?? '';
+      const tQuestion = this.dataset.tQuestion ?? '';
+      const tAnswer = this.dataset.tAnswer ?? '';
+      const tVariableUnknown = this.dataset.tVariableUnknown ?? '';
+      const tVariableEmpty = this.dataset.tVariableEmpty ?? '';
+      const tVariableTrimmedSpaces = this.dataset.tVariableTrimmedSpaces ?? '';
+      const tVariableSpacesInName = this.dataset.tVariableSpacesInName ?? '';
+      const tVariableInvalidBraces = this.dataset.tVariableInvalidBraces ?? '';
+
+      // ─── Inline autocomplete for {{variables}} ───
+      interface VarEntry { key: string; label: string; syntax: string; value: string; }
+      const vars: VarEntry[] = (JSON.parse(this.dataset.templateVars ?? '[]') as VarEntry[])
+        .map((v) => ({ key: v.key ?? '', label: v.label ?? '', syntax: v.syntax ?? '', value: v.value ?? '' }));
+      const dropdown = this.querySelector<HTMLElement>('#var-autocomplete');
+      const listEl = this.querySelector<HTMLElement>('#var-autocomplete-list');
+      let activeField: HTMLInputElement | HTMLTextAreaElement | null = null;
+      let activeIndex = 0;
+      let triggerStart = -1; // position of the opening `{{`
+      let visible = false;
+
+      // ─── Live preview for {{variables}} under textareas/inputs ───
+
+      /** Escape HTML entities */
+      const escapeHtml = (text: string) =>
+        text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const esc = escapeHtml;
+
+      /** Map of valid variable keys for quick lookup */
+      const varMap = new Map(vars.map((v) => [v.key, v]));
+      const validKeys = new Set(vars.map((v) => v.key));
+
+      /**
+       * Build preview HTML from raw text.
+       * - Valid {{key}} → green pill showing resolved value
+       * - Broken patterns (spaces, unknown keys, single braces) → red warning pill
+       */
+      const buildPreview = (text: string): string => {
+        if (!text) return '';
+        // Match any brace pattern that looks like a variable attempt:
+        // 1. {{anything}}  2. {word}}  3. {{word}  4. {word}
+        return escapeHtml(text).replace(
+          /\{\{([^}]*)\}\}|\{(\w[\w\s]*)\}\}|\{\{(\w[\w\s]*)\}(?!\})|\{(\w[\w\s]*)\}(?!\{)/g,
+          (match, doubleBrace) => {
+            // Case 1: {{...}} — check if content is a valid key
+            if (doubleBrace !== undefined) {
+              const trimmed = doubleBrace.trim();
+              if (trimmed === doubleBrace && validKeys.has(trimmed)) {
+                const v = varMap.get(trimmed)!;
+                return `<span class="var-pill var-valid" title="${escapeHtml(v.syntax)}">${escapeHtml(v.value || v.label)}</span>`;
+              }
+              // Broken: spaces, unknown key, multi-word, empty, etc.
+              let reason = tVariableUnknown;
+              if (!trimmed) reason = tVariableEmpty;
+              else if (trimmed !== doubleBrace) reason = tVariableTrimmedSpaces;
+              else if (/\s/.test(trimmed)) reason = tVariableSpacesInName;
+              return `<span class="var-pill var-broken" title="${reason}">${match}</span>`;
+            }
+            // Case 2-4: malformed braces
+            return `<span class="var-pill var-broken" title="${tVariableInvalidBraces}">${match}</span>`;
+          },
+        );
+      };
+
+      /** Check if text contains any variable-like pattern worth previewing */
+      const hasVarPattern = (text: string) => /\{/.test(text);
+
+      /** Create or update the live preview for a field */
+      const syncPreview = (field: HTMLInputElement | HTMLTextAreaElement) => {
+        const text = field.value;
+        let preview = field.parentElement?.querySelector<HTMLElement>('.var-preview');
+
+        if (!hasVarPattern(text)) {
+          // No variable patterns → hide preview
+          if (preview) preview.classList.add('hidden');
+          return;
+        }
+
+        if (!preview) {
+          preview = document.createElement('div');
+          preview.className = 'var-preview';
+          preview.setAttribute('aria-hidden', 'true');
+          // Insert right after the field (or after its wrapper)
+          field.parentElement?.appendChild(preview);
+        }
+
+        preview.innerHTML = buildPreview(text);
+        preview.classList.remove('hidden');
+      };
+
+      /** Setup live preview for a field */
+      const setupPreview = (field: HTMLInputElement | HTMLTextAreaElement) => {
+        if (field.dataset.previewReady) return;
+        field.dataset.previewReady = '1';
+        syncPreview(field); // Initial render
+        field.addEventListener('input', () => syncPreview(field));
+      };
+
+      // Setup previews for all existing fields
+      this.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea').forEach(setupPreview);
+
+      // Observe for dynamically added fields (add item)
+      const observer = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+          for (const node of m.addedNodes) {
+            if (node instanceof HTMLElement) {
+              node.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea').forEach(setupPreview);
+              if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) setupPreview(node);
+            }
+          }
+        }
+      });
+      observer.observe(this, { childList: true, subtree: true });
+
+      const showDropdown = (field: HTMLInputElement | HTMLTextAreaElement, query: string) => {
+        if (!dropdown || !listEl) return;
+        const filtered = query
+          ? vars.filter((v) => v.key.toLowerCase().includes(query.toLowerCase()) || v.label.toLowerCase().includes(query.toLowerCase()))
+          : vars;
+        if (filtered.length === 0) { hideDropdown(); return; }
+
+        // Render items
+        listEl.innerHTML = '';
+        filtered.forEach((v, i) => {
+          const item = document.createElement('div');
+          item.setAttribute('role', 'option');
+          item.dataset.index = String(i);
+          item.dataset.key = v.key;
+          item.className = 'var-option flex items-center gap-3 px-3 py-2 cursor-pointer text-sm transition-colors';
+          const valueHtml = v.value
+            ? `<span class="ml-auto text-xs text-muted-foreground/60 truncate max-w-32">${escapeHtml(v.value)}</span>`
+            : '';
+          item.innerHTML = `
+            <code class="font-mono text-xs bg-muted rounded px-1.5 py-0.5 shrink-0 text-primary">\u007B\u007B${escapeHtml(v.key)}\u007D\u007D</code>
+            <span class="truncate text-muted-foreground">${escapeHtml(v.label)}</span>
+            ${valueHtml}
+          `;
+          item.addEventListener('mousedown', (e) => { e.preventDefault(); selectVar(v); });
+          item.addEventListener('mouseenter', () => { activeIndex = i; highlightOption(); });
+          listEl.appendChild(item);
+        });
+        activeIndex = 0;
+        highlightOption();
+
+        // Position near the caret
+        positionDropdown(field);
+        dropdown.classList.remove('hidden');
+        visible = true;
+      };
+
+      const hideDropdown = () => {
+        if (!dropdown) return;
+        dropdown.classList.add('hidden');
+        visible = false;
+        activeIndex = 0;
+        triggerStart = -1;
+      };
+
+      const highlightOption = () => {
+        if (!listEl) return;
+        const items = listEl.querySelectorAll<HTMLElement>('.var-option');
+        items.forEach((el, i) => {
+          if (i === activeIndex) {
+            el.classList.add('bg-accent', 'text-accent-foreground');
+            el.setAttribute('aria-selected', 'true');
+            el.scrollIntoView({ block: 'nearest' });
+          } else {
+            el.classList.remove('bg-accent', 'text-accent-foreground');
+            el.removeAttribute('aria-selected');
+          }
+        });
+      };
+
+      const selectVar = (v: VarEntry) => {
+        if (!activeField || triggerStart < 0) return;
+        const cursorPos = activeField.selectionStart ?? activeField.value.length;
+        const before = activeField.value.slice(0, triggerStart);
+        const after = activeField.value.slice(cursorPos);
+        activeField.value = before + v.syntax + after;
+        const newPos = triggerStart + v.syntax.length;
+        activeField.focus();
+        activeField.setSelectionRange(newPos, newPos);
+        hideDropdown();
+        // Refresh the live preview after insertion
+        activeField.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+
+      const positionDropdown = (field: HTMLInputElement | HTMLTextAreaElement) => {
+        if (!dropdown) return;
+        const rect = field.getBoundingClientRect();
+        let top = rect.bottom + 4;
+        let left = rect.left;
+        // Ensure it stays within viewport
+        const dropdownWidth = 340;
+        if (left + dropdownWidth > window.innerWidth) left = window.innerWidth - dropdownWidth - 8;
+        if (top + 250 > window.innerHeight) top = rect.top - 250 - 4;
+        dropdown.style.top = `${top}px`;
+        dropdown.style.left = `${left}px`;
+        dropdown.style.width = `${Math.min(dropdownWidth, rect.width)}px`;
+      };
+
+      // Detect `{{` trigger on input
+      const handleInput = (e: Event) => {
+        const field = e.target as HTMLInputElement | HTMLTextAreaElement;
+        if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)) return;
+        activeField = field;
+        const cursorPos = field.selectionStart ?? 0;
+        const textBefore = field.value.slice(0, cursorPos);
+        // Find the last `{{` before cursor that isn't already closed
+        const lastOpen = textBefore.lastIndexOf('{{');
+        if (lastOpen >= 0) {
+          const between = textBefore.slice(lastOpen + 2);
+          // Only trigger if no `}}` between `{{` and cursor, and query is word chars only
+          if (!between.includes('}}') && /^\w*$/.test(between)) {
+            triggerStart = lastOpen;
+            showDropdown(field, between);
+            return;
+          }
+        }
+        hideDropdown();
+      };
+
+      // Keyboard navigation inside the autocomplete
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (!visible || !listEl) return;
+        const items = listEl.querySelectorAll<HTMLElement>('.var-option');
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          activeIndex = (activeIndex + 1) % items.length;
+          highlightOption();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          activeIndex = (activeIndex - 1 + items.length) % items.length;
+          highlightOption();
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+          e.preventDefault();
+          const key = items[activeIndex]?.dataset.key;
+          const v = vars.find((x) => x.key === key);
+          if (v) selectVar(v);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          hideDropdown();
+        }
+      };
+
+      // Attach listeners globally on the editor (covers dynamic elements too)
+      this.addEventListener('input', handleInput);
+      this.addEventListener('keydown', handleKeyDown);
+      // Hide on blur/click outside
+      document.addEventListener('click', (e) => {
+        if (visible && dropdown && !dropdown.contains(e.target as Node)) hideDropdown();
+      });
+      this.addEventListener('focusout', () => {
+        // Small delay so mousedown on dropdown items can fire first
+        setTimeout(() => {
+          if (visible && document.activeElement && !this.contains(document.activeElement)) hideDropdown();
+        }, 150);
+      });
+
+      // ─── Save page metadata ───
+      this.querySelector('#page-meta-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target as HTMLFormElement;
+        const data = Object.fromEntries(new FormData(form)) as Record<string, string>;
+        const { error } = await actions.updatePage({
+          id: pageId,
+          title: data.title,
+          slug: data.slug,
+          metaTitle: data.metaTitle || null,
+          metaDescription: data.metaDescription || null,
+          template: 'legal',
+        });
+        if (!error) toast.success(tSaved);
+        else toast.error(error.message ?? tError);
+      });
+
+      // ─── Add new tab ───
+      this.querySelector('#add-tab-btn')?.addEventListener('click', async () => {
+        const existingCards = this.querySelectorAll('.section-card');
+        const { error } = await actions.createSection({
+          pageId,
+          type: 'faq',
+          content: JSON.stringify({ title: tNewTabTitle, items: [] }),
+          sortOrder: existingCards.length,
+          isVisible: true,
+        });
+        if (!error) location.reload();
+        else toast.error(error.message ?? tError);
+      });
+
+      // ─── Save section ───
+      this.querySelectorAll<HTMLElement>('.save-section-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const sectionId = btn.dataset.sectionId!;
+          const card = this.querySelector(`.section-card[data-section-id="${sectionId}"]`);
+          if (!card) return;
+
+          const title = (card.querySelector<HTMLInputElement>(`.section-title-input[data-section-id="${sectionId}"]`)?.value ?? '').trim();
+          const intro = (card.querySelector<HTMLTextAreaElement>(`.section-intro-input[data-section-id="${sectionId}"]`)?.value ?? '').trim();
+
+          const itemRows = card.querySelectorAll('.item-row');
+          const items: { question: string; answer: string }[] = [];
+          itemRows.forEach((row) => {
+            const q = (row.querySelector<HTMLInputElement>('.item-question')?.value ?? '').trim();
+            const a = (row.querySelector<HTMLTextAreaElement>('.item-answer')?.value ?? '').trim();
+            if (q || a) items.push({ question: q, answer: a });
+          });
+
+          const content = JSON.stringify({
+            title,
+            ...(intro ? { intro } : {}),
+            items,
+          });
+
+          const { error } = await actions.updateSection({ id: sectionId, content });
+          if (!error) toast.success(tSaved);
+          else toast.error(error.message ?? tError);
+        });
+      });
+
+      // ─── Toggle visibility ───
+      this.querySelectorAll<HTMLElement>('.toggle-visible-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.sectionId!;
+          const isVisible = btn.dataset.visible === 'true';
+          const { error } = await actions.updateSection({ id, isVisible: !isVisible });
+          if (!error) location.reload();
+          else toast.error(error.message ?? tError);
+        });
+      });
+
+      // ─── Delete tab ───
+      this.querySelectorAll<HTMLElement>('.delete-tab-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          if (!confirm(tConfirmTab)) return;
+          const id = btn.dataset.sectionId!;
+          const { error } = await actions.deleteSection({ id });
+          if (!error) { toast.success(tDeleted); btn.closest('.section-card')?.remove(); }
+          else toast.error(error.message ?? tError);
+        });
+      });
+
+      // ─── Move up/down ───
+      this.querySelectorAll<HTMLElement>('.move-up-btn, .move-down-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const cards = Array.from(this.querySelectorAll<HTMLElement>('.section-card'));
+          const current = btn.closest<HTMLElement>('.section-card');
+          if (!current) return;
+
+          const isUp = btn.classList.contains('move-up-btn');
+          const idx = cards.indexOf(current);
+          const swapIdx = isUp ? idx - 1 : idx + 1;
+          if (swapIdx < 0 || swapIdx >= cards.length) return;
+
+          const items = cards.map((card, i) => ({
+            id: card.dataset.sectionId!,
+            sortOrder: i === idx ? swapIdx : i === swapIdx ? idx : i,
+          }));
+
+          const { error } = await actions.reorderSections({ items });
+          if (!error) location.reload();
+          else toast.error(error.message ?? tError);
+        });
+      });
+
+      // ─── Add Q&A item ───
+      this.querySelectorAll<HTMLElement>('.add-item-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const sectionId = btn.dataset.sectionId!;
+          const card = this.querySelector(`.section-card[data-section-id="${sectionId}"]`);
+          if (!card) return;
+
+          let itemsList = card.querySelector<HTMLElement>(`.items-list[data-section-id="${sectionId}"]`);
+          if (!itemsList) {
+            // Replace "no items" message with items list
+            const noItemsMsg = card.querySelector('p.text-muted-foreground');
+            if (noItemsMsg) noItemsMsg.remove();
+            itemsList = document.createElement('div');
+            itemsList.className = 'items-list space-y-3';
+            itemsList.dataset.sectionId = sectionId;
+            btn.closest('div')?.parentElement?.appendChild(itemsList);
+          }
+
+          const index = itemsList.querySelectorAll('.item-row').length;
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'item-row border rounded-md p-3';
+          itemDiv.dataset.itemIndex = String(index);
+          itemDiv.innerHTML = `
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs text-muted-foreground font-medium">#${index + 1}</span>
+              <button type="button" class="remove-item-btn inline-flex items-center justify-center rounded-md text-sm font-medium h-8 px-3 border bg-error text-error-foreground hover:bg-error/90" data-section-id="${sectionId}" data-item-index="${index}">×</button>
+            </div>
+            <div class="space-y-2">
+              <input class="item-question flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm" placeholder="${esc(tQuestion)}" />
+              <textarea class="item-answer flex min-h-16 w-full rounded-md border bg-transparent px-3 py-2 text-sm" placeholder="${esc(tAnswer)}"></textarea>
+            </div>
+          `;
+          itemsList.appendChild(itemDiv);
+
+          // Bind remove
+          itemDiv.querySelector('.remove-item-btn')?.addEventListener('click', () => {
+            itemDiv.remove();
+          });
+        });
+      });
+
+      // ─── Remove Q&A item ───
+      this.querySelectorAll<HTMLElement>('.remove-item-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (!confirm(tConfirmItem)) return;
+          btn.closest('.item-row')?.remove();
+        });
+      });
+    }
+  }
+
+  customElements.define('legal-editor', LegalEditor);
+</script>
+
+<style is:global>
+  /* ─── Live preview bar under fields ─── */
+  .var-preview {
+    margin-top: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    line-height: 1.65;
+    border-radius: 6px;
+    background: color-mix(in oklch, var(--muted), transparent 60%);
+    border: 1px dashed var(--border);
+    color: var(--muted-foreground);
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+  .var-preview.hidden { display: none; }
+
+  /* Valid variable → colored pill with resolved value */
+  .var-pill.var-valid {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    background: color-mix(in oklch, var(--primary), transparent 85%);
+    color: var(--primary);
+    border: 1px solid color-mix(in oklch, var(--primary), transparent 70%);
+    vertical-align: baseline;
+  }
+
+  /* Broken variable → red warning pill */
+  .var-pill.var-broken {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    background: color-mix(in oklch, var(--error), transparent 85%);
+    color: var(--error);
+    border: 1px solid color-mix(in oklch, var(--error), transparent 65%);
+    text-decoration: wavy underline;
+    text-decoration-color: color-mix(in oklch, var(--error), transparent 40%);
+    text-underline-offset: 3px;
+    vertical-align: baseline;
+  }
+</style>

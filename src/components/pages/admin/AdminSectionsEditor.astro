@@ -1,0 +1,382 @@
+---
+/**
+ * AdminSectionsEditor — Edit a page's metadata + manage its sections.
+ * Shown when ?edit=ID is present on the admin pages route.
+ */
+import type { AuthTranslations, Locale } from '@i18n/config';
+import type { pages, pageSections } from '@database/schemas';
+import { Card, CardContent, CardHeader, CardTitle } from '@atoms/card';
+import Button from '@atoms/button/Button.astro';
+import { Input } from '@atoms/input';
+import { Label } from '@atoms/label';
+import { NativeSelect, NativeSelectOption } from '@atoms/native-select';
+import Badge from '@atoms/badge/Badge.astro';
+import MediaPicker from '@atoms/media-picker/MediaPicker.astro';
+
+type PageRow = typeof pages.$inferSelect;
+type SectionRow = typeof pageSections.$inferSelect;
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  page: PageRow;
+  sections: SectionRow[];
+}
+
+const { t, locale, page, sections } = Astro.props;
+const cms = t.admin.cms.pages;
+
+const sectionTypes = [
+  'hero', 'text', 'image', 'gallery', 'cta', 'features',
+  'testimonials', 'faq', 'contact', 'map', 'video', 'custom',
+] as const;
+
+const backUrl = new URL(Astro.url);
+backUrl.searchParams.delete('edit');
+---
+
+<sections-editor
+  id="sections-editor"
+  data-page-id={page.id}
+  data-locale={locale}
+  data-t-saved={cms.saved}
+  data-t-deleted={cms.deleted}
+  data-t-error={t.admin.cms.common.error}
+  data-t-confirm={t.admin.cms.common.confirmDelete}
+  data-t-no-versions={cms.noVersions}
+  data-t-restore-version={cms.restoreVersion}
+  data-t-restore-version-confirm={cms.restoreVersionConfirm}
+  data-t-version-restored={cms.versionRestored}
+  data-t-snapshot-note-prompt={cms.snapshotNotePrompt}
+  data-t-snapshot-created={cms.snapshotCreated}
+  data-t-show-versions={cms.showVersions}
+  data-t-hide-versions={cms.hideVersions}
+>
+  <!-- Back link -->
+  <a href={backUrl.pathname + backUrl.search} class="text-sm text-muted-foreground hover:underline mb-4 inline-block">
+    ← {cms.title}
+  </a>
+
+  <!-- ─── Page metadata ─── -->
+  <Card class="mb-6">
+    <CardHeader>
+      <CardTitle>{cms.editPage}</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <form id="page-meta-form" class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="page-title">{cms.pageTitle}</Label>
+          <Input id="page-title" name="title" value={page.title} required />
+        </div>
+        <div>
+          <Label htmlFor="page-slug">{cms.slug}</Label>
+          <Input id="page-slug" name="slug" value={page.slug} required />
+        </div>
+        <div>
+          <Label htmlFor="page-meta-title">{cms.metaTitle}</Label>
+          <Input id="page-meta-title" name="metaTitle" value={page.metaTitle ?? ''} />
+        </div>
+        <div>
+          <Label htmlFor="page-meta-description">{cms.metaDescription}</Label>
+          <Input id="page-meta-description" name="metaDescription" value={page.metaDescription ?? ''} />
+        </div>
+        <div>
+          <Label htmlFor="page-template">{cms.template}</Label>
+          <Input id="page-template" name="template" value={page.template ?? ''} />
+        </div>
+        <div class="flex items-end">
+          <Button type="submit" id="save-page-btn">{cms.save}</Button>
+        </div>
+      </form>
+    </CardContent>
+  </Card>
+
+  <!-- ─── Version history ─── -->
+  <Card class="mb-6">
+    <CardHeader>
+      <div class="flex items-center justify-between">
+        <CardTitle class="text-sm">{cms.versionHistoryTitle}</CardTitle>
+        <div class="flex gap-2">
+          <Button id="create-version-btn" size="sm" variant="outline">{cms.createSnapshot}</Button>
+          <Button id="toggle-versions-btn" size="sm" variant="ghost">{cms.showVersions}</Button>
+        </div>
+      </div>
+    </CardHeader>
+    <CardContent>
+      <div id="versions-list" class="hidden space-y-2">
+        <p class="text-xs text-muted-foreground" id="versions-loading">{cms.loadingVersions}</p>
+      </div>
+    </CardContent>
+  </Card>
+
+  <!-- ─── Sections list ─── -->
+  <Card>
+    <CardHeader>
+      <CardTitle>{cms.sections}</CardTitle>
+      <div class="flex gap-2 items-center">
+        <NativeSelect id="new-section-type" class="max-w-50 text-sm">
+          {sectionTypes.map((st) => (
+            <NativeSelectOption value={st}>{st}</NativeSelectOption>
+          ))}
+        </NativeSelect>
+        <Button id="add-section-btn" size="sm">{cms.addSection}</Button>
+      </div>
+    </CardHeader>
+    <CardContent>
+      {sections.length === 0 ? (
+        <p class="text-muted-foreground text-sm">{cms.noSections}</p>
+      ) : (
+        <div class="space-y-4" id="sections-list">
+          {sections.map((section, idx) => (
+            <div class="section-item border rounded-md p-4" data-id={section.id}>
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <Badge variant="outline" size="sm">{section.type}</Badge>
+                  <span class="text-xs text-muted-foreground">#{idx + 1}</span>
+                  {!section.isVisible && (
+                    <Badge variant="secondary" size="sm">{cms.hidden}</Badge>
+                  )}
+                </div>
+                <div class="flex gap-2">
+                  <Button size="sm" variant="outline" class="toggle-visible-btn" data-id={section.id} data-visible={String(section.isVisible)}>
+                    {section.isVisible ? cms.hide : cms.show}
+                  </Button>
+                  <Button size="sm" variant="error" class="delete-section-btn" data-id={section.id}>
+                    {t.admin.cms.common.delete}
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <Label>{cms.sectionContent}</Label>
+                <textarea
+                  class="section-content-input w-full rounded-md border bg-background px-3 py-2 text-sm font-mono min-h-25"
+                  data-id={section.id}
+                >{section.content}</textarea>
+              </div>
+              <div class="mt-2 flex justify-end gap-2">
+                <Button size="sm" variant="outline" class="insert-media-btn" data-id={section.id}>
+                  {cms.insertMedia}
+                </Button>
+                <Button size="sm" variant="outline" class="save-section-btn" data-id={section.id}>
+                  {cms.save}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </CardContent>
+  </Card>
+
+  {/* Media picker dialog (shared across all sections) */}
+  <MediaPicker id="sections-media-picker" locale={locale} />
+</sections-editor>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { toast } from '@atoms/toast';
+
+  /** Escape user-controlled text before inserting into innerHTML. */
+  function esc(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  class SectionsEditor extends HTMLElement {
+    connectedCallback() {
+      const pageId = this.dataset.pageId!;
+      const tSaved = this.dataset.tSaved ?? '';
+      const tDeleted = this.dataset.tDeleted ?? '';
+      const tError = this.dataset.tError ?? '';
+      const tConfirm = this.dataset.tConfirm ?? '';
+      const tNoVersions = this.dataset.tNoVersions ?? '';
+      const tRestoreVersion = this.dataset.tRestoreVersion ?? '';
+      const tRestoreVersionConfirm = this.dataset.tRestoreVersionConfirm ?? '';
+      const tVersionRestored = this.dataset.tVersionRestored ?? '';
+      const tSnapshotNotePrompt = this.dataset.tSnapshotNotePrompt ?? '';
+      const tSnapshotCreated = this.dataset.tSnapshotCreated ?? '';
+      const tShowVersions = this.dataset.tShowVersions ?? '';
+      const tHideVersions = this.dataset.tHideVersions ?? '';
+
+      // ─── Save page metadata ───
+      this.querySelector('#page-meta-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target as HTMLFormElement;
+        const data = Object.fromEntries(new FormData(form)) as Record<string, string>;
+        const { error } = await actions.updatePage({
+          id: pageId,
+          title: data.title,
+          slug: data.slug,
+          metaTitle: data.metaTitle || null,
+          metaDescription: data.metaDescription || null,
+          template: data.template || undefined,
+        });
+        if (!error) toast.success(tSaved);
+        else toast.error(error.message ?? tError);
+      });
+
+      // ─── Add section ───
+      this.querySelector('#add-section-btn')?.addEventListener('click', async () => {
+        const select = this.querySelector('#new-section-type') as HTMLSelectElement | null;
+        const wrapper = select?.closest('[data-slot="native-select-wrapper"]');
+        const realSelect = (wrapper?.querySelector('select') ?? select) as HTMLSelectElement;
+        const type = realSelect?.value ?? 'text';
+
+        const { error } = await actions.createSection({
+          pageId,
+          type: type as 'hero' | 'text' | 'image' | 'gallery' | 'cta' | 'features' | 'testimonials' | 'faq' | 'contact' | 'map' | 'video' | 'custom',
+          content: JSON.stringify({ heading: '', body: '' }),
+          sortOrder: this.querySelectorAll('.section-item').length,
+          isVisible: true,
+        });
+        if (!error) location.reload();
+        else toast.error(error.message ?? tError);
+      });
+
+      // ─── Save section content ───
+      this.querySelectorAll<HTMLElement>('.save-section-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id!;
+          const textarea = this.querySelector<HTMLTextAreaElement>(`.section-content-input[data-id="${id}"]`);
+          if (!textarea) return;
+          const { error } = await actions.updateSection({
+            id,
+            content: textarea.value,
+          });
+          if (!error) toast.success(tSaved);
+          else toast.error(error.message ?? tError);
+        });
+      });
+
+      // ─── Toggle visibility ───
+      this.querySelectorAll<HTMLElement>('.toggle-visible-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id!;
+          const isVisible = btn.dataset.visible === 'true';
+          const { error } = await actions.updateSection({ id, isVisible: !isVisible });
+          if (!error) location.reload();
+          else toast.error(error.message ?? tError);
+        });
+      });
+
+      // ─── Delete section ───
+      this.querySelectorAll<HTMLElement>('.delete-section-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          if (!confirm(tConfirm)) return;
+          const id = btn.dataset.id!;
+          const { error } = await actions.deleteSection({ id });
+          if (!error) {
+            toast.success(tDeleted);
+            btn.closest('.section-item')?.remove();
+          } else {
+            toast.error(error.message ?? tError);
+          }
+        });
+      });
+
+      // ─── Insert media (open picker) ───
+      let activeTextarea: HTMLTextAreaElement | null = null;
+      const picker = this.querySelector<HTMLElement>('#sections-media-picker');
+
+      this.querySelectorAll<HTMLElement>('.insert-media-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.id!;
+          activeTextarea = this.querySelector<HTMLTextAreaElement>(`.section-content-input[data-id="${id}"]`);
+          // Open the picker programmatically
+          if (picker && 'open' in picker && typeof (picker as any).open === 'function') {
+            (picker as any).open();
+          } else {
+            picker?.classList.remove('hidden');
+          }
+        });
+      });
+
+      picker?.addEventListener('media-select', ((e: CustomEvent) => {
+        if (!activeTextarea) return;
+        const { url, alt } = e.detail;
+        // Try to parse current content as JSON and inject url/alt
+        try {
+          const content = JSON.parse(activeTextarea.value || '{}');
+          // Insert url and alt into common patterns
+          if ('src' in content || 'url' in content || 'image' in content) {
+            content.src = content.src !== undefined ? url : content.src;
+            content.url = content.url !== undefined ? url : content.url;
+            content.image = content.image !== undefined ? url : content.image;
+            if (alt) content.alt = alt;
+          } else {
+            content.image = url;
+            if (alt) content.alt = alt;
+          }
+          activeTextarea.value = JSON.stringify(content, null, 2);
+        } catch {
+          // If content is not JSON, append the URL
+          const insertion = alt ? `\n${url} (${alt})` : `\n${url}`;
+          activeTextarea.value += insertion;
+        }
+        activeTextarea = null;
+      }) as EventListener);
+
+      // ─── Version history ───
+      const createVersionBtn = this.querySelector<HTMLElement>('#create-version-btn');
+      const toggleVersionsBtn = this.querySelector<HTMLElement>('#toggle-versions-btn');
+      const versionsList = this.querySelector<HTMLElement>('#versions-list');
+
+      const loadVersions = async () => {
+        if (!versionsList) return;
+        const { data, error } = await actions.listPageVersions({ pageId });
+        if (error) { toast.error(error.message ?? tError); return; }
+        if (!data || data.length === 0) {
+          versionsList.innerHTML = `<p class="text-xs text-muted-foreground">${esc(tNoVersions)}</p>`;
+          return;
+        }
+        versionsList.innerHTML = data.map((v: any) => `
+          <div class="flex items-center justify-between border rounded px-3 py-2 text-sm">
+            <div>
+              <span class="font-medium">v${v.versionNumber}</span>
+              <span class="text-muted-foreground ml-2">${new Date(v.createdAt).toLocaleString()}</span>
+              ${v.note ? `<span class="text-muted-foreground ml-2">— ${esc(String(v.note))}</span>` : ''}
+            </div>
+            <button class="restore-version-btn text-xs underline text-primary hover:text-primary/80" data-version-id="${esc(String(v.id))}">
+              ${esc(tRestoreVersion)}
+            </button>
+          </div>
+        `).join('');
+        // Bind restore buttons
+        versionsList.querySelectorAll<HTMLElement>('.restore-version-btn').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            if (!confirm(tRestoreVersionConfirm)) return;
+            const versionId = btn.dataset.versionId!;
+            const { error: restoreErr } = await actions.restorePageVersion({ versionId });
+            if (!restoreErr) { toast.success(tVersionRestored); location.reload(); }
+            else toast.error(restoreErr.message ?? tError);
+          });
+        });
+      };
+
+      createVersionBtn?.addEventListener('click', async () => {
+        const note = prompt(tSnapshotNotePrompt);
+        const { error } = await actions.createPageVersion({
+          pageId,
+          ...(note ? { note } : {}),
+        });
+        if (!error) {
+          toast.success(tSnapshotCreated);
+          if (versionsList && !versionsList.classList.contains('hidden')) {
+            await loadVersions();
+          }
+        } else {
+          toast.error(error.message ?? tError);
+        }
+      });
+
+      toggleVersionsBtn?.addEventListener('click', async () => {
+        if (!versionsList) return;
+        const isHidden = versionsList.classList.contains('hidden');
+        versionsList.classList.toggle('hidden');
+        toggleVersionsBtn.textContent = isHidden ? tHideVersions : tShowVersions;
+        if (isHidden) await loadVersions();
+      });
+    }
+  }
+
+  customElements.define('sections-editor', SectionsEditor);
+</script>

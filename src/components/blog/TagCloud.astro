@@ -1,0 +1,55 @@
+---
+import type { Locale } from "@i18n/config";
+import type { BlogTranslations } from "@i18n/config";
+import { buildBlogTagHref } from "@/lib/blog/utils";
+import { Card, CardHeader, CardTitle, CardContent } from "@atoms/card";
+import { Badge } from "@atoms/badge";
+
+interface TagItem {
+  id: string;
+  slug: string;
+  name: string;
+  postCount: number;
+  color?: string | null;
+}
+
+interface Props {
+  locale: Locale;
+  blogT: BlogTranslations;
+  tags: TagItem[];
+  baseUrl: string;
+  activeSlug?: string;
+}
+
+const { blogT, tags, baseUrl, activeSlug } = Astro.props;
+
+const maxCount = Math.max(1, ...tags.map((t) => t.postCount));
+---
+
+<Card>
+  <CardHeader>
+    <CardTitle class="text-base">{blogT.labels.tags}</CardTitle>
+  </CardHeader>
+  <CardContent>
+    {tags.length === 0 ? (
+      <p class="text-sm text-muted-foreground">{blogT.labels.noResults}</p>
+    ) : (
+      <div class="flex flex-wrap gap-2">
+        {tags.map((tag) => {
+          const weight = Math.round((tag.postCount / maxCount) * 4) + 1;
+          return (
+            <Badge
+              variant={activeSlug === tag.slug ? "default" : "outline"}
+              size="sm"
+              href={buildBlogTagHref(baseUrl, blogT.routes.tags, tag.slug)}
+              class={weight >= 4 ? "text-base" : weight >= 3 ? "text-sm" : "text-xs"}
+            >
+              {tag.name}
+              <span class="ms-1 text-[10px] opacity-70">({tag.postCount})</span>
+            </Badge>
+          );
+        })}
+      </div>
+    )}
+  </CardContent>
+</Card>

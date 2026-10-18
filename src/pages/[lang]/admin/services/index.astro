@@ -1,0 +1,42 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { requirePermission } from "@lib/auth-guards";
+import { hasServicePermission, resolveServiceTenant } from "@/modules/services/permissions";
+import { getServiceAdminData, getServiceAdminStats, getServiceAdminTaxonomy, getServiceModerationQueue } from "@/modules/services/admin";
+import { getServiceCategories, getServiceProviders, getServiceTags } from "@/modules/services/loaders";
+import ServicesAdminPage from "@/components/services/ServicesAdminPage.astro";
+import { getServiceTranslations } from "@/modules/services/i18n";
+import { LOCALES } from "@i18n/config";
+export const prerender = false;
+const result = await requirePermission(Astro, { service: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getServiceTranslations(locale);
+const p = Astro.url.searchParams;
+const page = Math.max(1, Number(p.get("page") ?? "1") || 1);
+const featured = p.has("featured") ? p.get("featured") === "true" : undefined;
+const mobile = p.has("mobile") ? p.get("mobile") === "true" : undefined;
+const status: "DRAFT" | "PUBLISHED" | "ARCHIVED" | "DELETED" | undefined = (() => { const value = p.get("status"); return value === "DRAFT" || value === "PUBLISHED" || value === "ARCHIVED" || value === "DELETED" ? value : undefined; })();
+const sortBy: "createdAt" | "updatedAt" | "publishedAt" | "title" | "priceMinor" | "ratingAverage100" | "viewCount" | undefined = (() => { const value = p.get("sortBy"); return value === "createdAt" || value === "updatedAt" || value === "publishedAt" || value === "title" || value === "priceMinor" || value === "ratingAverage100" || value === "viewCount" ? value : undefined; })();
+const sortOrder: "asc" | "desc" | undefined = p.get("sortOrder") === "asc" ? "asc" : p.get("sortOrder") === "desc" ? "desc" : undefined;
+const filterInput = { page, limit: 20, search: p.get("search") || undefined, status, categoryId: p.get("categoryId") || undefined, tagId: p.get("tagId") || undefined, providerId: p.get("providerId") || undefined, featured, mobile, locale: p.get("locale") || undefined, sortBy, sortOrder };
+const [data, stats, categoryOptions, tagOptions, providerOptions, taxonomy, moderation] = await Promise.all([getServiceAdminData(null, locale, filterInput), getServiceAdminStats(null), getServiceCategories(locale, null), getServiceTags(locale, null), getServiceProviders(null), getServiceAdminTaxonomy(null, locale), getServiceModerationQueue(null)]);
+const tenant = resolveServiceTenant({});
+const [canCreate, canUpdate, canPublish, canDelete, canModerate, canCategoryCreate, canCategoryUpdate, canCategoryDelete, canTagCreate, canTagUpdate, canTagDelete] = await Promise.all([
+  hasServicePermission(Astro, tenant, { service: ["create"] }),
+  hasServicePermission(Astro, tenant, { service: ["update"] }),
+  hasServicePermission(Astro, tenant, { service: ["publish"] }),
+  hasServicePermission(Astro, tenant, { service: ["delete"] }),
+  hasServicePermission(Astro, tenant, { service: ["moderate"] }),
+  hasServicePermission(Astro, tenant, { serviceCategory: ["create"] }),
+  hasServicePermission(Astro, tenant, { serviceCategory: ["update"] }),
+  hasServicePermission(Astro, tenant, { serviceCategory: ["delete"] }),
+  hasServicePermission(Astro, tenant, { serviceTag: ["create"] }),
+  hasServicePermission(Astro, tenant, { serviceTag: ["update"] }),
+  hasServicePermission(Astro, tenant, { serviceTag: ["delete"] }),
+]);
+const canManageTaxonomy = canCategoryCreate && canCategoryUpdate && canCategoryDelete && canTagCreate && canTagUpdate && canTagDelete;
+---
+<BaseLayout title={t.admin.title} description={t.meta.description}><AuthLayout title={t.admin.title}><AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="services" /><main class="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8"><ServicesAdminPage locale={locale} title={t.admin.title} items={data.items} meta={{ page: data.page, totalPages: data.totalPages }} stats={stats} filters={filterInput} baseAdminUrl={`/${locale}/admin/services`} organizationId={null} canCreate={canCreate} canUpdate={canUpdate} canPublish={canPublish} canDelete={canDelete} canModerate={canModerate} canManageTaxonomy={canManageTaxonomy} categoryOptions={categoryOptions} tagOptions={tagOptions} providerOptions={providerOptions} localeOptions={LOCALES} taxonomy={taxonomy} moderation={moderation} /></main></AuthLayout></BaseLayout>

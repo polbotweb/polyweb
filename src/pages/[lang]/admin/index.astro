@@ -1,0 +1,10 @@
+---
+import { requirePermission } from '@/lib/auth-guards';
+
+export const prerender = false;
+
+const result = await requirePermission(Astro, { page: ["read"] });
+if ('redirect' in result) return result.redirect;
+
+return Astro.redirect(`/${result.locale}/admin/stats`);
+---

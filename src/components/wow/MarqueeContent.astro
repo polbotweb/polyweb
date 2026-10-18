@@ -1,0 +1,184 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import { tv } from "tailwind-variants";
+
+import { AspectRatio } from "@atoms/aspect-ratio";
+import { Badge } from "@atoms/badge";
+import { Image } from "@atoms/image";
+
+/** Feature marquee image item */
+export interface FeatureMarqueeItem {
+  /** Image source URL or imported ImageMetadata */
+  src: string | ImageMetadata;
+  /** Accessible alt text */
+  alt: string;
+  /** Feature title displayed as overlay */
+  title: string;
+  /** Short tagline displayed below the title */
+  tagline?: string;
+}
+
+interface Props extends HTMLAttributes<"section"> {
+  /** Badge/eyebrow text */
+  badge?: string;
+  /** Section heading */
+  heading?: string;
+  /** Section description */
+  description?: string;
+  /** Images for first row (scrolls left) */
+  row1?: FeatureMarqueeItem[];
+  /** Images for second row (scrolls right) */
+  row2?: FeatureMarqueeItem[];
+}
+
+const sectionStyles = tv({
+  base: "@container mx-auto w-full max-w-7xl px-4 py-12",
+});
+
+const {
+  badge = "Features",
+  heading = "Everything You Need",
+  description = "A visual tour of the capabilities that set our platform apart.",
+  row1 = [],
+  row2 = [],
+  class: className,
+  ...rest
+} = Astro.props;
+---
+
+<section class={sectionStyles({ class: className })} {...rest}>
+  <!-- Centered header -->
+  <div class="mx-auto mb-14 max-w-3xl text-center">
+    <Badge class="bg-primary-accent/10 text-primary-accent">{badge}</Badge>
+    <h2
+      class="font-heading mt-5 text-3xl font-semibold tracking-tight text-pretty @xl:text-4xl @3xl:text-5xl"
+    >
+      {heading}
+    </h2>
+    <p class="text-muted-foreground mt-4 text-pretty @xl:text-lg">
+      {description}
+    </p>
+  </div>
+
+  <!-- Marquee container -->
+  <div
+    id="feature-25-marquee"
+    class="relative flex flex-col gap-(--gap) overflow-x-clip"
+    style={{
+      "--gap": "1.25rem",
+      "--marquee-duration": "60s",
+      "mask-image": "linear-gradient(to right, transparent, black 6rem, black calc(100% - 6rem), transparent)",
+      "-webkit-mask-image": "linear-gradient(to right, transparent, black 6rem, black calc(100% - 6rem), transparent)",
+    }}
+  >
+
+    <!-- Row 1: Normal direction -->
+    <div class="feature-25-row flex gap-(--gap)">
+      {
+        [0, 1].map(() => (
+          <div class="feature-25-animate flex min-w-full shrink-0 gap-(--gap)">
+            {row1.map((item) => (
+              <div class="group relative w-[320px] shrink-0 overflow-hidden rounded-2xl @2xl:w-100 @4xl:w-120">
+                <AspectRatio ratio={16 / 9}>
+                  <Image
+                    src={item.src as any}
+                    alt={item.alt}
+                    class="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                  <div class="absolute inset-0 flex flex-col justify-end bg-linear-to-t from-black/80 via-black/20 to-transparent p-5">
+                    <h3 class="text-base font-semibold text-white @2xl:text-lg">{item.title}</h3>
+                    {item.tagline && (
+                      <p class="mt-1 text-sm leading-snug text-white">{item.tagline}</p>
+                    )}
+                  </div>
+                </AspectRatio>
+              </div>
+            ))}
+          </div>
+        ))
+      }
+    </div>
+
+    <!-- Row 2: Reverse direction -->
+    <div class="feature-25-row flex gap-(--gap)" style={{ "--direction": "reverse" }}>
+      {
+        [0, 1].map(() => (
+          <div class="feature-25-animate flex min-w-full shrink-0 gap-(--gap)">
+            {row2.map((item) => (
+              <div class="group relative w-[320px] shrink-0 overflow-hidden rounded-2xl @2xl:w-100 @4xl:w-120">
+                <AspectRatio ratio={16 / 9}>
+                  <Image
+                    src={item.src as any}
+                    alt={item.alt}
+                    class="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                  <div class="absolute inset-0 flex flex-col justify-end bg-linear-to-t from-black/80 via-black/20 to-transparent p-5">
+                    <h3 class="text-base font-semibold text-white @2xl:text-lg">{item.title}</h3>
+                    {item.tagline && (
+                      <p class="mt-1 text-sm leading-snug text-white">{item.tagline}</p>
+                    )}
+                  </div>
+                </AspectRatio>
+              </div>
+            ))}
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<script>
+  let controller: AbortController | null = null;
+
+  function initFeature25Marquee() {
+    controller?.abort();
+    controller = new AbortController();
+    const { signal } = controller;
+
+    const marquee = document.getElementById("feature-25-marquee");
+    if (!marquee) return;
+
+    const rows = marquee.querySelectorAll(".feature-25-row");
+    rows.forEach((row) => {
+      row.addEventListener("mouseenter", () => {
+        row.querySelectorAll(".feature-25-animate").forEach((el) => {
+          (el as HTMLElement).style.animationPlayState = "paused";
+        });
+      }, { signal });
+      row.addEventListener("mouseleave", () => {
+        row.querySelectorAll(".feature-25-animate").forEach((el) => {
+          (el as HTMLElement).style.animationPlayState = "running";
+        });
+      }, { signal });
+    });
+  }
+
+  initFeature25Marquee();
+  document.addEventListener("astro:after-swap", initFeature25Marquee);
+  document.addEventListener("astro:before-swap", () => { controller?.abort(); controller = null; });
+</script>
+
+<style>
+  @keyframes feature-25-scroll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+
+  .feature-25-animate {
+    animation: feature-25-scroll var(--marquee-duration) linear infinite;
+    animation-direction: var(--direction, normal);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .feature-25-animate {
+      animation-play-state: paused;
+    }
+  }
+</style>

@@ -1,0 +1,43 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import OrgSidebar from "@organisms/OrgSidebar/OrgSidebar.astro";
+import { requireAuth } from "@lib/auth-guards";
+import { fetchOrgData, getUserOrgRole } from "@/lib/auth-data";
+import { hasServicePermission, resolveServiceTenant } from "@/modules/services/permissions";
+import { getServiceAdminById } from "@/modules/services/admin";
+import { getServiceTranslations } from "@/modules/services/i18n";
+import ServiceLocaleSwitcher from "@/modules/services/components/ui/ServiceLocaleSwitcher.astro";
+import AdminServiceForm from "@/components/services/AdminServiceForm.astro";
+import type { Locale } from "@i18n/config";
+export const prerender = false;
+const result = await requireAuth(Astro);
+if ("redirect" in result) return result.redirect;
+const { user, locale, authT } = result;
+const orgSlug = Astro.params.slug!;
+const orgData = await fetchOrgData(Astro.request.headers, orgSlug);
+if (!orgData) return Astro.redirect(`/${locale}/auth/${authT.routes.dashboard}`);
+const { org, members } = orgData;
+const orgRole = getUserOrgRole(members, user.id);
+const tenant = resolveServiceTenant({ organizationId: org.id });
+const [canUpdate, canPublish, canDelete, canCreate] = await Promise.all([
+  hasServicePermission(Astro, tenant, { service: ["update"] }),
+  hasServicePermission(Astro, tenant, { service: ["publish"] }),
+  hasServicePermission(Astro, tenant, { service: ["delete"] }),
+  hasServicePermission(Astro, tenant, { service: ["create"] }),
+]);
+if (!canUpdate) return Astro.redirect(`/${locale}/${orgSlug}/admin/services`);
+const item = await getServiceAdminById(Astro.params.id!, locale as Locale, org.id);
+if (!item) return Astro.redirect(`/${locale}/${orgSlug}/admin/services`);
+const t = getServiceTranslations(locale as Locale);
+const baseAdminUrl = `/${locale}/${org.slug}/admin/services`;
+---
+<BaseLayout title={`${t.admin.editService} — ${org.name}`} description={t.meta.description}>
+  <AuthLayout title={org.name}>
+    <OrgSidebar slot="sidebar" t={authT} locale={locale} org={org} orgRole={orgRole} activeItem="services" />
+    <main class="mx-auto w-full max-w-5xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">
+      <ServiceLocaleSwitcher locale={locale as Locale} service={item} availableLocales={item.availableLocales} />
+      <AdminServiceForm locale={locale as Locale} service={item} organizationId={org.id} baseAdminUrl={baseAdminUrl} canUpdate={canUpdate} canPublish={canPublish} canDelete={canDelete} canCreate={canCreate} />
+    </main>
+  </AuthLayout>
+</BaseLayout>

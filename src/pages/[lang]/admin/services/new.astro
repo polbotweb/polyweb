@@ -1,0 +1,21 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { requirePermission } from "@lib/auth-guards";
+import { getServiceTranslations } from "@/modules/services/i18n";
+import ServiceLocaleSwitcher from "@/modules/services/components/ui/ServiceLocaleSwitcher.astro";
+import AdminServiceForm from "@/components/services/AdminServiceForm.astro";
+import type { Locale } from "@i18n/config";
+export const prerender = false;
+const result = await requirePermission(Astro, { service: ["create"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getServiceTranslations(locale);
+---
+<BaseLayout title={t.admin.newService} description={t.meta.description}>
+  <AuthLayout title={t.admin.newService}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="services" />
+    <main class="mx-auto w-full max-w-5xl space-y-4 px-4 py-8 sm:px-6 lg:px-8"><ServiceLocaleSwitcher locale={locale} /><AdminServiceForm locale={locale} organizationId={null} /></main>
+  </AuthLayout>
+</BaseLayout>

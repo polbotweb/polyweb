@@ -1,0 +1,191 @@
+---
+import type { HomeTranslations } from '@i18n/config';
+import { Badge } from '@atoms/badge';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@atoms/card';
+import { Icon } from 'astro-icon/components';
+import { tv } from 'tailwind-variants';
+
+interface Props {
+  t: HomeTranslations['pillars'];
+}
+
+const sectionStyles = tv({
+  base: "@container mx-auto w-full max-w-7xl px-4 py-12",
+});
+
+const { t } = Astro.props;
+
+// Duplicate items for seamless loop
+const row1 = t.items;
+const row2 = [...t.items].reverse();
+---
+
+<section class={sectionStyles()}>
+  <!-- Centered header -->
+  <div class="mx-auto mb-14 max-w-3xl text-center">
+    <div class="pillars-header-stagger" style="--stagger: 0">
+      <Badge variant="outline">{t.badge}</Badge>
+    </div>
+    <h2 class="pillars-header-stagger font-heading mt-5 text-3xl font-semibold tracking-tight text-pretty @xl:text-4xl @3xl:text-5xl" style="--stagger: 1">
+      {t.title}
+    </h2>
+    <p class="pillars-header-stagger text-muted-foreground mt-4 text-pretty @xl:text-lg" style="--stagger: 2">
+      {t.description}
+    </p>
+  </div>
+
+  <!-- Marquee container -->
+  <div
+    id="pillars-marquee"
+    class="relative flex flex-col gap-(--gap) overflow-x-clip"
+    style={{
+      "--gap": "1.25rem",
+      "--marquee-duration": "40s",
+      "mask-image": "linear-gradient(to right, transparent, black 6rem, black calc(100% - 6rem), transparent)",
+      "-webkit-mask-image": "linear-gradient(to right, transparent, black 6rem, black calc(100% - 6rem), transparent)",
+    }}
+  >
+
+    <!-- Row 1: Normal direction -->
+    <div class="pillars-row flex gap-(--gap)">
+      {
+        [0, 1].map(() => (
+          <div class="pillars-animate flex min-w-full shrink-0 gap-(--gap)">
+            {row1.map((item) => (
+              <Card class="w-70 shrink-0 @2xl:w-80">
+                <CardHeader>
+                  <div class="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Icon name={item.icon} class="size-6" />
+                  </div>
+                  <CardTitle>{item.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>{item.description}</CardDescription>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ))
+      }
+    </div>
+
+    <!-- Row 2: Reverse direction -->
+    <div class="pillars-row flex gap-(--gap)" style={{ "--direction": "reverse" }}>
+      {
+        [0, 1].map(() => (
+          <div class="pillars-animate flex min-w-full shrink-0 gap-(--gap)">
+            {row2.map((item) => (
+              <Card class="w-70 shrink-0 @2xl:w-80">
+                <CardHeader>
+                  <div class="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Icon name={item.icon} class="size-6" />
+                  </div>
+                  <CardTitle>{item.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>{item.description}</CardDescription>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<script>
+  let controller: AbortController | null = null;
+  let observerRef: IntersectionObserver | null = null;
+
+  function initPillarsMarquee() {
+    controller?.abort();
+    controller = new AbortController();
+    const { signal } = controller;
+
+    const marquee = document.getElementById("pillars-marquee");
+    if (!marquee) return;
+
+    const rows = marquee.querySelectorAll(".pillars-row");
+    rows.forEach((row) => {
+      row.addEventListener("mouseenter", () => {
+        row.querySelectorAll(".pillars-animate").forEach((el) => {
+          (el as HTMLElement).style.animationPlayState = "paused";
+        });
+      }, { signal });
+      row.addEventListener("mouseleave", () => {
+        row.querySelectorAll(".pillars-animate").forEach((el) => {
+          (el as HTMLElement).style.animationPlayState = "running";
+        });
+      }, { signal });
+    });
+  }
+
+  // Header stagger animation on scroll
+  function initPillarsHeaderReveal() {
+    observerRef?.disconnect();
+    const section = document.querySelector(".pillars-header-stagger")?.closest("section");
+    if (!section) return;
+    const staggerEls = section.querySelectorAll<HTMLElement>(".pillars-header-stagger");
+    observerRef = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            staggerEls.forEach((el) => {
+              el.style.animationPlayState = "running";
+            });
+            observerRef!.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.2 }
+    );
+    observerRef.observe(section);
+  }
+
+  initPillarsMarquee();
+  initPillarsHeaderReveal();
+  document.addEventListener("astro:after-swap", () => {
+    initPillarsMarquee();
+    initPillarsHeaderReveal();
+  });
+  document.addEventListener("astro:before-swap", () => {
+    controller?.abort(); controller = null;
+    observerRef?.disconnect(); observerRef = null;
+  });
+</script>
+
+<style>
+  @keyframes pillars-scroll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(calc(var(--marquee-dir, -1) * (100% + var(--gap))));
+    }
+  }
+
+  :global([dir="rtl"]) .pillars-animate {
+    --marquee-dir: 1;
+  }
+
+  .pillars-animate {
+    animation: pillars-scroll var(--marquee-duration) linear infinite;
+    animation-direction: var(--direction, normal);
+  }
+
+  .pillars-header-stagger {
+    opacity: 0;
+    transform: translateY(18px);
+    animation: pillars-header-enter 0.6s ease-out forwards;
+    animation-delay: calc(var(--stagger, 0) * 0.12s);
+    animation-play-state: paused;
+  }
+
+  @keyframes pillars-header-enter {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>

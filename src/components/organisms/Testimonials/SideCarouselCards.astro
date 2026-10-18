@@ -1,0 +1,205 @@
+---
+import IconStar from "@tabler/icons/filled/star.svg";
+import IconArrowLeft from "@tabler/icons/outline/arrow-left.svg";
+import IconArrowRight from "@tabler/icons/outline/arrow-right.svg";
+import type { HTMLAttributes } from "astro/types";
+import type { ImageMetadata } from "astro";
+import { tv } from "tailwind-variants";
+
+import { Avatar, AvatarFallback, AvatarImage } from "@atoms/avatar";
+import { Badge } from "@atoms/badge";
+import { Button } from "@atoms/button";
+import { Card, CardContent } from "@atoms/card";
+import { Carousel, CarouselContent, CarouselItem } from "@atoms/carousel";
+
+/** Testimonial data with rating */
+export interface Testimonial {
+  /** Person's name */
+  name: string;
+  /** Job title/role */
+  role: string;
+  /** Testimonial content */
+  content: string;
+  /** Star rating (1-5) */
+  rating: number;
+  /** Profile image */
+  image: ImageMetadata;
+}
+
+interface Props extends HTMLAttributes<"section"> {
+  /** Badge/eyebrow text */
+  badge?: string;
+  /** Section heading */
+  heading?: string;
+  /** Section description */
+  description?: string;
+  /** Array of testimonials */
+  testimonials?: Testimonial[];
+}
+
+const testimonial1Styles = tv({
+  base: "@container w-full py-12",
+});
+
+const {
+  badge = "Testimonials",
+  heading = "We Have Helped Over 2,000 Developers",
+  description = "Join our community of developers and start building your next project today. We are here to help you every step of the way.",
+  testimonials = [],
+  class: className,
+  ...rest
+} = Astro.props;
+---
+
+<section id="testimonials-01" class={testimonial1Styles({ class: className })} {...rest}>
+  <div class="relative">
+    <div class="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 @md:flex-row @md:gap-16">
+      <!-- Left Content Section -->
+      <div class="z-1 w-full @2xl:w-1/2">
+        <div class="@2xl:pe-4">
+          <Badge class="bg-primary-accent/10 text-primary-deep">{badge}</Badge>
+          <h2
+            class="font-heading mt-6 text-3xl font-semibold tracking-tight text-pretty @2xl:text-4xl"
+          >
+            {heading}
+          </h2>
+          <p class="text-muted-foreground mt-4 me-auto max-w-lg text-pretty">
+            {description}
+          </p>
+          <div class="mt-8 flex gap-4">
+            <Button
+              id="testimonials-01-previous"
+              class="rounded-full"
+              variant="outline"
+              size="icon"
+              aria-label="Previous testimonial"
+            >
+              <IconArrowLeft class="size-6 rtl:-scale-x-100" />
+              <span class="sr-only">Previous testimonial</span>
+            </Button>
+            <Button
+              id="testimonials-01-next"
+              class="rounded-full"
+              variant="outline"
+              size="icon"
+              aria-label="Next testimonial"
+            >
+              <IconArrowRight class="size-6 rtl:-scale-x-100" />
+              <span class="sr-only">Next testimonial</span>
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Carousel Section -->
+      <div class="inset-0 @2xl:absolute">
+        <div class="relative ms-auto overflow-clip @2xl:w-1/2">
+          <Carousel
+            id="testimonial-01-carousel"
+            autoInit={false}
+            opts={{ loop: true, align: "start" }}
+            class="w-full"
+          >
+            <CarouselContent>
+              {
+                testimonials.map((testimonial) => (
+                  <CarouselItem class="@2xl:basis-4/5 @3xl:basis-3/4 @5xl:basis-3/5">
+                    <div class="p-1">
+                      <Card class="hover:cursor-grab">
+                        <CardContent class="flex flex-col gap-4">
+                          {/* Rating Stars */}
+                          <figure
+                            class="flex gap-1"
+                            aria-label={`Rating: ${testimonial.rating} out of 5 stars`}
+                          >
+                            {Array.from({ length: testimonial.rating }).map(() => (
+                              <IconStar class="size-5 text-yellow-500" aria-hidden="true" />
+                            ))}
+                          </figure>
+
+                          {/* Testimonial Content */}
+                          <blockquote class="text-foreground text-base leading-relaxed text-pretty">
+                            "{testimonial.content}"
+                          </blockquote>
+
+                          {/* Author Info */}
+                          <div class="mt-2 flex items-center gap-3">
+                            <Avatar>
+                              <AvatarImage image={testimonial.image} alt={testimonial.name} />
+                              <AvatarFallback>
+                                {testimonial.name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div class="flex flex-col">
+                              <cite class="text-foreground font-medium not-italic">
+                                {testimonial.name}
+                              </cite>
+                              <span class="text-muted-foreground text-sm">{testimonial.role}</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </CarouselItem>
+                ))
+              }
+            </CarouselContent>
+          </Carousel>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import Autoplay from "embla-carousel-autoplay";
+
+  import { initCarousel } from "@atoms/carousel";
+
+  let controller: AbortController | null = null;
+
+  function setupTestimonialCarousel() {
+    controller?.abort();
+    controller = new AbortController();
+    const { signal } = controller;
+
+    const carouselElement = document.getElementById("testimonial-01-carousel");
+    if (!carouselElement) return;
+
+    const prevButton = document.getElementById("testimonials-01-previous") as HTMLButtonElement;
+    const nextButton = document.getElementById("testimonials-01-next") as HTMLButtonElement;
+
+    // Initialize carousel with autoplay and get manager
+    const carouselManager = initCarousel(carouselElement, {
+      plugins: [
+        Autoplay({
+          delay: 5000,
+          stopOnInteraction: false,
+          stopOnMouseEnter: true,
+        }),
+      ],
+    });
+
+    // Add click handlers to external buttons using carousel manager methods
+    if (prevButton) {
+      prevButton.addEventListener("click", () => {
+        carouselManager?.scrollPrev();
+      }, { signal });
+    }
+    if (nextButton) {
+      nextButton.addEventListener("click", () => {
+        carouselManager?.scrollNext();
+      }, { signal });
+    }
+  }
+
+  // Initialize on page load
+  setupTestimonialCarousel();
+
+  // Reinitialize on Astro page transitions
+  document.addEventListener("astro:after-swap", setupTestimonialCarousel);
+  document.addEventListener("astro:before-swap", () => { controller?.abort(); controller = null; });
+</script>

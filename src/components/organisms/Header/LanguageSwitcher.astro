@@ -1,0 +1,55 @@
+---
+import { getRelativeLocaleUrl } from 'astro:i18n';
+import { Icon } from 'astro-icon/components';
+import { LOCALES, LOCALE_LABELS, type Locale } from '@i18n/config';
+import { toLocale } from '@i18n/utils';
+import {
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  DropdownTrigger,
+} from '@atoms/dropdown';
+
+const FLAG_ICONS: Record<Locale, string> = {
+  fr: 'circle-flags:fr',
+  en: 'circle-flags:gb',
+  es: 'circle-flags:es',
+  ar: 'circle-flags:sa',
+};
+
+interface Props {
+  label?: string;
+}
+
+const currentLocale = toLocale(Astro.currentLocale);
+const currentPath = Astro.url.pathname;
+const { label = 'Switch language' } = Astro.props;
+
+// Extract the path after the locale prefix (e.g. /fr/about → /about)
+const pathWithoutLocale = currentPath.replace(new RegExp(`^/${currentLocale}(?=/|$)`), '') || '/';
+---
+
+<Dropdown>
+  <DropdownTrigger
+    class="text-muted-foreground hover:text-foreground inline-flex size-9 cursor-pointer items-center justify-center rounded-md transition-colors"
+    aria-label={label}
+  >
+      <Icon name={FLAG_ICONS[currentLocale]} class="size-5 rounded-sm" />
+  </DropdownTrigger>
+  <DropdownContent align="end">
+    {LOCALES.map((loc: Locale) => {
+      const isActive = loc === currentLocale;
+      const href = getRelativeLocaleUrl(loc, pathWithoutLocale);
+      return (
+        <DropdownItem
+          as="a"
+          href={href}
+          class:list={[isActive && 'bg-accent font-medium']}
+        >
+          <Icon name={FLAG_ICONS[loc]} class="size-4 shrink-0 rounded-sm" />
+          {LOCALE_LABELS[loc]}
+        </DropdownItem>
+      );
+    })}
+  </DropdownContent>
+</Dropdown>

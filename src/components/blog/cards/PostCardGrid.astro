@@ -1,0 +1,207 @@
+---
+import { Icon } from "astro-icon/components";
+import type { Locale } from "@i18n/config";
+import type { BlogTranslations } from "@i18n/config";
+import {
+  buildBlogCategoryUrl,
+  buildBlogPostUrl,
+  formatReadingTime,
+  generateExcerpt,
+} from "@/lib/blog/utils";
+import { AspectRatio } from "@atoms/aspect-ratio";
+import { Avatar, AvatarFallback, AvatarImage } from "@atoms/avatar";
+import { Badge } from "@atoms/badge";
+import { Image } from "@atoms/image";
+
+interface Props {
+  locale: Locale;
+  blogT: BlogTranslations;
+  post: {
+    post: {
+      id: string;
+      viewCount: number;
+      isFeatured: boolean;
+      isSticky: boolean;
+      publishedAt: Date | null;
+    };
+    translation: { title: string; slug: string; excerpt: string | null; content: string } | null;
+    author: { id: string; name: string; image: string | null } | null;
+    featuredImage: { id: string; url: string } | null;
+    categories: { id: string; slug: string; name: string | null }[];
+    commentCount: number;
+    rating?: number | null;
+    reviewCount?: number | null;
+  };
+  baseUrl: string;
+  organizationSlug?: string | null;
+  priority?: "eager" | "lazy";
+  showCategory?: boolean;
+  showAuthor?: boolean;
+  showDate?: boolean;
+  showExcerpt?: boolean;
+  showViews?: boolean;
+  showComments?: boolean;
+  showRating?: boolean;
+}
+
+const {
+  post,
+  blogT,
+  locale,
+  priority = "lazy",
+  showCategory = true,
+  showAuthor = true,
+  showDate = true,
+  showExcerpt = true,
+  showViews = true,
+  showComments = true,
+  showRating = true,
+  organizationSlug = null,
+} = Astro.props;
+
+const translation = post.translation;
+if (!translation) return null;
+
+const excerpt = translation.excerpt || generateExcerpt(translation.content, 160);
+const primaryCategorySlug = post.categories[0]?.slug ?? null;
+const postUrl = buildBlogPostUrl(locale, organizationSlug, translation.slug, primaryCategorySlug);
+const publishedAt = post.post.publishedAt;
+const primaryCategory = post.categories[0];
+const readingTime = formatReadingTime(translation.content);
+const authorInitial = post.author ? post.author.name.charAt(0).toUpperCase() : "?";
+const ratingValue = post.rating ?? 0;
+
+const formattedDate = publishedAt
+  ? publishedAt.toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" })
+  : null;
+const isoDate = publishedAt?.toISOString();
+const loadingAttr = priority === "eager" ? ("eager" as const) : ("lazy" as const);
+---
+
+<article class="group relative isolate flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+  <a
+    href={postUrl}
+    class="absolute inset-0 z-0 rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+    aria-label={translation.title}
+  >
+    <span class="sr-only">{translation.title}</span>
+  </a>
+
+  {/* Image */}
+  <div class="relative overflow-hidden bg-muted">
+    <AspectRatio ratio={16 / 9}>
+      {post.featuredImage ? (
+        <Image
+          src={post.featuredImage.url}
+          alt={translation.title}
+          class="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          loading={loadingAttr}
+          decoding="async"
+          inferSize
+        />
+      ) : (
+        <div class="absolute inset-0 flex items-center justify-center bg-muted">
+          <Icon name="mdi:newspaper-variant-outline" class="size-14 text-muted-foreground/25" />
+        </div>
+      )}
+    </AspectRatio>
+
+    {(post.post.isFeatured || post.post.isSticky) && (
+      <div class="absolute inset-x-3 top-3 flex gap-1.5">
+        {post.post.isFeatured && (
+          <Badge variant="primary" size="sm">{blogT.labels.featured}</Badge>
+        )}
+        {post.post.isSticky && (
+          <Badge variant="secondary" size="sm">{blogT.labels.sticky}</Badge>
+        )}
+      </div>
+    )}
+  </div>
+
+  {/* Body */}
+  <div class="flex flex-1 flex-col gap-3 p-4">
+    {/* Category + date */}
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      {showCategory && primaryCategory ? (
+        <Badge
+          variant="ghost"
+          size="sm"
+          class="relative z-10 rounded-md"
+          href={buildBlogCategoryUrl(locale, organizationSlug, primaryCategory.slug)}
+        >
+          {primaryCategory.name ?? primaryCategory.slug}
+        </Badge>
+      ) : <span />}
+      {showDate && formattedDate && (
+        <time class="text-xs text-muted-foreground" datetime={isoDate}>{formattedDate}</time>
+      )}
+    </div>
+
+    {/* Title */}
+    <h3 class="line-clamp-2 font-heading text-base font-semibold leading-snug tracking-tight transition-colors group-hover:text-primary">
+      {translation.title}
+    </h3>
+
+    {/* Excerpt */}
+    {showExcerpt && excerpt && (
+      <p class="line-clamp-2 text-sm leading-relaxed text-muted-foreground">{excerpt}</p>
+    )}
+
+    {/* Stars */}
+    {showRating && post.rating != null && (
+      <div class="flex items-center gap-1.5">
+        {/* eslint-disable-next-line astro/jsx-a11y/prefer-tag-over-role -- visual star rating built from icon components; role="img" + aria-label exposes the numeric value to AT without a redundant <img> per star */}
+        <div class="flex items-center gap-0.5" role="img" aria-label={`${post.rating.toFixed(1)} / 5`}>
+          {Array.from({ length: 5 }, (_, i) => {
+            const pos = i + 1;
+            const full = ratingValue >= pos;
+            const half = !full && ratingValue >= pos - 0.5;
+            return full
+              ? <Icon name="mdi:star" class="size-3.5 shrink-0 text-warning" />
+              : half
+              ? <Icon name="mdi:star-half-full" class="size-3.5 shrink-0 text-warning" />
+              : <Icon name="mdi:star-outline" class="size-3.5 shrink-0 text-muted-foreground/40" />;
+          })}
+        </div>
+        <span class="text-xs font-medium">{post.rating.toFixed(1)}</span>
+        {post.reviewCount != null && (
+          <span class="text-xs text-muted-foreground">({post.reviewCount})</span>
+        )}
+      </div>
+    )}
+
+    {/* Footer */}
+    <div class="mt-auto flex items-center justify-between gap-2 border-t border-border/40 pt-3">
+      {showAuthor && post.author ? (
+        <div class="flex min-w-0 items-center gap-2">
+          <Avatar size="sm">
+            {post.author.image && (
+              <AvatarImage src={post.author.image} alt={post.author.name} />
+            )}
+            <AvatarFallback>{authorInitial}</AvatarFallback>
+          </Avatar>
+          <span class="truncate text-xs font-medium">{post.author.name}</span>
+        </div>
+      ) : <span />}
+
+      <div class="flex shrink-0 items-center gap-2.5 text-xs text-muted-foreground">
+        <span class="flex items-center gap-1">
+          <Icon name="mdi:clock-outline" class="size-3 shrink-0" />
+          {readingTime}
+        </span>
+        {showViews && post.post.viewCount > 0 && (
+          <span class="hidden items-center gap-1 md:flex">
+            <Icon name="mdi:eye-outline" class="size-3 shrink-0" />
+            {post.post.viewCount.toLocaleString(locale)}
+          </span>
+        )}
+        {showComments && post.commentCount > 0 && (
+          <span class="hidden items-center gap-1 md:flex">
+            <Icon name="mdi:comment-outline" class="size-3 shrink-0" />
+            {post.commentCount}
+          </span>
+        )}
+      </div>
+    </div>
+  </div>
+</article>

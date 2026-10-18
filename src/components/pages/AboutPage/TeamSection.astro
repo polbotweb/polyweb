@@ -1,0 +1,186 @@
+---
+import IconArrowLeft from "@tabler/icons/outline/arrow-left.svg";
+import IconArrowRight from "@tabler/icons/outline/arrow-right.svg";
+import IconBrandLinkedin from "@tabler/icons/outline/brand-linkedin.svg";
+import IconBrandTwitter from "@tabler/icons/outline/brand-x.svg";
+import IconMail from "@tabler/icons/outline/mail.svg";
+import type { HTMLAttributes } from "astro/types";
+import type { ImageMetadata } from "astro";
+import { Image } from "astro:assets";
+import { tv } from "tailwind-variants";
+
+import { Badge } from "@atoms/badge";
+import { Button } from "@atoms/button";
+import { Carousel, CarouselContent, CarouselItem } from "@atoms/carousel";
+
+interface SocialLink {
+  name: string;
+  icon: string;
+  href: string;
+}
+
+interface TeamMember {
+  name: string;
+  role: string;
+  bio: string;
+  image: ImageMetadata;
+  socials: SocialLink[];
+}
+
+interface Props extends HTMLAttributes<"section"> {
+  eyebrow?: string;
+  title?: string;
+  description?: string;
+  members?: TeamMember[];
+}
+
+const team2Styles = tv({
+  base: "@container w-full py-24",
+});
+
+const iconMap: Record<string, typeof IconBrandLinkedin> = {
+  linkedin: IconBrandLinkedin,
+  twitter: IconBrandTwitter,
+  mail: IconMail,
+};
+
+const {
+  eyebrow = "Team",
+  title = "Leadership Team",
+  description = "Meet the passionate individuals driving our mission forward.",
+  members = [],
+  class: className,
+  ...rest
+} = Astro.props;
+---
+
+<section id="team-02" class={team2Styles({ class: className })} {...rest}>
+  <div class="mx-auto w-full max-w-7xl px-4">
+    <!-- Header with Navigation -->
+    <div
+      class="mb-12 flex flex-col gap-x-8 gap-y-4 @2xl:flex-row @2xl:items-end @2xl:justify-between"
+    >
+      <div class="flex-1">
+        {eyebrow && (
+          <Badge variant="primary" class="mb-3">{eyebrow}</Badge>
+        )}
+        <h2
+          class="font-heading mb-4 text-3xl font-semibold tracking-tight @xl:text-4xl @3xl:text-5xl"
+        >
+          {title}
+        </h2>
+        <p class="text-muted-foreground max-w-2xl text-pretty @xl:text-lg">
+          {description}
+        </p>
+      </div>
+
+      <div class="flex gap-4">
+        <Button
+          id="team-02-previous"
+          class="rounded-full [&_svg]:size-6"
+          variant="outline"
+          size="icon-lg"
+        >
+          <IconArrowLeft class="rtl:-scale-x-100" />
+          <span class="sr-only">Previous team member</span>
+        </Button>
+        <Button
+          id="team-02-next"
+          class="rounded-full [&_svg]:size-6"
+          variant="outline"
+          size="icon-lg"
+        >
+          <IconArrowRight class="rtl:-scale-x-100" />
+          <span class="sr-only">Next team member</span>
+        </Button>
+      </div>
+    </div>
+
+    <!-- Carousel -->
+    <div class="relative -mx-3">
+      <Carousel
+        id="team-02-carousel"
+        autoInit={false}
+        opts={{ loop: true, align: "start" }}
+        class="w-full"
+      >
+        <CarouselContent>
+          {
+            members.map((member) => (
+              <CarouselItem class="@md:basis-1/2 @2xl:basis-1/3 @4xl:basis-1/4">
+                <div class="px-3">
+                  <div class="mb-4 aspect-square overflow-hidden rounded-2xl">
+                    <Image src={member.image} alt={member.name} class="h-full w-full object-cover" width={300} height={300} loading="lazy" />
+                  </div>
+                  <div class="px-2">
+                    <h3 class="font-heading text-foreground text-xl font-semibold">
+                      {member.name}
+                    </h3>
+                    <p class="text-primary-deep mb-3 text-sm font-medium">{member.role}</p>
+                    <p class="text-muted-foreground mb-4 text-sm leading-relaxed">{member.bio}</p>
+
+                    <div class="flex gap-2">
+                      {member.socials.map((social) => {
+                        const SocialIcon = iconMap[social.icon];
+                        return SocialIcon ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            class="size-9"
+                            aria-label={`${member.name} – ${social.name}`}
+                            href={social.href}
+                            target={social.href.startsWith("mailto:") ? undefined : "_blank"}
+                            rel={social.href.startsWith("mailto:") ? undefined : "noopener noreferrer"}
+                          >
+                            <SocialIcon class="size-5" />
+                          </Button>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </CarouselItem>
+            ))
+          }
+        </CarouselContent>
+      </Carousel>
+    </div>
+  </div>
+</section>
+
+<script>
+  import Autoplay from "embla-carousel-autoplay";
+  import { initCarousel } from "@atoms/carousel";
+
+  function setupTeamCarousel() {
+    const carouselElement = document.getElementById("team-02-carousel");
+    if (!carouselElement) return;
+
+    const prevButton = document.getElementById("team-02-previous") as HTMLButtonElement;
+    const nextButton = document.getElementById("team-02-next") as HTMLButtonElement;
+
+    const carouselManager = initCarousel(carouselElement, {
+      plugins: [
+        Autoplay({
+          delay: 5000,
+          stopOnInteraction: false,
+          stopOnMouseEnter: true,
+        }),
+      ],
+    });
+
+    if (prevButton) {
+      prevButton.addEventListener("click", () => {
+        carouselManager?.scrollPrev();
+      });
+    }
+    if (nextButton) {
+      nextButton.addEventListener("click", () => {
+        carouselManager?.scrollNext();
+      });
+    }
+  }
+
+  setupTeamCarousel();
+  document.addEventListener("astro:after-swap", setupTeamCarousel);
+</script>

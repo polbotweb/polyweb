@@ -1,0 +1,263 @@
+---
+import IconCheck from "@tabler/icons/outline/check.svg";
+import type { HTMLAttributes } from "astro/types";
+import { tv } from "tailwind-variants";
+
+import { Button } from "@atoms/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@atoms/card";
+import { Switch } from "@atoms/switch";
+
+/** Feature item for pricing plan */
+export interface PricingFeature {
+  /** Feature description text */
+  text: string;
+  /** Whether the feature is included */
+  included: boolean;
+}
+
+/** Pricing plan data with monthly/yearly pricing */
+export interface PricingPlan {
+  /** Plan name */
+  name: string;
+  /** Plan description */
+  description: string;
+  /** Monthly price display string */
+  monthlyPrice: string;
+  /** Yearly price display string */
+  yearlyPrice: string;
+  /** List of features */
+  features: PricingFeature[];
+  /** CTA button text */
+  buttonText: string;
+  /** CTA button href */
+  buttonHref: string;
+}
+
+interface Props extends HTMLAttributes<"section"> {
+  /** Eyebrow text above heading */
+  eyebrow?: string;
+  /** Section heading */
+  heading?: string;
+  /** Section description */
+  description?: string;
+  /** Array of pricing plans */
+  plans?: PricingPlan[];
+  /** Monthly label */
+  monthlyLabel?: string;
+  /** Yearly label */
+  yearlyLabel?: string;
+  /** Discount badge text */
+  discountBadge?: string;
+}
+
+const pricing4Styles = tv({
+  base: "@container relative w-full",
+});
+
+const {
+  eyebrow = "Pricing",
+  heading = "Choose Your Plan",
+  description:
+    sectionDescription = "Select the perfect plan for your needs. Upgrade or downgrade at any time.",
+  plans = [],
+  monthlyLabel = "Monthly",
+  yearlyLabel = "Yearly",
+  discountBadge = "Save 20%",
+  class: className,
+  ...rest
+} = Astro.props;
+---
+
+<section id="pricing-04" class={pricing4Styles({ class: className })} {...rest}>
+  <!-- Grid Background -->
+  <div id="pricing-04-grid-overlay" class="pointer-events-none absolute inset-0" aria-hidden="true">
+    <svg class="size-full" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <pattern id="pricing-04-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path
+            d="M40 0v40M0 40h40"
+            fill="none"
+            stroke="oklch(0.400 0.016 75 / 0.15)"
+            stroke-width="0.5"></path>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#pricing-04-grid)"></rect>
+    </svg>
+    <div class="to-background absolute inset-0 bg-linear-to-b from-background via-background">
+    </div>
+  </div>
+
+  <div class="relative mx-auto max-w-3xl bg-background px-4 py-12">
+    <div class="relative mb-12 text-center">
+      <p class="text-primary-deep mb-3 text-sm font-medium">{eyebrow}</p>
+      <h2
+        class="font-heading mb-4 text-3xl font-semibold tracking-tight @lg:text-4xl @2xl:text-5xl"
+      >
+        {heading}
+      </h2>
+      <p class="text-muted-foreground mx-auto max-w-2xl text-pretty">
+        {sectionDescription}
+      </p>
+
+      <!-- Billing Period Toggle -->
+      <div class="mt-6 flex items-center justify-center gap-3">
+        <span class="text-sm font-medium">{monthlyLabel}</span>
+        <Switch id="pricing-toggle-04" variant="primary" />
+        <span class="text-sm font-medium">{yearlyLabel}</span>
+        <span
+          class="text-primary-deep bg-primary-accent/10 ml-2 rounded-full px-2 py-1 text-xs font-semibold"
+        >
+          {discountBadge}
+        </span>
+      </div>
+    </div>
+
+    <div class="grid gap-8 @lg:grid-cols-2">
+      {
+        plans.map((plan) => (
+          <Card class="flex flex-col">
+            <CardHeader class="text-center">
+              <CardTitle class="text-2xl">{plan.name}</CardTitle>
+              <CardDescription>{plan.description}</CardDescription>
+            </CardHeader>
+            <CardContent class="flex-1">
+              <div class="mb-6 text-center">
+                <div class="flex items-baseline justify-center gap-1">
+                  <span class="flex items-baseline text-5xl font-bold">
+                    <span aria-hidden="true">$</span>
+                    <span
+                      class="pricing-number tabular-nums"
+                      data-monthly={plan.monthlyPrice.replace("$", "")}
+                      data-yearly={plan.yearlyPrice.replace("$", "")}
+                    />
+                  </span>
+                  <span
+                    class="pricing-period text-muted-foreground text-sm"
+                    data-monthly="/per month"
+                    data-yearly="/per year"
+                  />
+                </div>
+              </div>
+              <ul class="space-y-3">
+                {plan.features.map((feature) => (
+                  <li class="flex items-start gap-3">
+                    <IconCheck class="text-primary-deep size-5 shrink-0" aria-hidden="true" />
+                    <span class="text-sm">{feature.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+            <CardFooter class="border-t-0 bg-transparent">
+              <Button variant="primary" class="w-full" href={plan.buttonHref}>
+                {plan.buttonText}
+              </Button>
+            </CardFooter>
+          </Card>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<script>
+  import type { SwitchChangeEvent } from "@atoms/switch";
+
+  let controller: AbortController | null = null;
+
+  function initPricingToggle() {
+    controller?.abort();
+    controller = new AbortController();
+    const { signal } = controller;
+
+    const pricingSection = document.querySelector("#pricing-04");
+
+    if (!pricingSection) {
+      return;
+    }
+
+    const pricingToggle = pricingSection.querySelector("#pricing-toggle-04") as HTMLElement;
+    const pricingNumbers = pricingSection.querySelectorAll(
+      ".pricing-number",
+    ) as NodeListOf<HTMLElement>;
+    const pricingPeriods = pricingSection.querySelectorAll(
+      ".pricing-period",
+    ) as NodeListOf<HTMLElement>;
+
+    // Initialize with monthly prices
+    pricingNumbers.forEach((el) => {
+      const monthlyPrice = parseInt(el.dataset.monthly || "0", 10);
+      el.style.setProperty("--price-num", monthlyPrice.toString());
+    });
+
+    if (pricingToggle) {
+      pricingToggle.addEventListener("starwind-switch:change", (e: Event) => {
+        const event = e as SwitchChangeEvent;
+        const isYearly = event.detail.checked;
+
+        pricingNumbers.forEach((el) => {
+          const monthlyPrice = parseInt(el.dataset.monthly || "0", 10);
+          const yearlyPrice = parseInt(el.dataset.yearly || "0", 10);
+          const targetPrice = isYearly ? yearlyPrice : monthlyPrice;
+
+          el.style.setProperty("--price-num", targetPrice.toString());
+        });
+
+        pricingPeriods.forEach((el) => {
+          if (isYearly) {
+            el.classList.add("yearly");
+          } else {
+            el.classList.remove("yearly");
+          }
+        });
+      }, { signal });
+    }
+  }
+
+  initPricingToggle();
+
+  document.addEventListener("astro:after-swap", initPricingToggle);
+  document.addEventListener("astro:before-swap", () => { controller?.abort(); controller = null; });
+</script>
+
+<style>
+  @property --price-num {
+    syntax: "<integer>";
+    initial-value: 0;
+    inherits: false;
+  }
+
+  .pricing-number {
+    --price-num: 0;
+    counter-reset: price var(--price-num);
+    transition: --price-num 0.6s ease-out;
+  }
+
+  .pricing-number::before {
+    content: counter(price);
+  }
+
+  .pricing-period::before {
+    content: attr(data-monthly);
+    transition: opacity 0.3s ease-out;
+  }
+
+  .pricing-period.yearly::before {
+    content: attr(data-yearly);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pricing-number {
+      transition: none;
+    }
+    .pricing-period::before {
+      transition: none;
+    }
+  }
+</style>

@@ -1,0 +1,81 @@
+---
+/**
+ * AdminPagination — server-side pagination controls using the existing
+ * Pagination atom set. Renders page links that append `?page=N` to the
+ * current URL (preserving other query params).
+ */
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationEllipsis,
+} from '@atoms/pagination';
+
+interface Props {
+  currentPage: number;
+  totalPages: number;
+  baseUrl: URL;
+}
+
+const { currentPage, totalPages, baseUrl } = Astro.props;
+
+if (totalPages <= 1) return undefined;
+
+/** Build a URL for the given page number, keeping other query params. */
+function pageUrl(page: number): string {
+  const url = new URL(baseUrl);
+  url.searchParams.set('page', String(page));
+  return url.pathname + url.search;
+}
+
+/** Compute which page numbers to show (current ±2, plus first/last). */
+function getPageNumbers(): (number | 'ellipsis')[] {
+  const pages: (number | 'ellipsis')[] = [];
+  const delta = 2;
+  const rangeStart = Math.max(2, currentPage - delta);
+  const rangeEnd = Math.min(totalPages - 1, currentPage + delta);
+
+  pages.push(1);
+  if (rangeStart > 2) pages.push('ellipsis');
+  for (let i = rangeStart; i <= rangeEnd; i++) pages.push(i);
+  if (rangeEnd < totalPages - 1) pages.push('ellipsis');
+  if (totalPages > 1) pages.push(totalPages);
+
+  return pages;
+}
+
+const items = getPageNumbers();
+---
+
+<Pagination class="mt-6">
+  <PaginationContent>
+    {currentPage > 1 && (
+      <PaginationItem>
+        <PaginationPrevious href={pageUrl(currentPage - 1)} />
+      </PaginationItem>
+    )}
+
+    {items.map((item) =>
+      item === 'ellipsis' ? (
+        <PaginationItem>
+          <PaginationEllipsis />
+        </PaginationItem>
+      ) : (
+        <PaginationItem>
+          <PaginationLink href={pageUrl(item)} isActive={item === currentPage}>
+            {item}
+          </PaginationLink>
+        </PaginationItem>
+      ),
+    )}
+
+    {currentPage < totalPages && (
+      <PaginationItem>
+        <PaginationNext href={pageUrl(currentPage + 1)} />
+      </PaginationItem>
+    )}
+  </PaginationContent>
+</Pagination>

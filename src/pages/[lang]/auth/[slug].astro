@@ -1,0 +1,117 @@
+---
+import { toLocale, getAuthTranslations, resolveAuthSlug } from '@i18n/utils';
+import type { Locale } from '@i18n/config';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import AuthLayout from '@organisms/AuthLayout/AuthLayout.astro';
+import AuthSidebar from '@organisms/AuthSidebar/AuthSidebar.astro';
+import SignInPage from '@pages/auth/SignInPage.astro';
+import SignUpPage from '@pages/auth/SignUpPage.astro';
+import DashboardPage from '@pages/auth/DashboardPage.astro';
+import ForgotPasswordPage from '@pages/auth/ForgotPasswordPage.astro';
+import ResetPasswordPage from '@pages/auth/ResetPasswordPage.astro';
+import VerifyEmailPage from '@pages/auth/VerifyEmailPage.astro';
+import ProfilePage from '@pages/auth/ProfilePage.astro';
+import { fetchUserOrganizations, fetchUserInvitations, type Invitation } from '@/lib/auth-data';
+
+export const prerender = false;
+
+const locale = toLocale(Astro.params.lang) as Locale;
+const slug = Astro.params.slug;
+const authT = await getAuthTranslations(locale);
+
+if (!slug) return Astro.redirect(`/${locale}/`);
+
+const pageId = resolveAuthSlug(slug, authT);
+if (!pageId) return Astro.redirect(`/${locale}/`);
+
+const user = Astro.locals.user;
+
+// ─── Backward compat redirects: admin & organizations now have dedicated routes ───
+if (pageId === 'admin') {
+  return Astro.redirect(`/${locale}/admin/stats`);
+}
+if (pageId === 'organizations') {
+  const orgSlug = Astro.url.searchParams.get('org');
+  if (orgSlug) {
+    return Astro.redirect(
+      `/${locale}/organizations/${orgSlug}/members` +
+      (Astro.url.searchParams.get('invitation')
+        ? `?invitation=${encodeURIComponent(Astro.url.searchParams.get('invitation')!)}`
+        : '')
+    );
+  }
+  return Astro.redirect(`/${locale}/auth/${authT.routes['dashboard']}`);
+}
+
+// Route protection
+const isGuest = !user;
+
+if ((pageId === 'sign-in' || pageId === 'sign-up' || pageId === 'forgot-password') && !isGuest) {
+  return Astro.redirect(`/${locale}/auth/${authT.routes['dashboard']}`);
+}
+
+if ((pageId === 'dashboard' || pageId === 'profile') && isGuest) {
+  return Astro.redirect(`/${locale}/auth/${authT.routes['sign-in']}`);
+}
+
+// reset-password and verify-email are accessible to anyone (token-based)
+
+// ─── Dashboard: server-side data fetching ───
+let organizations: unknown[] = [];
+let userInvitations: Invitation[] = [];
+
+if (pageId === 'dashboard' && user) {
+  const headers = Astro.request.headers;
+  [organizations, userInvitations] = await Promise.all([
+    fetchUserOrganizations(headers),
+    fetchUserInvitations(headers),
+  ]);
+}
+
+const metaKeys: Record<string, keyof typeof authT.meta> = {
+  'sign-in': 'signIn',
+  'sign-up': 'signUp',
+  dashboard: 'dashboard',
+  admin: 'admin',
+  'forgot-password': 'forgotPassword',
+  'reset-password': 'resetPassword',
+  'verify-email': 'verifyEmail',
+  profile: 'profile',
+  organizations: 'organizations',
+};
+const meta = authT.meta[metaKeys[pageId]];
+
+type FlowPageId = 'sign-in' | 'sign-up' | 'forgot-password' | 'reset-password' | 'verify-email' | 'dashboard' | 'profile';
+
+const pages = {
+  'sign-in': SignInPage,
+  'sign-up': SignUpPage,
+  'forgot-password': ForgotPasswordPage,
+  'reset-password': ResetPasswordPage,
+  'verify-email': VerifyEmailPage,
+  dashboard: DashboardPage,
+  profile: ProfilePage,
+};
+
+const Page = pages[pageId as FlowPageId];
+if (!Page) return Astro.redirect(`/${locale}/`);
+
+// Build extra props
+const extraProps = pageId === 'dashboard' ? {
+  organizations,
+  userInvitations,
+} : {};
+
+const needsSidebar = pageId === 'dashboard' || pageId === 'profile';
+---
+
+<BaseLayout title={meta.title} description={meta.description}>
+  {needsSidebar ? (
+    <AuthLayout title={meta.title}>
+      <AuthSidebar slot="sidebar" t={authT} locale={locale} user={user!} activeItem={pageId as 'dashboard' | 'profile'} />
+      <Page t={authT as never} locale={locale} user={user as never} {...extraProps} />
+    </AuthLayout>
+  ) : (
+    <Page t={authT as never} locale={locale} user={user as never} {...extraProps} />
+  )}
+</BaseLayout>

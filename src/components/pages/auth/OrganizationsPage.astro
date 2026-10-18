@@ -1,0 +1,418 @@
+---
+import type { AuthTranslations, Locale } from '@i18n/config';
+import type { AppUser } from '@/lib/types';
+import type { FullOrganization, Invitation } from '@/lib/auth-data';
+import { getAuthUrl } from '@i18n/utils';
+import { Card, CardHeader, CardTitle, CardContent } from '@atoms/card';
+import { Avatar, AvatarImage, AvatarFallback } from '@atoms/avatar';
+import { Input } from '@atoms/input';
+import { Label } from '@atoms/label';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@atoms/tabs';
+import { NativeSelect, NativeSelectOption } from '@atoms/native-select';
+import Badge from '@atoms/badge/Badge.astro';
+import Button from '@atoms/button/Button.astro';
+import { safeUrl } from '@lib/sanitize';
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  user: AppUser;
+  activeOrg: FullOrganization;
+  activeOrgMembers: FullOrganization['members'];
+  activeOrgInvitations: Invitation[];
+  activeOrgRole: string | null;
+}
+
+const {
+  t,
+  locale,
+  user,
+  activeOrg,
+  activeOrgMembers,
+  activeOrgInvitations,
+  activeOrgRole,
+} = Astro.props;
+
+const dashboardUrl = getAuthUrl(locale, 'dashboard', t);
+const orgsUrl = getAuthUrl(locale, 'organizations', t);
+const isOwner = activeOrgRole === 'owner';
+const isAdminOrOwner = activeOrgRole === 'admin' || activeOrgRole === 'owner';
+const roleLabels: Record<string, string> = {
+  owner: t.organizations.members.owner,
+  admin: t.organizations.members.admin,
+  member: t.organizations.members.member,
+};
+---
+
+<section class="mx-auto w-full max-w-4xl px-4 py-12">
+  <div class="flex items-center justify-between mb-8">
+    <a href={dashboardUrl} class="text-sm text-muted-foreground hover:underline">
+      &larr; {t.organizations.detail.backToList}
+    </a>
+  </div>
+
+  <!-- Org header -->
+  <div class="flex items-center gap-4 mb-8">
+    <Avatar size="lg" id="org-avatar-display">
+      {activeOrg.logo && safeUrl(activeOrg.logo) && <AvatarImage src={safeUrl(activeOrg.logo)!} alt={activeOrg.name} id="org-avatar-img" />}
+      <AvatarFallback id="org-avatar-fallback">{activeOrg.name.charAt(0).toUpperCase()}</AvatarFallback>
+    </Avatar>
+    <div>
+      <h1 class="text-3xl font-bold">{activeOrg.name}</h1>
+      <p class="text-muted-foreground text-sm">/{activeOrg.slug}</p>
+    </div>
+    {activeOrgRole && (
+      <Badge variant="outline" size="sm" class="ml-auto">{roleLabels[activeOrgRole] ?? activeOrgRole}</Badge>
+    )}
+  </div>
+
+  <Tabs defaultValue="members">
+    <TabsList>
+      <TabsTrigger value="members">{t.organizations.detail.membersTab}</TabsTrigger>
+      {isAdminOrOwner && (
+        <TabsTrigger value="settings">{t.organizations.detail.settingsTab}</TabsTrigger>
+      )}
+    </TabsList>
+
+    <!-- ─── Members Tab ─── -->
+    <TabsContent value="members">
+      <div class="grid gap-6 mt-4">
+        <!-- Invite form (admin/owner only) -->
+        {isAdminOrOwner && (
+          <Card>
+            <CardHeader>
+              <CardTitle>{t.organizations.members.invite}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form id="invite-member-form" class="flex gap-3 items-end flex-wrap">
+                <div class="flex-1 min-w-50">
+                  <Label for="invite-email">{t.organizations.members.email}</Label>
+                  <Input id="invite-email" type="email" placeholder={t.organizations.members.emailPlaceholder} required />
+                </div>
+                <div class="w-40">
+                  <Label for="invite-role">{t.organizations.pendingInvitations.role}</Label>
+                  <NativeSelect id="invite-role">
+                    <NativeSelectOption value="member">{t.organizations.members.member}</NativeSelectOption>
+                    <NativeSelectOption value="admin">{t.organizations.members.admin}</NativeSelectOption>
+                  </NativeSelect>
+                </div>
+                <Button type="submit" size="sm">{t.organizations.members.sendInvite}</Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        <!-- Pending org invitations -->
+        {isAdminOrOwner && activeOrgInvitations.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>{t.organizations.invitations.title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div class="divide-y" id="org-invitations">
+                {activeOrgInvitations.map((inv: any) => (
+                  <div class="flex items-center justify-between py-3" data-invitation-id={inv.id}>
+                    <div>
+                      <p class="text-sm">{inv.email}</p>
+                      <p class="text-xs text-muted-foreground">
+                        <Badge variant="outline" size="sm">{t.organizations.invitations.pending}</Badge>
+                        {' '}{roleLabels[inv.role] ?? inv.role}
+                      </p>
+                    </div>
+                    <Button size="sm" variant="outline" class="cancel-invitation-btn" data-id={inv.id}>
+                      {t.organizations.invitations.cancel}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <!-- Members list -->
+        <Card>
+          <CardHeader>
+            <CardTitle>{t.organizations.members.title}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div class="divide-y" id="members-list">
+              {activeOrgMembers.map((m: any) => {
+                const memberUser = m.user;
+                const mi = memberUser?.name
+                  ? memberUser.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
+                  : '?';
+                const isCurrentUser = memberUser?.id === user?.id;
+                const canManage = isAdminOrOwner && !isCurrentUser && m.role !== 'owner';
+                return (
+                  <div class="flex items-center gap-4 py-3" data-member-id={m.id}>
+                    <Avatar size="sm">
+                      {memberUser?.image && safeUrl(memberUser.image) && <AvatarImage src={safeUrl(memberUser.image)!} alt={memberUser.name ?? ''} />}
+                      <AvatarFallback>{mi}</AvatarFallback>
+                    </Avatar>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium truncate">
+                        {memberUser?.name ?? memberUser?.email}
+                        {isCurrentUser && <span class="text-muted-foreground"> {t.organizations.members.you}</span>}
+                      </p>
+                      <p class="text-xs text-muted-foreground">{memberUser?.email}</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      {canManage ? (
+                        <NativeSelect class="role-select text-sm w-36" data-member-id={m.id} data-current-role={m.role}>
+                          <NativeSelectOption value="member" selected={m.role === 'member'}>{t.organizations.members.member}</NativeSelectOption>
+                          <NativeSelectOption value="admin" selected={m.role === 'admin'}>{t.organizations.members.admin}</NativeSelectOption>
+                        </NativeSelect>
+                      ) : (
+                        <Badge variant="outline" size="sm">{roleLabels[m.role] ?? m.role}</Badge>
+                      )}
+                      {canManage && (
+                        <Button size="sm" variant="ghost" class="remove-member-btn text-error" data-member-id={m.id}>
+                          {t.organizations.members.remove}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </TabsContent>
+
+    <!-- ─── Settings Tab (admin/owner only) ─── -->
+    {isAdminOrOwner && (
+      <TabsContent value="settings">
+        <div class="grid gap-6 mt-4">
+          <!-- Edit org -->
+          <Card>
+            <CardHeader>
+              <CardTitle>{t.organizations.settings.title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form id="update-org-form" class="grid gap-4">
+                <div>
+                  <Label for="edit-org-name">{t.organizations.settings.name}</Label>
+                  <Input id="edit-org-name" name="name" value={activeOrg.name} placeholder={t.organizations.settings.namePlaceholder} />
+                </div>
+                <div>
+                  <Label for="edit-org-slug">{t.organizations.settings.slug}</Label>
+                  <Input id="edit-org-slug" name="slug" value={activeOrg.slug} placeholder={t.organizations.settings.slugPlaceholder} />
+                </div>
+                <div>
+                  <Label>{t.organizations.settings.logo}</Label>
+                  <input type="file" id="edit-org-logo-input" accept="image/*" class="block w-full text-sm file:mr-4 file:rounded-md file:border-0 file:bg-muted file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-muted/80 cursor-pointer" />
+                </div>
+                <div>
+                  <Button type="submit">{t.organizations.settings.save}</Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          <!-- Danger zone -->
+          <Card class="border-error/30">
+            <CardHeader>
+              <CardTitle class="text-error">{t.organizations.danger.title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p class="text-sm text-muted-foreground mb-4">{t.organizations.danger.description}</p>
+              <div class="flex gap-3 flex-wrap">
+                {!isOwner && (
+                  <Button variant="outline" id="leave-org-btn">
+                    {t.organizations.danger.leave}
+                  </Button>
+                )}
+                {isOwner && (
+                  <Button variant="error" id="delete-org-btn">
+                    {t.organizations.danger.delete}
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </TabsContent>
+    )}
+  </Tabs>
+</section>
+
+<!-- Pass data to the client script via hidden div -->
+<div
+  id="org-data"
+  class="hidden"
+  data-dashboard-url={dashboardUrl}
+  data-orgs-url={orgsUrl}
+  data-org-id={activeOrg.id}
+  data-org-slug={activeOrg.slug}
+  data-org-logo={activeOrg.logo ?? ''}
+  data-t-invite-sent={t.organizations.members.inviteSent}
+  data-t-removed={t.organizations.members.removed}
+  data-t-role-changed={t.organizations.members.roleChanged}
+  data-t-cancelled={t.organizations.invitations.cancelled}
+  data-t-saved={t.organizations.settings.saved}
+  data-t-left={t.organizations.danger.left}
+  data-t-deleted={t.organizations.danger.deleted}
+  data-t-remove-confirm={t.organizations.members.removeConfirm}
+  data-t-leave-confirm={t.organizations.danger.leaveConfirm}
+  data-t-delete-confirm={t.organizations.danger.deleteConfirm}
+></div>
+
+<script>
+  import { authClient } from '@lib/auth-client';
+  import { toast } from '@atoms/toast';
+
+  function init() {
+    const el = document.getElementById('org-data');
+    if (!el) return;
+    const d = el.dataset;
+    const dashboardUrl = d.dashboardUrl!;
+    const orgsUrl = d.orgsUrl!;
+    const orgId = d.orgId!;
+    const orgSlug = d.orgSlug!;
+    const orgLogo = d.orgLogo || null;
+
+    // ─── Invite member ───
+    const inviteForm = document.getElementById('invite-member-form') as HTMLFormElement | null;
+    inviteForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = (document.getElementById('invite-email') as HTMLInputElement).value.trim();
+      const role = (document.getElementById('invite-role') as HTMLSelectElement).value;
+      if (!email) return;
+
+      const { error } = await authClient.organization.inviteMember({
+        email,
+        role: role as 'admin' | 'member',
+        organizationId: orgId,
+      });
+      if (error) {
+        toast.error(error.message ?? 'Error');
+      } else {
+        toast.success(d.tInviteSent ?? '');
+        window.location.reload();
+      }
+    });
+
+    // ─── Cancel org invitation ───
+    document.querySelectorAll<HTMLButtonElement>('.cancel-invitation-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const invId = btn.dataset.id!;
+        const { error } = await authClient.organization.cancelInvitation({ invitationId: invId });
+        if (error) {
+          toast.error(error.message ?? 'Error');
+        } else {
+          toast.success(d.tCancelled ?? '');
+          btn.closest('[data-invitation-id]')?.remove();
+        }
+      });
+    });
+
+    // ─── Remove member ───
+    document.querySelectorAll<HTMLButtonElement>('.remove-member-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm(d.tRemoveConfirm ?? '')) return;
+        const memberId = btn.dataset.memberId!;
+        const { error } = await authClient.organization.removeMember({
+          memberIdOrEmail: memberId,
+          organizationId: orgId,
+        });
+        if (error) {
+          toast.error(error.message ?? 'Error');
+        } else {
+          toast.success(d.tRemoved ?? '');
+          btn.closest('[data-member-id]')?.remove();
+        }
+      });
+    });
+
+    // ─── Change role ───
+    document.querySelectorAll<HTMLSelectElement>('.role-select').forEach((select) => {
+      const nativeSelect = select.closest('[data-slot="native-select-wrapper"]')?.querySelector('select') ?? select;
+      nativeSelect.addEventListener('change', async () => {
+        const memberId = select.dataset.memberId!;
+        const newRole = nativeSelect.value;
+        const { error } = await authClient.organization.updateMemberRole({
+          memberId,
+          role: newRole,
+          organizationId: orgId,
+        });
+        if (error) {
+          toast.error(error.message ?? 'Error');
+          nativeSelect.value = select.dataset.currentRole ?? 'member';
+        } else {
+          toast.success(d.tRoleChanged ?? '');
+          select.dataset.currentRole = newRole;
+        }
+      });
+    });
+
+    // ─── Update organization settings ───
+    const updateForm = document.getElementById('update-org-form') as HTMLFormElement | null;
+    updateForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = (document.getElementById('edit-org-name') as HTMLInputElement).value.trim();
+      const slug = (document.getElementById('edit-org-slug') as HTMLInputElement).value.trim();
+
+      // Upload new logo if provided
+      let logoUrl: string | undefined;
+      const logoInput = document.getElementById('edit-org-logo-input') as HTMLInputElement;
+      if (logoInput?.files?.[0]) {
+        const formData = new FormData();
+        formData.append('file', logoInput.files[0]);
+        formData.append('type', 'brand');
+        if (orgLogo) formData.append('oldUrl', orgLogo);
+        const resp = await fetch('/api/upload', { method: 'POST', body: formData });
+        if (resp.ok) {
+          const json = await resp.json();
+          logoUrl = json.url;
+        }
+      }
+
+      // Set active org first so the update targets the right org
+      await authClient.organization.setActive({ organizationId: orgId });
+
+      const updateData: Record<string, string> = {};
+      if (name) updateData.name = name;
+      if (slug) updateData.slug = slug;
+      if (logoUrl) updateData.logo = logoUrl;
+
+      const { error } = await authClient.organization.update({ data: updateData });
+      if (error) {
+        toast.error(error.message ?? 'Error');
+      } else {
+        toast.success(d.tSaved ?? '');
+        const newSlug = slug || orgSlug;
+        window.location.href = `${orgsUrl}?org=${newSlug}`;
+      }
+    });
+
+    // ─── Leave organization ───
+    const leaveBtn = document.getElementById('leave-org-btn');
+    leaveBtn?.addEventListener('click', async () => {
+      if (!confirm(d.tLeaveConfirm ?? '')) return;
+      const { error } = await authClient.organization.leave({ organizationId: orgId });
+      if (error) {
+        toast.error(error.message ?? 'Error');
+      } else {
+        toast.success(d.tLeft ?? '');
+        window.location.href = dashboardUrl;
+      }
+    });
+
+    // ─── Delete organization ───
+    const deleteBtn = document.getElementById('delete-org-btn');
+    deleteBtn?.addEventListener('click', async () => {
+      if (!confirm(d.tDeleteConfirm ?? '')) return;
+      const { error } = await authClient.organization.delete({ organizationId: orgId });
+      if (error) {
+        toast.error(error.message ?? 'Error');
+      } else {
+        toast.success(d.tDeleted ?? '');
+        window.location.href = dashboardUrl;
+      }
+    });
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

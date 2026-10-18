@@ -1,0 +1,134 @@
+---
+/**
+ * AuthSidebar — Sidebar for authenticated (non-admin) pages: Dashboard, Profile, Orgs, Admin link.
+ * Used on dashboard & profile routes.
+ */
+import type { AuthTranslations, Locale } from '@i18n/config';
+import { getAuthUrl, getAdminUrl } from '@i18n/utils';
+
+import type { AppUser } from '@/lib/types';
+
+import DashboardIcon from '@tabler/icons/outline/layout-dashboard.svg';
+import UserIcon from '@tabler/icons/outline/user.svg';
+import ShieldIcon from '@tabler/icons/outline/shield.svg';
+import LogoutIcon from '@tabler/icons/outline/logout.svg';
+
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
+  SidebarSeparator,
+} from '@atoms/sidebar';
+import { Avatar, AvatarImage, AvatarFallback } from '@atoms/avatar';
+import { safeUrl } from '@lib/sanitize';
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  user: AppUser;
+  activeItem?: 'dashboard' | 'profile' | 'organizations' | 'admin';
+}
+
+const { t, locale, user, activeItem } = Astro.props;
+
+const dashboardUrl = getAuthUrl(locale, 'dashboard', t);
+const profileUrl = getAuthUrl(locale, 'profile', t);
+const adminUrl = getAdminUrl(locale, 'stats');
+const isAdmin = user?.role === 'admin';
+
+const initials = user?.name
+  ? user.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
+  : '?';
+
+const navItems = [
+  { id: 'dashboard' as const, title: t.userMenu.dashboard, url: dashboardUrl, icon: DashboardIcon },
+  { id: 'profile' as const, title: t.userMenu.profile, url: profileUrl, icon: UserIcon },
+];
+---
+
+<Sidebar collapsible="icon">
+  <SidebarHeader>
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <SidebarMenuButton size="lg" href={dashboardUrl}>
+          <Avatar class="size-10 shrink-0 rounded-lg">
+            {user?.image && safeUrl(user.image) && <AvatarImage src={safeUrl(user.image)} alt={user.name ?? ''} />}
+            <AvatarFallback class="rounded-lg">{initials}</AvatarFallback>
+          </Avatar>
+          <div class="grid flex-1 text-left text-sm leading-tight">
+            <span class="truncate font-semibold">{user?.name ?? ''}</span>
+            <span class="text-sidebar-foreground/70 truncate text-xs">{user?.email ?? ''}</span>
+          </div>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  </SidebarHeader>
+
+  <SidebarSeparator />
+
+  <SidebarContent>
+    <SidebarGroup>
+      <SidebarGroupLabel>{t.userMenu.dashboard}</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {navItems.map((item) => (
+            <SidebarMenuItem>
+              <SidebarMenuButton href={item.url} isActive={activeItem === item.id} tooltip={item.title}>
+                <item.icon class="size-4" />
+                <span>{item.title}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+
+    {isAdmin && (
+      <SidebarGroup>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton href={adminUrl} isActive={activeItem === 'admin'} tooltip={t.userMenu.admin}>
+                <ShieldIcon class="size-4" />
+                <span>{t.userMenu.admin}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    )}
+  </SidebarContent>
+
+  <SidebarFooter>
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <SidebarMenuButton id="sidebar-sign-out" tooltip={t.userMenu.signOut} data-redirect={getAuthUrl(locale, 'sign-in', t)}>
+          <LogoutIcon class="size-4" />
+          <span>{t.userMenu.signOut}</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  </SidebarFooter>
+
+  <SidebarRail />
+</Sidebar>
+
+<script>
+  import { authClient } from '@lib/auth-client';
+  const btn = document.getElementById('sidebar-sign-out');
+  btn?.addEventListener('click', async () => {
+    const redirect = btn.dataset.redirect!;
+    try {
+      await authClient.signOut();
+      window.location.href = redirect;
+    } catch { /* ignore */ }
+  });
+</script>

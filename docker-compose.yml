@@ -1,0 +1,66 @@
+# ── Docker Compose — local development ────────────────────────────────
+# Usage:
+#   docker compose up -d         → start PostgreSQL + app
+#   docker compose up -d db      → start only PostgreSQL
+#   docker compose down -v       → stop and remove volumes
+#
+# For production, use only the Dockerfile with your orchestrator (k8s, ECS, Fly, etc.)
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: atomic
+      POSTGRES_PASSWORD: atomic_dev_password
+      POSTGRES_DB: atomic_local
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atomic -d atomic_local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  app:
+    build:
+      context: .
+      args:
+        SITE_URL: http://localhost:4321
+        BETTER_AUTH_URL: http://localhost:4321
+    restart: unless-stopped
+    ports:
+      - "4321:4321"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_ENV: LOCAL
+      DATABASE_URL_LOCAL: postgresql://atomic:atomic_dev_password@db:5432/atomic_local
+      BETTER_AUTH_SECRET: dev-secret-replace-in-production-min-32-characters
+      BETTER_AUTH_URL: http://localhost:4321
+      SITE_URL: http://localhost:4321
+      SMTP_PROVIDER: NODEMAILER
+      SMTP_FROM_EMAIL: noreply@localhost
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      TRUST_PROXY: "true"
+    volumes:
+      - uploads:/app/public/uploads
+      - logs:/app/logs
+
+  # Optional: local mail catcher (UI on http://localhost:8025)
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+
+volumes:
+  pgdata:
+  uploads:
+  logs:

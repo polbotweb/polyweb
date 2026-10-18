@@ -1,0 +1,54 @@
+---
+import { requirePermission } from "@/lib/auth-guards";
+import { getBlogTranslations } from "@i18n/utils";
+import { getBlogCategories, getBlogTags } from "@database/loaders/blog.loader";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import AdminFormShell from "@organisms/AdminFormShell.astro";
+import AdminPostForm from "@/components/blog/AdminPostForm.astro";
+
+export const prerender = false;
+
+const result = await requirePermission(Astro, { blog: ["create"] });
+if ('redirect' in result) return result.redirect;
+
+const { locale, authT } = result;
+const blogT = await getBlogTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/blog`;
+const basePublicUrl = `/${locale}/${blogT.routes.blog}`;
+
+const [categoryRows, tagRows] = await Promise.all([
+  getBlogCategories(null, locale),
+  getBlogTags(null, locale),
+]);
+
+const categories = categoryRows.map((item) => ({
+  id: item.id,
+  slug: item.slug,
+  label: item.translation?.name ?? item.slug,
+}));
+
+const tags = tagRows.map((item) => ({
+  id: item.id,
+  slug: item.slug,
+  label: item.translation?.name ?? item.slug,
+}));
+---
+
+<BaseLayout title={blogT.admin.newPost} description={blogT.admin.title}>
+  <AuthLayout title={blogT.admin.newPost}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="blog" />
+    <AdminFormShell>
+      <AdminPostForm
+        locale={locale}
+        blogT={blogT}
+        mode="create"
+        categories={categories}
+        tags={tags}
+        baseAdminUrl={baseAdminUrl}
+        basePublicUrl={basePublicUrl}
+      />
+    </AdminFormShell>
+  </AuthLayout>
+</BaseLayout>

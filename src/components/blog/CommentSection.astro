@@ -1,0 +1,161 @@
+---
+import { Icon } from "astro-icon/components";
+import type { Locale } from "@i18n/config";
+import type { BlogTranslations } from "@i18n/config";
+import type { BlogCommentWithAuthor } from "@/lib/blog/types";
+import type { AppUser } from "@/lib/types";
+import { Card, CardContent } from "@atoms/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@atoms/tabs";
+import CommentForm from "./CommentForm.astro";
+import CommentThreadItem from "./CommentThreadItem.astro";
+
+interface Props {
+  locale: Locale;
+  blogT: BlogTranslations;
+  postId: string;
+  comments: BlogCommentWithAuthor[];
+  user: AppUser | null;
+  commentStatus: "OPEN" | "CLOSED" | "DISABLED";
+}
+
+const { locale, blogT, postId, comments, user, commentStatus } = Astro.props;
+
+const hasComments = comments.length > 0;
+const defaultTab = hasComments ? "list" : "write";
+---
+
+<section id="comments-section" data-post-id={postId}>
+  {commentStatus === "DISABLED" ? (
+    <Card>
+      <CardContent class="py-8 text-center text-sm text-muted-foreground">
+        {blogT.errors.commentDisabled}
+      </CardContent>
+    </Card>
+  ) : commentStatus === "CLOSED" ? (
+    <div class="flex flex-col gap-4">
+      <h2 class="flex items-center gap-2 font-heading text-lg font-semibold">
+        <Icon name="mdi:comment-outline" class="size-5 text-muted-foreground" />
+        {blogT.labels.comments} ({comments.length})
+      </h2>
+      {hasComments ? (
+        <div class="flex flex-col gap-6">
+          {comments.map((comment) => (
+            <CommentThreadItem
+              locale={locale}
+              blogT={blogT}
+              comment={comment}
+              commentStatus={commentStatus}
+            />
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <CardContent class="py-8 text-center text-sm text-muted-foreground">
+            {blogT.labels.noComments}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  ) : (
+    <Tabs defaultValue={defaultTab}>
+      <TabsList>
+        <TabsTrigger value="list" defaultActive={defaultTab === "list"}>
+          <Icon name="mdi:comment-multiple-outline" class="size-4" />
+          {blogT.labels.comments} ({comments.length})
+        </TabsTrigger>
+        <TabsTrigger value="write" defaultActive={defaultTab === "write"}>
+          <Icon name="mdi:pencil-outline" class="size-4" />
+          {blogT.labels.writeComment}
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="list" defaultActive={defaultTab === "list"}>
+        {hasComments ? (
+          <div class="flex flex-col gap-6">
+            {comments.map((comment) => (
+              <CommentThreadItem
+                locale={locale}
+                blogT={blogT}
+                comment={comment}
+                commentStatus={commentStatus}
+              />
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent class="py-8 text-center text-sm text-muted-foreground">
+              {blogT.labels.noComments}
+            </CardContent>
+          </Card>
+        )}
+      </TabsContent>
+
+      <TabsContent value="write" defaultActive={defaultTab === "write"}>
+        <CommentForm
+          locale={locale}
+          blogT={blogT}
+          postId={postId}
+          user={user}
+        />
+      </TabsContent>
+    </Tabs>
+  )}
+</section>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { toast } from '@atoms/toast';
+
+  function init() {
+    document.querySelectorAll<HTMLButtonElement>('.reply-toggle').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const parentId = btn.dataset.parentId;
+        const existing = btn.parentElement?.querySelector('.reply-form');
+        if (existing) {
+          existing.remove();
+          return;
+        }
+
+        const form = document.createElement('form');
+        form.className = 'reply-form mt-3 space-y-2';
+        form.innerHTML = `
+          <input type="hidden" name="parentId" value="${parentId}" />
+          <textarea name="content" rows="3" required
+            class="w-full rounded-md border bg-transparent px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring"
+            placeholder="${btn.textContent?.trim() ?? ''}"></textarea>
+          <div class="flex justify-end gap-2">
+            <button type="button" class="reply-cancel text-xs text-muted-foreground hover:text-foreground">Cancel</button>
+            <button type="submit" class="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground">Submit</button>
+          </div>
+        `;
+
+        form.querySelector('.reply-cancel')?.addEventListener('click', () => form.remove());
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const content = (form.querySelector('textarea') as HTMLTextAreaElement).value.trim();
+          const section = document.getElementById('comments-section') as HTMLElement | null;
+          const postId = section?.dataset.postId ?? '';
+          if (!content) return;
+
+          const { error } = await actions.createBlogComment({
+            postId,
+            parentId,
+            content,
+          });
+
+          if (error) {
+            toast.error(error.message ?? 'Error');
+          } else {
+            toast.success('Comment submitted');
+            window.location.reload();
+          }
+        });
+
+        btn.parentElement?.appendChild(form);
+      });
+    });
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

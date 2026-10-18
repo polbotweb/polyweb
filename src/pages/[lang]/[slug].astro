@@ -1,0 +1,133 @@
+---
+import type { PageId } from '@i18n/config';
+import { LOCALES } from '@i18n/config';
+import { toLocale, getCommonTranslations, getAboutTranslations, getContactTranslations } from '@i18n/utils';
+import { getPage } from '@database/loaders/page.loader';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import AboutPage from '@pages/AboutPage/AboutPage.astro';
+import ContactPage from '@pages/ContactPage/ContactPage.astro';
+import LegalPage from '@pages/LegalPage.astro';
+import CmsPage from '@pages/CmsPage.astro';
+import { getSiteSettings, getContactInfo } from '@database/loaders/site.loader';
+
+export const prerender = false;
+
+const locale = toLocale(Astro.params.lang);
+const slug = Astro.params.slug;
+
+if (!slug) return Astro.redirect(`/${locale}/`);
+
+// Resolve pageId from the URL slug by checking the route map
+const commonT = await getCommonTranslations(locale);
+const pageId = (Object.entries(commonT.pageRoutes) as [PageId, string][])
+  .find(([, s]) => s === slug)?.[0];
+
+// ─── Static routes (about, contact) ────────────────────────────────────────
+const isStaticPage = pageId === 'about' || pageId === 'contact';
+
+// ─── CMS-driven routes (legal + any dynamic CMS page) ──────────────────────
+const isCmsRoute = !isStaticPage;
+const cmsData = isCmsRoute ? await getPage(locale, slug) : null;
+
+// Neither a known static route nor a published CMS page → 404
+if (!isStaticPage && !cmsData) {
+  Astro.response.status = 404;
+  return Astro.rewrite('/404');
+}
+
+const isLegal = pageId === 'legal';
+const isDynamicCms = !isStaticPage && !isLegal && !!cmsData;
+
+const translations = {
+  about: () => getAboutTranslations(locale),
+  contact: () => getContactTranslations(locale),
+} as const;
+
+const t = isStaticPage ? await translations[pageId as 'about' | 'contact']() : null;
+
+const pageComponents = {
+  about: AboutPage,
+  contact: ContactPage,
+};
+
+const Page = isStaticPage ? pageComponents[pageId as 'about' | 'contact'] : null;
+
+// ─── Compute alternate URLs for hreflang ────────────────────────────────────
+const alternateUrls: Record<string, string> = {};
+if (pageId) {
+  // Static or legal page — alternate slugs come from i18n pageRoutes
+  await Promise.all(
+    LOCALES.map(async (loc) => {
+      const locT = await getCommonTranslations(loc);
+      const locSlug = locT.pageRoutes[pageId];
+      if (locSlug) {
+        alternateUrls[loc] = `/${loc}/${locSlug}`;
+      }
+    }),
+  );
+} else if (cmsData) {
+  // Dynamic CMS page — same slug across locales (CMS pages are per-locale rows)
+  alternateUrls[locale] = `/${locale}/${slug}`;
+}
+
+// ─── Meta fields ────────────────────────────────────────────────────────────
+let metaTitle: string | undefined;
+let metaDescription: string | undefined;
+let ogImage: string | undefined;
+let jsonLd: string | undefined;
+
+if (cmsData) {
+  const [siteData, contactData] = await Promise.all([
+    getSiteSettings(locale),
+    getContactInfo(),
+  ]);
+  const vars: Record<string, string> = {
+    siteName: siteData?.siteName ?? '',
+    email: contactData?.email ?? '',
+    phone: contactData?.phone ?? '',
+    address: contactData?.address ?? '',
+    city: contactData?.city ?? '',
+    postalCode: contactData?.postalCode ?? '',
+    country: contactData?.country ?? '',
+  };
+  const interpolate = (text: string) =>
+    text.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? '');
+
+  metaTitle = interpolate(cmsData.page.metaTitle ?? cmsData.page.title);
+  metaDescription = cmsData.page.metaDescription
+    ? interpolate(cmsData.page.metaDescription)
+    : undefined;
+  ogImage = cmsData.page.ogImage ?? siteData?.ogImage ?? undefined;
+
+  // JSON-LD WebPage structured data
+  const siteUrl = import.meta.env.SITE ?? '';
+  jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: metaTitle,
+    description: metaDescription,
+    url: `${siteUrl}/${locale}/${slug}`,
+    inLanguage: locale,
+    ...(ogImage ? { image: ogImage.startsWith('http') ? ogImage : `${siteUrl}${ogImage}` } : {}),
+    ...(cmsData.page.publishedAt ? { datePublished: cmsData.page.publishedAt.toISOString() } : {}),
+    dateModified: cmsData.page.updatedAt.toISOString(),
+    isPartOf: { '@type': 'WebSite', name: siteData?.siteName ?? '', url: siteUrl },
+  });
+}
+---
+
+<BaseLayout
+  title={metaTitle}
+  description={metaDescription}
+  alternateUrls={alternateUrls}
+  ogImage={ogImage}
+  jsonLd={jsonLd}
+>
+  {isLegal && cmsData ? (
+    <LegalPage data={cmsData} locale={locale} />
+  ) : isDynamicCms && cmsData ? (
+    <CmsPage data={cmsData} locale={locale} />
+  ) : Page && t ? (
+    <Page t={t as never} />
+  ) : null}
+</BaseLayout>

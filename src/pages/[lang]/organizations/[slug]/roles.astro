@@ -1,0 +1,41 @@
+---
+import { requireAuth } from '@/lib/auth-guards';
+import { fetchOrgData, getUserOrgRole } from '@/lib/auth-data';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import AuthLayout from '@organisms/AuthLayout/AuthLayout.astro';
+import OrgSidebar from '@organisms/OrgSidebar/OrgSidebar.astro';
+import OrgRolesPage from '@pages/org/OrgRolesPage.astro';
+
+export const prerender = false;
+
+const result = await requireAuth(Astro);
+if ('redirect' in result) return result.redirect;
+const { user, locale, authT } = result;
+
+const orgSlug = Astro.params.slug;
+if (!orgSlug) return Astro.redirect(`/${locale}/auth/${authT.routes['dashboard']}`);
+
+const orgData = await fetchOrgData(Astro.request.headers, orgSlug);
+if (!orgData) return Astro.redirect(`/${locale}/auth/${authT.routes['dashboard']}`);
+
+const { org, members } = orgData;
+const activeOrgRole = getUserOrgRole(members, user.id);
+
+// Only admin/owner can access roles
+if (activeOrgRole !== 'admin' && activeOrgRole !== 'owner') {
+  return Astro.redirect(`/${locale}/organizations/${orgSlug}/members`);
+}
+---
+
+<BaseLayout title={authT.meta.organizations.title} description={authT.meta.organizations.description}>
+  <AuthLayout title={org.name}>
+    <OrgSidebar slot="sidebar" t={authT} locale={locale} org={org} activeItem="roles" orgRole={activeOrgRole} />
+    <OrgRolesPage
+      t={authT}
+      locale={locale}
+      user={user}
+      activeOrg={org}
+      activeOrgRole={activeOrgRole}
+    />
+  </AuthLayout>
+</BaseLayout>

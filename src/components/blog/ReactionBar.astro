@@ -1,0 +1,102 @@
+---
+import { Icon } from "astro-icon/components";
+import type { BlogTranslations } from "@i18n/config";
+import type { BlogReactionType } from "@/lib/blog/constants";
+import { Button } from "@atoms/button";
+
+interface Props {
+  blogT: BlogTranslations;
+  postId: string;
+  reactionCounts: Record<BlogReactionType, number>;
+  userReaction?: BlogReactionType | null;
+}
+
+const REACTION_ICONS: Record<BlogReactionType, string> = {
+  LIKE: "mdi:thumb-up",
+  LOVE: "mdi:heart",
+  FIRE: "mdi:fire",
+  CLAP: "mdi:hand-clap",
+  LAUGH: "mdi:emoticon-lol",
+  SAD: "mdi:emoticon-sad",
+};
+
+const { blogT, postId, reactionCounts, userReaction } = Astro.props;
+---
+
+<div
+  class="flex flex-wrap items-center gap-2"
+  data-reaction-bar
+  data-post-id={postId}
+  data-t-error={blogT.labels.genericError}
+  data-t-updated={blogT.labels.reactionUpdated}
+>
+  <span class="me-2 text-sm font-medium text-muted-foreground">{blogT.labels.reactions}</span>
+  {Object.entries(REACTION_ICONS).map(([type, icon]) => {
+    const count = reactionCounts[type as BlogReactionType] ?? 0;
+    const isActive = userReaction === type;
+    return (
+      <Button
+        type="button"
+        variant={isActive ? "primary" : "outline"}
+        size="sm"
+        class="reaction-btn gap-1.5"
+        data-reaction-type={type}
+        aria-label={`${blogT.labels.reactions} : ${type} (${count})`}
+        aria-pressed={isActive ? "true" : "false"}
+      >
+        <Icon name={icon} class="size-4" />
+        <span>{count}</span>
+      </Button>
+    );
+  })}
+</div>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { toast } from '@atoms/toast';
+  import { BLOG_REACTION_TYPES, type BlogReactionType } from '@/lib/blog/constants';
+
+  function isReactionType(value: string): value is BlogReactionType {
+    return (BLOG_REACTION_TYPES as readonly string[]).includes(value);
+  }
+
+  function init() {
+    document.querySelectorAll<HTMLButtonElement>('.reaction-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const bar = btn.closest('[data-reaction-bar]') as HTMLElement | null;
+        const postId = bar?.dataset.postId;
+        const reactionType = btn.dataset.reactionType;
+        const errorText = bar?.dataset.tError ?? 'Error';
+        const updatedText = bar?.dataset.tUpdated ?? 'Reaction updated';
+
+        if (!postId || !reactionType || !isReactionType(reactionType)) return;
+
+        const { error } = await actions.toggleBlogReaction({
+          postId,
+          reactionType,
+        });
+
+        if (error) {
+          toast.error(error.message ?? errorText);
+        } else {
+          toast.success(updatedText);
+          // Update the button state locally instead of reloading the whole
+          // page (preserves scroll, avoids re-downloading JS/CSS and a second
+          // view-count hit). Toggle active styling and adjust the count.
+          const wasActive = btn.getAttribute('aria-pressed') === 'true';
+          btn.setAttribute('aria-pressed', wasActive ? 'false' : 'true');
+          btn.classList.toggle('variant-primary', !wasActive);
+          btn.classList.toggle('variant-outline', wasActive);
+          const countEl = btn.querySelector('span');
+          if (countEl) {
+            const current = parseInt(countEl.textContent ?? '0', 10) || 0;
+            countEl.textContent = String(wasActive ? Math.max(0, current - 1) : current + 1);
+          }
+        }
+      });
+    });
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

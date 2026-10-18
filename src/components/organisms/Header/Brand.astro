@@ -1,0 +1,136 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import type { ImageMetadata } from "astro";
+import { Image } from "astro:assets";
+import logo from "../../../assets/images/brand/logo.png";
+import logoDark from "../../../assets/images/brand/logo-dark.png";
+
+type LayoutOption = "row" | "col";
+
+interface Props extends HTMLAttributes<"a"> {
+  siteName?: string;
+  href?: string;
+  logoSrc?: ImageMetadata;
+  logoDarkSrc?: ImageMetadata;
+  logoLightUrl?: string | null;
+  logoDarkUrl?: string | null;
+  logoAlt?: string;
+  logoHeight?: string;
+  hideLogo?: boolean;
+  hideName?: boolean;
+  hideMobileLogo?: boolean;
+  hideMobileName?: boolean;
+  layout?: LayoutOption;
+  layoutMobile?: LayoutOption;
+}
+
+const {
+  siteName = "",
+  href = "/",
+  logoSrc = logo,
+  logoDarkSrc = logoDark,
+  logoLightUrl,
+  logoDarkUrl,
+  logoAlt,
+  logoHeight = "h-8",
+  hideLogo = false,
+  hideName = false,
+  hideMobileLogo,
+  hideMobileName,
+  layout = "row",
+  layoutMobile,
+  class: className,
+  ...rest
+} = Astro.props;
+
+const useDbLogo = !!(logoLightUrl || logoDarkUrl);
+
+const alt = logoAlt ?? "";
+
+const logoOnDesktop = !hideLogo;
+const nameOnDesktop = !hideName;
+const logoOnMobile  = !(hideMobileLogo ?? hideLogo);
+const nameOnMobile  = !(hideMobileName ?? hideName);
+
+function vis(mobile: boolean, desktop: boolean, display = "flex"): string {
+  if ( mobile &&  desktop) return display;
+  if (!mobile &&  desktop) return `hidden sm:${display}`;
+  if ( mobile && !desktop) return `${display} sm:hidden`;
+  return "hidden";
+}
+
+const logoVis = vis(logoOnMobile, logoOnDesktop, "flex");
+const nameVis = vis(nameOnMobile, nameOnDesktop, "block");
+
+const mob  = layoutMobile ?? layout;
+const desk = layout;
+
+const mobDir  = mob  === "col" ? "flex-col"    : "flex-row";
+const deskDir = desk === "col" ? "sm:flex-col" : "sm:flex-row";
+const dirClass = mob === desk ? mobDir : `${mobDir} ${deskDir}`;
+
+/** Build a WebP variant URL (for raster images uploaded via the CMS) */
+function toWebpUrl(url: string): string {
+  return url.replace(/\.(jpe?g|png)$/i, '.webp');
+}
+---
+
+<a
+  href={href}
+  class:list={["inline-flex shrink-0 items-center gap-2", dirClass, className]}
+  {...rest}
+>
+  <span class:list={["items-center", logoVis]}>
+    {useDbLogo ? (
+      <>
+        <picture class:list={[logoHeight, "w-auto max-w-30 dark:hidden"]}>
+          <source srcset={toWebpUrl(logoLightUrl ?? logoDarkUrl!)} type="image/webp" />
+          <img
+            src={logoLightUrl ?? logoDarkUrl!}
+            alt={alt}
+            class:list={[logoHeight, "w-auto"]}
+            loading="eager"
+            fetchpriority="high"
+          />
+        </picture>
+        <picture class:list={["hidden", logoHeight, "w-auto max-w-30 dark:block"]}>
+          <source srcset={toWebpUrl(logoDarkUrl ?? logoLightUrl!)} type="image/webp" />
+          <img
+            src={logoDarkUrl ?? logoLightUrl!}
+            alt={alt}
+            class:list={[logoHeight, "w-auto"]}
+            loading="eager"
+            fetchpriority="high"
+          />
+        </picture>
+      </>
+    ) : (
+      <>
+        <Image
+          src={logoSrc}
+          alt={alt}
+          class:list={[logoHeight, "w-30 dark:hidden"]}
+          loading="eager"
+          fetchpriority="high"
+          width={120}
+          height={32}
+        />
+        <Image
+          src={logoDarkSrc}
+          alt={alt}
+          class:list={["hidden", logoHeight, "w-30 dark:block"]}
+          loading="eager"
+          fetchpriority="high"
+          width={120}
+          height={32}
+        />
+      </>
+    )}
+  </span>
+
+  {siteName && (
+    <span class:list={["font-semibold text-lg leading-none", nameVis]}>
+      {siteName}
+    </span>
+  )}
+</a>

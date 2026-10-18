@@ -1,0 +1,289 @@
+---
+import { Icon } from "astro-icon/components";
+import type { Locale, BlogTranslations } from "@i18n/config";
+import type { BlogPaginationMeta, BlogPostListItem } from "@lib/blog/types";
+import Button from "@atoms/button/Button.astro";
+import { Input } from "@atoms/input";
+import PostGrid from "@/components/blog/grids/PostGrid.astro";
+import PostGridToggle from "@/components/blog/PostGridToggle.astro";
+import TagCloud from "@/components/blog/TagCloud.astro";
+import NewsletterSidebar from "@/components/blog/sidebars/NewsletterSidebar.astro";
+import CategoryFilterBar from "@/components/blog/CategoryFilterBar.astro";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@atoms/pagination";
+
+interface SidebarCategory {
+  id: string;
+  slug: string;
+  name: string;
+  postCount: number;
+  color?: string | null;
+  icon?: string | null;
+}
+
+interface SidebarTag {
+  id: string;
+  slug: string;
+  name: string;
+  postCount: number;
+  color?: string | null;
+}
+
+interface Props {
+  locale: Locale;
+  blogT: BlogTranslations;
+  title: string;
+  description: string;
+  posts: BlogPostListItem[];
+  meta: BlogPaginationMeta;
+  categories: SidebarCategory[];
+  tags: SidebarTag[];
+  baseUrl: string;
+  organizationSlug?: string | null;
+  searchQuery?: string;
+  activeCategorySlug?: string;
+  activeTagSlug?: string;
+  organizationName?: string;
+  emptyMessage?: string;
+  showHero?: boolean;
+  showFeatured?: boolean;
+  showNewsletter?: boolean;
+}
+
+const {
+  locale,
+  blogT,
+  title,
+  description,
+  posts,
+  meta,
+  categories,
+  tags,
+  baseUrl,
+  searchQuery,
+  activeCategorySlug,
+  activeTagSlug,
+  organizationName,
+  organizationSlug = null,
+  showNewsletter = true,
+} = Astro.props;
+
+const hasFilters = Boolean(searchQuery || activeCategorySlug || activeTagSlug);
+
+const isCategoryPage = Boolean(activeCategorySlug);
+const isTagPage = Boolean(activeTagSlug);
+
+const currentView = (Astro.cookies.get("blog-view")?.value ?? "grid") as "grid" | "horizontal";
+---
+
+<section class="mx-auto w-full max-w-7xl">
+
+  {/* ── Header hero ─────────────────────────────────────────────────── */}
+  <header class="relative overflow-hidden border-b bg-linear-to-b from-muted/60 to-background px-4 py-12 md:px-6 md:py-16">
+    {/* Breadcrumb */}
+    {(organizationName || isCategoryPage || isTagPage) && (
+      <div class="mb-4 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+        <a href={baseUrl} class="hover:text-foreground transition-colors">{blogT.meta.title}</a>
+        {organizationName && (
+          <>
+            <Icon name="mdi:chevron-right" class="size-3.5" />
+            <span class="font-medium text-foreground">{organizationName}</span>
+          </>
+        )}
+        {(isCategoryPage || isTagPage) && (
+          <>
+            <Icon name="mdi:chevron-right" class="size-3.5" />
+            <span class="font-medium text-foreground">{title}</span>
+          </>
+        )}
+      </div>
+    )}
+
+    <div class="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+      {/* Title + meta */}
+      <div class="flex-1">
+        <h1 class="font-heading text-4xl font-extrabold tracking-tight md:text-5xl lg:text-6xl">
+          {isCategoryPage || isTagPage ? title : blogT.meta.title}
+        </h1>
+        {description && !(isCategoryPage || isTagPage) && (
+          <p class="mt-3 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
+            {description}
+          </p>
+        )}
+        {meta.total > 0 && (
+          <div class="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+            <Icon name="mdi:file-document-multiple-outline" class="size-4 shrink-0" />
+            <span>
+              <strong class="font-semibold text-foreground">{meta.total}</strong>{" "}
+              {meta.total === 1 ? "article" : "articles"}
+              {activeCategorySlug && ` · ${title}`}
+              {activeTagSlug && ` · #${activeTagSlug}`}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Search */}
+      <form
+        method="get"
+        action={Astro.url.pathname}
+        class="flex w-full items-center gap-2 md:w-72 lg:w-96"
+      >
+        <div class="relative flex-1">
+          <Icon
+            name="mdi:magnify"
+            class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
+          />
+          <Input
+            type="search"
+            name="q"
+            placeholder={blogT.labels.search ?? "Rechercher…"}
+            value={searchQuery ?? ""}
+            class="pl-9 bg-background/80 backdrop-blur"
+          />
+        </div>
+        {hasFilters ? (
+          <Button href={baseUrl} variant="outline" size="sm" aria-label={blogT.labels.reset}>
+            <Icon name="mdi:close" class="size-4" />
+            <span class="sr-only">{blogT.labels.reset}</span>
+          </Button>
+        ) : (
+          <Button type="submit" size="sm" aria-label={blogT.labels.search}>
+            <Icon name="mdi:magnify" class="size-4" />
+          </Button>
+        )}
+      </form>
+    </div>
+
+    {/* Active search feedback */}
+    {searchQuery && (
+      <div class="mt-4 flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2.5 text-sm text-primary">
+        <Icon name="mdi:magnify" class="size-4 shrink-0" />
+        <span>Résultats pour <strong>« {searchQuery} »</strong></span>
+        <a href={baseUrl} class="ml-auto inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline">
+          Effacer
+          <Icon name="mdi:close" class="size-3.5" />
+        </a>
+      </div>
+    )}
+  </header>
+
+  {/* ── Category filter strip ──────────────────────────────────────── */}
+  {categories.length > 0 && !isTagPage && (
+    <div class="sticky top-0 z-10 border-b bg-background/95 px-4 py-3 shadow-sm backdrop-blur md:px-6">
+      <CategoryFilterBar
+        locale={locale}
+        blogT={blogT}
+        categories={categories}
+        baseUrl={baseUrl}
+        activeSlug={activeCategorySlug}
+        showAll={true}
+        maxVisible={20}
+      />
+    </div>
+  )}
+
+  {/* ── Active tag banner ──────────────────────────────────────────── */}
+  {activeTagSlug && (
+    <div class="flex items-center gap-3 border-b bg-muted/40 px-4 py-3 md:px-6">
+      <Icon name="mdi:tag-outline" class="size-4 text-muted-foreground" />
+      <span class="text-sm text-muted-foreground">Tag :</span>
+      <span class="text-sm font-semibold">#{activeTagSlug}</span>
+      <a href={baseUrl} class="ml-auto flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <Icon name="mdi:close" class="size-4" />
+        Effacer le filtre
+      </a>
+    </div>
+  )}
+
+  {/* ── Main content ────────────────────────────────────────────────── */}
+  <div class="grid gap-10 px-4 py-8 md:px-6 md:py-10 lg:grid-cols-[minmax(0,1fr)_20rem]">
+
+    {/* Posts column */}
+    <div class="min-w-0">
+      {/* Toolbar */}
+      <div class="mb-6 flex items-center justify-between gap-3">
+        <p class="text-sm text-muted-foreground">
+          {isCategoryPage || isTagPage
+            ? blogT.labels.relatedArticles
+            : blogT.labels.allArticles}
+          {meta.total > 0 && (
+            <span class="ml-1.5 tabular-nums">({meta.total})</span>
+          )}
+        </p>
+        <PostGridToggle blogT={blogT} />
+      </div>
+
+      {/* Posts */}
+      <PostGrid
+        locale={locale}
+        blogT={blogT}
+        posts={posts}
+        baseUrl={baseUrl}
+        organizationSlug={organizationSlug}
+        variant={currentView}
+        columns={3}
+        showCategory={true}
+        showAuthor={true}
+        showDate={true}
+        showExcerpt={true}
+        showViews={true}
+        showComments={true}
+        showRating={true}
+      />
+
+      {/* Pagination */}
+      {meta.totalPages > 1 && (
+        <div class="mt-10">
+          <Pagination>
+            <PaginationContent>
+              {meta.hasPrevPage && (
+                <PaginationItem>
+                  <PaginationPrevious href={`?page=${meta.page - 1}`}>
+                    {blogT.labels.previous}
+                  </PaginationPrevious>
+                </PaginationItem>
+              )}
+              {Array.from({ length: meta.totalPages }, (_, i) => i + 1).map((p) => (
+                <PaginationItem>
+                  <PaginationLink href={`?page=${p}`} isActive={p === meta.page}>
+                    {p}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              {meta.hasNextPage && (
+                <PaginationItem>
+                  <PaginationNext href={`?page=${meta.page + 1}`}>
+                    {blogT.labels.next}
+                  </PaginationNext>
+                </PaginationItem>
+              )}
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
+    </div>
+
+    {/* Sidebar */}
+    <aside class="flex flex-col gap-6 lg:sticky lg:top-14 lg:self-start">
+      <TagCloud
+        locale={locale}
+        blogT={blogT}
+        tags={tags}
+        baseUrl={baseUrl}
+        activeSlug={activeTagSlug}
+      />
+
+      {showNewsletter && (
+        <NewsletterSidebar locale={locale} blogT={blogT} />
+      )}
+    </aside>
+  </div>
+</section>
+

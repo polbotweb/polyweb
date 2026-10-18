@@ -1,0 +1,78 @@
+---
+import IconChevronLeft from "@tabler/icons/outline/chevron-left.svg";
+import IconChevronRight from "@tabler/icons/outline/chevron-right.svg";
+import type { HTMLAttributes } from "astro/types";
+
+interface Props extends HTMLAttributes<"div"> {
+  id: string;
+}
+
+const { id, class: className, ...rest } = Astro.props;
+---
+
+<div class="relative" {...rest}>
+  <!-- SCROLLER -->
+  <div
+    id={id}
+    class:list={[
+      "starwind-carousel scrollbar-hide flex gap-6 overflow-x-auto scroll-smooth px-4 pb-4 @3xl:px-[calc((100%-80rem)/2+1rem)]",
+      className,
+    ]}
+  >
+    <slot />
+  </div>
+
+  <!-- BUTTONS -->
+  <button
+    type="button"
+    data-prev
+    aria-label="Previous items"
+    class="absolute left-4 top-1/2 z-10 hidden size-12 -translate-y-1/2 items-center justify-center rounded-full border bg-background/80 shadow-md @xl:flex"
+  >
+    <IconChevronLeft class="size-6" />
+    <span class="sr-only">Previous items</span>
+  </button>
+
+  <button
+    type="button"
+    data-next
+    aria-label="Next items"
+    class="absolute right-4 top-1/2 z-10 hidden size-12 -translate-y-1/2 items-center justify-center rounded-full border bg-background/80 shadow-md @xl:flex"
+  >
+    <IconChevronRight class="size-6" />
+    <span class="sr-only">Next items</span>
+  </button>
+
+  <!-- fades -->
+  <div class="pointer-events-none absolute inset-y-0 left-0 hidden w-24 bg-linear-to-r from-background to-transparent @3xl:block" />
+  <div class="pointer-events-none absolute inset-y-0 right-0 hidden w-24 bg-linear-to-l from-background to-transparent @3xl:block" />
+</div>
+
+<style>
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+</style>
+
+<script>
+  import { initCarousel } from "./carousel";
+
+  const setupCarousels = () => {
+    const carousels = document.querySelectorAll(".starwind-carousel") as NodeListOf<HTMLElement>;
+    carousels.forEach((carousel) => {
+      if (carousel.dataset.autoInit === "false") {
+        return;
+      }
+      initCarousel(carousel);
+    });
+  };
+
+  document.addEventListener("DOMContentLoaded", setupCarousels);
+
+  // Re-initialize after Astro page transitions
+  document.addEventListener("astro:after-swap", setupCarousels);
+</script>

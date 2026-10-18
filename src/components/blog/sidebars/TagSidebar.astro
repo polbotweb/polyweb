@@ -1,0 +1,136 @@
+---
+import { Icon } from "astro-icon/components";
+import type { Locale } from "@i18n/config";
+import type { BlogTranslations } from "@i18n/config";
+import { buildBlogTagUrl } from "@lib/blog/utils";
+import { Card, CardHeader, CardTitle, CardContent } from "@atoms/card";
+import { Badge } from "@atoms/badge";
+
+interface TagItem {
+  id: string;
+  slug: string;
+  name: string;
+  postCount: number;
+}
+
+interface Props {
+  locale: Locale;
+  blogT: BlogTranslations;
+  tags: TagItem[];
+  baseUrl: string;
+  activeSlug?: string;
+  maxVisible?: number;
+  showCount?: boolean;
+}
+
+const {
+  locale,
+  blogT,
+  tags,
+  activeSlug,
+  maxVisible = 20,
+  showCount = true,
+} = Astro.props;
+
+const visibleTags = tags.slice(0, maxVisible);
+const maxCount = Math.max(1, ...tags.map((t) => t.postCount));
+---
+
+<Card>
+  <CardHeader>
+    <CardTitle class="sidebar-title">
+      <Icon name="mdi:tag-outline" />
+      {blogT.labels.tags}
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    {tags.length === 0 ? (
+      <p class="sidebar-empty">{blogT.labels.noTags}</p>
+    ) : (
+      <div class="sidebar-tags">
+        {visibleTags.map((tag) => {
+          const weight = Math.round((tag.postCount / maxCount) * 4) + 1;
+          const isActive = activeSlug === tag.slug;
+          return (
+            <a
+              href={buildBlogTagUrl(locale, null, blogT.routes.tags, tag.slug)}
+              class={`sidebar-tag sidebar-tag--size-${weight}`}
+              aria-current={isActive ? "page" : undefined}
+            >
+              <Badge variant={isActive ? "default" : "outline"} size="sm">
+                {tag.name}
+                {showCount && tag.postCount > 0 && (
+                  <span class="sidebar-tag__count">({tag.postCount})</span>
+                )}
+              </Badge>
+            </a>
+          );
+        })}
+        
+        {tags.length > maxVisible && (
+          <Badge variant="outline" class="sidebar-tag__more">
+            +{tags.length - maxVisible}
+          </Badge>
+        )}
+      </div>
+    )}
+  </CardContent>
+</Card>
+
+<style>
+  .sidebar-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 0 var(--space-3);
+    color: var(--heading-color, var(--text-default));
+  }
+
+  .sidebar-title :global(svg) {
+    width: 1.125rem;
+    height: 1.125rem;
+    color: var(--color-primary);
+  }
+
+  .sidebar-empty {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  .sidebar-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .sidebar-tag {
+    transition: all 150ms ease;
+  }
+
+  .sidebar-tag:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .sidebar-tag__count {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    margin-left: var(--space-1);
+  }
+
+  /* Size variants */
+  .sidebar-tag--size-1 { font-size: 0.75rem; }
+  .sidebar-tag--size-2 { font-size: 0.8125rem; }
+  .sidebar-tag--size-3 { font-size: 0.875rem; }
+  .sidebar-tag--size-4 { font-size: 0.9375rem; }
+  .sidebar-tag--size-5 { font-size: 1rem; }
+
+  .sidebar-tag__more {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+</style>

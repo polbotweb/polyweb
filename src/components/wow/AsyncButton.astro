@@ -1,0 +1,347 @@
+---
+/**
+ * # AsyncButton1 — Animated Async State Button
+ *
+ * A button that visually transitions through loading, success, and error states.
+ * Perfect for form submissions, login flows, and any async operations needing visual feedback.
+ *
+ * ## How It Works
+ *
+ * 1. User clicks the button
+ * 2. Button shrinks to a circle and shows a spinning loader
+ * 3. The button dispatches an `async-button:execute` CustomEvent
+ * 4. Your handler calls `event.detail.resolve()` for success or `event.detail.reject()` for error
+ * 5. Button shows a check (✓) or x (✗) icon with appropriate coloring
+ * 6. After `resetDelay` ms, button smoothly returns to its idle state
+ *
+ * ## Usage
+ *
+ * ```astro
+ * <AsyncButton1 text="Sign In" id="login-btn" />
+ *
+ * <script>
+ *   const btn = document.getElementById("login-btn");
+ *   btn?.addEventListener("async-button:execute", async (e) => {
+ *     const { resolve, reject } = (e as CustomEvent).detail;
+ *     try {
+ *       await myApiCall();
+ *       resolve(); // Shows success state
+ *     } catch {
+ *       reject();  // Shows error state
+ *     }
+ *   });
+ * </script>
+ * ```
+ *
+ * ## Event Detail
+ *
+ * The `async-button:execute` event's `detail` object contains:
+ * - `resolve()` — Call to transition to the success state
+ * - `reject()`  — Call to transition to the error state
+ *
+ * If neither is called, the button stays in loading state indefinitely.
+ * Always call one of them to complete the lifecycle.
+ */
+
+import IconCheck from "@tabler/icons/outline/check.svg";
+import IconLoader2 from "@tabler/icons/outline/loader-2.svg";
+import IconX from "@tabler/icons/outline/x.svg";
+import type { HTMLAttributes } from "astro/types";
+import { tv, type VariantProps } from "tailwind-variants";
+
+/** Available button style variants */
+export type AsyncButtonVariant = "default" | "primary" | "secondary" | "outline";
+
+/** Available button sizes */
+export type AsyncButtonSize = "sm" | "md" | "lg";
+
+interface Props extends HTMLAttributes<"button">, VariantProps<typeof asyncButton> {
+  /** Button label text displayed in idle state */
+  text?: string;
+  /** Screen-reader text announced during loading (default: "Loading...") */
+  loadingText?: string;
+  /** Screen-reader text announced on success (default: "Success") */
+  successText?: string;
+  /** Screen-reader text announced on error (default: "Error") */
+  errorText?: string;
+  /** Milliseconds before the button resets to idle after success/error (default: 2000) */
+  resetDelay?: number;
+}
+
+const asyncButton = tv({
+  base: [
+    "relative inline-flex cursor-pointer items-center justify-center gap-1.5 overflow-hidden rounded-md font-medium whitespace-nowrap",
+    "[&_svg]:pointer-events-none [&_svg]:shrink-0",
+    "outline-none focus-visible:ring-3",
+    "disabled:pointer-events-none disabled:opacity-50",
+  ],
+  variants: {
+    variant: {
+      default: "bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-outline/50",
+      primary:
+        "bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-primary/50",
+      secondary:
+        "bg-secondary text-secondary-foreground hover:bg-secondary/90 focus-visible:ring-secondary/50",
+      outline:
+        "dark:border-input focus-visible:ring-outline/50 bg-background dark:bg-input/30 focus-visible:border-outline hover:bg-muted dark:hover:bg-input/50 hover:text-foreground border shadow-xs",
+    },
+    size: {
+      sm: "h-9 px-4 text-sm [&_svg:not([class*='size-'])]:size-3.5",
+      md: "h-11 px-5 text-base [&_svg:not([class*='size-'])]:size-4.5",
+      lg: "h-12 px-8 text-lg [&_svg:not([class*='size-'])]:size-5",
+    },
+  },
+  defaultVariants: { variant: "default", size: "md" },
+});
+
+const iconSize = tv({
+  variants: {
+    size: {
+      sm: "size-4",
+      md: "size-5",
+      lg: "size-6",
+    },
+  },
+  defaultVariants: { size: "md" },
+});
+
+const {
+  text = "Submit",
+  loadingText = "Loading...",
+  successText = "Success",
+  errorText = "Error",
+  resetDelay = 2000,
+  variant,
+  size,
+  class: className,
+  ...rest
+} = Astro.props;
+
+const resolvedSize = size ?? "md";
+---
+
+<button
+  class={asyncButton({ variant, size, class: className })}
+  data-async-button
+  data-reset-delay={resetDelay}
+  data-loading-text={loadingText}
+  data-success-text={successText}
+  data-error-text={errorText}
+  data-state="idle"
+  {...rest}
+>
+  <!-- Visible label text -->
+  <span data-async-label class="inline-flex items-center gap-1.5">
+    <slot>{text}</slot>
+  </span>
+
+  <!-- Loading spinner (hidden by default) -->
+  <span
+    data-async-spinner
+    class="absolute inset-0 hidden items-center justify-center will-change-[transform,opacity]"
+    aria-hidden="true"
+  >
+    <IconLoader2 class:list={[iconSize({ size: resolvedSize }), "animate-spin"]} />
+  </span>
+
+  <!-- Success icon (hidden by default) -->
+  <span
+    data-async-success
+    class="absolute inset-0 hidden items-center justify-center will-change-[transform,opacity]"
+    aria-hidden="true"
+  >
+    <IconCheck class={iconSize({ size: resolvedSize })} />
+  </span>
+
+  <!-- Error icon (hidden by default) -->
+  <span
+    data-async-error
+    class="absolute inset-0 hidden items-center justify-center will-change-[transform,opacity]"
+    aria-hidden="true"
+  >
+    <IconX class={iconSize({ size: resolvedSize })} />
+  </span>
+
+  <!-- Screen-reader live region for state announcements -->
+  <span data-async-sr class="sr-only" role="status" aria-live="polite"></span>
+</button>
+
+<script>
+  import { animate } from "motion";
+
+  /** Smooth ease-out curve for non-spring animations */
+  const easeOut = [0.33, 1, 0.68, 1] as const;
+
+  /**
+   * Initializes all async buttons on the page.
+   * Each button operates independently via its own data attributes and state.
+   */
+  function initAsyncButtons() {
+    document.querySelectorAll<HTMLButtonElement>("[data-async-button]").forEach((btn) => {
+      // Skip if already initialized (prevents duplicate listeners on re-init)
+      if (btn.dataset.asyncInit === "true") return;
+      btn.dataset.asyncInit = "true";
+
+      const label = btn.querySelector<HTMLElement>("[data-async-label]");
+      const spinner = btn.querySelector<HTMLElement>("[data-async-spinner]");
+      const successIcon = btn.querySelector<HTMLElement>("[data-async-success]");
+      const errorIcon = btn.querySelector<HTMLElement>("[data-async-error]");
+      const srRegion = btn.querySelector<HTMLElement>("[data-async-sr]");
+
+      if (!label || !spinner || !successIcon || !errorIcon || !srRegion) return;
+
+      const resetDelay = parseInt(btn.dataset.resetDelay || "2000", 10);
+      const loadingText = btn.dataset.loadingText || "Loading...";
+      const successText = btn.dataset.successText || "Success";
+      const errorText = btn.dataset.errorText || "Error";
+
+      /** Store original dimensions for reset */
+      let idleWidth = 0;
+      let originalBg = "";
+      let originalColor = "";
+      let originalRadius = "";
+
+      btn.addEventListener("click", () => {
+        // Guard: only trigger from idle state
+        if (btn.dataset.state !== "idle") return;
+
+        // Capture the button's computed styles before animating
+        const computed = getComputedStyle(btn);
+        idleWidth = btn.offsetWidth;
+        const targetSize = btn.offsetHeight;
+        originalBg = computed.backgroundColor;
+        originalColor = computed.color;
+        originalRadius = computed.borderRadius;
+
+        btn.dataset.state = "loading";
+        btn.setAttribute("aria-busy", "true");
+        btn.setAttribute("aria-disabled", "true");
+        srRegion!.textContent = loadingText;
+
+        // Lock the current width so the shrink animation has a starting point
+        btn.style.width = `${idleWidth}px`;
+        // Remove padding so the circle is clean
+        btn.style.paddingLeft = "0";
+        btn.style.paddingRight = "0";
+
+        // Phase 1: Fade out label, shrink to circle, show spinner
+        animate(label!, { opacity: [1, 0] }, { duration: 0.15, ease: easeOut }).then(() => {
+          label!.style.visibility = "hidden";
+          label!.style.opacity = "0";
+
+          // Prepare spinner (visible but transparent)
+          spinner!.classList.remove("hidden");
+          spinner!.classList.add("flex");
+          spinner!.style.opacity = "0";
+
+          // Shrink button to a circle
+          animate(
+            btn,
+            {
+              width: [`${idleWidth}px`, `${targetSize}px`],
+              borderRadius: [originalRadius, "9999px"],
+            },
+            { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
+          ).then(() => {
+            // Fade in spinner after shrink completes
+            animate(spinner!, { opacity: [0, 1] }, { duration: 0.2, ease: easeOut });
+          });
+        });
+
+        // Dispatch the custom event with resolve/reject handlers
+        const event = new CustomEvent("async-button:execute", {
+          bubbles: true,
+          detail: {
+            /** Call resolve() to show the success state */
+            resolve: () => transitionToResult("success"),
+            /** Call reject() to show the error state */
+            reject: () => transitionToResult("error"),
+          },
+        });
+        btn.dispatchEvent(event);
+
+        function transitionToResult(result: "success" | "error") {
+          // Guard: only transition from loading state
+          if (btn.dataset.state !== "loading") return;
+          btn.dataset.state = result;
+
+          const isSuccess = result === "success";
+          const icon = isSuccess ? successIcon! : errorIcon!;
+          const bgColor = isSuccess ? "var(--color-success)" : "var(--color-error)";
+          const fgColor = isSuccess
+            ? "var(--color-success-foreground)"
+            : "var(--color-error-foreground)";
+
+          srRegion!.textContent = isSuccess ? successText : errorText;
+
+          // Phase 2: Fade out spinner, show result icon with color change
+          animate(spinner!, { opacity: [1, 0] }, { duration: 0.12, ease: easeOut }).then(() => {
+            spinner!.classList.add("hidden");
+            spinner!.classList.remove("flex");
+            spinner!.style.opacity = "";
+
+            // Show result icon
+            icon.classList.remove("hidden");
+            icon.classList.add("flex");
+
+            // Animate background color and fade in result icon together
+            animate(
+              btn,
+              { backgroundColor: [originalBg, bgColor], color: [originalColor, fgColor] },
+              { duration: 0.3, ease: easeOut },
+            );
+            animate(
+              icon,
+              { opacity: [0, 1], transform: ["scale(0.5)", "scale(1)"] },
+              { duration: 0.3, ease: easeOut },
+            );
+          });
+
+          // Phase 3: After resetDelay, return to idle
+          setTimeout(() => {
+            animate(icon, { opacity: [1, 0] }, { duration: 0.15, ease: easeOut }).then(() => {
+              icon.classList.add("hidden");
+              icon.classList.remove("flex");
+              icon.style.opacity = "";
+              icon.style.transform = "";
+
+              // Animate colors back to original and expand to original width
+              animate(
+                btn,
+                {
+                  backgroundColor: [bgColor, originalBg],
+                  color: [fgColor, originalColor],
+                  width: [`${targetSize}px`, `${idleWidth}px`],
+                  borderRadius: ["9999px", originalRadius],
+                },
+                { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
+              ).then(() => {
+                // Clear all inline styles so the button reflows naturally
+                btn.style.width = "";
+                btn.style.borderRadius = "";
+                btn.style.backgroundColor = "";
+                btn.style.color = "";
+                btn.style.paddingLeft = "";
+                btn.style.paddingRight = "";
+
+                // Fade label back in
+                label!.style.visibility = "visible";
+                animate(label!, { opacity: [0, 1] }, { duration: 0.2, ease: easeOut }).then(() => {
+                  label!.style.opacity = "";
+                  // Fully reset state
+                  btn.dataset.state = "idle";
+                  btn.removeAttribute("aria-busy");
+                  btn.removeAttribute("aria-disabled");
+                  srRegion!.textContent = "";
+                });
+              });
+            });
+          }, resetDelay);
+        }
+      });
+    });
+  }
+
+  initAsyncButtons();
+  document.addEventListener("astro:after-swap", initAsyncButtons);
+</script>

@@ -1,0 +1,820 @@
+---
+/**
+ * AdminMediaPage — Media library: browse folders, upload files, manage i18n alt texts.
+ * Two-pane layout: folder tree (sidebar) + file grid with detail panel.
+ */
+import type { AuthTranslations, Locale } from '@i18n/config';
+import { LOCALES, LOCALE_LABELS } from '@i18n/config';
+import type { MediaFolderNode, MediaFileWithAlts } from '@database/loaders/media.loader';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@atoms/card';
+import { Input } from '@atoms/input';
+import { Label } from '@atoms/label';
+import { NativeSelect, NativeSelectOption } from '@atoms/native-select';
+import { Separator } from '@atoms/separator';
+import { Badge } from '@atoms/badge';
+import Button from '@atoms/button/Button.astro';
+
+interface FolderFlat {
+  id: string;
+  name: string;
+  parentId: string | null;
+}
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  folderTree: MediaFolderNode[];
+  foldersList: FolderFlat[];
+  files: MediaFileWithAlts[];
+  currentFolderId: string | null;
+  editFile: MediaFileWithAlts | null;
+  fileCounts: Record<string, number>;
+  stats: { totalFiles: number; totalSize: number; totalFolders: number };
+  baseUrl?: string;
+  organizationId?: string | null;
+}
+
+const { t, locale, folderTree, foldersList, files, currentFolderId, editFile, fileCounts, stats, baseUrl, organizationId } = Astro.props;
+const mediaT = t.admin.cms.media;
+
+const adminUrl = baseUrl ?? `/${locale}/admin/media`;
+
+function pluralize(count: number, singular: string, plural: string): string {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
+function formatDate(d: Date | string) {
+  return new Date(d).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+/** Get file count for a folder (direct children only). */
+function getFolderFileCount(folderId: string): number {
+  return fileCounts[folderId] ?? 0;
+}
+
+/** Build indented label for folder select */
+function flattenWithIndent(nodes: MediaFolderNode[], depth = 0): { id: string; label: string }[] {
+  const result: { id: string; label: string }[] = [];
+  for (const node of nodes) {
+    result.push({ id: node.id, label: `${'—'.repeat(depth)} ${node.name}`.trim() });
+    result.push(...flattenWithIndent(node.children, depth + 1));
+  }
+  return result;
+}
+
+const indentedFolders = flattenWithIndent(folderTree);
+
+// Find current folder name for breadcrumb
+function findFolder(nodes: MediaFolderNode[], id: string): MediaFolderNode | null {
+  for (const n of nodes) {
+    if (n.id === id) return n;
+    const found = findFolder(n.children, id);
+    if (found) return found;
+  }
+  return null;
+}
+const currentFolder = currentFolderId ? findFolder(folderTree, currentFolderId) : null;
+
+// Build breadcrumb path
+function buildBreadcrumb(id: string | null): { id: string | null; name: string }[] {
+  if (!id) return [{ id: null, name: mediaT.root }];
+  const path: { id: string | null; name: string }[] = [{ id: null, name: mediaT.root }];
+  let current = foldersList.find(f => f.id === id);
+  const segments: { id: string; name: string }[] = [];
+  while (current) {
+    segments.unshift({ id: current.id, name: current.name });
+    current = current.parentId ? foldersList.find(f => f.id === current!.parentId) : undefined;
+  }
+  return [...path, ...segments];
+}
+const breadcrumb = buildBreadcrumb(currentFolderId);
+
+/** Strip extension from filename for the rename input */
+function filenameWithoutExt(name: string): string {
+  const dot = name.lastIndexOf('.');
+  return dot > 0 ? name.substring(0, dot) : name;
+}
+function filenameExt(name: string): string {
+  const dot = name.lastIndexOf('.');
+  return dot > 0 ? name.substring(dot) : '';
+}
+---
+
+<media-manager
+  id="cms-media-data"
+  data-locale={locale}
+  data-current-folder={currentFolderId ?? ''}
+  data-admin-url={adminUrl}
+  data-organization-id={organizationId ?? ''}
+  data-t-saved={mediaT.saved}
+  data-t-deleted={mediaT.deleted}
+  data-t-uploaded={mediaT.uploaded}
+  data-t-renamed={mediaT.renamed}
+  data-t-error={mediaT.error}
+  data-t-copied-url={mediaT.copiedUrl}
+  data-t-confirm-delete-file={mediaT.confirmDeleteFile}
+  data-t-confirm-delete-folder={mediaT.confirmDeleteFolder}
+  class="grid gap-6"
+>
+
+  <!-- ═══════════════════════════════════════════════════════
+       STATS HEADER
+       ═══════════════════════════════════════════════════════ -->
+  <div class="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+    <div class="flex items-center gap-1.5">
+      <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5a2.25 2.25 0 0 0 2.25-2.25V6.75a2.25 2.25 0 0 0-2.25-2.25H3.75A2.25 2.25 0 0 0 1.5 6.75v12a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
+      <span>{pluralize(stats.totalFiles, mediaT.counts.file, mediaT.counts.files)}</span>
+    </div>
+    <span class="text-border">•</span>
+    <div class="flex items-center gap-1.5">
+      <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" /></svg>
+      <span>{pluralize(stats.totalFolders, mediaT.counts.folder, mediaT.counts.folders)}</span>
+    </div>
+    <span class="text-border">•</span>
+    <span>{mediaT.usedSpace} {formatSize(stats.totalSize)}</span>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       BREADCRUMB & ACTIONS
+       ═══════════════════════════════════════════════════════ -->
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <nav class="flex items-center gap-1 text-sm">
+      {breadcrumb.map((crumb, i) => (
+        <>
+          {i > 0 && <span class="text-muted-foreground">/</span>}
+          {i < breadcrumb.length - 1 ? (
+            <a
+              href={crumb.id ? `${adminUrl}?folder=${crumb.id}` : adminUrl}
+              class="text-primary hover:underline"
+            >
+              {crumb.name}
+            </a>
+          ) : (
+            <span class="font-medium">{crumb.name}</span>
+          )}
+        </>
+      ))}
+      {currentFolderId && (
+        <Badge variant="secondary" class="ml-2 text-[10px]">{pluralize(files.length, mediaT.counts.file, mediaT.counts.files)}</Badge>
+      )}
+    </nav>
+    <div class="flex gap-2">
+      <Button id="create-folder-btn" size="sm" variant="outline">
+        <svg class="size-4 mr-1" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10.5v6m3-3H9m4.06-7.19-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" /></svg>
+        {mediaT.newFolder}
+      </Button>
+      <Button id="upload-file-btn" size="sm">
+        <svg class="size-4 mr-1" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" /></svg>
+        {mediaT.upload}
+      </Button>
+    </div>
+  </div>
+
+  <!-- Hidden upload form -->
+  <input type="file" id="media-file-input" accept="image/jpeg,image/png,image/webp,image/avif,image/svg+xml,image/x-icon" class="hidden" />
+
+  <!-- ═══════════════════════════════════════════════════════
+       CREATE FOLDER — inline form (hidden by default)
+       ═══════════════════════════════════════════════════════ -->
+  <div id="create-folder-form" class="hidden">
+    <Card>
+      <CardContent class="pt-4">
+        <div class="grid gap-3 sm:grid-cols-3 sm:items-end">
+          <div class="grid gap-1.5">
+            <Label for="new-folder-name">{mediaT.folderName}</Label>
+            <Input id="new-folder-name" placeholder={mediaT.folderNamePlaceholder} />
+          </div>
+          <div class="grid gap-1.5">
+            <Label for="new-folder-parent">{mediaT.parentFolder}</Label>
+            <NativeSelect id="new-folder-parent">
+              <NativeSelectOption value="">{mediaT.root}</NativeSelectOption>
+              {indentedFolders.map((f) => (
+                <NativeSelectOption value={f.id} selected={f.id === currentFolderId}>{f.label}</NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </div>
+          <div class="flex gap-2">
+            <Button id="create-folder-submit" size="sm">{mediaT.create}</Button>
+            <Button id="create-folder-cancel" size="sm" variant="outline">{mediaT.cancel}</Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       CONTENT: SUBFOLDERS + FILES
+       ═══════════════════════════════════════════════════════ -->
+  <div class={editFile ? "grid gap-6 lg:grid-cols-[1fr_360px]" : "grid gap-6"}>
+    {/* ── Detail panel: shows first on mobile when file is selected ── */}
+    {editFile && (
+      <div class="lg:hidden space-y-4" id="mobile-detail-panel">
+        <Card>
+          <CardHeader class="pb-3">
+            <div class="flex items-center justify-between">
+              <CardTitle class="text-sm">{mediaT.fileDetails}</CardTitle>
+              <a href={`${adminUrl}${currentFolderId ? `?folder=${currentFolderId}` : ''}`} class="text-xs text-muted-foreground hover:text-foreground transition-colors">✕ {mediaT.close}</a>
+            </div>
+          </CardHeader>
+          <CardContent class="space-y-4">
+            <div class="flex gap-4">
+              {editFile.mimeType.startsWith('image/') && (
+                <div class="shrink-0 overflow-hidden rounded-lg border bg-muted w-28 h-28">
+                  <img
+                    src={editFile.url}
+                    alt={editFile.alts.find(a => a.locale === locale)?.alt ?? editFile.filename}
+                    class="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              <div class="grid gap-1.5 text-sm min-w-0 flex-1">
+                <div class="flex justify-between"><span class="text-muted-foreground">{mediaT.type}</span><Badge variant="outline" class="text-xs">{editFile.mimeType}</Badge></div>
+                <div class="flex justify-between"><span class="text-muted-foreground">{mediaT.size}</span><span>{formatSize(editFile.size)}</span></div>
+                {editFile.width && editFile.height && (
+                  <div class="flex justify-between"><span class="text-muted-foreground">{mediaT.dimensions}</span><span>{editFile.width} × {editFile.height}</span></div>
+                )}
+                <div class="flex justify-between"><span class="text-muted-foreground">{mediaT.date}</span><span>{formatDate(editFile.createdAt)}</span></div>
+              </div>
+            </div>
+            <Separator />
+            <div class="grid gap-1.5">
+              <Label for="rename-file-mobile">{mediaT.fileName}</Label>
+              <div class="flex gap-2">
+                <div class="relative flex-1">
+                  <Input id="rename-file-mobile" value={filenameWithoutExt(editFile.filename)} class="pr-14 font-mono text-xs rename-input" data-file-id={editFile.id} data-original={editFile.filename} />
+                  <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground font-mono">{filenameExt(editFile.filename)}</span>
+                </div>
+                <Button size="sm" variant="outline" data-file-id={editFile.id} class="rename-btn">{mediaT.rename}</Button>
+              </div>
+            </div>
+            <div class="grid gap-1.5">
+              <Label for="file-url-mobile">{mediaT.url}</Label>
+              <div class="flex gap-2">
+                <Input id="file-url-mobile" value={editFile.url} readonly class="font-mono text-xs" />
+                <Button size="sm" variant="outline" data-url={editFile.url} class="copy-url-btn">{mediaT.copyUrl}</Button>
+              </div>
+            </div>
+            <div class="grid gap-1.5">
+              <Label for="move-file-folder-mobile">{mediaT.moveTo}</Label>
+              <NativeSelect id="move-file-folder-mobile" data-file-id={editFile.id} data-current-folder={editFile.folderId ?? ''} class="move-select">
+                <NativeSelectOption value="" selected={!editFile.folderId}>{mediaT.root}</NativeSelectOption>
+                {indentedFolders.map((f) => (
+                  <NativeSelectOption value={f.id} selected={f.id === editFile.folderId}>{f.label}</NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <Button size="sm" class="w-full save-alts-btn" data-file-id={editFile.id}>{mediaT.saveAltTexts}</Button>
+              <Button variant="error" size="sm" class="w-full delete-file-btn" data-file-id={editFile.id}>{mediaT.deleteFile}</Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Alt texts — mobile */}
+        <Card>
+          <CardHeader class="pb-3">
+            <CardTitle class="text-sm">{mediaT.altTexts}</CardTitle>
+          </CardHeader>
+          <CardContent class="space-y-4">
+            {LOCALES.map((loc) => {
+              const altData = editFile.alts.find(a => a.locale === loc);
+              return (
+                <div class="grid gap-1.5" data-alt-locale={loc}>
+                  <Label for={`alt-mobile-${loc}`}>{LOCALE_LABELS[loc]} {altData ? <Badge variant="secondary" class="ml-1 text-[10px]">✓</Badge> : <Badge variant="outline" class="ml-1 text-[10px]">{mediaT.altMissing}</Badge>}</Label>
+                  <Input id={`alt-mobile-${loc}`} value={altData?.alt ?? ''} placeholder={`${mediaT.altPlaceholder} (${loc})`} data-file-id={editFile.id} data-locale={loc} class="alt-input" />
+                  <Input id={`title-mobile-${loc}`} value={altData?.title ?? ''} placeholder={`${mediaT.titlePlaceholder} (${loc})`} data-file-id={editFile.id} data-locale={loc} class="title-input text-xs" />
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      </div>
+    )}
+
+    <div class="space-y-6">
+
+      {/* ── Subfolders ── */}
+      {currentFolder?.children && currentFolder.children.length > 0 && (
+        <div>
+          <h3 class="mb-3 text-sm font-medium text-muted-foreground">{mediaT.foldersHeading}</h3>
+          <div class="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+            {currentFolder.children.map((child) => {
+              const count = getFolderFileCount(child.id);
+              return (
+                <div class="flex items-center gap-3 rounded-lg border hover:bg-accent transition-colors group relative">
+                  <a
+                    href={`${adminUrl}?folder=${child.id}`}
+                    class="flex flex-1 items-center gap-3 p-3"
+                  >
+                    <svg class="size-5 shrink-0 text-muted-foreground group-hover:text-primary" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" /></svg>
+                    <div class="min-w-0 flex-1">
+                      <span class="truncate text-sm font-medium block">{child.name}</span>
+                      <span class="text-[10px] text-muted-foreground">{pluralize(count, mediaT.counts.file, mediaT.counts.files)}{child.children.length > 0 ? ` · ${pluralize(child.children.length, mediaT.counts.subfolder, mediaT.counts.subfolders)}` : ''}</span>
+                    </div>
+                  </a>
+                  <button
+                    class="delete-folder-btn p-2 mr-1 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all"
+                    data-folder-id={child.id}
+                    data-folder-name={child.name}
+                    title={mediaT.deleteFolder}
+                  >
+                    <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Root folder children only at top level ── */}
+      {!currentFolderId && folderTree.length > 0 && (
+        <div>
+          <h3 class="mb-3 text-sm font-medium text-muted-foreground">{mediaT.foldersHeading}</h3>
+          <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+            {folderTree.map((folder) => {
+              const count = getFolderFileCount(folder.id);
+              return (
+                <a
+                  href={`${adminUrl}?folder=${folder.id}`}
+                  class="group flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm hover:border-primary/50 hover:shadow-md transition-all"
+                >
+                  <div class="flex items-center gap-3">
+                    <div class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
+                      <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" /></svg>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <span class="block truncate text-sm font-semibold">{folder.name}</span>
+                      <span class="text-xs text-muted-foreground">{pluralize(count, mediaT.counts.file, mediaT.counts.files)}{folder.children.length > 0 ? ` · ${pluralize(folder.children.length, mediaT.counts.subfolder, mediaT.counts.subfolders)}` : ''}</span>
+                    </div>
+                    <svg class="size-4 text-muted-foreground group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── File Grid ── */}
+      {files.length > 0 ? (
+        <div>
+          <h3 class="mb-3 text-sm font-medium text-muted-foreground">
+            {mediaT.filesHeading} <Badge variant="secondary">{files.length}</Badge>
+          </h3>
+          <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+            {files.map((file) => {
+              const isSelected = editFile?.id === file.id;
+              const altForLocale = file.alts.find(a => a.locale === locale);
+              return (
+                <a
+                  href={`${adminUrl}?${currentFolderId ? `folder=${currentFolderId}&` : ''}file=${file.id}`}
+                  class:list={[
+                    'group relative flex flex-col overflow-hidden rounded-lg border transition-all',
+                    {
+                      'ring-2 ring-primary border-primary': isSelected,
+                      'hover:border-primary/50': !isSelected,
+                    },
+                  ]}
+                  data-file-id={file.id}
+                >
+                  {/* Thumbnail */}
+                  <div class="relative aspect-square bg-muted">
+                    {file.mimeType.startsWith('image/') ? (
+                      <img
+                        src={file.url}
+                        alt={altForLocale?.alt ?? file.filename}
+                        class="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div class="flex h-full items-center justify-center">
+                        <svg class="size-10 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
+                      </div>
+                    )}
+                    {/* Missing alt indicator */}
+                    {!altForLocale && (
+                      <div class="absolute top-1 right-1">
+                        <Badge variant="error" class="text-[10px] px-1 py-0">ALT</Badge>
+                      </div>
+                    )}
+                  </div>
+                  {/* Info */}
+                  <div class="p-2">
+                    <p class="truncate text-xs font-medium">{file.filename}</p>
+                    <p class="text-[10px] text-muted-foreground">{formatSize(file.size)}</p>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        /* Only show empty state if we're inside a folder OR if there are no folders at all */
+        (!currentFolderId && folderTree.length > 0) ? null : (
+        <Card>
+          <CardContent class="flex flex-col items-center justify-center py-12 text-center">
+            <div class="mb-3 rounded-full bg-muted p-4">
+              <svg class="size-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5a2.25 2.25 0 0 0 2.25-2.25V6.75a2.25 2.25 0 0 0-2.25-2.25H3.75A2.25 2.25 0 0 0 1.5 6.75v12a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
+            </div>
+            <p class="text-muted-foreground text-sm mb-2">{mediaT.noFilesInFolder}</p>
+            <Button id="upload-file-btn-empty" size="sm">{mediaT.uploadFile}</Button>
+          </CardContent>
+        </Card>
+        )
+      )}
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         FILE DETAIL PANEL (sticky right sidebar — desktop only)
+         ═══════════════════════════════════════════════════════ -->
+    {editFile ? (
+      <div class="hidden lg:block">
+        <div class="sticky top-4 space-y-4">
+        <Card>
+          <CardHeader class="pb-3">
+            <div class="flex items-center justify-between">
+              <CardTitle class="text-sm">{mediaT.fileDetails}</CardTitle>
+              <a href={`${adminUrl}${currentFolderId ? `?folder=${currentFolderId}` : ''}`} class="text-xs text-muted-foreground hover:text-foreground transition-colors">✕ {mediaT.close}</a>
+            </div>
+          </CardHeader>
+          <CardContent class="space-y-4">
+            {/* Preview */}
+            {editFile.mimeType.startsWith('image/') && (
+              <div class="overflow-hidden rounded-lg border bg-muted">
+                <img
+                  src={editFile.url}
+                  alt={editFile.alts.find(a => a.locale === locale)?.alt ?? editFile.filename}
+                  class="w-full object-contain max-h-48"
+                />
+              </div>
+            )}
+
+            {/* Metadata */}
+            <div class="grid gap-2 text-sm">
+              <div class="flex justify-between">
+                <span class="text-muted-foreground">{mediaT.type}</span>
+                <Badge variant="outline" class="text-xs">{editFile.mimeType}</Badge>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-muted-foreground">{mediaT.size}</span>
+                <span>{formatSize(editFile.size)}</span>
+              </div>
+              {editFile.width && editFile.height && (
+                <div class="flex justify-between">
+                  <span class="text-muted-foreground">{mediaT.dimensions}</span>
+                  <span>{editFile.width} × {editFile.height}</span>
+                </div>
+              )}
+              <div class="flex justify-between">
+                <span class="text-muted-foreground">{mediaT.date}</span>
+                <span>{formatDate(editFile.createdAt)}</span>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Rename file */}
+            <div class="grid gap-1.5">
+              <Label>{mediaT.fileName}</Label>
+              <div class="flex gap-2">
+                <div class="relative flex-1">
+                  <Input
+                    value={filenameWithoutExt(editFile.filename)}
+                    class="pr-14 font-mono text-xs rename-input"
+                    data-file-id={editFile.id}
+                    data-original={editFile.filename}
+                  />
+                  <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground font-mono">
+                    {filenameExt(editFile.filename)}
+                  </span>
+                </div>
+                <Button size="sm" variant="outline" data-file-id={editFile.id} class="rename-btn">{mediaT.rename}</Button>
+              </div>
+              <p class="text-[10px] text-muted-foreground">{mediaT.renameHint}</p>
+            </div>
+
+            <Separator />
+
+            {/* URL copy */}
+            <div class="grid gap-1.5">
+              <Label>{mediaT.url}</Label>
+              <div class="flex gap-2">
+                <Input value={editFile.url} readonly class="font-mono text-xs file-url-input" />
+                <Button size="sm" variant="outline" data-url={editFile.url} class="copy-url-btn">{mediaT.copyUrl}</Button>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Move to folder */}
+            <div class="grid gap-1.5">
+              <Label>{mediaT.moveTo}</Label>
+              <NativeSelect data-file-id={editFile.id} data-current-folder={editFile.folderId ?? ''} class="move-select">
+                <NativeSelectOption value="" selected={!editFile.folderId}>{mediaT.root}</NativeSelectOption>
+                {indentedFolders.map((f) => (
+                  <NativeSelectOption value={f.id} selected={f.id === editFile.folderId}>{f.label}</NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </div>
+
+            {/* Delete */}
+            <Button variant="error" size="sm" class="w-full delete-file-btn" data-file-id={editFile.id}>
+              {mediaT.deleteFile}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* ── Alt Texts (i18n) ── */}
+        <Card>
+          <CardHeader class="pb-3">
+            <CardTitle class="text-sm">{mediaT.altTexts}</CardTitle>
+            <CardDescription class="text-xs">{mediaT.altTextsDescription}</CardDescription>
+          </CardHeader>
+          <CardContent class="space-y-4">
+            {LOCALES.map((loc) => {
+              const altData = editFile.alts.find(a => a.locale === loc);
+              return (
+                <div class="grid gap-1.5" data-alt-locale={loc}>
+                  <Label>
+                    {LOCALE_LABELS[loc]}
+                    {altData ? (
+                      <Badge variant="secondary" class="ml-1 text-[10px]">✓</Badge>
+                    ) : (
+                      <Badge variant="outline" class="ml-1 text-[10px]">{mediaT.altMissing}</Badge>
+                    )}
+                  </Label>
+                  <Input
+                    value={altData?.alt ?? ''}
+                    placeholder={`${mediaT.altPlaceholder} (${loc})`}
+                    data-file-id={editFile.id}
+                    data-locale={loc}
+                    class="alt-input"
+                  />
+                  <Input
+                    value={altData?.title ?? ''}
+                    placeholder={`${mediaT.titlePlaceholder} (${loc})`}
+                    data-file-id={editFile.id}
+                    data-locale={loc}
+                    class="title-input text-xs"
+                  />
+                </div>
+              );
+            })}
+            <Button size="sm" class="w-full save-alts-btn" data-file-id={editFile.id}>
+              {mediaT.saveAltTexts}
+            </Button>
+          </CardContent>
+        </Card>
+        </div>
+      </div>
+    ) : (
+      <Card class="hidden lg:block">
+        <CardContent class="flex flex-col items-center justify-center py-12 text-center">
+          <p class="text-sm text-muted-foreground">{mediaT.noSelection}</p>
+        </CardContent>
+      </Card>
+    )}
+  </div>
+
+</media-manager>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { toast } from '@atoms/toast';
+  import type { Locale } from '@i18n/config';
+
+  class MediaManager extends HTMLElement {
+    private currentFolder = '';
+    private adminUrl = '';
+    private organizationId = '';
+
+    connectedCallback() {
+      this.currentFolder = this.dataset.currentFolder ?? '';
+      this.adminUrl = this.dataset.adminUrl ?? '';
+      this.organizationId = this.dataset.organizationId ?? '';
+
+      this.setupFolderCreate();
+      this.setupFolderDelete();
+      this.setupFileUpload();
+      this.setupFileRename();
+      this.setupFileDelete();
+      this.setupFileMove();
+      this.setupCopyUrl();
+      this.setupAltSave();
+    }
+
+    private reload() {
+      location.reload();
+    }
+
+    private showSuccess(msg: string) {
+      toast.success(msg);
+    }
+
+    private showError(msg: string) {
+      toast.error(msg);
+    }
+
+    // ── Folder CRUD ──
+
+    private setupFolderCreate() {
+      const btn = this.querySelector('#create-folder-btn');
+      const form = this.querySelector('#create-folder-form') as HTMLElement | null;
+      const cancel = this.querySelector('#create-folder-cancel');
+      const submit = this.querySelector('#create-folder-submit');
+
+      btn?.addEventListener('click', () => form?.classList.toggle('hidden'));
+      cancel?.addEventListener('click', () => form?.classList.add('hidden'));
+
+      submit?.addEventListener('click', async () => {
+        const name = (this.querySelector('#new-folder-name') as HTMLInputElement)?.value.trim();
+        const parentId = (this.querySelector('#new-folder-parent') as HTMLSelectElement)?.value || null;
+        const organizationId = this.organizationId || undefined;
+
+        if (!name) return;
+        const { error } = await actions.createMediaFolder({ name, parentId, organizationId });
+        if (error) { this.showError(error.message); return; }
+        this.showSuccess(this.dataset.tSaved ?? 'Enregistré');
+        this.reload();
+      });
+    }
+
+    private setupFolderDelete() {
+      this.querySelectorAll<HTMLElement>('.delete-folder-btn').forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const folderId = btn.dataset.folderId;
+          const folderName = btn.dataset.folderName ?? '';
+          const organizationId = this.organizationId || undefined;
+          if (!folderId) return;
+          const confirmMessage = (this.dataset.tConfirmDeleteFolder ?? 'Delete folder {name}?').replace('{name}', folderName);
+          if (!confirm(confirmMessage)) return;
+
+          const { error } = await actions.deleteMediaFolder({ id: folderId, organizationId });
+          if (error) { this.showError(error.message); return; }
+          this.showSuccess(this.dataset.tDeleted ?? 'Supprimé');
+          this.reload();
+        });
+      });
+    }
+
+    // ── File Rename ──
+
+    private setupFileRename() {
+      this.querySelectorAll<HTMLElement>('.rename-btn').forEach((btn) => {
+        const input = btn.closest('.grid, .flex')?.parentElement?.querySelector('.rename-input') as HTMLInputElement | null
+          ?? btn.parentElement?.querySelector('.rename-input') as HTMLInputElement | null;
+        if (!input) return;
+
+        const doRename = async () => {
+          const fileId = btn.dataset.fileId;
+          const newName = input.value.trim();
+          const organizationId = this.organizationId || undefined;
+          if (!fileId || !newName) return;
+
+          const { error } = await actions.renameMediaFile({ id: fileId, filename: newName, organizationId });
+          if (error) { this.showError(error.message); return; }
+          this.showSuccess(this.dataset.tRenamed ?? 'Fichier renommé');
+          this.reload();
+        };
+
+        btn.addEventListener('click', doRename);
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') { e.preventDefault(); doRename(); }
+        });
+      });
+    }
+
+    // ── File Upload ──
+
+    private setupFileUpload() {
+      const fileInput = this.querySelector('#media-file-input') as HTMLInputElement | null;
+      const triggers = this.querySelectorAll('#upload-file-btn, #upload-file-btn-empty');
+
+      triggers.forEach(btn => btn.addEventListener('click', () => fileInput?.click()));
+
+      fileInput?.addEventListener('change', async () => {
+        const file = fileInput.files?.[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.set('file', file);
+        formData.set('folderId', this.currentFolder || '');
+        if (this.organizationId) {
+          formData.set('organizationId', this.organizationId);
+        }
+
+        const { error } = await actions.uploadMediaFile(formData);
+        if (error) { this.showError(error.message); return; }
+        this.showSuccess(this.dataset.tUploaded ?? 'Fichier uploadé');
+        this.reload();
+      });
+    }
+
+    // ── File Delete ──
+
+    private setupFileDelete() {
+      this.querySelectorAll<HTMLElement>('.delete-file-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const fileId = btn.dataset.fileId;
+          const organizationId = this.organizationId || undefined;
+          if (!fileId) return;
+          if (!confirm(this.dataset.tConfirmDeleteFile ?? 'Supprimer ce fichier ?')) return;
+
+          const { error } = await actions.deleteMediaFile({ id: fileId, organizationId });
+          if (error) { this.showError(error.message); return; }
+          this.showSuccess(this.dataset.tDeleted ?? 'Supprimé');
+          location.href = this.currentFolder ? `${this.adminUrl}?folder=${this.currentFolder}` : this.adminUrl;
+        });
+      });
+    }
+
+    // ── File Move ──
+
+    private setupFileMove() {
+      this.querySelectorAll<HTMLSelectElement>('.move-select').forEach((select) => {
+        select.addEventListener('change', async () => {
+          const fileId = select.dataset.fileId;
+          const organizationId = this.organizationId || undefined;
+          if (!fileId) return;
+          const folderId = select.value || null;
+
+          const { error } = await actions.moveMediaFile({ id: fileId, folderId, organizationId });
+          if (error) { this.showError(error.message); return; }
+          this.showSuccess(this.dataset.tSaved ?? 'Enregistré');
+          this.reload();
+        });
+      });
+    }
+
+    // ── Copy URL ──
+
+    private setupCopyUrl() {
+      this.querySelectorAll<HTMLElement>('.copy-url-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const url = btn.dataset.url;
+          if (url) {
+            navigator.clipboard.writeText(url);
+            this.showSuccess(this.dataset.tCopiedUrl ?? 'URL copied');
+          }
+        });
+      });
+    }
+
+    // ── Alt Texts ──
+
+    private setupAltSave() {
+      this.querySelectorAll<HTMLElement>('.save-alts-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const fileId = btn?.dataset.fileId;
+          const organizationId = this.organizationId || undefined;
+          if (!fileId) return;
+
+          const altInputs = this.querySelectorAll<HTMLInputElement>('.alt-input');
+          const titleInputs = this.querySelectorAll<HTMLInputElement>('.title-input');
+
+          const promises: Promise<unknown>[] = [];
+          // Deduplicate by locale (mobile + desktop have duplicate inputs)
+          const seen = new Set<string>();
+
+          altInputs.forEach((input) => {
+            const loc = input.dataset.locale;
+            if (!loc || seen.has(loc)) return;
+            seen.add(loc);
+            const alt = input.value.trim();
+
+            if (alt) {
+              const titleInput = Array.from(titleInputs).find(
+                ti => ti.dataset.locale === loc && ti.dataset.fileId === fileId
+              );
+              const title = titleInput?.value.trim() || null;
+              promises.push(actions.upsertMediaFileAlt({ fileId, locale: loc as Locale, alt, title, organizationId }));
+            } else {
+              promises.push(actions.deleteMediaFileAlt({ fileId, locale: loc as Locale, organizationId }).catch(() => {}));
+            }
+          });
+
+          const results = await Promise.allSettled(promises);
+          const hasError = results.some(r => r.status === 'rejected');
+          if (hasError) {
+            this.showError(this.dataset.tError ?? 'Erreur');
+          } else {
+            this.showSuccess(this.dataset.tSaved ?? 'Enregistré');
+            this.reload();
+          }
+        });
+      });
+    }
+  }
+
+  customElements.define('media-manager', MediaManager);
+</script>

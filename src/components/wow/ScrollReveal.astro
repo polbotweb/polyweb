@@ -1,0 +1,159 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import { tv } from "tailwind-variants";
+
+interface Props extends HTMLAttributes<"div"> {
+  /**
+   * Animation direction
+   * @default "up"
+   */
+  direction?: "up" | "down" | "left" | "right";
+  /**
+   * Animation delay in milliseconds
+   * @default 0
+   */
+  delay?: number;
+  /**
+   * Animation duration in milliseconds
+   * @default 600
+   */
+  duration?: number;
+  /**
+   * Distance to travel in pixels
+   * @default 30
+   */
+  distance?: number;
+  /**
+   * Whether to animate only once
+   * @default true
+   */
+  once?: boolean;
+  /**
+   * Threshold for IntersectionObserver (0-1)
+   * @default 0.1
+   */
+  threshold?: number;
+}
+
+const revealStyles = tv({
+  base: "scroll-reveal",
+});
+
+const {
+  direction = "up",
+  delay = 0,
+  duration = 600,
+  distance = 30,
+  once = true,
+  threshold = 0.1,
+  class: className,
+  ...rest
+} = Astro.props;
+---
+
+<div
+  class={revealStyles({ class: className })}
+  data-reveal
+  data-reveal-direction={direction}
+  data-reveal-delay={delay}
+  data-reveal-duration={duration}
+  data-reveal-distance={distance}
+  data-reveal-once={once}
+  data-reveal-threshold={threshold}
+  {...rest}
+>
+  <slot />
+</div>
+
+<style>
+  /* Initial hidden state lives in CSS (not JS) so there is no flash of
+     unstyled content before the reveal script runs. The script only adds the
+     .is-visible class when the element scrolls into view. */
+  [data-reveal] {
+    opacity: 0;
+    transition: opacity 600ms ease-out, transform 600ms ease-out;
+    will-change: opacity, transform;
+  }
+  [data-reveal][data-reveal-direction="up"] { transform: translateY(30px); }
+  [data-reveal][data-reveal-direction="down"] { transform: translateY(-30px); }
+  [data-reveal][data-reveal-direction="left"] { transform: translateX(30px); }
+  [data-reveal][data-reveal-direction="right"] { transform: translateX(-30px); }
+
+  [data-reveal].is-visible {
+    opacity: 1;
+    transform: translate(0);
+  }
+
+  /* Honor reduced-motion: show content immediately, no transform. */
+  @media (prefers-reduced-motion: reduce) {
+    [data-reveal] {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  function setupScrollReveal(): () => void {
+    const elements = document.querySelectorAll<HTMLElement>("[data-reveal]");
+    const observers: IntersectionObserver[] = [];
+
+    elements.forEach((el) => {
+      const direction = el.dataset.revealDirection || "up";
+      const delay = parseInt(el.dataset.revealDelay || "0", 10);
+      const duration = parseInt(el.dataset.revealDuration || "600", 10);
+      const distance = parseInt(el.dataset.revealDistance || "30", 10);
+      const once = el.dataset.revealOnce !== "false";
+      const threshold = parseFloat(el.dataset.revealThreshold || "0.1");
+
+      const transforms: Record<string, string> = {
+        up: `translateY(${distance}px)`,
+        down: `translateY(-${distance}px)`,
+        left: `translateX(${distance}px)`,
+        right: `translateX(-${distance}px)`,
+      };
+
+      // Apply per-instance duration/delay from CSS custom props so the
+      // transition matches the author's configuration.
+      el.style.transitionDuration = `${duration}ms`;
+      el.style.transitionDelay = `${delay}ms`;
+      if (el.classList.contains("is-visible")) return;
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              el.classList.add("is-visible");
+              if (once) observer.unobserve(el);
+            } else if (!once) {
+              el.classList.remove("is-visible");
+            }
+          });
+        },
+        { threshold }
+      );
+
+      observer.observe(el);
+      observers.push(observer);
+    });
+
+    return () => observers.forEach((o) => o.disconnect());
+  }
+
+  let cleanup: (() => void) | null = null;
+
+  function start() {
+    cleanup?.();
+    cleanup = setupScrollReveal();
+  }
+
+  // Defer the reveal setup to idle time so it never competes with the main
+  // thread during load (keeps Total Blocking Time low → better Lighthouse perf).
+  // Astro already defers the module, but the synchronous body would still run
+  // inside the load window; requestIdleCallback pushes it past first paint.
+  const whenIdle = window.requestIdleCallback || ((cb: () => void) => setTimeout(cb, 200));
+  whenIdle(start);
+  document.addEventListener("astro:after-swap", start);
+  document.addEventListener("astro:before-swap", () => { cleanup?.(); cleanup = null; });
+</script>

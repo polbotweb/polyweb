@@ -1,0 +1,66 @@
+---
+import { and, desc, eq, inArray } from "drizzle-orm";
+import { getDrizzle } from "@database/drizzle";
+import { serviceComments, serviceFavorites, serviceReactions, serviceReviews, serviceReviewHelpful, user } from "@database/schemas";
+import type { Locale } from "@i18n/config";
+import { getServiceEngagementTranslations } from "@/modules/services/i18n/engagement";
+
+const { serviceId, organizationId = null, locale } = Astro.props as { serviceId: string; organizationId?: string | null; locale: Locale };
+const db = getDrizzle();
+const currentUserId = Astro.locals.user?.id ?? null;
+const [reviews, comments, favorite, reaction] = await Promise.all([
+  db.select({ review: serviceReviews, author: { id: user.id, name: user.name } }).from(serviceReviews).leftJoin(user, eq(user.id, serviceReviews.authorId)).where(and(eq(serviceReviews.serviceId, serviceId), eq(serviceReviews.status, "APPROVED"))).orderBy(desc(serviceReviews.createdAt)).limit(50),
+  db.select({ comment: serviceComments, author: { id: user.id, name: user.name } }).from(serviceComments).leftJoin(user, eq(user.id, serviceComments.authorId)).where(and(eq(serviceComments.serviceId, serviceId), eq(serviceComments.status, "APPROVED"))).orderBy(desc(serviceComments.createdAt)).limit(100),
+  currentUserId ? db.select({ serviceId: serviceFavorites.serviceId }).from(serviceFavorites).where(and(eq(serviceFavorites.serviceId, serviceId), eq(serviceFavorites.userId, currentUserId))).limit(1) : Promise.resolve([]),
+  currentUserId ? db.select({ reactionType: serviceReactions.reactionType }).from(serviceReactions).where(and(eq(serviceReactions.serviceId, serviceId), eq(serviceReactions.userId, currentUserId))).limit(1) : Promise.resolve([]),
+]);
+const helpfulVotes = currentUserId && reviews.length
+  ? await db.select({ reviewId: serviceReviewHelpful.reviewId, isHelpful: serviceReviewHelpful.isHelpful }).from(serviceReviewHelpful).where(and(eq(serviceReviewHelpful.userId, currentUserId), inArray(serviceReviewHelpful.reviewId, reviews.map(({ review }) => review.id))))
+  : [];
+const helpfulByReview = new Map(helpfulVotes.map((vote) => [vote.reviewId, vote.isHelpful]));
+const t = getServiceEngagementTranslations(locale);
+const favoriteActive = favorite.length > 0;
+const currentReaction = reaction[0]?.reactionType ?? null;
+const reactionTypes = ["LIKE", "LOVE", "FIRE", "CLAP"] as const;
+---
+<section class="mt-14 space-y-10" data-service-engagement data-service-id={serviceId} data-organization-id={organizationId ?? ""} data-locale={locale} data-favorite-label={t.favorite} data-unfavorite-label={t.unfavorite} data-pending-label={t.pendingModeration} data-error-label={t.error} data-helpful-label={t.helpful} data-helpful-mark-label={t.helpfulMark} data-helpful-unmark-label={t.helpfulUnmark} data-success-label={t.success} data-favorite-active={favoriteActive ? "true" : "false"} data-reaction={currentReaction ?? ""}>
+  <div class="flex flex-wrap items-center gap-3">
+    {currentUserId && <button type="button" class="rounded-md border px-4 py-2 text-sm hover:bg-muted" data-service-favorite>{favoriteActive ? t.unfavorite : t.favorite}</button>}
+    <span class="text-sm font-medium" aria-label={t.reactionLabel}>{t.reactionLabel}</span>
+    {currentUserId && reactionTypes.map((type) => <button type="button" class:list={["rounded-full border px-3 py-1.5 text-sm transition", { "bg-primary text-primary-foreground": currentReaction === type }]} data-service-reaction={type} aria-pressed={currentReaction === type}>{t.reactionTypes[type]}</button>)}
+    <p data-service-engagement-status class="text-sm" aria-live="polite"></p>
+  </div>
+  <section aria-labelledby="service-reviews-title" class="space-y-5">
+    <h2 id="service-reviews-title" class="text-2xl font-semibold">{t.reviewTitle}</h2>
+    {reviews.length ? <div class="space-y-4">{reviews.map(({ review, author }) => {
+      const helpful = helpfulByReview.get(review.id) === true;
+      return <article class="rounded-xl border p-5"><header class="flex flex-wrap items-center justify-between gap-2"><div class="font-medium">{author?.name ?? ""}</div><div class="text-sm" aria-label={`${review.rating}/5`}>{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</div></header>{review.title && <h3 class="mt-2 font-semibold">{review.title}</h3>}<p class="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{review.content}</p><div class="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground"><span data-helpful-count={review.id}>{review.helpfulCount} {t.helpful}</span>{currentUserId && <button type="button" class="rounded-md border px-2.5 py-1.5 text-xs" data-helpful-review={review.id} data-helpful={helpful ? "true" : "false"} aria-pressed={helpful}>{helpful ? t.helpfulUnmark : t.helpfulMark}</button>}{currentUserId && <button type="button" class="rounded-md border px-2.5 py-1.5 text-xs" data-report-review={review.id}>{t.report}</button>}</div></article>;
+    })}</div> : <p class="text-sm text-muted-foreground">{t.noReviews}</p>}
+    {currentUserId && <form data-service-review-form class="space-y-3 rounded-xl border p-5"><div class="grid gap-3 sm:grid-cols-2"><label class="space-y-1.5 text-sm"><span>{t.reviewRating}</span><select name="rating" class="h-10 w-full rounded-md border bg-background px-3"><option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option></select></label><label class="space-y-1.5 text-sm"><span>{t.reviewRecommended}</span><input name="recommended" type="checkbox" checked class="mt-3" /></label></div><label class="block space-y-1.5 text-sm"><span>{t.reviewContent}</span><textarea name="content" required rows={4} class="w-full rounded-md border bg-background px-3 py-2"></textarea></label><button type="submit" class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">{t.submitReview}</button><p data-service-review-status class="text-sm" aria-live="polite"></p></form>}
+  </section>
+  <section aria-labelledby="service-comments-title" class="space-y-5">
+    <h2 id="service-comments-title" class="text-2xl font-semibold">{t.commentTitle}</h2>
+    {comments.length ? <div class="space-y-4">{comments.map(({ comment, author }) => <article class="rounded-xl border p-5"><div class="text-sm font-medium">{author?.name ?? ""}</div><p class="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{comment.content}</p>{currentUserId && <button type="button" class="mt-3 rounded-md border px-2.5 py-1.5 text-xs" data-report-comment={comment.id}>{t.report}</button>}</article>)}</div> : <p class="text-sm text-muted-foreground">{t.noComments}</p>}
+    {currentUserId && <form data-service-comment-form class="space-y-3 rounded-xl border p-5"><label class="block space-y-1.5 text-sm"><span>{t.commentContent}</span><textarea name="content" required rows={4} class="w-full rounded-md border bg-background px-3 py-2"></textarea></label><button type="submit" class="rounded-md border px-4 py-2 text-sm">{t.submitComment}</button><p data-service-comment-status class="text-sm" aria-live="polite"></p></form>}
+  </section>
+</section>
+<script>
+  import { actions } from "astro:actions";
+  import { toast } from "@atoms/toast";
+  import { getServiceErrorMessage } from "@/modules/services/i18n";
+  for (const root of document.querySelectorAll<HTMLElement>("[data-service-engagement]")) {
+    const serviceId = root.dataset.serviceId; const organizationId = root.dataset.organizationId || null; const locale = root.dataset.locale ?? "fr"; if (!serviceId) continue;
+    const pendingLabel = root.dataset.pendingLabel ?? ""; const status = root.querySelector<HTMLElement>("[data-service-engagement-status]");
+    const showError = (error?: { code?: string }) => { const message = error ? getServiceErrorMessage(locale, error.code) : (root.dataset.errorLabel ?? ""); if (status) status.textContent = message; if (error) toast.error(message); };
+    const showSuccess = (message: string) => { if (status) status.textContent = message; toast.success(message); };
+    const favoriteButton = root.querySelector<HTMLButtonElement>("[data-service-favorite]");
+    favoriteButton?.addEventListener("click", async () => { favoriteButton.disabled = true; const result = await actions.toggleServiceFavorite({ serviceId, organizationId }); favoriteButton.disabled = false; if (result.error) showError(result.error); else { favoriteButton.textContent = result.data?.active ? (root.dataset.unfavoriteLabel ?? "") : (root.dataset.favoriteLabel ?? ""); if (status) status.textContent = ""; } });
+    root.querySelectorAll<HTMLButtonElement>("[data-service-reaction]").forEach((button) => button.addEventListener("click", async () => { const reactionType = button.dataset.serviceReaction; if (!reactionType) return; button.disabled = true; const result = await actions.toggleServiceReaction({ serviceId, organizationId, reactionType: reactionType as "LIKE" | "LOVE" | "FIRE" | "CLAP" }); button.disabled = false; if (result.error) showError(result.error); else { root.querySelectorAll<HTMLButtonElement>("[data-service-reaction]").forEach((item) => { const active = item.getAttribute("data-service-reaction") === result.data?.active; item.classList.toggle("bg-primary", active); item.classList.toggle("text-primary-foreground", active); item.setAttribute("aria-pressed", String(active)); }); if (status) status.textContent = ""; } }));
+    root.querySelectorAll<HTMLButtonElement>("[data-helpful-review]").forEach((button) => button.addEventListener("click", async () => { const reviewId = button.dataset.helpfulReview; if (!reviewId) return; const currentlyHelpful = button.dataset.helpful === "true"; button.disabled = true; const result = await actions.voteServiceReviewHelpful({ serviceId, organizationId, reviewId, isHelpful: !currentlyHelpful }); button.disabled = false; if (result.error) showError(result.error); else { const nextHelpful = !currentlyHelpful; button.dataset.helpful = String(nextHelpful); button.setAttribute("aria-pressed", String(nextHelpful)); button.textContent = nextHelpful ? (root.dataset.helpfulUnmarkLabel || "") : (root.dataset.helpfulMarkLabel || ""); const count = root.querySelector<HTMLElement>(`[data-helpful-count="${CSS.escape(reviewId)}"]`); if (count) count.textContent = `${result.data?.helpfulCount ?? 0} ${root.dataset.helpfulLabel || ""}`; showSuccess(root.dataset.successLabel || ""); } }));
+    root.querySelectorAll<HTMLButtonElement>("[data-report-review], [data-report-comment]").forEach((button) => button.addEventListener("click", async () => { const reviewId = button.dataset.reportReview; const commentId = button.dataset.reportComment; button.disabled = true; const result = await actions.createServiceReport({ serviceId, organizationId, reviewId, commentId, reason: "OTHER" }); button.disabled = false; if (result.error) showError(result.error); else showSuccess(root.dataset.successLabel || ""); }));
+    const reviewForm = root.querySelector<HTMLFormElement>("[data-service-review-form]");
+    reviewForm?.addEventListener("submit", async (event) => { event.preventDefault(); const submit = reviewForm.querySelector<HTMLButtonElement>('button[type="submit"]'); if (submit) submit.disabled = true; const data = new FormData(reviewForm); const result = await actions.createServiceReview({ serviceId, organizationId, rating: Number(data.get("rating")), content: String(data.get("content") ?? ""), isRecommended: reviewForm.querySelector<HTMLInputElement>('input[name="recommended"]')?.checked ?? false }); const fieldStatus = reviewForm.querySelector<HTMLElement>("[data-service-review-status]"); if (fieldStatus) fieldStatus.textContent = result.error ? getServiceErrorMessage(locale, result.error.code) : pendingLabel; if (!result.error) reviewForm.reset(); if (submit) submit.disabled = false; });
+    const commentForm = root.querySelector<HTMLFormElement>("[data-service-comment-form]");
+    commentForm?.addEventListener("submit", async (event) => { event.preventDefault(); const submit = commentForm.querySelector<HTMLButtonElement>('button[type="submit"]'); if (submit) submit.disabled = true; const data = new FormData(commentForm); const result = await actions.createServiceComment({ serviceId, organizationId, content: String(data.get("content") ?? "") }); const fieldStatus = commentForm.querySelector<HTMLElement>("[data-service-comment-status]"); if (fieldStatus) fieldStatus.textContent = result.error ? getServiceErrorMessage(locale, result.error.code) : pendingLabel; if (!result.error) commentForm.reset(); if (submit) submit.disabled = false; });
+  }
+</script>

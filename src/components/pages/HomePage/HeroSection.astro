@@ -1,0 +1,324 @@
+---
+import IconArrowLeft from "@tabler/icons/outline/arrow-left.svg";
+import IconArrowRight from "@tabler/icons/outline/arrow-right.svg";
+import IconSparkles from "@tabler/icons/outline/sparkles.svg";
+import type { HTMLAttributes } from "astro/types";
+import type { ImageMetadata } from "astro";
+import { Picture } from "astro:assets";
+import { tv } from "tailwind-variants";
+
+import { AspectRatio } from "@atoms/aspect-ratio";
+import { Avatar, AvatarFallback, AvatarImage } from "@atoms/avatar";
+import { Button } from "@atoms/button";
+import { Carousel, CarouselContent, CarouselItem } from "@atoms/carousel";
+
+export interface CarouselImage {
+  src: ImageMetadata;
+  alt: string;
+}
+
+export interface AvatarData {
+  src: string;
+  alt: string;
+  fallback: string;
+}
+
+interface Props extends HTMLAttributes<"section"> {
+  /** Badge text */
+  badgeText?: string;
+  /** Badge href */
+  badgeHref?: string;
+  /** Badge icon component */
+  badgeIcon?: typeof IconSparkles;
+  /** Main heading text */
+  heading?: string;
+  /** Description text */
+  description?: string;
+  /** Primary button text */
+  primaryButtonText?: string;
+  /** Primary button href */
+  primaryButtonHref?: string;
+  /** Secondary button text */
+  secondaryButtonText?: string;
+  /** Secondary button href */
+  secondaryButtonHref?: string;
+  /** Social proof heading */
+  socialProofHeading?: string;
+  /** Social proof subtext */
+  socialProofSubtext?: string;
+  /** Array of avatar data for social proof */
+  avatars?: AvatarData[];
+  /** Array of carousel images */
+  carouselImages?: CarouselImage[];
+}
+
+const hero7Styles = tv({
+  base: "@container mx-auto w-full max-w-7xl px-4 py-12",
+});
+
+const {
+  badgeText = "New features released",
+  badgeHref = "#",
+  badgeIcon: BadgeIcon = IconSparkles,
+  heading = "Accelerate Your Development Workflow",
+  description = "Build production-ready applications in half the time. Our comprehensive toolkit and intuitive components help teams ship faster without compromising quality.",
+  primaryButtonText = "Get Started Free",
+  primaryButtonHref = "#",
+  secondaryButtonText,
+  secondaryButtonHref = "#",
+  socialProofHeading = "Join 10,000+ developers",
+  socialProofSubtext = "Building the future of the web",
+  avatars = [],
+  carouselImages = [],
+  class: className,
+  ...rest
+} = Astro.props;
+---
+
+<section class={hero7Styles({ class: className })} {...rest}>
+  <div class="grid gap-12 @2xl:grid-cols-2 @2xl:items-center @2xl:gap-16">
+    <div class="flex flex-col">
+      <!-- Badge -->
+      <a
+        href={badgeHref}
+        class="hero-stagger bg-muted/50 text-muted-foreground hover:text-foreground hover:border-foreground/40 mb-6 flex w-fit items-center gap-2 rounded-full border px-3 py-0.5 text-sm transition-colors"
+        style="--stagger: 0"
+      >
+        <BadgeIcon class="size-4" />
+        <span>{badgeText}</span>
+      </a>
+
+      <!-- Heading -->
+      <h1 class="hero-stagger font-heading text-4xl font-semibold tracking-tight text-pretty @3xl:text-5xl" style="--stagger: 1">
+        {heading}
+      </h1>
+
+      <!-- Description -->
+      <p class="hero-stagger text-muted-foreground mt-6 text-lg text-pretty" style="--stagger: 2">
+        {description}
+      </p>
+
+      <!-- Buttons -->
+      <div class="hero-stagger mt-8 flex flex-col flex-wrap gap-4 @md:flex-row" style="--stagger: 3">
+        <Button variant="primary" class="rounded-full" href={primaryButtonHref}
+          >{primaryButtonText}</Button
+        >
+        {
+          secondaryButtonText && (
+            <Button variant="outline" class="rounded-full" href={secondaryButtonHref}>
+              {secondaryButtonText}
+            </Button>
+          )
+        }
+      </div>
+
+      <!-- Avatar Group & Social Proof -->
+      {
+        avatars.length > 0 && (
+          <div class="mt-10 flex items-center gap-4">
+            <div class="flex -space-x-3">
+              {avatars.map((avatar) => (
+                <Avatar>
+                  <AvatarImage src={avatar.src} alt={avatar.alt} />
+                  <AvatarFallback>{avatar.fallback}</AvatarFallback>
+                </Avatar>
+              ))}
+            </div>
+            <div class="flex flex-col">
+              <div class="text-sm font-semibold">{socialProofHeading}</div>
+              <div class="text-muted-foreground text-sm">{socialProofSubtext}</div>
+            </div>
+          </div>
+        )
+      }
+    </div>
+
+    <!-- Carousel -->
+    <div class="hero-carousel-entrance">
+      <Carousel id="hero7-carousel" autoInit={false} opts={{ loop: true }} class="w-full">
+        <CarouselContent>
+          {
+            carouselImages.map((image, index) => (
+              <CarouselItem>
+                <AspectRatio ratio={4 / 3} class="overflow-hidden rounded-lg shadow-lg">
+                  <Picture
+                    src={image.src}
+                    alt={image.alt}
+                    formats={['avif', 'webp']}
+                    widths={[400, 800, 1200]}
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    class="size-full object-cover hover:cursor-grab"
+                    loading={index === 0 ? 'eager' : 'lazy'}
+                    fetchpriority={index === 0 ? 'high' : 'low'}
+                  />
+                </AspectRatio>
+              </CarouselItem>
+            ))
+          }
+        </CarouselContent>
+
+        <!-- Custom Controls Container -->
+        <div class="mt-4 flex items-center justify-between">
+          <!-- Navigation Arrows (Left) -->
+          <div class="flex items-center gap-2">
+            <Button
+              class="starwind-carousel-previous rounded-full"
+              data-slot="carousel-previous"
+              variant="outline"
+              size="icon-sm"
+              aria-label="Previous slide"
+            >
+              <IconArrowLeft class="rtl:-scale-x-100" />
+              <span class="sr-only">Previous slide</span>
+            </Button>
+            <Button
+              class="starwind-carousel-next rounded-full"
+              data-slot="carousel-next"
+              variant="outline"
+              size="icon-sm"
+              aria-label="Next slide"
+            >
+              <IconArrowRight class="rtl:-scale-x-100" />
+              <span class="sr-only">Next slide</span>
+            </Button>
+          </div>
+
+          <!-- Pagination Dots (Right) -->
+          <div id="hero7-dots" class="flex items-center gap-2">
+            {
+              carouselImages.map((_, index) => (
+                <button
+                  type="button"
+                  data-index={index}
+                  class="carousel-dot group flex items-center justify-center size-6 shrink-0 rounded-full transition-all"
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))
+            }
+          </div>
+        </div>
+      </Carousel>
+    </div>
+  </div>
+</section>
+
+<style>
+  .carousel-dot::after {
+    content: '';
+    display: block;
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--color-foreground) 20%, transparent);
+    transition: all 0.2s;
+  }
+
+  .carousel-dot:hover::after {
+    background: color-mix(in srgb, var(--color-muted-foreground) 50%, transparent);
+  }
+
+  .carousel-dot.active::after {
+    background: var(--color-foreground);
+    width: 2rem;
+  }
+
+  /* Staggered entrance for hero text elements */
+  .hero-stagger {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: hero-fade-up 0.7s ease-out forwards;
+    animation-delay: calc(var(--stagger, 0) * 0.15s + 0.2s);
+  }
+
+  @keyframes hero-fade-up {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Carousel slide-in from right */
+  .hero-carousel-entrance {
+    opacity: 0;
+    transform: translateX(40px);
+    animation: hero-slide-in 0.8s ease-out 0.5s forwards;
+  }
+
+  @keyframes hero-slide-in {
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-stagger {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+    .hero-carousel-entrance {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+</style>
+
+<script>
+  import { initCarousel } from "@atoms/carousel";
+
+  let controller: AbortController | null = null;
+
+  function setupHero7Carousel() {
+    controller?.abort();
+    controller = new AbortController();
+    const { signal } = controller;
+
+    const carouselElement = document.getElementById("hero7-carousel");
+    if (!carouselElement) return;
+
+    const dotsContainer = document.getElementById("hero7-dots");
+    if (!dotsContainer) return;
+
+    const dots = dotsContainer.querySelectorAll<HTMLButtonElement>(".carousel-dot");
+
+    // Initialize carousel and get API
+    initCarousel(carouselElement, {
+      opts: { loop: true },
+      setApi: (api) => {
+        // Update dots on slide change
+        const updateDots = () => {
+          const selectedIndex = api.selectedScrollSnap();
+          dots.forEach((dot, index) => {
+            if (index === selectedIndex) {
+              dot.classList.add("active");
+            } else {
+              dot.classList.remove("active");
+            }
+          });
+        };
+
+        // Initial update
+        updateDots();
+
+        // Listen for slide changes
+        api.on("select", updateDots);
+
+        // Add click handlers to dots
+        dots.forEach((dot, index) => {
+          dot.addEventListener("click", () => {
+            api.scrollTo(index);
+          }, { signal });
+        });
+      },
+    });
+  }
+
+  // Initialize on page load
+  setupHero7Carousel();
+
+  // Reinitialize on Astro page transitions
+  document.addEventListener("astro:after-swap", setupHero7Carousel);
+  document.addEventListener("astro:before-swap", () => { controller?.abort(); controller = null; });
+</script>

@@ -1,0 +1,32 @@
+---
+import { requireAuth } from "@/lib/auth-guards";
+import { fetchOrgData, getUserOrgRole } from "@/lib/auth-data";
+import { getBlogTranslations } from "@i18n/utils";
+import { getBlogCategories, getBlogTags } from "@database/loaders/blog.loader";
+import { hasBlogPermission, resolveBlogTenant } from "@/actions/blog/_helpers";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import OrgSidebar from "@organisms/OrgSidebar/OrgSidebar.astro";
+import AdminFormShell from "@organisms/AdminFormShell.astro";
+import AdminPostForm from "@/components/blog/AdminPostForm.astro";
+
+export const prerender = false;
+const result = await requireAuth(Astro);
+if ("redirect" in result) return result.redirect;
+const { user, locale, authT } = result;
+const orgSlug = Astro.params.slug;
+if (!orgSlug) return Astro.redirect(`/${locale}/auth/${authT.routes.dashboard}`);
+const orgData = await fetchOrgData(Astro.request.headers, orgSlug);
+if (!orgData) return Astro.redirect(`/${locale}/auth/${authT.routes.dashboard}`);
+const { org, members } = orgData;
+const orgRole = getUserOrgRole(members, user.id);
+const tenant = resolveBlogTenant({ organizationId: org.id });
+if (!(await hasBlogPermission(Astro, tenant, { blog: ["create"] }))) return Astro.redirect(`/${locale}/organizations/${orgSlug}/members`);
+const blogT = await getBlogTranslations(locale);
+const baseAdminUrl = `/${locale}/${org.slug}/admin/blog`;
+const basePublicUrl = `/${locale}/${org.slug}/${blogT.routes.blog}`;
+const [categoryRows, tagRows] = await Promise.all([getBlogCategories(org.id, locale), getBlogTags(org.id, locale)]);
+const categories = categoryRows.map((item) => ({ id: item.id, slug: item.slug, label: item.translation?.name ?? item.slug }));
+const tags = tagRows.map((item) => ({ id: item.id, slug: item.slug, label: item.translation?.name ?? item.slug }));
+---
+<BaseLayout title={blogT.admin.newPost} description={authT.organizations.blog.description}><AuthLayout title={org.name}><OrgSidebar slot="sidebar" t={authT} locale={locale} org={org} activeItem="blog" orgRole={orgRole} /><AdminFormShell><AdminPostForm locale={locale} blogT={blogT} mode="create" categories={categories} tags={tags} baseAdminUrl={baseAdminUrl} basePublicUrl={basePublicUrl} organizationId={org.id} /></AdminFormShell></AuthLayout></BaseLayout>

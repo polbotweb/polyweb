@@ -1,0 +1,73 @@
+---
+import { requireAuth } from "@/lib/auth-guards";
+import { fetchOrgData, getUserOrgRole } from "@/lib/auth-data";
+import { getBlogTranslations } from "@i18n/utils";
+import { getBlogCategories, getBlogTags, getBlogModerationQueue } from "@database/loaders/blog.loader";
+import { getBlogAdminPostData, getBlogAdminAuthors, getBlogAdminTags } from "@database/loaders/blog-admin.loader";
+import { getBlogAdminModerationCount } from "@database/loaders/blog-admin-moderation.loader";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import OrgSidebar from "@organisms/OrgSidebar/OrgSidebar.astro";
+import BlogAdminPage from "@/components/blog/BlogAdminPage.astro";
+import { hasBlogPermission, resolveBlogTenant } from "@/actions/blog/_helpers";
+import { LOCALES, type Locale } from "@i18n/config";
+
+export const prerender = false;
+const result = await requireAuth(Astro);
+if ("redirect" in result) return result.redirect;
+const { user, locale, authT } = result;
+const orgSlug = Astro.params.slug;
+if (!orgSlug) return Astro.redirect(`/${locale}/auth/${authT.routes.dashboard}`);
+const orgData = await fetchOrgData(Astro.request.headers, orgSlug);
+if (!orgData) return Astro.redirect(`/${locale}/auth/${authT.routes.dashboard}`);
+const { org, members } = orgData;
+const activeOrgRole = getUserOrgRole(members, user.id);
+const tenant = resolveBlogTenant({ organizationId: org.id });
+const [canAccessBlog, canCreate, canUpdate, canPublish, canDelete] = await Promise.all([
+  hasBlogPermission(Astro, tenant, { blog: ["read"], blogCategory: ["read"], blogTag: ["read"], blogComment: ["read"], blogReview: ["read"] }),
+  hasBlogPermission(Astro, tenant, { blog: ["create"] }),
+  hasBlogPermission(Astro, tenant, { blog: ["update"] }),
+  hasBlogPermission(Astro, tenant, { blog: ["publish"] }),
+  hasBlogPermission(Astro, tenant, { blog: ["delete"] }),
+]);
+if (!canAccessBlog) return Astro.redirect(`/${locale}/organizations/${orgSlug}/members`);
+const blogT = await getBlogTranslations(locale);
+const p = Astro.url.searchParams;
+const page = Math.max(1, Number(p.get("page") ?? "1") || 1);
+const boolParam = (key: string) => p.get(key) === null ? undefined : p.get(key) === "true";
+const requestedLocale = p.get("translationLocale") as Locale | null;
+const translationLocale = requestedLocale && LOCALES.includes(requestedLocale) ? requestedLocale : locale;
+const filters = {
+  page,
+  translationLocale,
+  search: p.get("search") || undefined,
+  status: (p.get("status") || undefined) as import("@/lib/blog/constants").BlogPostStatus | undefined,
+  categoryId: p.get("categoryId") || undefined,
+  tagId: p.get("tagId") || undefined,
+  authorId: p.get("authorId") || undefined,
+  featured: boolParam("featured"),
+  sticky: boolParam("sticky"),
+  sortBy: (p.get("sortBy") || "updatedAt") as "createdAt" | "updatedAt" | "publishedAt" | "title" | "viewCount",
+  sortOrder: (p.get("sortOrder") || "desc") as "asc" | "desc",
+};
+const baseAdminUrl = `/${locale}/${org.slug}/admin/blog`;
+const basePublicUrl = `/${locale}/${org.slug}/${blogT.routes.blog}`;
+const [{ rows, meta, stats }, categoryRows, tagRows, moderation, authors, adminTags, moderationCount] = await Promise.all([
+  getBlogAdminPostData(org.id, locale, filters),
+  getBlogCategories(org.id, locale),
+  getBlogTags(org.id, locale),
+  getBlogModerationQueue(org.id, { limit: 10 }),
+  getBlogAdminAuthors(org.id),
+  getBlogAdminTags(org.id, locale),
+  getBlogAdminModerationCount(org.id),
+]);
+const categories = categoryRows.map((item) => ({ id: item.id, slug: item.slug, name: item.translation?.name ?? item.slug, description: item.translation?.description ?? null, color: item.color, icon: item.icon, parentId: item.parentId, sortOrder: item.sortOrder, postCount: item.postCount }));
+const tags = tagRows.map((item) => ({ id: item.id, slug: item.slug, name: item.translation?.name ?? item.slug, color: item.color, postCount: item.postCount }));
+const filterOptions = { categories: categories.map(({ id, name }) => ({ id, name })), tags: adminTags.map(({ id, name }) => ({ id, name })), authors };
+---
+<BaseLayout title={`${authT.organizations.blog.title} — ${org.name}`} description={authT.organizations.blog.description}>
+  <AuthLayout title={org.name}>
+    <OrgSidebar slot="sidebar" t={authT} locale={locale} org={org} activeItem="blog" orgRole={activeOrgRole} />
+    <BlogAdminPage locale={locale} blogT={blogT} title={`${authT.organizations.blog.title} — ${org.name}`} posts={rows} postsMeta={meta} stats={stats} moderationCount={moderationCount} categories={categories} tags={tags} moderation={moderation} baseAdminUrl={baseAdminUrl} basePublicUrl={basePublicUrl} organizationId={org.id} userId={user.id} canCreate={canCreate} canUpdate={canUpdate} canPublish={canPublish} canDelete={canDelete} filterOptions={filterOptions} />
+  </AuthLayout>
+</BaseLayout>

@@ -1,0 +1,348 @@
+---
+import { Icon } from "astro-icon/components";
+import type { Locale } from "@i18n/config";
+import type { BlogTranslations } from "@i18n/config";
+import { Card, CardContent, CardHeader, CardTitle } from "@atoms/card";
+import { Input } from "@atoms/input";
+import { Textarea } from "@atoms/textarea";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import { Badge } from "@atoms/badge";
+import Button from "@atoms/button/Button.astro";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "@atoms/dialog";
+
+type TaxonomyKind = "category" | "tag";
+
+interface TaxonomyItem {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string | null;
+  color?: string | null;
+  icon?: string | null;
+  parentId?: string | null;
+  sortOrder?: number | null;
+  postCount: number;
+}
+
+interface Props {
+  locale: Locale;
+  blogT: BlogTranslations;
+  kind: TaxonomyKind;
+  items: TaxonomyItem[];
+  organizationId?: string | null;
+}
+
+const { locale, blogT, kind, items, organizationId } = Astro.props;
+
+const isCategory = kind === "category";
+const taxonomyT = blogT.admin.taxonomy;
+const actionT = blogT.admin.actionLabels;
+const feedbackT = blogT.admin.feedback;
+const labels = {
+  title: isCategory ? blogT.admin.categories : blogT.admin.tags,
+  create: isCategory ? taxonomyT.createCategory : taxonomyT.createTag,
+  edit: isCategory ? taxonomyT.editCategory : taxonomyT.editTag,
+  delete: isCategory ? taxonomyT.deleteCategory : taxonomyT.deleteTag,
+  description: isCategory ? taxonomyT.dialogDescriptionCategory : taxonomyT.dialogDescriptionTag,
+};
+---
+
+<Card>
+  <CardHeader>
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <CardTitle class="text-base">{labels.title}</CardTitle>
+      <Button type="button" size="sm" id={`${kind}-add-btn`}>
+        <Icon name="mdi:plus" class="size-4" />
+        {labels.create}
+      </Button>
+    </div>
+  </CardHeader>
+  <CardContent>
+    {items.length === 0 ? (
+      <p class="py-8 text-center text-sm text-muted-foreground">{blogT.labels.noResults}</p>
+    ) : (
+      <div class="space-y-3" id={`${kind}-items`}>
+        {items.map((item) => (
+          <div
+            class="rounded-lg border px-4 py-3"
+            data-taxonomy-item
+            data-id={item.id}
+            data-name={item.name}
+            data-slug={item.slug}
+            data-description={item.description ?? ""}
+            data-color={item.color ?? ""}
+            data-icon={item.icon ?? ""}
+            data-parent-id={item.parentId ?? ""}
+            data-sort-order={String(item.sortOrder ?? 0)}
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <p class="font-medium">{item.name}</p>
+                  <Badge variant="outline" size="sm">/{item.slug}</Badge>
+                  <Badge variant="secondary" size="sm">{item.postCount}</Badge>
+                </div>
+                <div class="mt-2 flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+                  {item.color && <span>{item.color}</span>}
+                  {item.icon && <span>{item.icon}</span>}
+                  {item.description && <span>{item.description}</span>}
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <Button type="button" variant="outline" size="sm" class="taxonomy-edit-btn" data-id={item.id} aria-label={labels.edit}>
+                  <Icon name="mdi:pencil" class="size-4" />
+                </Button>
+                <Button type="button" variant="error" size="sm" class="taxonomy-delete-btn" data-id={item.id} aria-label={labels.delete}>
+                  <Icon name="mdi:delete" class="size-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </CardContent>
+</Card>
+
+<Dialog id={`${kind}-dialog`}>
+  <DialogContent class="max-w-2xl">
+    <DialogHeader>
+      <DialogTitle>{labels.create}</DialogTitle>
+      <DialogDescription>{labels.description}</DialogDescription>
+    </DialogHeader>
+
+    <input type="hidden" id={`${kind}-edit-id`} value="" />
+
+    <div class="grid gap-4 py-2 md:grid-cols-2">
+      <div class="space-y-1.5">
+        <Label for={`${kind}-name`}>{taxonomyT.name}</Label>
+        <Input id={`${kind}-name`} type="text" />
+      </div>
+      <div class="space-y-1.5">
+        <Label for={`${kind}-slug`}>{blogT.admin.fields.slug}</Label>
+        <Input id={`${kind}-slug`} type="text" />
+      </div>
+      {isCategory && (
+        <div class="space-y-1.5">
+          <Label for={`${kind}-parent`}>{taxonomyT.parentCategory}</Label>
+          <NativeSelect id={`${kind}-parent`}>
+            <NativeSelectOption value="">{taxonomyT.none}</NativeSelectOption>
+            {items.map((item) => (
+              <NativeSelectOption value={item.id}>{item.name}</NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </div>
+      )}
+      {isCategory && (
+        <div class="space-y-1.5">
+          <Label for={`${kind}-icon`}>{taxonomyT.icon}</Label>
+          <Input id={`${kind}-icon`} type="text" placeholder="mdi:folder-outline" />
+        </div>
+      )}
+      <div class="space-y-1.5">
+        <Label for={`${kind}-color`}>{taxonomyT.color}</Label>
+        <Input id={`${kind}-color`} type="text" placeholder="#0f172a" />
+      </div>
+      {isCategory && (
+        <div class="space-y-1.5">
+          <Label for={`${kind}-sort-order`}>{taxonomyT.sortOrder}</Label>
+          <Input id={`${kind}-sort-order`} type="number" value="0" />
+        </div>
+      )}
+      {isCategory && (
+        <div class="space-y-1.5 md:col-span-2">
+          <Label for={`${kind}-description`}>{taxonomyT.description}</Label>
+          <Textarea id={`${kind}-description`} rows={3} defaultValue="" />
+        </div>
+      )}
+    </div>
+
+    <DialogFooter>
+      <DialogClose asChild>
+        <Button type="button" variant="outline">{actionT.cancel}</Button>
+      </DialogClose>
+      <Button type="button" id={`${kind}-save-btn`}>{actionT.save}</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
+<Dialog id={`${kind}-delete-dialog`}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>{labels.delete}</DialogTitle>
+      <DialogDescription>{taxonomyT.confirmDelete}</DialogDescription>
+    </DialogHeader>
+    <input type="hidden" id={`${kind}-delete-id`} value="" />
+    <DialogFooter>
+      <DialogClose asChild>
+        <Button type="button" variant="outline">{actionT.cancel}</Button>
+      </DialogClose>
+      <Button type="button" variant="error" id={`${kind}-confirm-delete-btn`}>{labels.delete}</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
+<div
+  id={`${kind}-data`}
+  class="hidden"
+  data-kind={kind}
+  data-locale={locale}
+  data-organization-id={organizationId ?? ""}
+  data-create-label={labels.create}
+  data-edit-label={labels.edit}
+  data-t-saved={feedbackT.saved}
+  data-t-deleted={feedbackT.deleted}
+  data-t-error={feedbackT.genericError}
+></div>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { toast } from '@atoms/toast';
+
+  function setupTaxonomy(kind: 'category' | 'tag') {
+    const dataEl = document.getElementById(`${kind}-data`);
+    if (!dataEl || dataEl.dataset.bound === '1') return;
+    dataEl.dataset.bound = '1';
+
+    const locale = dataEl.dataset.locale as 'fr' | 'en' | 'es' | 'ar';
+    const organizationId = dataEl.dataset.organizationId || undefined;
+    const dialogEl = document.getElementById(`${kind}-dialog`);
+    const deleteDialogEl = document.getElementById(`${kind}-delete-dialog`);
+    const titleEl = dialogEl?.querySelector('[data-slot="dialog-title"]') as HTMLElement | null;
+    const editIdInput = document.getElementById(`${kind}-edit-id`) as HTMLInputElement | null;
+    const deleteIdInput = document.getElementById(`${kind}-delete-id`) as HTMLInputElement | null;
+    const nameInput = document.getElementById(`${kind}-name`) as HTMLInputElement | null;
+    const slugInput = document.getElementById(`${kind}-slug`) as HTMLInputElement | null;
+    const colorInput = document.getElementById(`${kind}-color`) as HTMLInputElement | null;
+    const iconInput = document.getElementById(`${kind}-icon`) as HTMLInputElement | null;
+    const sortOrderInput = document.getElementById(`${kind}-sort-order`) as HTMLInputElement | null;
+    const descriptionInput = document.getElementById(`${kind}-description`) as HTMLTextAreaElement | null;
+    const parentInput = document.getElementById(`${kind}-parent`) as HTMLSelectElement | null;
+
+    function openDialog(el: HTMLElement | null) {
+      const dialog = el?.querySelector<HTMLDialogElement>('dialog');
+      const backdrop = el?.querySelector<HTMLElement>('.starwind-dialog-backdrop');
+      if (dialog && !dialog.open) {
+        dialog.showModal();
+        dialog.dataset.state = 'open';
+        if (backdrop) { backdrop.style.display = 'block'; backdrop.dataset.state = 'open'; }
+      }
+    }
+
+    function closeDialog(el: HTMLElement | null) {
+      el?.querySelector<HTMLButtonElement>('[data-slot="dialog-close"]')?.click();
+    }
+
+    function resetForm() {
+      if (editIdInput) editIdInput.value = '';
+      if (nameInput) nameInput.value = '';
+      if (slugInput) slugInput.value = '';
+      if (colorInput) colorInput.value = '';
+      if (iconInput) iconInput.value = '';
+      if (sortOrderInput) sortOrderInput.value = '0';
+      if (descriptionInput) descriptionInput.value = '';
+      if (parentInput) parentInput.value = '';
+    }
+
+    document.getElementById(`${kind}-add-btn`)?.addEventListener('click', () => {
+      resetForm();
+      if (titleEl) titleEl.textContent = dataEl.dataset.createLabel ?? '';
+      openDialog(dialogEl);
+    });
+
+    document.querySelectorAll<HTMLElement>(`.taxonomy-edit-btn[data-id]`).forEach((button) => {
+      button.addEventListener('click', () => {
+        const row = button.closest('[data-taxonomy-item]') as HTMLElement | null;
+        if (!row) return;
+        if (titleEl) titleEl.textContent = dataEl.dataset.editLabel ?? '';
+        if (editIdInput) editIdInput.value = row.dataset.id ?? '';
+        if (nameInput) nameInput.value = row.dataset.name ?? '';
+        if (slugInput) slugInput.value = row.dataset.slug ?? '';
+        if (colorInput) colorInput.value = row.dataset.color ?? '';
+        if (iconInput) iconInput.value = row.dataset.icon ?? '';
+        if (sortOrderInput) sortOrderInput.value = row.dataset.sortOrder ?? '0';
+        if (descriptionInput) descriptionInput.value = row.dataset.description ?? '';
+        if (parentInput) parentInput.value = row.dataset.parentId ?? '';
+        openDialog(dialogEl);
+      });
+    });
+
+    document.querySelectorAll<HTMLElement>(`.taxonomy-delete-btn[data-id]`).forEach((button) => {
+      button.addEventListener('click', () => {
+        if (deleteIdInput) deleteIdInput.value = button.dataset.id ?? '';
+        openDialog(deleteDialogEl);
+      });
+    });
+
+    document.getElementById(`${kind}-save-btn`)?.addEventListener('click', async () => {
+      const id = editIdInput?.value || undefined;
+      const formPayload: Record<string, unknown> = {
+        locale,
+        organizationId,
+        name: nameInput?.value.trim(),
+        slug: slugInput?.value.trim(),
+        color: colorInput?.value.trim() || undefined,
+      };
+
+      if (kind === 'category') {
+        formPayload.description = descriptionInput?.value.trim() || undefined;
+        formPayload.icon = iconInput?.value.trim() || undefined;
+        formPayload.sortOrder = Number(sortOrderInput?.value ?? '0') || 0;
+        formPayload.parentId = parentInput?.value || undefined;
+      }
+
+      let result;
+      if (kind === 'category') {
+        result = id
+          ? await actions.updateBlogCategory(Object.assign({ id }, formPayload) as never)
+          : await actions.createBlogCategory(formPayload as never);
+      } else {
+        result = id
+          ? await actions.updateBlogTag(Object.assign({ id }, formPayload) as never)
+          : await actions.createBlogTag(formPayload as never);
+      }
+
+      if (result.error) {
+        toast.error(result.error.message ?? dataEl.dataset.tError ?? '');
+        return;
+      }
+
+      toast.success(dataEl.dataset.tSaved ?? '');
+      closeDialog(dialogEl);
+      window.location.reload();
+    });
+
+    document.getElementById(`${kind}-confirm-delete-btn`)?.addEventListener('click', async () => {
+      const id = deleteIdInput?.value;
+      if (!id) return;
+      const result = kind === 'category'
+        ? await actions.deleteBlogCategory({ id, organizationId })
+        : await actions.deleteBlogTag({ id, organizationId });
+
+      if (result.error) {
+        toast.error(result.error.message ?? dataEl.dataset.tError ?? '');
+        return;
+      }
+
+      toast.success(dataEl.dataset.tDeleted ?? '');
+      closeDialog(deleteDialogEl);
+      window.location.reload();
+    });
+  }
+
+  setupTaxonomy('category');
+  setupTaxonomy('tag');
+  document.addEventListener('astro:after-swap', () => {
+    setupTaxonomy('category');
+    setupTaxonomy('tag');
+  });
+</script>

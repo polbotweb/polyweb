@@ -1,0 +1,183 @@
+---
+import "@styles/global.css";
+import { toLocale, getCommonTranslations, getAuthTranslations, getDirection } from '@i18n/utils';
+import type { Locale } from '@i18n/config';
+import Header, { type NavLink } from "@organisms/Header/Header.astro";
+import Footer, { type FooterLink, type SocialLink } from "@organisms/Footer/Footer.astro";
+import { Toaster } from "@atoms/toast";
+import { CookieConsent } from "@organisms/CookieConsent";
+import { getSiteSettings, getSocialLinks, getActiveThemeCss } from "@database/loaders/site.loader";
+import { getConsentSettings } from "@database/loaders/consent.loader";
+import { safeJsonLd } from "@/lib/sanitize";
+import { getMenu, getMenuMeta, type NavTreeItem } from "@database/loaders/navigation.loader";
+
+interface Props {
+  title?: string;
+  description?: string;
+  alternateUrls?: Record<string, string>;
+  ogImage?: string;
+  ogType?: string;
+  jsonLd?: string;
+}
+
+const { title: titleOverride, description: descriptionOverride, alternateUrls, ogImage: ogImageOverride, ogType, jsonLd } = Astro.props;
+const locale = toLocale(Astro.currentLocale) as Locale;
+const direction = getDirection(locale);
+const t = await getCommonTranslations(locale);
+const authT = await getAuthTranslations(locale);
+
+const user = Astro.locals.user;
+const session = Astro.locals.session;
+const isImpersonating = !!session?.impersonatedBy;
+
+// ─── Load CMS data from database ────────────────────────────────────────────
+const [siteData, dbSocialLinks, headerNav, footerPrimary, footerSecondary, footerLegal, themeCss, footerPrimaryMeta, footerSecondaryMeta, footerLegalMeta, consentData] = await Promise.all([
+  getSiteSettings(locale),
+  getSocialLinks(),
+  getMenu("header", locale),
+  getMenu("footer_primary", locale),
+  getMenu("footer_secondary", locale),
+  getMenu("footer_legal", locale),
+  getActiveThemeCss(),
+  getMenuMeta("footer_primary"),
+  getMenuMeta("footer_secondary"),
+  getMenuMeta("footer_legal"),
+  getConsentSettings(locale),
+]);
+
+const siteName = siteData?.siteName ?? "";
+const metaTitle = titleOverride ?? siteData?.metaTitle ?? t.meta.title;
+const metaDesc = descriptionOverride ?? siteData?.metaDescription ?? t.meta.description;
+
+// Map DB nav tree → Header NavLink[]
+function toNavLinks(tree: NavTreeItem[]): NavLink[] {
+  return tree.map((item) => ({
+    label: item.label,
+    href: item.url ?? undefined,
+    icon: item.showIcon && item.icon ? item.icon : undefined,
+    children: item.children.length > 0 ? toNavLinks(item.children) : undefined,
+  }));
+}
+
+const links: NavLink[] = toNavLinks(headerNav);
+
+// Map DB nav items → FooterLink[]
+function toFooterLinks(tree: NavTreeItem[]): FooterLink[] {
+  return tree.map((item) => ({
+    label: item.label,
+    href: item.url ?? "#",
+    icon: item.showIcon && item.icon ? item.icon : undefined,
+  }));
+}
+
+const footerNavLinks: FooterLink[] = toFooterLinks(footerPrimary);
+const footerNavLinksSecondary: FooterLink[] = toFooterLinks(footerSecondary);
+const footerLegalLinks: FooterLink[] = toFooterLinks(footerLegal);
+
+const footerSocialLinks: SocialLink[] = dbSocialLinks.map((s) => ({
+  name: s.label ?? s.platform,
+  href: s.url,
+  icon: s.icon ?? `mdi:${s.platform}`,
+}));
+
+// Compute footer headings: showHeading=false → undefined (hides heading),
+// otherwise cascade: site_settings per-locale > menu displayLabel > i18n default
+const navPrimaryHeading = footerPrimaryMeta?.showHeading !== false
+  ? (siteData?.footerNavPrimaryHeading || footerPrimaryMeta?.displayLabel || t.footer.navPrimary)
+  : undefined;
+const navSecondaryHeading = footerSecondaryMeta?.showHeading !== false
+  ? (siteData?.footerNavSecondaryHeading || footerSecondaryMeta?.displayLabel || t.footer.navSecondary)
+  : undefined;
+const legalHeading = footerLegalMeta?.showHeading !== false
+  ? (siteData?.footerLegalHeading || footerLegalMeta?.displayLabel || t.footer.legalHeading)
+  : undefined;
+
+const canonicalUrl = Astro.url.pathname;
+---
+
+<html lang={locale} dir={direction}>
+<head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href={siteData?.favicon ?? "/favicon.svg"} />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{metaTitle}</title>
+    <meta name="description" content={metaDesc} />
+    <link rel="canonical" href={canonicalUrl} />
+    {alternateUrls && Object.entries(alternateUrls).map(([lang, url]) => (
+      <link rel="alternate" hreflang={lang} href={url} />
+    ))}
+    {alternateUrls && <link rel="alternate" hreflang="x-default" href={alternateUrls['fr'] ?? canonicalUrl} />}
+    <meta property="og:title" content={metaTitle} />
+    <meta property="og:description" content={metaDesc} />
+    <meta property="og:type" content={ogType ?? "website"} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:locale" content={locale} />
+    {siteName && <meta property="og:site_name" content={siteName} />}
+    {(ogImageOverride || siteData?.ogImage) && <meta property="og:image" content={ogImageOverride ?? siteData!.ogImage!} />}
+    <meta name="twitter:card" content={(ogImageOverride || siteData?.ogImage) ? "summary_large_image" : "summary"} />
+    <meta name="twitter:title" content={metaTitle} />
+    <meta name="twitter:description" content={metaDesc} />
+    {(ogImageOverride || siteData?.ogImage) && <meta name="twitter:image" content={ogImageOverride ?? siteData!.ogImage!} />}
+    {/* eslint-disable-next-line astro/no-set-html-directive -- jsonLd is pre-escaped via safeJsonLd() (neutralizes </script> breakout); it is structured data (JSON.stringify output), not arbitrary HTML */}
+    {jsonLd && <script type="application/ld+json" set:html={safeJsonLd(jsonLd)} />}
+    {/* eslint-disable-next-line astro/no-set-html-directive -- theme CSS is generated server-side from validated OKLCH tokens */}
+    {themeCss && <style set:html={themeCss} />}
+</head>
+
+<body class="flex min-h-screen flex-col">
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg focus:ring-2 focus:ring-ring">
+      {t.a11y.skipToContent}
+    </a>
+    {isImpersonating && (
+      <div class="bg-warning text-warning-foreground flex items-center justify-center gap-3 px-4 py-2 text-sm font-medium" id="impersonation-banner">
+        <span>{authT.admin.impersonation.banner.replace('{name}', user?.name ?? '')}</span>
+        <button
+          type="button"
+          class="rounded-md bg-warning-foreground/10 px-3 py-1 text-xs font-semibold hover:bg-warning-foreground/20 transition-colors"
+          id="stop-impersonation-btn"
+        >
+          {authT.admin.impersonation.stop}
+        </button>
+      </div>
+    )}
+    <Header
+        siteName={siteName}
+        logoLightUrl={siteData?.logoLight}
+        logoDarkUrl={siteData?.logoDark}
+        links={links}
+        ctaText={siteData?.headerCtaText || t.cta.getStarted}
+        ctaHref={siteData?.headerCtaUrl || "#get-started"}
+        secondaryText={siteData?.headerSecondaryText || undefined}
+        secondaryHref={siteData?.headerSecondaryUrl || undefined}
+        user={user}
+        authTranslations={authT}
+        locale={locale}
+    />
+    <main id="main-content" class="flex-1">
+        <slot />
+    </main>
+    <Footer
+        navLinks={footerNavLinks}
+        navLinksSecondary={footerNavLinksSecondary}
+        legalLinks={footerLegalLinks}
+        socialLinks={footerSocialLinks}
+        copyrightText={siteData?.footerCopyrightText || t.footer.copyright}
+        copyrightHref={siteData?.footerCopyrightUrl || undefined}
+        socialHeading={siteData?.footerSocialHeading || t.footer.socialHeading}
+        navPrimaryHeading={navPrimaryHeading}
+        navSecondaryHeading={navSecondaryHeading}
+        legalHeading={legalHeading}
+    />
+    <Toaster position="bottom-right" />
+    {consentData?.isActive && <CookieConsent consent={consentData} />}
+    <script>
+      import { authClient } from '@/lib/auth-client';
+      const btn = document.getElementById('stop-impersonation-btn');
+      btn?.addEventListener('click', async () => {
+        await authClient.admin.stopImpersonating();
+        location.reload();
+      });
+    </script>
+</body>
+</html>

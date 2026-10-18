@@ -1,0 +1,25 @@
+---
+export const prerender = false;
+
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { Container } from '@components/atoms/container';
+import { Button } from '@components/atoms/button';
+import { type Locale } from '@i18n/config';
+import { toLocale, getCommonTranslations } from '@i18n/utils';
+
+const url = new URL(Astro.request.url);
+const pathSegments = url.pathname.split('/').filter(Boolean);
+const locale: Locale = toLocale(pathSegments[0]);
+
+const common = await getCommonTranslations(locale);
+const t = common.errors.notFound;
+---
+
+<BaseLayout title={`404 — ${t.title}`}>
+  <Container size="sm" layout="centered" minHeight="half" gutter="md" paddingY="xl">
+    <h1 class="text-7xl font-extrabold text-muted-foreground">404</h1>
+    <h2 class="text-xl font-medium">{t.heading}</h2>
+    <p class="text-muted-foreground leading-relaxed">{t.message}</p>
+    <Button href={`/${locale}/`} variant="default">{t.back}</Button>
+  </Container>
+</BaseLayout>

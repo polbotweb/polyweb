@@ -1,0 +1,113 @@
+---
+import { requirePermission } from '@/lib/auth-guards';
+import { getDrizzle } from '@database/drizzle';
+import { pages, pageSections } from '@database/schemas';
+import { asc, eq, count } from 'drizzle-orm';
+import { getSiteSettings, getContactInfo } from '@database/loaders/site.loader';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import AuthLayout from '@organisms/AuthLayout/AuthLayout.astro';
+import AdminSidebar from '@organisms/AdminSidebar/AdminSidebar.astro';
+import AdminPagesPage from '@pages/admin/AdminPagesPage.astro';
+import AdminSectionsEditor from '@pages/admin/AdminSectionsEditor.astro';
+import AdminLegalEditor from '@pages/admin/AdminLegalEditor.astro';
+
+export const prerender = false;
+
+const result = await requirePermission(Astro, { page: ["read"] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT } = result;
+
+const db = getDrizzle();
+const editId = Astro.url.searchParams.get('edit');
+
+// ─── Edit mode: load page + sections ───
+let editPage: typeof pages.$inferSelect | null = null;
+let editSections: (typeof pageSections.$inferSelect)[] = [];
+let templateVars: Record<string, string> = {};
+if (editId) {
+  const [row] = await db.select().from(pages).where(eq(pages.id, editId)).limit(1);
+  if (row) {
+    editPage = row;
+    const [sects, siteData, contactData] = await Promise.all([
+      db.select().from(pageSections).where(eq(pageSections.pageId, editId)).orderBy(asc(pageSections.sortOrder)),
+      getSiteSettings(locale),
+      getContactInfo(),
+    ]);
+    editSections = sects;
+    templateVars = {
+      siteName: siteData?.siteName ?? '',
+      email: contactData?.email ?? '',
+      phone: contactData?.phone ?? '',
+      address: contactData?.address ?? '',
+      city: contactData?.city ?? '',
+      postalCode: contactData?.postalCode ?? '',
+      country: contactData?.country ?? '',
+    };
+  }
+}
+
+// ─── List mode: paginated pages ───
+const PER_PAGE = 20;
+const MAX_PAGE = 200;
+const MAX_OFFSET = 10_000;
+const page = Math.max(1, Math.min(Number(Astro.url.searchParams.get('page')) || 1, MAX_PAGE));
+const offset = Math.min((page - 1) * PER_PAGE, MAX_OFFSET);
+
+const [allPagesRaw, [total]] = await Promise.all([
+  db
+    .select({
+      id: pages.id,
+      locale: pages.locale,
+      title: pages.title,
+      slug: pages.slug,
+      template: pages.template,
+      metaTitle: pages.metaTitle,
+      metaDescription: pages.metaDescription,
+      ogImage: pages.ogImage,
+      isPublished: pages.isPublished,
+      publishedAt: pages.publishedAt,
+      sortOrder: pages.sortOrder,
+      lockedBy: pages.lockedBy,
+      lockedAt: pages.lockedAt,
+      createdAt: pages.createdAt,
+      updatedAt: pages.updatedAt,
+      sectionCount: count(pageSections.id),
+    })
+    .from(pages)
+    .leftJoin(pageSections, eq(pages.id, pageSections.pageId))
+    .groupBy(pages.id)
+    .orderBy(asc(pages.locale), asc(pages.sortOrder))
+    .limit(PER_PAGE)
+    .offset(offset),
+  db.select({ value: count() }).from(pages),
+]);
+const allPages = allPagesRaw;
+const totalPages = Math.max(1, Math.ceil((total?.value ?? 0) / PER_PAGE));
+
+// Clamp page to actual totalPages
+if (page > totalPages && totalPages > 0) {
+  const url = new URL(Astro.url);
+  url.searchParams.set('page', String(totalPages));
+  return Astro.redirect(url.pathname + url.search);
+}
+---
+
+<BaseLayout title={editPage ? `${authT.admin.cms.pages.editPage} — ${editPage.title}` : authT.admin.cms.pages.title} description={authT.admin.cms.pages.description}>
+  <AuthLayout title={editPage ? `${authT.admin.cms.pages.editPage} — ${editPage.title}` : authT.admin.cms.pages.title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="pages" />
+    {editPage ? (
+      editPage.template === 'legal'
+        ? <AdminLegalEditor t={authT} locale={locale} page={editPage} sections={editSections} templateVars={templateVars} />
+        : <AdminSectionsEditor t={authT} locale={locale} page={editPage} sections={editSections} />
+    ) : (
+      <AdminPagesPage
+        t={authT}
+        locale={locale}
+        pages={allPages}
+        currentPage={page}
+        totalPages={totalPages}
+        baseUrl={Astro.url}
+      />
+    )}
+  </AuthLayout>
+</BaseLayout>

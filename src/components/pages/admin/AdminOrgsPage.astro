@@ -1,0 +1,223 @@
+---
+import type { AuthTranslations, Locale } from '@i18n/config';
+import type { AppUser } from '@/lib/types';
+import type { Organization } from '@/lib/auth-data';
+import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@atoms/table';
+import { Card, CardContent } from '@atoms/card';
+import Badge from '@atoms/badge/Badge.astro';
+import Button from '@atoms/button/Button.astro';
+import { Input } from '@atoms/input';
+import { NativeSelect, NativeSelectOption } from '@atoms/native-select';
+import { safeUrl } from '@lib/sanitize';
+import { DataView } from '@molecules/DataView';
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  user: AppUser;
+  adminOrgs: Organization[];
+}
+
+const { t, locale, adminOrgs } = Astro.props;
+const ta = t.admin;
+
+function formatShortDate(d: Date | string | null) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString(locale, {
+    year: 'numeric', month: 'short', day: 'numeric',
+  });
+}
+
+function isoDate(d: Date | string | null) {
+  if (!d) return '';
+  return new Date(d).toISOString();
+}
+---
+
+<DataView>
+  <Fragment slot="toolbar-start">
+    <Input
+      type="search"
+      id="admin-org-search"
+      placeholder={ta.organizations.searchPlaceholder}
+      class="max-w-xs"
+    />
+  </Fragment>
+
+  <Fragment slot="toolbar-end">
+    <NativeSelect id="admin-org-sort" class="w-auto text-sm">
+      <NativeSelectOption value="newest">{ta.organizations.sort.newest}</NativeSelectOption>
+      <NativeSelectOption value="oldest">{ta.organizations.sort.oldest}</NativeSelectOption>
+      <NativeSelectOption value="name-asc">{ta.organizations.sort.nameAsc}</NativeSelectOption>
+      <NativeSelectOption value="name-desc">{ta.organizations.sort.nameDesc}</NativeSelectOption>
+      <NativeSelectOption value="most-members">{ta.organizations.sort.mostMembers}</NativeSelectOption>
+    </NativeSelect>
+  </Fragment>
+
+  <!-- ─── Table view ─── -->
+  <div slot="table" class="rounded-md border overflow-x-auto">
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>{ta.organizations.columns.name}</TableHead>
+          <TableHead>{ta.organizations.columns.slug}</TableHead>
+          <TableHead>{ta.organizations.columns.owner}</TableHead>
+          <TableHead>{ta.organizations.columns.members}</TableHead>
+          <TableHead>{ta.organizations.columns.created}</TableHead>
+          <TableHead class="text-right">{ta.organizations.columns.actions}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody id="admin-orgs-tbody">
+        {adminOrgs.length === 0 ? (
+          <TableRow>
+            <TableCell colspan={6} class="text-center text-muted-foreground py-8">
+              {ta.organizations.noResults}
+            </TableCell>
+          </TableRow>
+        ) : (
+          adminOrgs.map((org) => (
+            <TableRow
+              class="admin-org-row"
+              data-name={org.name.toLowerCase()}
+              data-slug={org.slug.toLowerCase()}
+              data-members={org.memberCount}
+              data-date={isoDate(org.createdAt)}
+              data-org-id={org.id}
+            >
+              <TableCell>
+                <div class="flex items-center gap-2">
+                  {org.logo && safeUrl(org.logo) && <img src={safeUrl(org.logo)!} alt={org.name} class="w-6 h-6 rounded" />}
+                  <span class="font-medium">{org.name}</span>
+                </div>
+              </TableCell>
+              <TableCell class="text-sm text-muted-foreground">/{org.slug}</TableCell>
+              <TableCell class="text-sm">{org.ownerName ?? '—'}</TableCell>
+              <TableCell>
+                <Badge variant="outline" size="sm">{org.memberCount}</Badge>
+              </TableCell>
+              <TableCell class="text-sm text-muted-foreground">
+                {formatShortDate(org.createdAt)}
+              </TableCell>
+              <TableCell class="text-right">
+                <Button size="sm" variant="error" class="admin-delete-org-btn" data-org-id={org.id}>
+                  {ta.organizations.actions.delete}
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))
+        )}
+      </TableBody>
+    </Table>
+  </div>
+
+  <!-- ─── Cards view (mobile) ─── -->
+  <div slot="cards" class="grid gap-3" id="admin-orgs-cards">
+    {adminOrgs.length === 0 ? (
+      <p class="text-center text-muted-foreground py-8">{ta.organizations.noResults}</p>
+    ) : (
+      adminOrgs.map((org) => (
+        <Card
+          class="admin-org-card"
+          data-name={org.name.toLowerCase()}
+          data-slug={org.slug.toLowerCase()}
+          data-members={org.memberCount}
+          data-date={isoDate(org.createdAt)}
+          data-org-id={org.id}
+        >
+          <CardContent class="p-4">
+            <div class="flex items-center gap-3 mb-2">
+              {org.logo && safeUrl(org.logo) && <img src={safeUrl(org.logo)!} alt={org.name} class="w-8 h-8 rounded" />}
+              <div class="flex-1 min-w-0">
+                <p class="font-medium text-sm truncate">{org.name}</p>
+                <p class="text-xs text-muted-foreground">/{org.slug}</p>
+              </div>
+              <Badge variant="outline" size="sm">{org.memberCount} {ta.organizations.columns.members.toLowerCase()}</Badge>
+            </div>
+            <div class="flex items-center justify-between text-xs text-muted-foreground mb-3">
+              <span>{ta.organizations.columns.owner}: {org.ownerName ?? '—'}</span>
+              <span>{formatShortDate(org.createdAt)}</span>
+            </div>
+            <Button size="sm" variant="error" class="admin-delete-org-btn w-full" data-org-id={org.id}>
+              {ta.organizations.actions.delete}
+            </Button>
+          </CardContent>
+        </Card>
+      ))
+    )}
+  </div>
+</DataView>
+
+<div
+  id="admin-orgs-data"
+  class="hidden"
+  data-t-deleted={ta.organizations.deleted}
+  data-t-confirm-delete={ta.organizations.confirmDelete}
+  data-t-error={t.admin.cms.common.error}
+></div>
+
+<script>
+  import { authClient } from '@/lib/auth-client';
+  import { toast } from '@atoms/toast';
+
+  function init() {
+    const d = document.getElementById('admin-orgs-data')?.dataset ?? {};
+    const rows = () => document.querySelectorAll<HTMLElement>('.admin-org-row');
+    const cards = () => document.querySelectorAll<HTMLElement>('.admin-org-card');
+    const items = () => [...rows(), ...cards()];
+
+    function getSelect(id: string): HTMLSelectElement | null {
+      const el = document.getElementById(id);
+      return el?.closest('[data-slot="native-select-wrapper"]')?.querySelector('select')
+        ?? el as HTMLSelectElement | null;
+    }
+
+    // ─── Filter & Sort ───
+    const searchInput = document.getElementById('admin-org-search') as HTMLInputElement | null;
+    const sortSelect = getSelect('admin-org-sort');
+
+    function applyFilters() {
+      const q = (searchInput?.value ?? '').toLowerCase();
+      items().forEach((el) => {
+        const name = el.dataset.name ?? '';
+        const slug = el.dataset.slug ?? '';
+        const matches = !q || name.includes(q) || slug.includes(q);
+        el.style.display = matches ? '' : 'none';
+      });
+    }
+
+    function applySort() {
+      const sortVal = sortSelect?.value ?? 'newest';
+      const sortContainer = (parent: HTMLElement | null, selector: string) => {
+        if (!parent) return;
+        const children = [...parent.querySelectorAll<HTMLElement>(selector)];
+        children.sort((a, b) => {
+          if (sortVal === 'name-asc') return (a.dataset.name ?? '').localeCompare(b.dataset.name ?? '');
+          if (sortVal === 'name-desc') return (b.dataset.name ?? '').localeCompare(a.dataset.name ?? '');
+          if (sortVal === 'oldest') return (a.dataset.date ?? '').localeCompare(b.dataset.date ?? '');
+          if (sortVal === 'most-members') return parseInt(b.dataset.members ?? '0') - parseInt(a.dataset.members ?? '0');
+          return (b.dataset.date ?? '').localeCompare(a.dataset.date ?? '');
+        });
+        children.forEach((c) => parent.appendChild(c));
+      };
+      sortContainer(document.getElementById('admin-orgs-tbody'), '.admin-org-row');
+      sortContainer(document.getElementById('admin-orgs-cards'), '.admin-org-card');
+    }
+
+    searchInput?.addEventListener('input', applyFilters);
+    sortSelect?.addEventListener('change', () => { applySort(); applyFilters(); });
+
+    // ─── Delete ───
+    document.querySelectorAll<HTMLElement>('.admin-delete-org-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const orgId = btn.dataset.orgId;
+        if (!orgId || !confirm(d.tConfirmDelete ?? '')) return;
+        const { error } = await authClient.organization.delete({ organizationId: orgId });
+        if (!error) { toast.success(d.tDeleted ?? ''); location.reload(); }
+        else toast.error(error.message ?? d.tError ?? '');
+      });
+    });
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

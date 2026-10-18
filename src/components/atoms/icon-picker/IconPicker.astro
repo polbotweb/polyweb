@@ -1,0 +1,257 @@
+---
+interface Props {
+  id: string;
+  name?: string;
+  value?: string | null;
+  placeholder?: string;
+  searchPlaceholder?: string;
+  clearLabel?: string;
+  class?: string;
+}
+
+const {
+  id,
+  name,
+  value = null,
+  placeholder = 'Select icon',
+  searchPlaceholder = 'Search…',
+  clearLabel = 'Clear',
+  class: className,
+} = Astro.props;
+
+const iconName = value?.replace(/^mdi:/, '') ?? '';
+---
+
+<div
+  class:list={['icon-picker relative', className]}
+  data-picker-id={id}
+  data-placeholder={placeholder}
+>
+  <input type="hidden" name={name} id={`${id}-value`} value={value ?? ''} />
+
+  <button
+    type="button"
+    id={`${id}-trigger`}
+    class="inline-flex w-full items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm hover:bg-muted transition-colors cursor-pointer"
+    aria-haspopup="dialog"
+    aria-expanded="false"
+  >
+    <span
+      id={`${id}-preview`}
+      class="inline-flex size-5 items-center justify-center shrink-0"
+    ></span>
+    <span
+      id={`${id}-label`}
+      class:list={['flex-1 text-left truncate', { 'text-muted-foreground': !iconName }]}
+    >
+      {iconName || placeholder}
+    </span>
+  </button>
+
+  <div
+    id={`${id}-dropdown`}
+    class="absolute left-0 z-50 mt-1 hidden w-80 rounded-lg border bg-popover p-3 shadow-lg"
+    role="dialog"
+    aria-label="Icon picker"
+  >
+    <input
+      type="text"
+      id={`${id}-search`}
+      placeholder={searchPlaceholder}
+      class="mb-2 w-full rounded-md border bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+      autocomplete="off"
+    />
+    <div
+      id={`${id}-grid`}
+      class="grid grid-cols-8 gap-1 max-h-56 overflow-y-auto"
+    ></div>
+    <div
+      class="mt-2 flex items-center justify-between text-xs text-muted-foreground"
+    >
+      <span id={`${id}-count`}></span>
+      <button
+        type="button"
+        id={`${id}-clear`}
+        class="hover:text-foreground hover:underline text-xs"
+      >
+        {clearLabel}
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SVG_ALLOWED_TAGS = new Set([
+    'svg', 'path', 'circle', 'rect', 'line', 'polyline', 'polygon',
+    'g', 'defs', 'use', 'ellipse', 'text', 'tspan', 'clippath', 'mask',
+  ]);
+
+  function sanitizeSvg(raw: string): string {
+    const doc = new DOMParser().parseFromString(raw, 'image/svg+xml');
+    const svg = doc.querySelector('svg');
+    if (!svg) return '';
+    stripUnsafe(svg);
+    return svg.outerHTML;
+  }
+
+  function stripUnsafe(el: Element) {
+    for (const child of Array.from(el.children)) {
+      if (!SVG_ALLOWED_TAGS.has(child.tagName.toLowerCase())) {
+        child.remove();
+      } else {
+        for (const attr of Array.from(child.attributes)) {
+          if (attr.name.startsWith('on')) child.removeAttribute(attr.name);
+        }
+        stripUnsafe(child);
+      }
+    }
+  }
+
+  function initIconPickers() {
+    document.querySelectorAll<HTMLElement>('.icon-picker').forEach((picker) => {
+      const id = picker.dataset.pickerId;
+      if (!id || picker.dataset.init) return;
+      picker.dataset.init = '1';
+
+      const trigger = document.getElementById(
+        `${id}-trigger`,
+      ) as HTMLButtonElement;
+      const dropdown = document.getElementById(`${id}-dropdown`)!;
+      const search = document.getElementById(
+        `${id}-search`,
+      ) as HTMLInputElement;
+      const grid = document.getElementById(`${id}-grid`)!;
+      const countEl = document.getElementById(`${id}-count`)!;
+      const hidden = document.getElementById(
+        `${id}-value`,
+      ) as HTMLInputElement;
+      const preview = document.getElementById(`${id}-preview`)!;
+      const label = document.getElementById(`${id}-label`)!;
+      const clearBtn = document.getElementById(`${id}-clear`)!;
+      const placeholder = picker.dataset.placeholder || 'Select icon';
+
+      let timer: ReturnType<typeof setTimeout>;
+      let isOpen = false;
+
+      async function fetchIconSvg(name: string): Promise<string> {
+        const res = await fetch(`https://api.iconify.design/mdi/${encodeURIComponent(name)}.svg?height=20`);
+        const raw = await res.text();
+        return sanitizeSvg(raw);
+      }
+
+      function open() {
+        dropdown.classList.remove('hidden');
+        trigger.setAttribute('aria-expanded', 'true');
+        isOpen = true;
+        search.focus();
+        if (!grid.children.length) fetchIcons('');
+      }
+
+      function close() {
+        dropdown.classList.add('hidden');
+        trigger.setAttribute('aria-expanded', 'false');
+        isOpen = false;
+      }
+
+      trigger.addEventListener('click', (e) => {
+        e.preventDefault();
+        isOpen ? close() : open();
+      });
+
+      document.addEventListener('click', (e) => {
+        if (isOpen && !picker.contains(e.target as Node)) close();
+      });
+
+      picker.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && isOpen) {
+          close();
+          trigger.focus();
+        }
+      });
+
+      async function fetchIcons(q: string) {
+        try {
+          const res = await fetch(
+            `https://api.iconify.design/search?prefix=mdi&query=${encodeURIComponent(q)}&limit=60`,
+          );
+          const data = await res.json();
+          const names: string[] = (data.icons ?? []).map((n: string) => n.replace(/^mdi:/, ''));
+
+          const results = await Promise.all(
+            names.map(async (name) => {
+              const svg = await fetchIconSvg(name);
+              return { name, svg };
+            }),
+          );
+
+          renderGrid(results, data.total ?? results.length);
+        } catch {
+          grid.textContent = '';
+          const errorP = document.createElement('p');
+          errorP.className = 'col-span-8 text-xs text-muted-foreground py-4 text-center';
+          errorP.textContent = 'Error';
+          grid.appendChild(errorP);
+        }
+      }
+
+      function renderGrid(
+        results: { name: string; svg: string }[],
+        total: number,
+      ) {
+        grid.innerHTML = '';
+        for (const icon of results) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className =
+            'flex items-center justify-center rounded p-1.5 hover:bg-muted transition-colors cursor-pointer';
+          btn.title = `mdi:${icon.name}`;
+          btn.innerHTML = icon.svg;
+          btn.addEventListener('click', () =>
+            selectIcon(icon.name, icon.svg),
+          );
+          grid.appendChild(btn);
+        }
+        const shown = results.length;
+        countEl.textContent =
+          total > shown ? `${shown} / ${total}` : `${total}`;
+      }
+
+      function selectIcon(name: string, svg: string) {
+        hidden.value = `mdi:${name}`;
+        preview.innerHTML = svg;
+        label.textContent = name;
+        label.classList.remove('text-muted-foreground');
+        close();
+        hidden.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      clearBtn.addEventListener('click', () => {
+        hidden.value = '';
+        preview.innerHTML = '';
+        label.textContent = placeholder;
+        label.classList.add('text-muted-foreground');
+        hidden.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+
+      search.addEventListener('input', () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => fetchIcons(search.value), 250);
+      });
+
+      // Load initial icon preview
+      const initial = hidden.value?.replace(/^mdi:/, '');
+      if (initial) {
+        fetchIconSvg(initial)
+          .then((svg) => {
+            preview.innerHTML = svg;
+            label.textContent = initial;
+            label.classList.remove('text-muted-foreground');
+          })
+          .catch(() => {});
+      }
+    });
+  }
+
+  initIconPickers();
+  document.addEventListener('astro:after-swap', initIconPickers);
+</script>

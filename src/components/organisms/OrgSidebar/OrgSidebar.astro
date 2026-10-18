@@ -1,0 +1,39 @@
+---
+import type { AuthTranslations, Locale } from '@i18n/config';
+import { getAuthUrl, getOrgUrl } from '@i18n/utils';
+import { getModuleLabel } from '@/core/localization/module-labels';
+import type { FullOrganization } from '@/lib/auth-data';
+import type { OrgSubpage } from '@i18n/utils';
+import ArrowLeftIcon from '@tabler/icons/outline/arrow-left.svg';
+import FileTextIcon from '@tabler/icons/outline/file-text.svg';
+import PhotoIcon from '@tabler/icons/outline/photo.svg';
+import UsersIcon from '@tabler/icons/outline/users.svg';
+import ShieldIcon from '@tabler/icons/outline/shield.svg';
+import SettingsIcon from '@tabler/icons/outline/settings.svg';
+import BriefcaseIcon from '@tabler/icons/outline/briefcase.svg';
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail, SidebarSeparator } from '@atoms/sidebar';
+import { Avatar, AvatarImage, AvatarFallback } from '@atoms/avatar';
+import { safeUrl } from '@lib/sanitize';
+
+interface Props { t: AuthTranslations; locale: Locale; org: FullOrganization; activeItem?: OrgSubpage; orgRole?: string | null; }
+const { t, locale, org, activeItem, orgRole } = Astro.props;
+const dashboardUrl = getAuthUrl(locale, 'dashboard', t);
+const canManage = orgRole === 'admin' || orgRole === 'owner';
+const navItems: { id: OrgSubpage; title: string; url: string; icon: typeof UsersIcon; show: boolean }[] = [
+  { id: 'members', title: t.organizations.members.title, url: getOrgUrl(locale, org.slug, 'members'), icon: UsersIcon, show: true },
+  { id: 'roles', title: t.organizations.roles.title, url: getOrgUrl(locale, org.slug, 'roles'), icon: ShieldIcon, show: canManage },
+  { id: 'blog', title: t.organizations.blog.title, url: getOrgUrl(locale, org.slug, 'blog'), icon: FileTextIcon, show: canManage },
+  { id: 'services', title: getModuleLabel('services', locale), url: getOrgUrl(locale, org.slug, 'services'), icon: BriefcaseIcon, show: canManage },
+  { id: 'media', title: t.organizations.media.title, url: getOrgUrl(locale, org.slug, 'media'), icon: PhotoIcon, show: canManage },
+  { id: 'settings', title: t.organizations.settings.title, url: getOrgUrl(locale, org.slug, 'settings'), icon: SettingsIcon, show: canManage },
+];
+---
+<Sidebar collapsible="icon">
+  <SidebarHeader><SidebarMenu><SidebarMenuItem><SidebarMenuButton size="lg" href={getOrgUrl(locale, org.slug, 'members')}><Avatar class="size-10 shrink-0 rounded-lg">{org.logo && safeUrl(org.logo) && <AvatarImage src={safeUrl(org.logo)!} alt={org.name} />}<AvatarFallback class="rounded-lg">{org.name.charAt(0).toUpperCase()}</AvatarFallback></Avatar><div class="grid flex-1 text-left text-sm leading-tight"><span class="truncate font-semibold">{org.name}</span><span class="text-sidebar-foreground/70 truncate text-xs">/{org.slug}</span></div></SidebarMenuButton></SidebarMenuItem></SidebarMenu></SidebarHeader>
+  <SidebarSeparator />
+  <SidebarContent>
+    <SidebarGroup><SidebarGroupContent><SidebarMenu><SidebarMenuItem><SidebarMenuButton href={dashboardUrl} tooltip={t.userMenu.dashboard}><ArrowLeftIcon class="size-4" /><span>{t.userMenu.dashboard}</span></SidebarMenuButton></SidebarMenuItem></SidebarMenu></SidebarGroupContent></SidebarGroup>
+    <SidebarGroup><SidebarGroupLabel>{t.userMenu.organizations}</SidebarGroupLabel><SidebarGroupContent><SidebarMenu>{navItems.filter(item => item.show).map((item) => <SidebarMenuItem><SidebarMenuButton href={item.url} isActive={activeItem === item.id} tooltip={item.title}><item.icon class="size-4" /><span>{item.title}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu></SidebarGroupContent></SidebarGroup>
+  </SidebarContent>
+  <SidebarRail />
+</Sidebar>

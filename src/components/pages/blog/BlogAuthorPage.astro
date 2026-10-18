@@ -1,0 +1,241 @@
+---
+import { Icon } from "astro-icon/components";
+import type { Locale, BlogTranslations } from "@i18n/config";
+import type { BlogPaginationMeta, BlogPostListItem } from "@lib/blog/types";
+import { Badge } from "@atoms/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@atoms/avatar";
+import Button from "@atoms/button/Button.astro";
+import { Input } from "@atoms/input";
+import PostGrid from "@/components/blog/grids/PostGrid.astro";
+import PostGridToggle from "@/components/blog/PostGridToggle.astro";
+import CategorySidebar from "@/components/blog/sidebars/CategorySidebar.astro";
+import TagSidebar from "@/components/blog/sidebars/TagSidebar.astro";
+import NewsletterSidebar from "@/components/blog/sidebars/NewsletterSidebar.astro";
+
+interface SidebarCategory {
+  id: string;
+  slug: string;
+  name: string;
+  postCount: number;
+  color?: string | null;
+  icon?: string | null;
+}
+
+interface SidebarTag {
+  id: string;
+  slug: string;
+  name: string;
+  postCount: number;
+  color?: string | null;
+}
+
+interface Props {
+  locale: Locale;
+  blogT: BlogTranslations;
+  author: {
+    id: string;
+    name: string;
+    image: string | null;
+    bio: string | null;
+    website: string | null;
+    twitter: string | null;
+    linkedin: string | null;
+  };
+  posts: BlogPostListItem[];
+  meta: BlogPaginationMeta;
+  categories: SidebarCategory[];
+  tags: SidebarTag[];
+  baseUrl: string;
+  searchQuery?: string;
+  organizationName?: string;
+  showNewsletter?: boolean;
+}
+
+const {
+  locale,
+  blogT,
+  author,
+  posts,
+  meta,
+  categories,
+  tags,
+  baseUrl,
+  searchQuery,
+  organizationName,
+  showNewsletter = true,
+} = Astro.props;
+
+const hasFilters = Boolean(searchQuery);
+const hasSidebar = categories.length > 0 || tags.length > 0;
+
+const authorInitials = author.name
+  .split(" ")
+  .map((w) => w[0])
+  .join("")
+  .toUpperCase()
+  .slice(0, 2);
+
+const currentView = (Astro.cookies.get("blog-view")?.value ?? "grid") as "grid" | "horizontal";
+---
+
+<section class="mx-auto w-full max-w-7xl">
+  {/* ── Header ──────────────────────────────────────────────────────── */}
+  <header class="relative overflow-hidden border-b bg-linear-to-b from-muted/60 to-background px-4 py-12 md:px-6 md:py-16">
+    {organizationName && (
+      <div class="mb-4 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+        <a href={baseUrl} class="hover:text-foreground transition-colors">{blogT.meta.title}</a>
+        <Icon name="mdi:chevron-right" class="size-3.5" />
+        <span class="font-medium text-foreground">{organizationName}</span>
+      </div>
+    )}
+
+    <div class="flex flex-col items-center gap-5 text-center sm:flex-row sm:items-start sm:text-left">
+      <Avatar size="lg" variant="primary" class="size-20 shrink-0 text-2xl">
+        {author.image && <AvatarImage src={author.image} alt={author.name} />}
+        <AvatarFallback>{authorInitials}</AvatarFallback>
+      </Avatar>
+
+      <div class="min-w-0 flex-1">
+        <Badge variant="ghost" size="sm" class="mb-2">
+          <Icon name="mdi:account-outline" class="size-3" />
+          {blogT.labels.byAuthor}
+        </Badge>
+
+        <h1 class="font-heading text-3xl font-extrabold tracking-tight md:text-4xl">
+          {author.name}
+        </h1>
+
+        {author.bio && (
+          <p class="mt-2 max-w-2xl text-base leading-relaxed text-muted-foreground">
+            {author.bio}
+          </p>
+        )}
+
+        <div class="mt-4 flex flex-wrap items-center justify-center gap-4 sm:justify-start">
+          {meta.total > 0 && (
+            <span class="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Icon name="mdi:file-document-multiple-outline" class="size-4 shrink-0" />
+              <strong class="font-semibold text-foreground">{meta.total}</strong>{" "}
+              {meta.total === 1 ? "article" : "articles"}
+            </span>
+          )}
+          {author.website && (
+            <a href={author.website} target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground transition-colors" aria-label="Site web">
+              <Icon name="mdi:web" class="size-5" />
+            </a>
+          )}
+          {author.twitter && (
+            <a href={`https://twitter.com/${author.twitter}`} target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground transition-colors" aria-label="Twitter">
+              <Icon name="mdi:twitter" class="size-5" />
+            </a>
+          )}
+          {author.linkedin && (
+            <a href={`https://linkedin.com/in/${author.linkedin}`} target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground transition-colors" aria-label="LinkedIn">
+              <Icon name="mdi:linkedin" class="size-5" />
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* Search */}
+      <form
+        method="get"
+        action={Astro.url.pathname}
+        class="flex w-full shrink-0 items-center gap-2 sm:w-64"
+      >
+        <div class="relative flex-1">
+          <Icon
+            name="mdi:magnify"
+            class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
+          />
+          <Input
+            type="search"
+            name="q"
+            placeholder={blogT.labels.search}
+            value={searchQuery ?? ""}
+            class="pl-9 bg-background/80 backdrop-blur"
+          />
+        </div>
+        {hasFilters && (
+          <Button href={baseUrl} variant="outline" size="sm" aria-label={blogT.labels.reset}>
+            <Icon name="mdi:close" class="size-4" />
+          </Button>
+        )}
+      </form>
+    </div>
+  </header>
+
+  {/* ── Main content ────────────────────────────────────────────────── */}
+  <div class="grid gap-10 px-4 py-8 md:px-6 md:py-10 lg:grid-cols-[minmax(0,1fr)_20rem]">
+    {/* Posts column */}
+    <div class="min-w-0">
+      <div class="mb-6 flex items-center justify-between gap-3">
+        <p class="text-sm text-muted-foreground">
+          {blogT.labels.authorArticles}
+          {meta.total > 0 && <span class="ml-1.5 tabular-nums">({meta.total})</span>}
+        </p>
+        <PostGridToggle blogT={blogT} />
+      </div>
+
+      <PostGrid
+        locale={locale}
+        blogT={blogT}
+        posts={posts}
+        baseUrl={baseUrl}
+        variant={currentView}
+        columns={3}
+        showCategory={true}
+        showAuthor={false}
+        showDate={true}
+        showExcerpt={true}
+        showViews={true}
+        showComments={true}
+        showRating={true}
+      />
+
+      {/* Pagination */}
+      {meta.totalPages > 1 && (
+        <div class="mt-10 flex items-center justify-center gap-2">
+          {meta.hasPrevPage && (
+            <Button href={`?page=${meta.page - 1}`} variant="outline" size="sm">
+              <Icon name="mdi:chevron-left" class="size-4" />
+              {blogT.labels.previous}
+            </Button>
+          )}
+          <span class="text-sm text-muted-foreground">
+            {blogT.labels.page} {meta.page} {blogT.labels.of} {meta.totalPages}
+          </span>
+          {meta.hasNextPage && (
+            <Button href={`?page=${meta.page + 1}`} variant="outline" size="sm">
+              {blogT.labels.next}
+              <Icon name="mdi:chevron-right" class="size-4" />
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+
+    {/* Sidebar */}
+    {hasSidebar && (
+      <aside class="flex flex-col gap-6 lg:sticky lg:top-6 lg:self-start">
+        <CategorySidebar
+          locale={locale}
+          blogT={blogT}
+          categories={categories}
+          baseUrl={baseUrl}
+        />
+
+        <TagSidebar
+          locale={locale}
+          blogT={blogT}
+          tags={tags}
+          baseUrl={baseUrl}
+        />
+
+        {showNewsletter && (
+          <NewsletterSidebar locale={locale} blogT={blogT} />
+        )}
+      </aside>
+    )}
+  </div>
+</section>

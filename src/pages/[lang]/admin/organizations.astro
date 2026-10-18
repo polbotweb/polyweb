@@ -1,0 +1,23 @@
+---
+import { requirePermission } from '@/lib/auth-guards';
+import { fetchAdminOrgs } from '@/lib/auth-data';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import AuthLayout from '@organisms/AuthLayout/AuthLayout.astro';
+import AdminSidebar from '@organisms/AdminSidebar/AdminSidebar.astro';
+import AdminOrgsPage from '@pages/admin/AdminOrgsPage.astro';
+
+export const prerender = false;
+
+const result = await requirePermission(Astro, { user: ["list"] });
+if ('redirect' in result) return result.redirect;
+const { user, locale, authT } = result;
+
+const adminOrgs = await fetchAdminOrgs(Astro.request.headers);
+---
+
+<BaseLayout title={authT.meta.admin.title} description={authT.meta.admin.description}>
+  <AuthLayout title={authT.admin.tabs.organizations}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="organizations" />
+    <AdminOrgsPage t={authT} locale={locale} user={user} adminOrgs={adminOrgs} />
+  </AuthLayout>
+</BaseLayout>

@@ -1,0 +1,340 @@
+---
+import { Icon } from "astro-icon/components";
+import IconChevronDown from "@tabler/icons/outline/chevron-down.svg";
+import IconMenu from "@tabler/icons/outline/menu-deep.svg";
+import IconX from "@tabler/icons/outline/x.svg";
+import type { HTMLAttributes } from "astro/types";
+import { tv } from "tailwind-variants";
+
+import { Button } from "@atoms/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@atoms/collapsible";
+import {
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  DropdownTrigger,
+} from "@atoms/dropdown";
+import { Separator } from "@atoms/separator";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@atoms/sheet";
+
+import Brand from "@organisms/Header/Brand.astro";
+import AuthUser from "@organisms/Header/AuthUser.astro";
+import ThemeSwitcher from "./ThemeSwitcher.astro";
+import LanguageSwitcher from "./LanguageSwitcher.astro";
+
+import type { AuthTranslations, Locale } from '@i18n/config';
+
+export interface NavLink {
+  label: string;
+  href?: string;
+  icon?: string | null;
+  children?: NavLink[];
+}
+
+interface Props extends HTMLAttributes<"nav"> {
+  siteName?: string;
+  logoLightUrl?: string | null;
+  logoDarkUrl?: string | null;
+  links?: NavLink[];
+  ctaText?: string;
+  ctaHref?: string;
+  secondaryText?: string;
+  secondaryHref?: string;
+  user?: App.Locals['user'];
+  authTranslations?: AuthTranslations;
+  locale?: Locale;
+}
+
+const navStyles = tv({
+  base: "data-scrolled:bg-background/40 sticky @container inset-x-0 top-0 z-50 border-transparent transition-all duration-300 border-b data-scrolled:border-border data-scrolled:backdrop-blur",
+});
+
+const {
+  siteName = "",
+  logoLightUrl,
+  logoDarkUrl,
+  links = [],
+  ctaText = "Get Started",
+  ctaHref = "#",
+  secondaryText,
+  secondaryHref = "#",
+  user,
+  authTranslations,
+  locale,
+  class: className,
+  ...rest
+} = Astro.props;
+---
+
+<nav class={navStyles({ class: className })} data-navbar-2 {...rest}>
+  <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
+    <div class="flex shrink-0 items-center">
+      <slot name="logo">
+        <Brand siteName={siteName} logoLightUrl={logoLightUrl} logoDarkUrl={logoDarkUrl} />
+      </slot>
+
+      <div class="ml-6 hidden items-center gap-1 @2xl:flex">
+        {
+          links.map((link) => {
+            if (link.children && link.children.length > 0) {
+              return (
+                <Dropdown>
+                  <DropdownTrigger class="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 rounded-md px-3 py-2 transition-colors">
+                      {link.icon && <Icon name={link.icon} class="size-4 shrink-0" />}
+                      {link.label}
+                      <IconChevronDown class="size-4" />
+                  </DropdownTrigger>
+                  <DropdownContent align="start">
+                    {link.children.map((child) => (
+                      <DropdownItem as="a" href={child.href}>
+                        {child.icon && <Icon name={child.icon} class="size-4 shrink-0" />}
+                        {child.label}
+                      </DropdownItem>
+                    ))}
+                  </DropdownContent>
+                </Dropdown>
+              );
+            }
+
+            return (
+              <a
+                href={link.href}
+                class="text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-md px-3 py-2 transition-colors"
+              >
+                {link.icon && <Icon name={link.icon} class="size-4 shrink-0" />}
+                {link.label}
+              </a>
+            );
+          })
+        }
+      </div>
+    </div>
+
+    <div class="hidden items-center gap-2 @2xl:flex">
+      {authTranslations && locale ? (
+        <AuthUser user={user ?? null} authTranslations={authTranslations} locale={locale} />
+      ) : (
+        <>
+          {secondaryText && (
+            <Button variant="outline" href={secondaryHref}>
+              {secondaryText}
+            </Button>
+          )}
+          <Button href={ctaHref}>{ctaText}</Button>
+        </>
+      )}
+      <LanguageSwitcher />
+      <ThemeSwitcher />
+    </div>
+
+    <div class="flex items-center gap-1 @2xl:hidden">
+      <LanguageSwitcher />
+      <ThemeSwitcher />
+      {links.length > 0 && (
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" class="[&_svg]:size-8" aria-label="Open menu">
+            <IconMenu />
+          </Button>
+        </SheetTrigger>
+        <SheetContent
+          id="navbar-2-sheet-content"
+          side="right"
+          class="max-w-70 sm:max-w-75"
+        >
+          <SheetHeader>
+            <SheetTitle class="pr-12">
+              <slot name="logo">
+                <Brand siteName={siteName} logoLightUrl={logoLightUrl} logoDarkUrl={logoDarkUrl} />
+              </slot>
+            </SheetTitle>
+            <Separator class="mt-2" />
+          </SheetHeader>
+
+          <div class="-mt-5 flex flex-col px-4" data-nav-links>
+            {
+              links.map((link, index) => {
+                if (link.children && link.children.length > 0) {
+                  return (
+                    <Collapsible
+                      class="group w-full opacity-0"
+                      style={`--link-index: ${index}`}
+                      data-nav-link
+                    >
+                      <CollapsibleTrigger asChild>
+                        <button
+                          type="button"
+                          class="text-muted-foreground hover:text-foreground -mx-3 flex w-full items-center justify-between rounded-md px-3 py-2 text-xl transition-colors"
+                        >
+                          <span class="flex items-center gap-2">
+                            {link.icon && <Icon name={link.icon} class="size-5 shrink-0" />}
+                            {link.label}
+                          </span>
+                          <IconChevronDown class="size-5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                        </button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent class="flex flex-col pl-4">
+                        {link.children.map((child) => (
+                          <SheetClose asChild>
+                            <a
+                              href={child.href}
+                              class="text-muted-foreground hover:text-foreground flex w-full items-center gap-2 rounded-md py-2 text-lg transition-colors"
+                            >
+                              {child.icon && <Icon name={child.icon} class="size-4 shrink-0" />}
+                              {child.label}
+                            </a>
+                          </SheetClose>
+                        ))}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  );
+                }
+
+                return (
+                  <SheetClose asChild>
+                    <a
+                      href={link.href}
+                      class="text-muted-foreground hover:text-foreground -mx-3 flex items-center gap-2 rounded-md px-3 py-2 text-xl opacity-0 transition-colors"
+                      style={`--link-index: ${index}`}
+                      data-nav-link
+                    >
+                      {link.icon && <Icon name={link.icon} class="size-5 shrink-0" />}
+                      {link.label}
+                    </a>
+                  </SheetClose>
+                );
+              })
+            }
+          </div>
+          <SheetFooter class="flex-col gap-2">
+            {authTranslations && locale ? (
+              <AuthUser user={user ?? null} authTranslations={authTranslations} locale={locale} />
+            ) : (
+              <>
+                {secondaryText && (
+                  <SheetClose asChild>
+                    <Button variant="outline" href={secondaryHref} class="w-full">
+                      {secondaryText}
+                    </Button>
+                  </SheetClose>
+                )}
+                <SheetClose asChild>
+                  <Button href={ctaHref} class="w-full">{ctaText}</Button>
+                </SheetClose>
+              </>
+            )}
+          </SheetFooter>
+          <IconX class="size-7" slot="icon" />
+        </SheetContent>
+      </Sheet>
+      )}
+    </div>
+  </div>
+</nav>
+
+<style>
+  [data-nav-link].animate-in {
+    animation: slide-in 0.3s ease-out forwards;
+    animation-delay: calc(var(--link-index) * 75ms);
+  }
+
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(-1rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+</style>
+
+<script>
+  let observer: MutationObserver | null = null;
+  let scrollController: AbortController | null = null;
+
+  function initNavbar2() {
+    observer?.disconnect();
+    observer = null;
+
+    // Watch for sheet open state changes
+    observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === "attributes" && mutation.attributeName === "data-state") {
+          const target = mutation.target as HTMLElement;
+          const isOpen = target.getAttribute("data-state") === "open";
+          const navLinks = target.querySelectorAll("[data-nav-link]");
+
+          if (isOpen) {
+            // Wait for sheet animation to complete (500ms), then animate links
+            setTimeout(() => {
+              navLinks.forEach((link) => {
+                link.classList.add("animate-in");
+              });
+            }, 425);
+          } else {
+            // Reset animation state when sheet closes
+            navLinks.forEach((link) => {
+              link.classList.remove("animate-in");
+            });
+          }
+        }
+      });
+    });
+
+    // Observe the specific sheet content element
+    const sheetContent = document.getElementById("navbar-2-sheet-content");
+    if (sheetContent) {
+      observer.observe(sheetContent, { attributes: true });
+    }
+  }
+
+  initNavbar2();
+  document.addEventListener("astro:after-swap", initNavbar2);
+
+  // Handle scroll-based navbar styling
+  function initNavbarScroll() {
+    scrollController?.abort();
+    scrollController = new AbortController();
+
+    const navbar = document.querySelector("[data-navbar-2]");
+    if (!navbar) return;
+
+    // Find the scrollable parent container
+    const scrollContainer = navbar.closest(".overflow-y-auto, .overflow-y-scroll") || window;
+
+    const updateNavbarStyle = () => {
+      const scrollTop =
+        scrollContainer === window ? window.scrollY : (scrollContainer as HTMLElement).scrollTop;
+
+      if (scrollTop > 10) {
+        navbar.setAttribute("data-scrolled", "");
+      } else {
+        navbar.removeAttribute("data-scrolled");
+      }
+    };
+
+    // Initial check
+    updateNavbarStyle();
+
+    // Listen for scroll events
+    scrollContainer.addEventListener("scroll", updateNavbarStyle, { passive: true, signal: scrollController.signal });
+  }
+
+  initNavbarScroll();
+  document.addEventListener("astro:after-swap", initNavbarScroll);
+  document.addEventListener("astro:before-swap", () => { observer?.disconnect(); observer = null; scrollController?.abort(); scrollController = null; });
+</script>

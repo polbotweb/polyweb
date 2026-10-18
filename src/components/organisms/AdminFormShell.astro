@@ -1,0 +1,81 @@
+---
+interface Props {
+  title?: string;
+  description?: string;
+  formSelector?: string;
+}
+
+const {
+  title,
+  description,
+  formSelector = "form[data-admin-form], form#blog-post-form",
+} = Astro.props;
+---
+<section class="space-y-6" data-admin-form-shell data-form-selector={formSelector}>
+  {(title || description) && (
+    <header>
+      {title ? <h1 class="font-heading text-2xl font-semibold">{title}</h1> : null}
+      {description ? <p class="mt-1 text-sm text-muted-foreground">{description}</p> : null}
+    </header>
+  )}
+  <slot />
+</section>
+
+<script>
+  const dirtyForms = new WeakMap<HTMLFormElement, { dirty: boolean; submitted: boolean }>();
+  const trackedForms = new Set<HTMLFormElement>();
+  let beforeUnloadBound = false;
+
+  function bindAdminForm(form: HTMLFormElement) {
+    if (dirtyForms.has(form)) return;
+    dirtyForms.set(form, { dirty: false, submitted: false });
+    trackedForms.add(form);
+
+    const markDirty = () => {
+      const state = dirtyForms.get(form);
+      if (state && !state.submitted) state.dirty = true;
+    };
+
+    form.addEventListener("input", markDirty);
+    form.addEventListener("change", markDirty);
+    form.addEventListener("submit", () => {
+      const state = dirtyForms.get(form);
+      if (state) {
+        state.submitted = true;
+        state.dirty = false;
+      }
+    });
+    form.addEventListener("reset", () => {
+      const state = dirtyForms.get(form);
+      if (state) state.dirty = false;
+    });
+  }
+
+  function initAdminFormShell() {
+    for (const form of trackedForms) {
+      if (!form.isConnected) trackedForms.delete(form);
+    }
+
+    document.querySelectorAll<HTMLElement>("[data-admin-form-shell]").forEach((shell) => {
+      const selector = shell.dataset.formSelector ?? "form[data-admin-form]";
+      shell.querySelectorAll<HTMLFormElement>(selector).forEach(bindAdminForm);
+    });
+
+    if (!beforeUnloadBound) {
+      beforeUnloadBound = true;
+      window.addEventListener("beforeunload", (event) => {
+        for (const form of trackedForms) {
+          const state = dirtyForms.get(form);
+          if (state?.dirty && !state.submitted && form.isConnected) {
+            event.preventDefault();
+            event.returnValue = "";
+            return;
+          }
+        }
+      });
+    }
+  }
+
+  initAdminFormShell();
+  document.addEventListener("astro:after-swap", initAdminFormShell);
+</script>

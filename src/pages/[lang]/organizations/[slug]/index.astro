@@ -1,0 +1,13 @@
+---
+import { requireAuth } from '@/lib/auth-guards';
+
+export const prerender = false;
+
+const result = await requireAuth(Astro);
+if ('redirect' in result) return result.redirect;
+
+const slug = Astro.params.slug;
+if (!slug) return Astro.redirect(`/${result.locale}/auth/${(result.authT).routes['dashboard']}`);
+
+return Astro.redirect(`/${result.locale}/organizations/${slug}/members`);
+---

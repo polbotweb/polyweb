@@ -1,0 +1,528 @@
+---
+/**
+ * AdminRolesPage — Tabs layout: CRUD custom roles + reference permission matrices.
+ *
+ * Tab 1: Custom org roles — CRUD with Dialog for create/edit (primary action).
+ * Tab 2: Global roles matrix — read-only CMS permissions (admin/editor/user).
+ * Tab 3: Org roles matrix — read-only CMS permissions (owner/admin/member).
+ *
+ * Pattern: Tabs + Dialog (same as AdminPage.astro), init() + astro:after-swap.
+ */
+import type { AuthTranslations, Locale } from '@i18n/config';
+import type { AppUser } from '@/lib/types';
+import type { Organization } from '@/lib/auth-data';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@atoms/tabs';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@atoms/card';
+import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@atoms/table';
+import Badge from '@atoms/badge/Badge.astro';
+import Button from '@atoms/button/Button.astro';
+import { Input } from '@atoms/input';
+import { NativeSelect, NativeSelectOption } from '@atoms/native-select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@atoms/dialog';
+import {
+  statement,
+  adminRole,
+  editorRole,
+  userRole,
+  orgOwnerRole,
+  orgAdminRole,
+  orgMemberRole,
+} from '@/lib/permissions';
+import CheckIcon from '@tabler/icons/outline/check.svg';
+import XIcon from '@tabler/icons/outline/x.svg';
+import PlusIcon from '@tabler/icons/outline/plus.svg';
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  user: AppUser;
+  adminOrgs: Organization[];
+}
+
+const { t, adminOrgs } = Astro.props;
+const tr = t.admin.roles;
+
+type RoleDef = { name: string; statements: Record<string, readonly string[]> };
+
+const globalRoles: RoleDef[] = [
+  { name: tr.roleName.admin, statements: adminRole.statements as Record<string, readonly string[]> },
+  { name: tr.roleName.editor, statements: editorRole.statements as Record<string, readonly string[]> },
+  { name: tr.roleName.user, statements: userRole.statements as Record<string, readonly string[]> },
+];
+
+const orgRoles: RoleDef[] = [
+  { name: tr.roleName.owner, statements: orgOwnerRole.statements as Record<string, readonly string[]> },
+  { name: tr.roleName.orgAdmin, statements: orgAdminRole.statements as Record<string, readonly string[]> },
+  { name: tr.roleName.member, statements: orgMemberRole.statements as Record<string, readonly string[]> },
+];
+
+const resourceNames = tr.resourceName as Record<string, string>;
+const cmsResources = ['page', 'section', 'media', 'site', 'navigation', 'audit', 'theme'] as const;
+const singleOrg = adminOrgs.length === 1;
+
+function hasAction(role: RoleDef, resource: string, action: string): boolean {
+  const perms = role.statements[resource];
+  return Array.isArray(perms) && perms.includes(action);
+}
+---
+
+<p class="text-muted-foreground text-sm mb-4">{tr.description}</p>
+
+<Tabs defaultValue="custom-roles">
+  <TabsList>
+    <TabsTrigger value="custom-roles" defaultActive>{tr.customRoles}</TabsTrigger>
+    <TabsTrigger value="global-matrix">{tr.globalRoles}</TabsTrigger>
+    <TabsTrigger value="org-matrix">{tr.orgRoles}</TabsTrigger>
+  </TabsList>
+
+  {/* ═══ Tab 1: Custom Roles CRUD ═══ */}
+  <TabsContent value="custom-roles" defaultActive>
+    <div class="mt-4 space-y-4">
+      {adminOrgs.length === 0 ? (
+        <Card>
+          <CardContent class="py-12 text-center">
+            <p class="text-muted-foreground text-sm">{tr.noOrgs}</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Toolbar: org selector + create button */}
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <NativeSelect id="org-roles-org-select" class="w-auto text-sm max-w-xs">
+              {!singleOrg && <NativeSelectOption value="">{tr.selectOrg}</NativeSelectOption>}
+              {adminOrgs.map((org) => (
+                <NativeSelectOption value={org.id} selected={singleOrg}>{org.name}</NativeSelectOption>
+              ))}
+            </NativeSelect>
+            <Button type="button" id="org-role-add-btn" size="sm" class={singleOrg ? '' : 'hidden'}>
+              <PlusIcon class="size-4 me-1.5" />
+              {tr.createRole}
+            </Button>
+          </div>
+
+          {/* Role list */}
+          <div id="org-roles-list" class={singleOrg ? '' : 'hidden'}>
+            <div id="org-roles-items" class="space-y-2"></div>
+            <p id="org-roles-empty" class="text-muted-foreground text-sm py-12 text-center hidden">{tr.noCustomRoles}</p>
+            <div id="org-roles-loading" class="flex items-center justify-center py-12">
+              <div class="size-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent"></div>
+            </div>
+          </div>
+
+          {/* ─── Dialog for Create / Edit ─── */}
+          <Dialog id="role-dialog">
+            <DialogContent class="max-w-lg sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle><span id="role-dialog-title">{tr.createRole}</span></DialogTitle>
+                <DialogDescription>{tr.customRolesDescription}</DialogDescription>
+              </DialogHeader>
+              <input type="hidden" id="org-role-edit-id" value="" />
+              <div class="space-y-4 py-2">
+                <div>
+                  <label for="org-role-name" class="text-sm font-medium mb-1.5 block">{tr.roleNameLabel}</label>
+                  <Input type="text" id="org-role-name" placeholder={tr.roleNamePlaceholder} size="sm" />
+                </div>
+                <fieldset>
+                  <legend class="text-sm font-medium mb-3">{tr.permissionsLabel}</legend>
+                  <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {cmsResources.map((resource) => (
+                      <div class="border rounded-lg p-3 bg-muted/20">
+                        <p class="text-xs font-semibold mb-2">{resourceNames[resource] ?? resource}</p>
+                        <div class="space-y-1.5">
+                          {(statement[resource] as readonly string[]).map((action) => (
+                            <label class="flex items-center gap-2 text-xs cursor-pointer hover:text-foreground transition-colors">
+                              <input
+                                type="checkbox"
+                                class="org-role-perm-cb rounded"
+                                data-resource={resource}
+                                data-action={action}
+                              />
+                              {action}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </fieldset>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button type="button" variant="outline">{tr.cancel}</Button>
+                </DialogClose>
+                <Button type="button" id="org-role-save-btn">{tr.save}</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* ─── Delete confirmation Dialog ─── */}
+          <Dialog id="role-delete-dialog">
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{tr.deleteRole}</DialogTitle>
+                <DialogDescription>{tr.confirmDelete}</DialogDescription>
+              </DialogHeader>
+              <input type="hidden" id="org-role-delete-id" value="" />
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button type="button" variant="outline">{tr.cancel}</Button>
+                </DialogClose>
+                <Button type="button" id="org-role-confirm-delete-btn" variant="error">{tr.deleteRole}</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
+    </div>
+  </TabsContent>
+
+  {/* ═══ Tab 2: Global Roles Matrix ═══ */}
+  <TabsContent value="global-matrix">
+    <Card class="mt-4">
+      <CardHeader>
+        <CardTitle class="text-base">{tr.globalRoles}</CardTitle>
+        <CardDescription>admin · editor · user</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div class="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead class="sticky inset-s-0 bg-background z-10 min-w-32">{tr.resource}</TableHead>
+                <TableHead class="min-w-24">{tr.permissions}</TableHead>
+                {globalRoles.map((role) => (
+                  <TableHead class="text-center min-w-20">{role.name}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {cmsResources.map((resource) => {
+                const actions = statement[resource] as readonly string[];
+                return actions.map((action, i) => (
+                  <TableRow>
+                    {i === 0 ? (
+                      <TableCell rowspan={actions.length} class="sticky inset-s-0 bg-background z-10 font-medium align-top border-e">
+                        {resourceNames[resource] ?? resource}
+                      </TableCell>
+                    ) : null}
+                    <TableCell>
+                      <Badge variant="outline">{action}</Badge>
+                    </TableCell>
+                    {globalRoles.map((role) => (
+                      <TableCell class="text-center">
+                        {hasAction(role, resource, action) ? (
+                          <CheckIcon class="text-emerald-500 size-4 inline-block" aria-label="✓" />
+                        ) : (
+                          <XIcon class="text-muted-foreground/30 size-4 inline-block" aria-label="✗" />
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ));
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  </TabsContent>
+
+  {/* ═══ Tab 3: Org Roles Matrix ═══ */}
+  <TabsContent value="org-matrix">
+    <Card class="mt-4">
+      <CardHeader>
+        <CardTitle class="text-base">{tr.orgRoles}</CardTitle>
+        <CardDescription>owner · admin · member</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div class="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead class="sticky inset-s-0 bg-background z-10 min-w-32">{tr.resource}</TableHead>
+                <TableHead class="min-w-24">{tr.permissions}</TableHead>
+                {orgRoles.map((role) => (
+                  <TableHead class="text-center min-w-20">{role.name}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {cmsResources.map((resource) => {
+                const actions = statement[resource] as readonly string[];
+                return actions.map((action, i) => (
+                  <TableRow>
+                    {i === 0 ? (
+                      <TableCell rowspan={actions.length} class="sticky inset-s-0 bg-background z-10 font-medium align-top border-e">
+                        {resourceNames[resource] ?? resource}
+                      </TableCell>
+                    ) : null}
+                    <TableCell>
+                      <Badge variant="outline">{action}</Badge>
+                    </TableCell>
+                    {orgRoles.map((role) => (
+                      <TableCell class="text-center">
+                        {hasAction(role, resource, action) ? (
+                          <CheckIcon class="text-emerald-500 size-4 inline-block" aria-label="✓" />
+                        ) : (
+                          <XIcon class="text-muted-foreground/30 size-4 inline-block" aria-label="✗" />
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ));
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  </TabsContent>
+</Tabs>
+
+<div
+  id="org-roles-data"
+  class="hidden"
+  data-t-created={tr.created}
+  data-t-updated={tr.updated}
+  data-t-deleted={tr.deleted}
+  data-t-edit={tr.editRole}
+  data-t-delete={tr.deleteRole}
+  data-t-create={tr.createRole}
+  data-t-edit-title={tr.editRole}
+  data-t-no-custom={tr.noCustomRoles}
+  data-auto-select={singleOrg ? adminOrgs[0].id : ''}
+  data-t-error={t.admin.cms.common.error}
+></div>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { toast } from '@atoms/toast';
+
+  function init() {
+    const d = document.getElementById('org-roles-data')?.dataset ?? {};
+    const orgSelect = document.getElementById('org-roles-org-select') as HTMLSelectElement | null;
+    const listWrap = document.getElementById('org-roles-list');
+    const itemsEl = document.getElementById('org-roles-items');
+    const emptyEl = document.getElementById('org-roles-empty');
+    const loadingEl = document.getElementById('org-roles-loading');
+    const editIdInput = document.getElementById('org-role-edit-id') as HTMLInputElement | null;
+    const nameInput = document.getElementById('org-role-name') as HTMLInputElement | null;
+    const deleteIdInput = document.getElementById('org-role-delete-id') as HTMLInputElement | null;
+    const saveBtn = document.getElementById('org-role-save-btn');
+    const addBtn = document.getElementById('org-role-add-btn');
+    const confirmDeleteBtn = document.getElementById('org-role-confirm-delete-btn');
+
+    // Dialog open/close helpers via the starwind-dialog API
+    const roleDialogEl = document.getElementById('role-dialog');
+    const deleteDialogEl = document.getElementById('role-delete-dialog');
+    const dialogTitle = document.getElementById('role-dialog-title');
+
+    function openDialog(el: HTMLElement | null) {
+      el?.querySelector<HTMLButtonElement>('[data-slot="dialog-trigger"]')?.click?.();
+      // Fallback: programmatic open via the dialog element
+      const dialog = el?.querySelector<HTMLDialogElement>('dialog');
+      const backdrop = el?.querySelector<HTMLElement>('.starwind-dialog-backdrop');
+      if (dialog && !dialog.open) {
+        dialog.showModal();
+        dialog.dataset.state = 'open';
+        if (backdrop) { backdrop.style.display = 'block'; backdrop.dataset.state = 'open'; }
+      }
+    }
+
+    function closeDialog(el: HTMLElement | null) {
+      el?.querySelector<HTMLButtonElement>('[data-slot="dialog-close"]')?.click();
+    }
+
+    let currentOrgId = '';
+
+    function getSelectedPermissions(): Record<string, string[]> {
+      const perms: Record<string, string[]> = {};
+      document.querySelectorAll<HTMLInputElement>('.org-role-perm-cb:checked').forEach((cb) => {
+        const r = cb.dataset.resource!;
+        const a = cb.dataset.action!;
+        if (!perms[r]) perms[r] = [];
+        perms[r].push(a);
+      });
+      return perms;
+    }
+
+    function setPermissionCheckboxes(perms: Record<string, string[]>) {
+      document.querySelectorAll<HTMLInputElement>('.org-role-perm-cb').forEach((cb) => {
+        cb.checked = perms[cb.dataset.resource!]?.includes(cb.dataset.action!) ?? false;
+      });
+    }
+
+    function resetForm() {
+      if (editIdInput) editIdInput.value = '';
+      if (nameInput) nameInput.value = '';
+      document.querySelectorAll<HTMLInputElement>('.org-role-perm-cb').forEach((cb) => { cb.checked = false; });
+    }
+
+    function renderRoles(roles: Array<{ id: string; role: string; permission: Record<string, string[]> }>) {
+      if (!itemsEl) return;
+      loadingEl?.classList.add('hidden');
+      itemsEl.innerHTML = '';
+
+      if (roles.length === 0) {
+        emptyEl?.classList.remove('hidden');
+        return;
+      }
+      emptyEl?.classList.add('hidden');
+
+      for (const r of roles) {
+        const card = document.createElement('div');
+        card.className = 'flex items-start justify-between gap-3 rounded-lg border p-4 bg-background hover:bg-muted/30 transition-colors';
+
+        const badges = Object.entries(r.permission)
+          .filter(([, acts]) => (acts as string[]).length > 0)
+          .map(([res, acts]) =>
+            `<span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium text-muted-foreground bg-muted/40">${res}: ${(acts as string[]).join(', ')}</span>`
+          )
+          .join('') || '<span class="text-[11px] text-muted-foreground italic">—</span>';
+
+        card.innerHTML = `
+          <div class="min-w-0 flex-1 space-y-1.5">
+            <p class="font-semibold text-sm">${r.role}</p>
+            <div class="flex flex-wrap gap-1">${badges}</div>
+          </div>
+          <div class="flex gap-1.5 shrink-0 pt-0.5">
+            <button type="button" class="org-role-edit-btn inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium hover:bg-muted transition-colors" data-role-id="${r.id}">${d.tEdit ?? ''}</button>
+            <button type="button" class="org-role-delete-btn inline-flex items-center rounded-md border border-red-200 dark:border-red-900 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 transition-colors" data-role-id="${r.id}">${d.tDelete ?? ''}</button>
+          </div>
+        `;
+
+        // Edit → open dialog with data pre-filled
+        card.querySelector('.org-role-edit-btn')?.addEventListener('click', () => {
+          if (editIdInput) editIdInput.value = r.id;
+          if (nameInput) nameInput.value = r.role;
+          if (dialogTitle) dialogTitle.textContent = d.tEditTitle ?? '';
+          setPermissionCheckboxes(r.permission as Record<string, string[]>);
+          openDialog(roleDialogEl);
+        });
+
+        // Delete → open delete confirmation dialog
+        card.querySelector('.org-role-delete-btn')?.addEventListener('click', () => {
+          if (deleteIdInput) deleteIdInput.value = r.id;
+          openDialog(deleteDialogEl);
+        });
+
+        itemsEl.appendChild(card);
+      }
+    }
+
+    async function loadRoles() {
+      if (!currentOrgId) return;
+      loadingEl?.classList.remove('hidden');
+      emptyEl?.classList.add('hidden');
+      if (itemsEl) itemsEl.innerHTML = '';
+
+      try {
+        const { data, error } = await actions.listOrgRoles({ organizationId: currentOrgId });
+        if (error) {
+          loadingEl?.classList.add('hidden');
+          toast.error(error.message ?? d.tError ?? '');
+          return;
+        }
+        const roles = Array.isArray(data) ? data : (data as { data: unknown[] })?.data ?? [];
+        renderRoles(roles as Array<{ id: string; role: string; permission: Record<string, string[]> }>);
+      } catch {
+        loadingEl?.classList.add('hidden');
+        renderRoles([]);
+      }
+    }
+
+    // Org selector
+    orgSelect?.addEventListener('change', async () => {
+      currentOrgId = orgSelect.value;
+      if (currentOrgId) {
+        listWrap?.classList.remove('hidden');
+        addBtn?.classList.remove('hidden');
+        await loadRoles();
+      } else {
+        listWrap?.classList.add('hidden');
+        addBtn?.classList.add('hidden');
+      }
+    });
+
+    // Auto-select single org
+    const autoId = d.autoSelect;
+    if (autoId && orgSelect) {
+      orgSelect.value = autoId;
+      currentOrgId = autoId;
+      loadRoles();
+    }
+
+    // + Create → open empty dialog
+    addBtn?.addEventListener('click', () => {
+      resetForm();
+      if (dialogTitle) dialogTitle.textContent = d.tCreate ?? '';
+      openDialog(roleDialogEl);
+      setTimeout(() => nameInput?.focus(), 100);
+    });
+
+    // Save (create or update)
+    saveBtn?.addEventListener('click', async () => {
+      const roleName = nameInput?.value.trim();
+      if (!roleName || !currentOrgId) return;
+      const perms = getSelectedPermissions();
+      const editId = editIdInput?.value;
+
+      saveBtn.setAttribute('disabled', '');
+      try {
+        if (editId) {
+          const { error } = await actions.updateOrgRole({
+            organizationId: currentOrgId,
+            roleId: editId,
+            data: { roleName, permission: perms },
+          });
+          if (error) { toast.error(error.message ?? d.tError ?? ''); return; }
+          toast.success(d.tUpdated ?? '');
+        } else {
+          const { error } = await actions.createOrgRole({
+            organizationId: currentOrgId,
+            role: roleName,
+            permission: perms,
+          });
+          if (error) { toast.error(error.message ?? d.tError ?? ''); return; }
+          toast.success(d.tCreated ?? '');
+        }
+        closeDialog(roleDialogEl);
+        resetForm();
+        await loadRoles();
+      } finally {
+        saveBtn.removeAttribute('disabled');
+      }
+    });
+
+    // Confirm delete
+    confirmDeleteBtn?.addEventListener('click', async () => {
+      const roleId = deleteIdInput?.value;
+      if (!roleId || !currentOrgId) return;
+
+      confirmDeleteBtn.setAttribute('disabled', '');
+      try {
+        const { error } = await actions.deleteOrgRole({
+          organizationId: currentOrgId,
+          roleId,
+        });
+        if (error) { toast.error(error.message ?? d.tError ?? ''); return; }
+        toast.success(d.tDeleted ?? '');
+        closeDialog(deleteDialogEl);
+        await loadRoles();
+      } finally {
+        confirmDeleteBtn.removeAttribute('disabled');
+      }
+    });
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

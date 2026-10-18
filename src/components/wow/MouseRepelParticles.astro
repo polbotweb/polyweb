@@ -1,0 +1,350 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import { tv } from "tailwind-variants";
+
+interface Props extends HTMLAttributes<"div"> {
+  /**
+   * Number of particles to render
+   * @default 80
+   */
+  particleCount?: number;
+  /**
+   * Minimum particle size in pixels
+   * @default 3
+   */
+  minSize?: number;
+  /**
+   * Maximum particle size in pixels
+   * @default 8
+   */
+  maxSize?: number;
+  /**
+   * Particle color (CSS color value)
+   * @default "currentColor"
+   */
+  particleColor?: string;
+  /**
+   * Minimum particle opacity (0-1)
+   * @default 0.2
+   */
+  minOpacity?: number;
+  /**
+   * Maximum particle opacity (0-1)
+   * @default 0.7
+   */
+  maxOpacity?: number;
+  /**
+   * Radius of the repel effect in pixels
+   * @default 150
+   */
+  repelRadius?: number;
+  /**
+   * Strength of the repel effect (higher = stronger push)
+   * @default 1
+   */
+  repelStrength?: number;
+  /**
+   * Duration of the snap-back animation in milliseconds
+   * @default 300
+   */
+  snapBackDuration?: number;
+}
+
+const repelParticlesEffect = tv({
+  base: "repel-particles relative overflow-hidden",
+});
+
+const {
+  particleCount = 80,
+  minSize = 3,
+  maxSize = 8,
+  particleColor = "currentColor",
+  minOpacity = 0.2,
+  maxOpacity = 0.7,
+  repelRadius = 150,
+  repelStrength = 1,
+  snapBackDuration = 300,
+  class: className,
+  ...rest
+} = Astro.props;
+
+const uniqueId = `repel-particles-${Math.random().toString(36).slice(2, 9)}`;
+
+const particles = Array.from({ length: particleCount }, (_, i) => {
+  const size = minSize + Math.random() * (maxSize - minSize);
+  const left = Math.random() * 100;
+  const top = Math.random() * 100;
+  const opacity = minOpacity + Math.random() * (maxOpacity - minOpacity);
+
+  return {
+    id: i,
+    size,
+    left,
+    top,
+    opacity,
+  };
+});
+---
+
+<div
+  id={uniqueId}
+  class={repelParticlesEffect({ class: className })}
+  data-repel-radius={repelRadius}
+  data-repel-strength={repelStrength}
+  data-snap-back-duration={snapBackDuration}
+  style={{
+    "--particle-color": particleColor,
+    "--snap-back-duration": `${snapBackDuration}ms`,
+  }}
+  {...rest}
+>
+  <div
+    class="repel-particles-container pointer-events-none absolute inset-0 overflow-hidden"
+    aria-hidden="true"
+  >
+    {
+      particles.map((particle) => (
+        <span
+          class="repel-particle absolute rounded-full"
+          data-original-left={particle.left}
+          data-original-top={particle.top}
+          style={{
+            width: `${particle.size}px`,
+            height: `${particle.size}px`,
+            left: `${particle.left}%`,
+            top: `${particle.top}%`,
+            opacity: particle.opacity,
+            "--push-x": "0px",
+            "--push-y": "0px",
+          }}
+        />
+      ))
+    }
+  </div>
+  <div class="relative z-10">
+    <slot />
+  </div>
+</div>
+
+<script>
+  interface ParticleData {
+    element: HTMLElement;
+    originalLeft: number;
+    originalTop: number;
+    cachedX: number;
+    cachedY: number;
+  }
+
+  function initRepelParticles(): () => void {
+    const containers = document.querySelectorAll<HTMLElement>(".repel-particles");
+    const cleanups: (() => void)[] = [];
+
+    containers.forEach((container) => {
+      if (container.dataset.initialized === "true") return;
+      container.dataset.initialized = "true";
+
+      const particlesContainer = container.querySelector(".repel-particles-container");
+      if (!particlesContainer) return;
+
+      const particleElements = particlesContainer.querySelectorAll<HTMLElement>(".repel-particle");
+      const repelRadius = parseFloat(container.dataset.repelRadius || "150");
+      const repelStrength = parseFloat(container.dataset.repelStrength || "1");
+      const repelRadiusSq = repelRadius * repelRadius;
+
+      let containerRect: DOMRect;
+      const particleData: ParticleData[] = [];
+
+      particleElements.forEach((el) => {
+        const originalLeft = parseFloat(el.dataset.originalLeft || "0");
+        const originalTop = parseFloat(el.dataset.originalTop || "0");
+        particleData.push({
+          element: el,
+          originalLeft,
+          originalTop,
+          cachedX: 0,
+          cachedY: 0,
+        });
+      });
+
+      const updateCachedPositions = () => {
+        containerRect = container.getBoundingClientRect();
+        for (let i = 0; i < particleData.length; i++) {
+          const p = particleData[i];
+          p.cachedX = (p.originalLeft / 100) * containerRect.width;
+          p.cachedY = (p.originalTop / 100) * containerRect.height;
+        }
+      };
+
+      const resizeObserver = new ResizeObserver(updateCachedPositions);
+      resizeObserver.observe(container);
+
+      container.addEventListener("mouseenter", updateCachedPositions);
+
+      let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
+      const handleScroll = () => {
+        if (scrollTimeout) clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(updateCachedPositions, 50);
+      };
+      window.addEventListener("scroll", handleScroll, { passive: true });
+
+      let animationFrameId: number | null = null;
+      let mouseX = -1000;
+      let mouseY = -1000;
+      let isMouseInContainer = false;
+
+      const updateParticles = () => {
+        if (!containerRect) return;
+
+        const relativeMouseX = mouseX - containerRect.left;
+        const relativeMouseY = mouseY - containerRect.top;
+
+        for (let i = 0; i < particleData.length; i++) {
+          const p = particleData[i];
+          const dx = p.cachedX - relativeMouseX;
+          const dy = p.cachedY - relativeMouseY;
+          const distanceSq = dx * dx + dy * dy;
+
+          if (isMouseInContainer && distanceSq < repelRadiusSq) {
+            const distance = Math.sqrt(distanceSq);
+            const force = (1 - distance / repelRadius) * repelStrength;
+            const angle = Math.atan2(dy, dx);
+            const pushX = Math.cos(angle) * force * repelRadius * 0.5;
+            const pushY = Math.sin(angle) * force * repelRadius * 0.5;
+
+            p.element.style.setProperty("--push-x", `${pushX}px`);
+            p.element.style.setProperty("--push-y", `${pushY}px`);
+            p.element.dataset.repelling = "true";
+          } else if (p.element.dataset.repelling === "true") {
+            p.element.style.setProperty("--push-x", "0px");
+            p.element.style.setProperty("--push-y", "0px");
+            p.element.dataset.repelling = "false";
+          }
+        }
+
+        if (isMouseInContainer) {
+          animationFrameId = requestAnimationFrame(updateParticles);
+        }
+      };
+
+      const handleMouseMove = (e: MouseEvent) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+      };
+
+      const handleMouseEnter = () => {
+        isMouseInContainer = true;
+        if (!animationFrameId) {
+          animationFrameId = requestAnimationFrame(updateParticles);
+        }
+      };
+
+      const handleMouseLeave = () => {
+        isMouseInContainer = false;
+        mouseX = -1000;
+        mouseY = -1000;
+
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+        }
+
+        for (let i = 0; i < particleData.length; i++) {
+          const p = particleData[i];
+          p.element.style.setProperty("--push-x", "0px");
+          p.element.style.setProperty("--push-y", "0px");
+          p.element.dataset.repelling = "false";
+        }
+      };
+
+      container.addEventListener("mousemove", handleMouseMove);
+      container.addEventListener("mouseenter", handleMouseEnter);
+      container.addEventListener("mouseleave", handleMouseLeave);
+
+      const checkIfMouseInside = () => {
+        if (!containerRect) return;
+        const elements = document.elementsFromPoint(mouseX, mouseY);
+        if (elements.includes(container) && !isMouseInContainer) {
+          handleMouseEnter();
+        }
+      };
+
+      document.addEventListener(
+        "mousemove",
+        (e) => {
+          mouseX = e.clientX;
+          mouseY = e.clientY;
+          checkIfMouseInside();
+        },
+        { once: true },
+      );
+
+      cleanups.push(() => {
+        resizeObserver.disconnect();
+        container.removeEventListener("mouseenter", updateCachedPositions);
+        window.removeEventListener("scroll", handleScroll);
+        container.removeEventListener("mousemove", handleMouseMove);
+        container.removeEventListener("mouseenter", handleMouseEnter);
+        container.removeEventListener("mouseleave", handleMouseLeave);
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        if (scrollTimeout) clearTimeout(scrollTimeout);
+        delete container.dataset.initialized;
+      });
+    });
+
+    return () => cleanups.forEach((fn) => fn());
+  }
+
+  let cleanup: (() => void) | null = null;
+
+  function start() {
+    cleanup?.();
+    cleanup = initRepelParticles();
+  }
+
+  start();
+  document.addEventListener("astro:after-swap", start);
+  document.addEventListener("astro:before-swap", () => { cleanup?.(); cleanup = null; });
+</script>
+
+<style>
+  @property --push-x {
+    syntax: "<length>";
+    inherits: false;
+    initial-value: 0px;
+  }
+
+  @property --push-y {
+    syntax: "<length>";
+    inherits: false;
+    initial-value: 0px;
+  }
+
+  .repel-particles {
+    --particle-color: currentColor;
+    --snap-back-duration: 300ms;
+  }
+
+  .repel-particle {
+    background-color: var(--particle-color);
+    transform: translate(calc(-50% + var(--push-x)), calc(-50% + var(--push-y)));
+    transition:
+      --push-x var(--snap-back-duration) cubic-bezier(0.34, 1.56, 0.64, 1),
+      --push-y var(--snap-back-duration) cubic-bezier(0.34, 1.56, 0.64, 1);
+    will-change: --push-x, --push-y;
+  }
+
+  .repel-particle[data-repelling="true"] {
+    transition:
+      --push-x 50ms ease-out,
+      --push-y 50ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .repel-particle {
+      transition: none;
+    }
+    .repel-particle[data-repelling="true"] {
+      transition: none;
+    }
+  }
+</style>

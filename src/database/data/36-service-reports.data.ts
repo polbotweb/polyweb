@@ -1,0 +1,4 @@
+export default [
+  { id: "9a000000-0000-0000-0000-000000000001", serviceId: null, commentId: "99000000-0000-0000-0000-000000000003", reviewId: null, reporterId: "33333333-3333-3333-3333-333333333333", reason: "OFF_TOPIC", description: "Signalement de démonstration.", status: "PENDING", resolvedBy: null, resolvedAt: null, createdAt: new Date("2026-02-21T12:00:00.000Z") },
+  { id: "9a000000-0000-0000-0000-000000000002", serviceId: "90000000-0000-0000-0000-000000000001", commentId: null, reviewId: null, reporterId: "33333333-3333-3333-3333-333333333333", reason: "OTHER", description: "Rapport ciblant directement le service.", status: "RESOLVED", resolvedBy: "44444444-4444-4444-4444-444444444444", resolvedAt: new Date("2026-02-22T12:00:00.000Z"), createdAt: new Date("2026-02-22T11:00:00.000Z") },
+];

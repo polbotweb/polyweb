@@ -1,0 +1,104 @@
+---
+import { eq } from "drizzle-orm";
+import { LOCALES } from "@i18n/config";
+import { toLocale, getBlogTranslations } from "@i18n/utils";
+import { getDrizzle } from "@database/drizzle";
+import { organization } from "@database/schemas";
+import { getBlogPosts, getBlogCategories, getBlogTags } from "@database/loaders/blog.loader";
+import { generateSchemaMarkup } from "@/lib/blog/utils";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import BlogListingPage from "@pages/blog/BlogListingPage.astro";
+
+export const prerender = false;
+
+const locale = toLocale(Astro.params.lang);
+const orgSlug = Astro.params.organization;
+const blogT = await getBlogTranslations(locale);
+
+if (!orgSlug) {
+  Astro.response.status = 404;
+  return Astro.rewrite('/404');
+}
+
+const db = getDrizzle();
+const [org] = await db
+  .select({ id: organization.id, name: organization.name, slug: organization.slug })
+  .from(organization)
+  .where(eq(organization.slug, orgSlug))
+  .limit(1);
+
+if (!org) {
+  Astro.response.status = 404;
+  return Astro.rewrite('/404');
+}
+
+const baseUrl = `/${locale}/${org.slug}/${blogT.routes.blog}`;
+const page = Math.max(1, Number(Astro.url.searchParams.get("page") ?? "1") || 1);
+const searchQuery = Astro.url.searchParams.get("q")?.trim() || undefined;
+
+const [{ items, meta }, categoryRows, tagRows] = await Promise.all([
+  getBlogPosts(org.id, locale, { page, searchQuery }),
+  getBlogCategories(org.id, locale),
+  getBlogTags(org.id, locale),
+]);
+
+const categories = categoryRows.map((item) => ({
+  id: item.id,
+  slug: item.slug,
+  name: item.translation?.name ?? item.slug,
+  postCount: item.postCount,
+  color: item.color,
+  icon: item.icon,
+}));
+
+const tags = tagRows.map((item) => ({
+  id: item.id,
+  slug: item.slug,
+  name: item.translation?.name ?? item.slug,
+  postCount: item.postCount,
+  color: item.color,
+}));
+
+const alternateUrls = Object.fromEntries(
+  await Promise.all(
+    LOCALES.map(async (loc) => {
+      const locBlogT = await getBlogTranslations(loc);
+      return [loc, `/${loc}/${org.slug}/${locBlogT.routes.blog}`];
+    }),
+  ),
+);
+
+const pageTitle = `${blogT.meta.title} — ${org.name}`;
+const jsonLd = JSON.stringify(
+  generateSchemaMarkup("Blog", {
+    name: pageTitle,
+    description: blogT.meta.description,
+    url: Astro.url.href,
+    inLanguage: locale,
+    publisher: { "@type": "Organization", name: org.name },
+  }),
+);
+---
+
+<BaseLayout
+  title={pageTitle}
+  description={blogT.meta.description}
+  alternateUrls={alternateUrls}
+  ogType="blog"
+  jsonLd={jsonLd}
+>
+  <BlogListingPage
+    locale={locale}
+    blogT={blogT}
+    title={pageTitle}
+    description={blogT.meta.description}
+    posts={items as never}
+    meta={meta}
+    categories={categories}
+    tags={tags}
+    baseUrl={baseUrl}
+    organizationSlug={org.slug}
+    searchQuery={searchQuery}
+    organizationName={org.name}
+  />
+</BaseLayout>

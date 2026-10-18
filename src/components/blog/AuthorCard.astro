@@ -1,0 +1,63 @@
+---
+import { Icon } from "astro-icon/components";
+import type { Locale } from "@i18n/config";
+import type { BlogTranslations } from "@i18n/config";
+import { buildBlogCategoryUrl, extractOrgSlugFromBaseUrl } from "@lib/blog/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@atoms/avatar";
+import { Badge } from "@atoms/badge";
+import { Card, CardContent } from "@atoms/card";
+
+interface Props {
+  locale: Locale;
+  blogT: BlogTranslations;
+  author: { id: string; name: string; image: string | null } | null;
+  publishedAt: Date | null;
+  categories: { id: string; slug: string; name: string | null }[];
+  baseUrl: string;
+}
+
+const { locale, blogT, author, publishedAt, categories, baseUrl } = Astro.props;
+const organizationSlug = extractOrgSlugFromBaseUrl(baseUrl);
+
+if (!author) return null;
+---
+
+<Card class="overflow-hidden border bg-card/80 shadow-sm">
+  <CardContent class="flex flex-col gap-4 p-6 sm:flex-row sm:items-center">
+    <Avatar size="lg" variant="primary" class="shrink-0">
+      {author.image && <AvatarImage src={author.image} alt={author.name} />}
+      <AvatarFallback>{author.name.charAt(0)}</AvatarFallback>
+    </Avatar>
+
+    <div class="min-w-0 flex-1 space-y-3">
+      <p class="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">{blogT.labels.byAuthor}</p>
+      <div class="space-y-2">
+        <h2 class="font-heading text-2xl font-semibold leading-none">{author.name}</h2>
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+          {publishedAt && (
+            <span class="inline-flex items-center gap-1.5">
+              <Icon name="mdi:calendar" class="size-4" />
+              {blogT.labels.publishedOn} {publishedAt.toLocaleDateString(locale)}
+            </span>
+          )}
+          {categories.length > 0 && (
+            <span class="inline-flex items-center gap-1.5">
+              <Icon name="mdi:folder-outline" class="size-4" />
+              {categories.length} {blogT.labels.categories}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {categories.length > 0 && (
+        <div class="flex flex-wrap gap-2">
+          {categories.map((category) => (
+            <Badge variant="outline" size="sm" href={buildBlogCategoryUrl(locale, organizationSlug, category.slug)}>
+              {category.name ?? category.slug}
+            </Badge>
+          ))}
+        </div>
+      )}
+    </div>
+  </CardContent>
+</Card>

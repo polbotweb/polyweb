@@ -1,0 +1,384 @@
+---
+import type { AuthTranslations, Locale } from '@i18n/config';
+import type { AppUser } from '@/lib/types';
+import { getAuthUrl } from '@i18n/utils';
+import { Card, CardHeader, CardTitle, CardContent } from '@atoms/card';
+import { Avatar, AvatarImage, AvatarFallback } from '@atoms/avatar';
+import { Input } from '@atoms/input';
+import { Label } from '@atoms/label';
+import { Checkbox } from '@atoms/checkbox';
+import Separator from '@atoms/separator/Separator.astro';
+import Button from '@atoms/button/Button.astro';
+import { safeUrl } from '@lib/sanitize';
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  user: AppUser;
+}
+
+const { t, locale, user } = Astro.props;
+const dashboardUrl = getAuthUrl(locale, 'dashboard', t);
+const signInUrl = getAuthUrl(locale, 'sign-in', t);
+const initials = user?.name
+  ? user.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
+  : '?';
+---
+
+<section class="mx-auto w-full max-w-3xl">
+  <div class="flex items-center justify-between mb-8">
+    <h1 class="text-3xl font-bold">{t.profile.identity.title}</h1>
+    <a href={dashboardUrl} class="text-sm text-muted-foreground hover:underline">
+      &larr; {t.dashboard.welcome}
+    </a>
+  </div>
+
+  <div class="grid gap-6">
+    <!-- ═══ Identity Card ═══ -->
+    <Card>
+      <CardHeader>
+        <CardTitle>{t.profile.identity.title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div class="flex items-center gap-4 mb-6">
+          <button
+            id="avatar-trigger"
+            type="button"
+            class="relative group cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Avatar size="lg" id="avatar-display">
+              {user?.image && safeUrl(user.image) && <AvatarImage src={safeUrl(user.image)!} alt={user.name ?? ''} id="avatar-img" />}
+              <AvatarFallback id="avatar-fallback">{initials}</AvatarFallback>
+            </Avatar>
+            <div class="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <input
+              type="file"
+              id="avatar-input"
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              class="hidden"
+            />
+          </button>
+          <div>
+            <p class="text-sm text-muted-foreground">{t.profile.identity.avatarLabel}</p>
+            <p class="text-xs text-muted-foreground">JPEG, PNG, WebP, AVIF · 2 MB max</p>
+          </div>
+        </div>
+
+        <Separator class="mb-6" />
+
+        <form id="identity-form" class="grid gap-4">
+          <div class="grid gap-2">
+            <Label for="profile-name">{t.profile.identity.name}</Label>
+            <Input id="profile-name" name="name" value={user?.name ?? ''} placeholder={t.profile.identity.namePlaceholder} />
+          </div>
+
+          <div class="grid gap-2">
+            <Label for="profile-username">{t.profile.identity.username}</Label>
+            <Input id="profile-username" name="username" value={user?.username ?? ''} placeholder={t.profile.identity.usernamePlaceholder} />
+            <p id="username-status" class="text-xs h-4"></p>
+          </div>
+
+          <div class="grid gap-2">
+            <Label for="profile-email">{t.dashboard.profile.email}</Label>
+            <Input id="profile-email" value={user?.email ?? ''} disabled class="opacity-60" />
+            <p class="text-xs text-muted-foreground italic">Non modifiable</p>
+          </div>
+
+          <Button type="submit" id="identity-save">{t.profile.identity.save}</Button>
+        </form>
+      </CardContent>
+    </Card>
+
+    <!-- ═══ Security Card ═══ -->
+    <Card>
+      <CardHeader>
+        <CardTitle>{t.profile.security.title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p class="text-sm text-muted-foreground mb-4">{t.profile.security.description}</p>
+        <form id="security-form" class="grid gap-4">
+          <div class="grid gap-2">
+            <Label for="current-password">{t.profile.security.currentPassword}</Label>
+            <Input id="current-password" name="currentPassword" type="password" placeholder={t.profile.security.currentPasswordPlaceholder} autocomplete="current-password" />
+          </div>
+          <div class="grid gap-2">
+            <Label for="new-password">{t.profile.security.newPassword}</Label>
+            <Input id="new-password" name="newPassword" type="password" placeholder={t.profile.security.newPasswordPlaceholder} autocomplete="new-password" />
+          </div>
+          <div class="grid gap-2">
+            <Label for="confirm-password">{t.profile.security.confirmPassword}</Label>
+            <Input id="confirm-password" name="confirmPassword" type="password" placeholder={t.profile.security.confirmPasswordPlaceholder} autocomplete="new-password" />
+          </div>
+          <Checkbox id="revoke-sessions" label={t.profile.security.revokeOtherSessions} />
+          <Button type="submit">{t.profile.security.changePassword}</Button>
+        </form>
+      </CardContent>
+    </Card>
+
+    <!-- ═══ Danger Zone Card ═══ -->
+    <Card class="border-destructive/40">
+      <CardHeader>
+        <CardTitle class="text-destructive">{t.profile.dangerZone.title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p class="text-sm text-muted-foreground mb-6">{t.profile.dangerZone.description}</p>
+
+        <!-- Export Data -->
+        <div class="mb-6">
+          <h2 class="text-sm font-semibold mb-1">{t.profile.dangerZone.exportData}</h2>
+          <p class="text-xs text-muted-foreground mb-3">{t.profile.dangerZone.exportDataDescription}</p>
+          <Button id="export-data-btn" variant="outline" size="sm">{t.profile.dangerZone.exportDataButton}</Button>
+        </div>
+
+        <Separator class="mb-6" />
+
+        <!-- Delete Account -->
+        <div>
+          <h2 class="text-sm font-semibold text-destructive mb-1">{t.profile.dangerZone.deleteAccount}</h2>
+          <p class="text-xs text-muted-foreground mb-3">{t.profile.dangerZone.deleteAccountDescription}</p>
+          <div id="delete-section">
+            <Button id="delete-reveal-btn" variant="error" size="sm">{t.profile.dangerZone.deleteAccountButton}</Button>
+            <div id="delete-confirm" class="mt-4 hidden gap-3">
+              <p class="text-sm font-medium text-destructive">{t.profile.dangerZone.deleteAccountConfirm}</p>
+              <div class="grid gap-2">
+                <Label for="delete-password">{t.profile.dangerZone.deleteAccountPassword}</Label>
+                <Input id="delete-password" type="password" placeholder={t.profile.dangerZone.deleteAccountPasswordPlaceholder} autocomplete="current-password" />
+              </div>
+              <Button id="delete-confirm-btn" variant="error" size="sm">{t.profile.dangerZone.deleteAccountButton}</Button>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+</section>
+
+<div
+  id="profile-data"
+  class="hidden"
+  data-dashboard-url={dashboardUrl}
+  data-sign-in-url={signInUrl}
+  data-current-username={user?.username ?? ''}
+  data-current-image={user?.image ?? ''}
+  data-t-save-success={t.profile.identity.saveSuccess}
+  data-t-password-changed={t.profile.security.passwordChanged}
+  data-t-passwords-mismatch={t.errors.PASSWORDS_DO_NOT_MATCH}
+  data-t-username-available={t.profile.identity.usernameAvailable}
+  data-t-username-taken={t.profile.identity.usernameTaken}
+  data-t-username-checking={t.profile.identity.usernameChecking}
+  data-t-export-failed={t.errors.EXPORT_DATA_FAILED}
+  data-t-delete-sent={t.profile.dangerZone.deleteAccountSent}
+  data-t-delete-failed={t.errors.DELETE_ACCOUNT_FAILED}
+  data-t-unknown={t.errors.UNKNOWN}
+></div>
+
+<script>
+  import { authClient } from '@lib/auth-client';
+  import { toast } from '@atoms/toast';
+
+  function init() {
+    const script = document.getElementById('profile-data')!;
+    const d = script.dataset;
+    const signInUrl = d.signInUrl!;
+    const currentUsername = d.currentUsername!;
+    const currentImage = d.currentImage!;
+    const T = {
+      saveSuccess: d.tSaveSuccess!,
+      passwordChanged: d.tPasswordChanged!,
+      passwordsMismatch: d.tPasswordsMismatch!,
+      usernameAvailable: d.tUsernameAvailable!,
+      usernameTaken: d.tUsernameTaken!,
+      usernameChecking: d.tUsernameChecking!,
+      exportFailed: d.tExportFailed!,
+      deleteSent: d.tDeleteSent!,
+      deleteFailed: d.tDeleteFailed!,
+      unknown: d.tUnknown!,
+    };
+
+    // ─── Avatar Upload ─────────────────────────────────────────────
+    let pendingAvatarUrl = '';
+    const avatarTrigger = document.getElementById('avatar-trigger');
+    const avatarInput = document.getElementById('avatar-input') as HTMLInputElement | null;
+    const avatarImg = document.getElementById('avatar-img') as HTMLImageElement | null;
+    const avatarFallback = document.getElementById('avatar-fallback');
+
+    avatarTrigger?.addEventListener('click', () => avatarInput?.click());
+
+    avatarInput?.addEventListener('change', async () => {
+      const file = avatarInput.files?.[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'avatar');
+      if (pendingAvatarUrl || currentImage) {
+        formData.append('oldUrl', pendingAvatarUrl || currentImage);
+      }
+
+      try {
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        pendingAvatarUrl = data.url;
+
+        // Preview
+        if (avatarImg) {
+          avatarImg.src = data.url;
+        } else if (avatarFallback) {
+          const img = document.createElement('img');
+          img.src = data.url;
+          img.alt = '';
+          img.setAttribute('role', 'presentation');
+          img.className = 'aspect-square h-full w-full object-cover';
+          img.id = 'avatar-img';
+          avatarFallback.parentElement!.insertBefore(img, avatarFallback);
+          avatarFallback.style.display = 'none';
+        }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : T.unknown);
+      }
+    });
+
+    // ─── Username availability (debounced) ─────────────────────────
+    const usernameInput = document.getElementById('profile-username') as HTMLInputElement | null;
+    const usernameStatus = document.getElementById('username-status');
+    let usernameTimer: ReturnType<typeof setTimeout>;
+
+    usernameInput?.addEventListener('input', () => {
+      clearTimeout(usernameTimer);
+      const val = usernameInput.value.trim();
+
+      if (!val || val === currentUsername) {
+        if (usernameStatus) usernameStatus.textContent = '';
+        return;
+      }
+
+      if (usernameStatus) {
+        usernameStatus.textContent = T.usernameChecking;
+        usernameStatus.className = 'text-xs h-4 text-muted-foreground';
+      }
+
+      usernameTimer = setTimeout(async () => {
+        try {
+          const { data } = await authClient.isUsernameAvailable({ username: val });
+          if (usernameStatus) {
+            if (data?.available) {
+              usernameStatus.textContent = T.usernameAvailable;
+              usernameStatus.className = 'text-xs h-4 text-green-600';
+            } else {
+              usernameStatus.textContent = T.usernameTaken;
+              usernameStatus.className = 'text-xs h-4 text-destructive';
+            }
+          }
+        } catch {
+          if (usernameStatus) usernameStatus.textContent = '';
+        }
+      }, 500);
+    });
+
+    // ─── Identity Save ─────────────────────────────────────────────
+    const identityForm = document.getElementById('identity-form');
+    identityForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nameInput = document.getElementById('profile-name') as HTMLInputElement;
+      const uInput = document.getElementById('profile-username') as HTMLInputElement;
+
+      const payload: Record<string, string> = {};
+      if (nameInput.value.trim()) payload.name = nameInput.value.trim();
+      if (uInput.value.trim()) payload.username = uInput.value.trim();
+      if (pendingAvatarUrl) payload.image = pendingAvatarUrl;
+
+      try {
+        const { error } = await authClient.updateUser(payload);
+        if (error) throw error;
+        pendingAvatarUrl = '';
+        toast.success(T.saveSuccess);
+        setTimeout(() => { window.location.href = d.dashboardUrl!; }, 600);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : T.unknown);
+      }
+    });
+
+    // ─── Change Password ───────────────────────────────────────────
+    const securityForm = document.getElementById('security-form');
+    securityForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const curPwd = (document.getElementById('current-password') as HTMLInputElement).value;
+      const newPwd = (document.getElementById('new-password') as HTMLInputElement).value;
+      const confPwd = (document.getElementById('confirm-password') as HTMLInputElement).value;
+      const revoke = (document.getElementById('revoke-sessions') as HTMLInputElement)?.checked ?? false;
+
+      if (newPwd !== confPwd) {
+        toast.error(T.passwordsMismatch);
+        return;
+      }
+
+      try {
+        const { error } = await authClient.changePassword({
+          currentPassword: curPwd,
+          newPassword: newPwd,
+          revokeOtherSessions: revoke,
+        });
+        if (error) throw error;
+        (securityForm as HTMLFormElement).reset();
+        toast.success(T.passwordChanged);
+        setTimeout(() => { window.location.href = d.dashboardUrl!; }, 600);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : T.unknown);
+      }
+    });
+
+    // ─── Export Data ───────────────────────────────────────────────
+    const exportBtn = document.getElementById('export-data-btn');
+    exportBtn?.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/export-data');
+        if (!res.ok) throw new Error();
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'atomic-data-export.json';
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch {
+        toast.error(T.exportFailed);
+      }
+    });
+
+    // ─── Delete Account ────────────────────────────────────────────
+    const revealBtn = document.getElementById('delete-reveal-btn');
+    const confirmDiv = document.getElementById('delete-confirm');
+    revealBtn?.addEventListener('click', () => {
+      confirmDiv?.classList.remove('hidden');
+      confirmDiv?.classList.add('grid');
+      revealBtn.classList.add('hidden');
+    });
+
+    const deleteBtn = document.getElementById('delete-confirm-btn');
+    deleteBtn?.addEventListener('click', async () => {
+      const pwd = (document.getElementById('delete-password') as HTMLInputElement).value;
+      if (!pwd) return;
+
+      try {
+        const { error } = await authClient.deleteUser({
+          password: pwd,
+          callbackURL: signInUrl,
+        });
+        if (error) throw error;
+        toast.success(T.deleteSent);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : T.deleteFailed);
+      }
+    });
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

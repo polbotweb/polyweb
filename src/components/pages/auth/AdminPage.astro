@@ -1,0 +1,429 @@
+---
+import type { AuthTranslations, Locale } from '@i18n/config';
+import type { AppUser } from '@/lib/types';
+import type { AdminUser, Organization, AuditLogRow } from '@/lib/auth-data';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@atoms/tabs';
+import { Card, CardHeader, CardTitle, CardContent } from '@atoms/card';
+import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@atoms/table';
+import Badge from '@atoms/badge/Badge.astro';
+import Button from '@atoms/button/Button.astro';
+import { Input } from '@atoms/input';
+import { NativeSelect, NativeSelectOption } from '@atoms/native-select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+  DialogClose,
+  DialogFooter,
+} from '@atoms/dialog';
+import { safeUrl } from '@lib/sanitize';
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  user: AppUser;
+  adminUsers?: AdminUser[];
+  adminOrgs?: Organization[];
+  adminAuditLogs?: AuditLogRow[];
+  adminStats?: { totalUsers: number; totalOrganizations: number; recentSignups: number };
+}
+
+const {
+  t,
+  locale,
+  user,
+  adminUsers = [],
+  adminOrgs = [],
+  adminAuditLogs = [],
+  adminStats = { totalUsers: 0, totalOrganizations: 0, recentSignups: 0 },
+} = Astro.props;
+
+const ta = t.admin;
+
+function formatDate(d: Date | string | null) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString(locale, {
+    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+}
+
+function formatShortDate(d: Date | string | null) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString(locale, {
+    year: 'numeric', month: 'short', day: 'numeric',
+  });
+}
+
+// Unique actions for filter
+const uniqueActions = [...new Set(adminAuditLogs.map((l: any) => l.action))].sort();
+---
+
+<section class="mx-auto w-full max-w-6xl px-4 py-12">
+  <h1 class="text-3xl font-bold mb-8">{ta.title}</h1>
+
+  <Tabs defaultValue="stats">
+    <TabsList>
+      <TabsTrigger value="stats">{ta.tabs.stats}</TabsTrigger>
+      <TabsTrigger value="users">{ta.tabs.users}</TabsTrigger>
+      <TabsTrigger value="organizations">{ta.tabs.organizations}</TabsTrigger>
+      <TabsTrigger value="audit-log">{ta.tabs.auditLog}</TabsTrigger>
+    </TabsList>
+
+    <!-- ─── Stats Tab ─── -->
+    <TabsContent value="stats">
+      <div class="grid gap-4 sm:grid-cols-3 mt-4">
+        <Card>
+          <CardHeader><CardTitle class="text-sm text-muted-foreground">{ta.stats.totalUsers}</CardTitle></CardHeader>
+          <CardContent><p class="text-3xl font-bold">{adminStats.totalUsers}</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle class="text-sm text-muted-foreground">{ta.stats.totalOrganizations}</CardTitle></CardHeader>
+          <CardContent><p class="text-3xl font-bold">{adminStats.totalOrganizations}</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-sm text-muted-foreground">{ta.stats.recentSignups}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p class="text-3xl font-bold">{adminStats.recentSignups}</p>
+            <p class="text-xs text-muted-foreground mt-1">{ta.stats.recentSignupsDescription}</p>
+          </CardContent>
+        </Card>
+      </div>
+    </TabsContent>
+
+    <!-- ─── Users Tab ─── -->
+    <TabsContent value="users">
+      <div class="mt-4 space-y-4">
+        <Input
+          type="search"
+          id="admin-user-search"
+          placeholder={ta.users.searchPlaceholder}
+          class="max-w-sm"
+        />
+
+        <div class="rounded-md border overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{ta.users.columns.name}</TableHead>
+                <TableHead>{ta.users.columns.email}</TableHead>
+                <TableHead>{ta.users.columns.role}</TableHead>
+                <TableHead>{ta.users.columns.status}</TableHead>
+                <TableHead>{ta.users.columns.joined}</TableHead>
+                <TableHead class="text-right">{ta.users.columns.actions}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody id="admin-users-tbody">
+              {adminUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell colspan={6} class="text-center text-muted-foreground py-8">
+                    {ta.users.noResults}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                adminUsers.map((u: any) => (
+                  <TableRow
+                    class="admin-user-row"
+                    data-name={u.name?.toLowerCase() ?? ''}
+                    data-email={u.email?.toLowerCase() ?? ''}
+                    data-user-id={u.id}
+                  >
+                    <TableCell>
+                      <div class="flex flex-col">
+                        <span class="font-medium">{u.name}</span>
+                        <span class="text-xs text-muted-foreground">@{u.username ?? '—'}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell class="text-sm">{u.email}</TableCell>
+                    <TableCell>
+                      <Badge variant={u.role === 'admin' ? 'primary' : 'outline'} size="sm">
+                        {u.role === 'admin' ? ta.users.roles.admin : ta.users.roles.user}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {u.banned ? (
+                        <Badge variant="error" size="sm">{ta.users.status.banned}</Badge>
+                      ) : (
+                        <Badge variant="success" size="sm">{ta.users.status.active}</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell class="text-sm text-muted-foreground">
+                      {formatShortDate(u.createdAt)}
+                    </TableCell>
+                    <TableCell class="text-right">
+                      {u.id !== user.id && (
+                        <div class="flex gap-1 justify-end flex-wrap">
+                          {u.banned ? (
+                            <Button size="sm" variant="outline" class="admin-unban-btn" data-user-id={u.id}>
+                              {ta.users.actions.unban}
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="outline" class="admin-ban-btn" data-user-id={u.id}>
+                              {ta.users.actions.ban}
+                            </Button>
+                          )}
+                          {u.role === 'admin' ? (
+                            <Button size="sm" variant="outline" class="admin-set-user-btn" data-user-id={u.id}>
+                              {ta.users.actions.setUser}
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="outline" class="admin-set-admin-btn" data-user-id={u.id}>
+                              {ta.users.actions.setAdmin}
+                            </Button>
+                          )}
+                          <Button size="sm" variant="ghost" class="admin-impersonate-btn" data-user-id={u.id}>
+                            {ta.users.actions.impersonate}
+                          </Button>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button size="sm" variant="error">{ta.users.actions.delete}</Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>{ta.users.actions.delete}</DialogTitle>
+                                <DialogDescription>{ta.users.confirmDelete}</DialogDescription>
+                              </DialogHeader>
+                              <DialogFooter>
+                                <DialogClose asChild>
+                                  <Button variant="outline">Cancel</Button>
+                                </DialogClose>
+                                <Button variant="error" class="admin-delete-btn" data-user-id={u.id}>
+                                  {ta.users.actions.delete}
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    </TabsContent>
+
+    <!-- ─── Organizations Tab ─── -->
+    <TabsContent value="organizations">
+      <div class="mt-4 rounded-md border overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{ta.organizations.columns.name}</TableHead>
+              <TableHead>{ta.organizations.columns.slug}</TableHead>
+              <TableHead>{ta.organizations.columns.members}</TableHead>
+              <TableHead>{ta.organizations.columns.created}</TableHead>
+              <TableHead class="text-right">{ta.organizations.columns.actions}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {adminOrgs.length === 0 ? (
+              <TableRow>
+                <TableCell colspan={5} class="text-center text-muted-foreground py-8">
+                  {ta.organizations.noResults}
+                </TableCell>
+              </TableRow>
+            ) : (
+              adminOrgs.map((org: any) => (
+                <TableRow>
+                  <TableCell>
+                    <div class="flex items-center gap-2">
+                      {org.logo && safeUrl(org.logo) && <img src={safeUrl(org.logo)!} alt={org.name} class="w-6 h-6 rounded" />}
+                      <span class="font-medium">{org.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell class="text-sm text-muted-foreground">{org.slug}</TableCell>
+                  <TableCell class="text-sm">{org.memberCount}</TableCell>
+                  <TableCell class="text-sm text-muted-foreground">
+                    {formatShortDate(org.createdAt)}
+                  </TableCell>
+                  <TableCell class="text-right">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button size="sm" variant="error">{ta.organizations.actions.delete}</Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>{ta.organizations.actions.delete}</DialogTitle>
+                          <DialogDescription>{ta.organizations.confirmDelete}</DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                          <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                          </DialogClose>
+                          <Button variant="error" class="admin-delete-org-btn" data-org-id={org.id}>
+                            {ta.organizations.actions.delete}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </TabsContent>
+
+    <!-- ─── Audit Log Tab ─── -->
+    <TabsContent value="audit-log">
+      <div class="mt-4 space-y-4">
+        <NativeSelect id="audit-action-filter" class="max-w-xs">
+          <NativeSelectOption value="">{ta.auditLog.allActions}</NativeSelectOption>
+          {uniqueActions.map((action: string) => (
+            <NativeSelectOption value={action}>{action}</NativeSelectOption>
+          ))}
+        </NativeSelect>
+
+        <div class="rounded-md border overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{ta.auditLog.columns.date}</TableHead>
+                <TableHead>{ta.auditLog.columns.user}</TableHead>
+                <TableHead>{ta.auditLog.columns.action}</TableHead>
+                <TableHead>{ta.auditLog.columns.resource}</TableHead>
+                <TableHead>{ta.auditLog.columns.ip}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody id="audit-log-tbody">
+              {adminAuditLogs.length === 0 ? (
+                <TableRow>
+                  <TableCell colspan={5} class="text-center text-muted-foreground py-8">
+                    {ta.auditLog.noResults}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                adminAuditLogs.map((log: any) => (
+                  <TableRow class="audit-log-row" data-action={log.action}>
+                    <TableCell class="text-sm text-muted-foreground whitespace-nowrap">
+                      {formatDate(log.createdAt)}
+                    </TableCell>
+                    <TableCell class="text-sm">{log.userName ?? '—'}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" size="sm">{log.action}</Badge>
+                    </TableCell>
+                    <TableCell class="text-sm">
+                      {log.resource}{log.resourceId ? ` #${log.resourceId.slice(0, 8)}` : ''}
+                    </TableCell>
+                    <TableCell class="text-sm text-muted-foreground">{log.ipAddress ?? '—'}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    </TabsContent>
+  </Tabs>
+</section>
+
+<script>
+  import { authClient } from '@/lib/auth-client';
+
+  // ─── User search filter ───
+  const searchInput = document.getElementById('admin-user-search') as HTMLInputElement | null;
+  searchInput?.addEventListener('input', () => {
+    const q = searchInput.value.toLowerCase();
+    document.querySelectorAll<HTMLElement>('.admin-user-row').forEach((row) => {
+      const name = row.dataset.name ?? '';
+      const email = row.dataset.email ?? '';
+      row.style.display = name.includes(q) || email.includes(q) ? '' : 'none';
+    });
+  });
+
+  // ─── Audit log action filter ───
+  const actionFilter = document.getElementById('audit-action-filter') as HTMLSelectElement | null;
+  actionFilter?.addEventListener('change', () => {
+    const val = actionFilter.value;
+    document.querySelectorAll<HTMLElement>('.audit-log-row').forEach((row) => {
+      row.style.display = !val || row.dataset.action === val ? '' : 'none';
+    });
+  });
+
+  // ─── Admin user actions ───
+  function showToast(msg: string) {
+    const el = document.createElement('div');
+    el.className = 'fixed bottom-4 right-4 z-50 rounded-md border bg-background px-4 py-3 text-sm shadow-lg';
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+  }
+
+  // Ban
+  document.querySelectorAll('.admin-ban-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const userId = (btn as HTMLElement).dataset.userId;
+      if (!userId) return;
+      const { error } = await authClient.admin.banUser({ userId });
+      if (!error) { showToast('User banned.'); location.reload(); }
+    });
+  });
+
+  // Unban
+  document.querySelectorAll('.admin-unban-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const userId = (btn as HTMLElement).dataset.userId;
+      if (!userId) return;
+      const { error } = await authClient.admin.unbanUser({ userId });
+      if (!error) { showToast('User unbanned.'); location.reload(); }
+    });
+  });
+
+  // Set admin
+  document.querySelectorAll('.admin-set-admin-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const userId = (btn as HTMLElement).dataset.userId;
+      if (!userId) return;
+      const { error } = await authClient.admin.setRole({ userId, role: 'admin' });
+      if (!error) { showToast('Role updated.'); location.reload(); }
+    });
+  });
+
+  // Set user
+  document.querySelectorAll('.admin-set-user-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const userId = (btn as HTMLElement).dataset.userId;
+      if (!userId) return;
+      const { error } = await authClient.admin.setRole({ userId, role: 'user' });
+      if (!error) { showToast('Role updated.'); location.reload(); }
+    });
+  });
+
+  // Impersonate
+  document.querySelectorAll('.admin-impersonate-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const userId = (btn as HTMLElement).dataset.userId;
+      if (!userId) return;
+      const { error } = await authClient.admin.impersonateUser({ userId });
+      if (!error) location.reload();
+    });
+  });
+
+  // Delete user
+  document.querySelectorAll('.admin-delete-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const userId = (btn as HTMLElement).dataset.userId;
+      if (!userId) return;
+      const { error } = await authClient.admin.removeUser({ userId });
+      if (!error) { showToast('User deleted.'); location.reload(); }
+    });
+  });
+
+  // Delete organization
+  document.querySelectorAll('.admin-delete-org-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const orgId = (btn as HTMLElement).dataset.orgId;
+      if (!orgId) return;
+      const { error } = await authClient.organization.delete({ organizationId: orgId });
+      if (!error) { showToast('Organization deleted.'); location.reload(); }
+    });
+  });
+</script>

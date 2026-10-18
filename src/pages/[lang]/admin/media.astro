@@ -1,0 +1,49 @@
+---
+import { requirePermission } from '@/lib/auth-guards';
+import { getMediaFolders, getMediaFilesByFolder, getMediaFoldersList, getMediaFile, getMediaFileCountsByFolder, getMediaStats } from '@database/loaders/media.loader';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import AuthLayout from '@organisms/AuthLayout/AuthLayout.astro';
+import AdminSidebar from '@organisms/AdminSidebar/AdminSidebar.astro';
+import AdminMediaPage from '@pages/admin/AdminMediaPage.astro';
+
+export const prerender = false;
+
+const result = await requirePermission(Astro, { media: ["read"] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT } = result;
+
+const folderId = Astro.url.searchParams.get('folder') || null;
+const editFileId = Astro.url.searchParams.get('file') || null;
+
+const [folderTree, foldersList, files, editFile, fileCountsMap, stats] = await Promise.all([
+  getMediaFolders(),
+  getMediaFoldersList(),
+  getMediaFilesByFolder(folderId),
+  editFileId ? getMediaFile(editFileId) : null,
+  getMediaFileCountsByFolder(),
+  getMediaStats(),
+]);
+
+// Convert Map to plain object for serialization
+const fileCounts: Record<string, number> = {};
+for (const [k, v] of fileCountsMap) {
+  fileCounts[k ?? '__root__'] = v;
+}
+---
+
+<BaseLayout title={authT.admin.tabs.media} description={authT.admin.tabs.media}>
+  <AuthLayout title={authT.admin.tabs.media}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="media" />
+    <AdminMediaPage
+      t={authT}
+      locale={locale}
+      folderTree={folderTree}
+      foldersList={foldersList}
+      files={files}
+      currentFolderId={folderId}
+      editFile={editFile}
+      fileCounts={fileCounts}
+      stats={stats}
+    />
+  </AuthLayout>
+</BaseLayout>

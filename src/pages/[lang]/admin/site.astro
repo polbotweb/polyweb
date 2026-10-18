@@ -1,0 +1,45 @@
+---
+import { requirePermission } from '@/lib/auth-guards';
+import {
+  getSiteSettings,
+  getSocialLinks,
+  getContactInfo,
+  getOpeningHours,
+} from '@database/loaders/site.loader';
+import { LOCALES, type Locale } from '@i18n/config';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import AuthLayout from '@organisms/AuthLayout/AuthLayout.astro';
+import AdminSidebar from '@organisms/AdminSidebar/AdminSidebar.astro';
+import AdminSitePage from '@pages/admin/AdminSitePage.astro';
+
+export const prerender = false;
+
+const result = await requirePermission(Astro, { site: ["read"] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT } = result;
+
+const [allSettingsArr, social, contact, hours] = await Promise.all([
+  Promise.all(LOCALES.map((l) => getSiteSettings(l))),
+  getSocialLinks(),
+  getContactInfo(),
+  getOpeningHours(),
+]);
+
+const allSettings = Object.fromEntries(
+  LOCALES.map((l, i) => [l, allSettingsArr[i]])
+) as Record<Locale, Awaited<ReturnType<typeof getSiteSettings>>>;
+---
+
+<BaseLayout title={authT.admin.cms.site.title} description={authT.admin.cms.site.description}>
+  <AuthLayout title={authT.admin.cms.site.title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="site" />
+    <AdminSitePage
+      t={authT}
+      locale={locale}
+      allSettings={allSettings}
+      socialLinks={social}
+      contactInfo={contact}
+      openingHours={hours}
+    />
+  </AuthLayout>
+</BaseLayout>

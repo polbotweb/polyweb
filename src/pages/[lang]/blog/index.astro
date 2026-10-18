@@ -1,0 +1,79 @@
+---
+import { LOCALES } from "@i18n/config";
+import { toLocale, getBlogTranslations } from "@i18n/utils";
+import { getBlogPosts, getBlogCategories, getBlogTags } from "@database/loaders/blog.loader";
+import { generateSchemaMarkup } from "@/lib/blog/utils";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import BlogListingPage from "@pages/blog/BlogListingPage.astro";
+
+export const prerender = false;
+
+const locale = toLocale(Astro.params.lang);
+const blogT = await getBlogTranslations(locale);
+const baseUrl = `/${locale}/${blogT.routes.blog}`;
+const page = Math.max(1, Number(Astro.url.searchParams.get("page") ?? "1") || 1);
+const searchQuery = Astro.url.searchParams.get("q")?.trim() || undefined;
+
+const [{ items, meta }, categoryRows, tagRows] = await Promise.all([
+  getBlogPosts(null, locale, { page, searchQuery }),
+  getBlogCategories(null, locale),
+  getBlogTags(null, locale),
+]);
+
+const categories = categoryRows.map((item) => ({
+  id: item.id,
+  slug: item.slug,
+  name: item.translation?.name ?? item.slug,
+  postCount: item.postCount,
+  color: item.color,
+  icon: item.icon,
+}));
+
+const tags = tagRows.map((item) => ({
+  id: item.id,
+  slug: item.slug,
+  name: item.translation?.name ?? item.slug,
+  postCount: item.postCount,
+  color: item.color,
+}));
+
+const alternateUrls = Object.fromEntries(
+  await Promise.all(
+    LOCALES.map(async (loc) => {
+      const locBlogT = await getBlogTranslations(loc);
+      return [loc, `/${loc}/${locBlogT.routes.blog}`];
+    }),
+  ),
+);
+
+const jsonLd = JSON.stringify(
+  generateSchemaMarkup("Blog", {
+    name: blogT.meta.title,
+    description: blogT.meta.description,
+    url: Astro.url.href,
+    inLanguage: locale,
+  }),
+);
+---
+
+<BaseLayout
+  title={blogT.meta.title}
+  description={blogT.meta.description}
+  alternateUrls={alternateUrls}
+  ogType="blog"
+  jsonLd={jsonLd}
+>
+  <BlogListingPage
+    locale={locale}
+    blogT={blogT}
+    title={blogT.meta.title}
+    description={blogT.meta.description}
+    posts={items as never}
+    meta={meta}
+    categories={categories}
+    tags={tags}
+    baseUrl={baseUrl}
+    organizationSlug={null}
+    searchQuery={searchQuery}
+  />
+</BaseLayout>

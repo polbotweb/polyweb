@@ -1,0 +1,12 @@
+---
+import { toLocale, getContactTranslations } from '@i18n/utils';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import ContactPage from '@pages/ContactPage/ContactPage.astro';
+
+const locale = toLocale(Astro.params.lang);
+const t = await getContactTranslations(locale);
+---
+
+<BaseLayout>
+  <ContactPage t={t} />
+</BaseLayout>

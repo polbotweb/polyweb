@@ -1,0 +1,23 @@
+---
+import { requirePermission } from '@/lib/auth-guards';
+import { fetchAdminStats } from '@/lib/auth-data';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import AuthLayout from '@organisms/AuthLayout/AuthLayout.astro';
+import AdminSidebar from '@organisms/AdminSidebar/AdminSidebar.astro';
+import AdminStatsPage from '@pages/admin/AdminStatsPage.astro';
+
+export const prerender = false;
+
+const result = await requirePermission(Astro, { page: ["read"] });
+if ('redirect' in result) return result.redirect;
+const { user, locale, authT } = result;
+
+const { stats } = await fetchAdminStats(Astro.request.headers);
+---
+
+<BaseLayout title={authT.meta.admin.title} description={authT.meta.admin.description}>
+  <AuthLayout title={authT.admin.tabs.stats}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="stats" />
+    <AdminStatsPage t={authT} locale={locale} user={user} adminStats={stats} />
+  </AuthLayout>
+</BaseLayout>

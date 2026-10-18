@@ -1,0 +1,35 @@
+---
+import type { AuthTranslations, Locale } from '@i18n/config';
+import type { AppUser } from '@/lib/types';
+import { Card, CardHeader, CardTitle, CardContent } from '@atoms/card';
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  user: AppUser;
+  adminStats: { totalUsers: number; totalOrganizations: number; recentSignups: number };
+}
+
+const { t, adminStats } = Astro.props;
+const ta = t.admin;
+---
+
+<div class="grid gap-4 sm:grid-cols-3">
+  <Card>
+    <CardHeader><CardTitle class="text-sm text-muted-foreground">{ta.stats.totalUsers}</CardTitle></CardHeader>
+    <CardContent><p class="text-3xl font-bold">{adminStats.totalUsers}</p></CardContent>
+  </Card>
+  <Card>
+    <CardHeader><CardTitle class="text-sm text-muted-foreground">{ta.stats.totalOrganizations}</CardTitle></CardHeader>
+    <CardContent><p class="text-3xl font-bold">{adminStats.totalOrganizations}</p></CardContent>
+  </Card>
+  <Card>
+    <CardHeader>
+      <CardTitle class="text-sm text-muted-foreground">{ta.stats.recentSignups}</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <p class="text-3xl font-bold">{adminStats.recentSignups}</p>
+      <p class="text-xs text-muted-foreground mt-1">{ta.stats.recentSignupsDescription}</p>
+    </CardContent>
+  </Card>
+</div>

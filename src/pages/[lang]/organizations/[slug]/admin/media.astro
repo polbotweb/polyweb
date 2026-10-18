@@ -1,0 +1,64 @@
+---
+import { requireAuth } from '@/lib/auth-guards';
+import { fetchOrgData, getUserOrgRole } from '@/lib/auth-data';
+import { getMediaFolders, getMediaFilesByFolder, getMediaFoldersList, getMediaFile, getMediaFileCountsByFolder, getMediaStats } from '@database/loaders/media.loader';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import AuthLayout from '@organisms/AuthLayout/AuthLayout.astro';
+import OrgSidebar from '@organisms/OrgSidebar/OrgSidebar.astro';
+import AdminMediaPage from '@pages/admin/AdminMediaPage.astro';
+
+export const prerender = false;
+
+const result = await requireAuth(Astro);
+if ('redirect' in result) return result.redirect;
+const { user, locale, authT } = result;
+
+const orgSlug = Astro.params.slug;
+if (!orgSlug) return Astro.redirect(`/${locale}/auth/${authT.routes['dashboard']}`);
+
+const orgData = await fetchOrgData(Astro.request.headers, orgSlug);
+if (!orgData) return Astro.redirect(`/${locale}/auth/${authT.routes['dashboard']}`);
+
+const { org, members } = orgData;
+const activeOrgRole = getUserOrgRole(members, user.id);
+
+if (activeOrgRole !== 'admin' && activeOrgRole !== 'owner') {
+  return Astro.redirect(`/${locale}/organizations/${orgSlug}/members`);
+}
+
+const folderId = Astro.url.searchParams.get('folder') || null;
+const editFileId = Astro.url.searchParams.get('file') || null;
+
+const [folderTree, foldersList, files, editFile, fileCountsMap, stats] = await Promise.all([
+  getMediaFolders(org.id),
+  getMediaFoldersList(org.id),
+  getMediaFilesByFolder(folderId, org.id),
+  editFileId ? getMediaFile(editFileId, org.id) : null,
+  getMediaFileCountsByFolder(org.id),
+  getMediaStats(org.id),
+]);
+
+const fileCounts: Record<string, number> = {};
+for (const [k, v] of fileCountsMap) {
+  fileCounts[k ?? '__root__'] = v;
+}
+---
+
+<BaseLayout title={authT.organizations.media.title} description={authT.organizations.media.description}>
+  <AuthLayout title={org.name}>
+    <OrgSidebar slot="sidebar" t={authT} locale={locale} org={org} activeItem="media" orgRole={activeOrgRole} />
+    <AdminMediaPage
+      t={authT}
+      locale={locale}
+      folderTree={folderTree}
+      foldersList={foldersList}
+      files={files}
+      currentFolderId={folderId}
+      editFile={editFile}
+      fileCounts={fileCounts}
+      stats={stats}
+      baseUrl={`/${locale}/organizations/${org.slug}/admin/media`}
+      organizationId={org.id}
+    />
+  </AuthLayout>
+</BaseLayout>

@@ -1,0 +1,94 @@
+---
+import { getRelativeLocaleUrl } from "astro:i18n";
+import { LOCALES, LOCALE_LABELS, type Locale } from "@/core/localization";
+import type { BlogTranslations } from "@i18n/config";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@atoms/tabs";
+import AdminResourceShell from "@organisms/AdminResourceShell.astro";
+import AdminResourceStats from "@molecules/AdminResourceStats.astro";
+import { AdminPostList, AdminModerationQueue, AdminTaxonomyManager } from "@/modules/blog/admin";
+import { NotificationBell } from "@/modules/blog/components/ui";
+import type { BlogAdminAggregateStats } from "@database/loaders/blog-admin.loader";
+import type { BlogPostListItem } from "@/modules/blog/domain";
+import type { getBlogModerationQueue } from "@database/loaders/blog.loader";
+import { blogPostAdminResource } from "@/modules/blog";
+
+interface PostRow { post: BlogPostListItem["post"]; translation: { id: string; locale: Locale; title: string; slug: string } | null; author: BlogPostListItem["author"]; categories: BlogPostListItem["categories"]; }
+interface TaxonomyItem { id: string; slug: string; name: string; description?: string | null; color?: string | null; icon?: string | null; parentId?: string | null; sortOrder?: number | null; postCount: number; }
+interface FilterOptions { categories: { id: string; name: string }[]; tags: { id: string; name: string }[]; authors: { id: string; name: string | null }[] }
+interface Props {
+  locale: Locale;
+  blogT: BlogTranslations;
+  title: string;
+  posts: PostRow[];
+  postsMeta: { total: number; page: number; limit: number; totalPages: number; hasNextPage: boolean; hasPrevPage: boolean };
+  stats: BlogAdminAggregateStats;
+  moderationCount: number;
+  categories: TaxonomyItem[];
+  tags: TaxonomyItem[];
+  moderation: Awaited<ReturnType<typeof getBlogModerationQueue>>;
+  baseAdminUrl: string;
+  basePublicUrl: string;
+  organizationId?: string | null;
+  userId: string;
+  canCreate: boolean;
+  canUpdate: boolean;
+  canPublish: boolean;
+  canDelete: boolean;
+  filterOptions: FilterOptions;
+}
+const { title, locale, blogT, posts, postsMeta, stats, moderationCount, categories, tags, moderation, baseAdminUrl, basePublicUrl, organizationId, userId, canCreate, canUpdate, canPublish, canDelete, filterOptions } = Astro.props;
+const localeSwitcherT = blogT.admin.localeSwitcher;
+const currentPath = Astro.url.pathname;
+const pathWithoutLocale = currentPath.replace(new RegExp(`^/${locale}(?=/|$)`), "") || "/";
+function buildLocaleHref(targetLocale: Locale): string { return `${getRelativeLocaleUrl(targetLocale, pathWithoutLocale)}${Astro.url.search}`; }
+---
+
+<div data-admin-resource={blogPostAdminResource.id} data-admin-entity={blogPostAdminResource.entity}>
+  <AdminResourceShell title={title} description={blogT.admin.title}>
+    <Fragment slot="actions">
+      <NotificationBell blogT={blogT} userId={userId} baseAdminUrl={baseAdminUrl} organizationId={organizationId ?? null} />
+    </Fragment>
+
+    <div class="space-y-6 p-4 sm:p-6">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">{localeSwitcherT.title}</span>
+            {LOCALES.map((loc) => (
+              <a href={buildLocaleHref(loc)} aria-current={loc === locale ? "page" : undefined} class:list={["inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors", { "border-primary bg-primary text-primary-foreground": loc === locale, "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground": loc !== locale }]}>{LOCALE_LABELS[loc]}</a>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <Tabs defaultValue="posts">
+        <TabsList>
+          <TabsTrigger value="posts" defaultActive>{blogT.admin.posts}</TabsTrigger>
+          <TabsTrigger value="categories">{blogT.admin.categories}</TabsTrigger>
+          <TabsTrigger value="tags">{blogT.admin.tags}</TabsTrigger>
+          <TabsTrigger value="moderation">{blogT.admin.moderation}</TabsTrigger>
+          <TabsTrigger value="stats">{blogT.admin.stats}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="posts" defaultActive class="pt-4">
+          <AdminPostList locale={locale} blogT={blogT} rows={posts} meta={postsMeta} baseAdminUrl={baseAdminUrl} basePublicUrl={basePublicUrl} canCreate={canCreate} canUpdate={canUpdate} canPublish={canPublish} canDelete={canDelete} organizationId={organizationId} filterOptions={filterOptions} />
+        </TabsContent>
+        <TabsContent value="categories" class="pt-4"><AdminTaxonomyManager locale={locale} blogT={blogT} kind="category" items={categories} organizationId={organizationId} /></TabsContent>
+        <TabsContent value="tags" class="pt-4"><AdminTaxonomyManager locale={locale} blogT={blogT} kind="tag" items={tags} organizationId={organizationId} /></TabsContent>
+        <TabsContent value="moderation" class="pt-4"><AdminModerationQueue blogT={blogT} moderation={moderation} organizationId={organizationId} /></TabsContent>
+        <TabsContent value="stats" class="pt-4">
+          <AdminResourceStats stats={[
+            { label: blogT.admin.posts, value: stats.total },
+            { label: blogT.statuses.PUBLISHED, value: stats.published },
+            { label: blogT.statuses.DRAFT, value: stats.draft },
+            { label: blogT.admin.archive, value: stats.archived },
+            { label: blogT.statuses.DELETED, value: stats.deleted },
+            { label: blogT.labels.featured, value: stats.featured },
+            { label: blogT.labels.sticky, value: stats.sticky },
+            { label: blogT.admin.views, value: stats.views },
+            { label: blogT.admin.moderation, value: moderationCount },
+          ]} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  </AdminResourceShell>
+</div>

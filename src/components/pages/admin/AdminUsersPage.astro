@@ -1,0 +1,386 @@
+---
+import type { AuthTranslations, Locale } from '@i18n/config';
+import type { AppUser } from '@/lib/types';
+import type { AdminUser } from '@/lib/auth-data';
+import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@atoms/table';
+import { Card, CardContent } from '@atoms/card';
+import { Avatar, AvatarImage, AvatarFallback } from '@atoms/avatar';
+import Badge from '@atoms/badge/Badge.astro';
+import Button from '@atoms/button/Button.astro';
+import { Input } from '@atoms/input';
+import { NativeSelect, NativeSelectOption } from '@atoms/native-select';
+import { DataView } from '@molecules/DataView';
+import { safeUrl } from '@lib/sanitize';
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  user: AppUser;
+  adminUsers: AdminUser[];
+}
+
+const { t, locale, user, adminUsers } = Astro.props;
+const ta = t.admin;
+const roles = Object.entries(ta.users.roles) as [string, string][];
+
+function formatShortDate(d: Date | string | null) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString(locale, {
+    year: 'numeric', month: 'short', day: 'numeric',
+  });
+}
+
+function isoDate(d: Date | string | null) {
+  if (!d) return '';
+  return new Date(d).toISOString();
+}
+
+function initials(name?: string) {
+  return name ? name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) : '?';
+}
+---
+
+<DataView>
+  <Fragment slot="toolbar-start">
+    <Input
+      type="search"
+      id="admin-user-search"
+      placeholder={ta.users.searchPlaceholder}
+      class="max-w-xs"
+    />
+    <NativeSelect id="admin-filter-role" class="w-auto text-sm">
+      <NativeSelectOption value="">{ta.users.filter.allRoles}</NativeSelectOption>
+      {roles.map(([value, label]) => (
+        <NativeSelectOption value={value}>{label}</NativeSelectOption>
+      ))}
+    </NativeSelect>
+    <NativeSelect id="admin-filter-status" class="w-auto text-sm">
+      <NativeSelectOption value="">{ta.users.filter.allStatuses}</NativeSelectOption>
+      <NativeSelectOption value="active">{ta.users.status.active}</NativeSelectOption>
+      <NativeSelectOption value="banned">{ta.users.status.banned}</NativeSelectOption>
+    </NativeSelect>
+  </Fragment>
+
+  <Fragment slot="toolbar-end">
+    <NativeSelect id="admin-sort" class="w-auto text-sm">
+      <NativeSelectOption value="newest">{ta.users.sort.newest}</NativeSelectOption>
+      <NativeSelectOption value="oldest">{ta.users.sort.oldest}</NativeSelectOption>
+      <NativeSelectOption value="name-asc">{ta.users.sort.nameAsc}</NativeSelectOption>
+      <NativeSelectOption value="name-desc">{ta.users.sort.nameDesc}</NativeSelectOption>
+    </NativeSelect>
+  </Fragment>
+
+  <!-- ─── Table view ─── -->
+  <div slot="table" class="rounded-md border overflow-x-auto">
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>{ta.users.columns.name}</TableHead>
+          <TableHead>{ta.users.columns.email}</TableHead>
+          <TableHead>{ta.users.columns.role}</TableHead>
+          <TableHead>{ta.users.columns.status}</TableHead>
+          <TableHead>{ta.users.columns.joined}</TableHead>
+          <TableHead class="text-right">{ta.users.columns.actions}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody id="admin-users-tbody">
+        {adminUsers.length === 0 ? (
+          <TableRow>
+            <TableCell colspan={6} class="text-center text-muted-foreground py-8">
+              {ta.users.noResults}
+            </TableCell>
+          </TableRow>
+        ) : (
+          adminUsers.map((u: any) => (
+            <TableRow
+              class="admin-user-row"
+              data-name={u.name?.toLowerCase() ?? ''}
+              data-email={u.email?.toLowerCase() ?? ''}
+              data-role={u.role ?? 'user'}
+              data-banned={u.banned ? 'true' : 'false'}
+              data-date={isoDate(u.createdAt)}
+              data-user-id={u.id}
+            >
+              <TableCell>
+                <div class="flex items-center gap-3">
+                  <Avatar size="sm">
+                    {u.image && safeUrl(u.image) && <AvatarImage src={safeUrl(u.image)!} alt={u.name ?? ''} />}
+                    <AvatarFallback>{initials(u.name)}</AvatarFallback>
+                  </Avatar>
+                  <div class="flex flex-col">
+                    <span class="font-medium">{u.name}</span>
+                    {u.username && <span class="text-xs text-muted-foreground">@{u.username}</span>}
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell class="text-sm">{u.email}</TableCell>
+              <TableCell>
+                {u.id !== user.id ? (
+                  <select
+                    class="admin-role-select rounded border bg-transparent px-2 py-1 text-xs"
+                    data-user-id={u.id}
+                  >
+                    {roles.map(([value, label]) => (
+                      <option value={value} selected={u.role === value}>{label}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <Badge variant={u.role === 'admin' ? 'primary' : 'outline'} size="sm">
+                    {ta.users.roles[u.role as keyof typeof ta.users.roles] ?? u.role}
+                  </Badge>
+                )}
+              </TableCell>
+              <TableCell>
+                {u.banned ? (
+                  <Badge variant="error" size="sm">{ta.users.status.banned}</Badge>
+                ) : (
+                  <Badge variant="success" size="sm">{ta.users.status.active}</Badge>
+                )}
+              </TableCell>
+              <TableCell class="text-sm text-muted-foreground">
+                {formatShortDate(u.createdAt)}
+              </TableCell>
+              <TableCell class="text-right">
+                {u.id !== user.id && (
+                  <div class="flex gap-1 justify-end flex-wrap">
+                    {u.banned ? (
+                      <Button size="sm" variant="outline" class="admin-unban-btn" data-user-id={u.id}>
+                        {ta.users.actions.unban}
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="outline" class="admin-ban-btn" data-user-id={u.id}>
+                        {ta.users.actions.ban}
+                      </Button>
+                    )}
+                    <Button size="sm" variant="ghost" class="admin-impersonate-btn" data-user-id={u.id}>
+                      {ta.users.actions.impersonate}
+                    </Button>
+                    <Button size="sm" variant="error" class="admin-delete-btn" data-user-id={u.id}>
+                      {ta.users.actions.delete}
+                    </Button>
+                  </div>
+                )}
+              </TableCell>
+            </TableRow>
+          ))
+        )}
+      </TableBody>
+    </Table>
+  </div>
+
+  <!-- ─── Cards view ─── -->
+  <div slot="cards" class="grid gap-3" id="admin-users-cards">
+    {adminUsers.length === 0 ? (
+      <p class="text-center text-muted-foreground py-8">{ta.users.noResults}</p>
+    ) : (
+      adminUsers.map((u: any) => (
+        <Card
+          class="admin-user-card"
+          data-name={u.name?.toLowerCase() ?? ''}
+          data-email={u.email?.toLowerCase() ?? ''}
+          data-role={u.role ?? 'user'}
+          data-banned={u.banned ? 'true' : 'false'}
+          data-date={isoDate(u.createdAt)}
+          data-user-id={u.id}
+        >
+          <CardContent class="p-4">
+            <div class="flex items-center gap-3 mb-3">
+              <Avatar size="sm">
+                {u.image && safeUrl(u.image) && <AvatarImage src={safeUrl(u.image)!} alt={u.name ?? ''} />}
+                <AvatarFallback>{initials(u.name)}</AvatarFallback>
+              </Avatar>
+              <div class="flex-1 min-w-0">
+                <p class="font-medium text-sm truncate">{u.name}</p>
+                <p class="text-xs text-muted-foreground truncate">{u.email}</p>
+              </div>
+              <div class="flex gap-1">
+                {u.banned ? (
+                  <Badge variant="error" size="sm">{ta.users.status.banned}</Badge>
+                ) : (
+                  <Badge variant="success" size="sm">{ta.users.status.active}</Badge>
+                )}
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-xs text-muted-foreground mb-3">
+              {u.username ? <span>@{u.username}</span> : <span />}
+              <span>{formatShortDate(u.createdAt)}</span>
+            </div>
+            {u.id !== user.id && (
+              <div class="flex gap-2 flex-wrap items-center">
+                <select
+                  class="admin-role-select rounded border bg-transparent px-2 py-1 text-xs"
+                  data-user-id={u.id}
+                >
+                  {roles.map(([value, label]) => (
+                    <option value={value} selected={u.role === value}>{label}</option>
+                  ))}
+                </select>
+                {u.banned ? (
+                  <Button size="sm" variant="outline" class="admin-unban-btn" data-user-id={u.id}>
+                    {ta.users.actions.unban}
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" class="admin-ban-btn" data-user-id={u.id}>
+                    {ta.users.actions.ban}
+                  </Button>
+                )}
+                <Button size="sm" variant="ghost" class="admin-impersonate-btn" data-user-id={u.id}>
+                  {ta.users.actions.impersonate}
+                </Button>
+                <Button size="sm" variant="error" class="admin-delete-btn" data-user-id={u.id}>
+                  {ta.users.actions.delete}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))
+    )}
+  </div>
+</DataView>
+
+<div
+  id="admin-users-data"
+  class="hidden"
+  data-t-banned={ta.users.banned}
+  data-t-unbanned={ta.users.unbanned}
+  data-t-role-changed={ta.users.roleChanged}
+  data-t-deleted={ta.users.deleted}
+  data-t-confirm-ban={ta.users.confirmBan}
+  data-t-confirm-delete={ta.users.confirmDelete}
+  data-t-error={t.admin.cms.common.error}
+></div>
+
+<script>
+  import { authClient } from '@/lib/auth-client';
+  import { toast } from '@atoms/toast';
+
+  function init() {
+    const d = document.getElementById('admin-users-data')?.dataset ?? {};
+    const rows = () => document.querySelectorAll<HTMLElement>('.admin-user-row');
+    const cards = () => document.querySelectorAll<HTMLElement>('.admin-user-card');
+    const items = () => [...rows(), ...cards()];
+
+    // ─── Helpers ───
+    function getSelect(id: string): HTMLSelectElement | null {
+      const el = document.getElementById(id);
+      return el?.closest('[data-slot="native-select-wrapper"]')?.querySelector('select')
+        ?? el as HTMLSelectElement | null;
+    }
+
+    // ─── Filter & Sort ───
+    const searchInput = document.getElementById('admin-user-search') as HTMLInputElement | null;
+    const roleFilter = getSelect('admin-filter-role');
+    const statusFilter = getSelect('admin-filter-status');
+    const sortSelect = getSelect('admin-sort');
+
+    function applyFilters() {
+      const q = (searchInput?.value ?? '').toLowerCase();
+      const role = roleFilter?.value ?? '';
+      const status = statusFilter?.value ?? '';
+
+      items().forEach((el) => {
+        const name = el.dataset.name ?? '';
+        const email = el.dataset.email ?? '';
+        const elRole = el.dataset.role ?? '';
+        const elBanned = el.dataset.banned ?? 'false';
+
+        const matchesSearch = !q || name.includes(q) || email.includes(q);
+        const matchesRole = !role || elRole === role;
+        const matchesStatus = !status ||
+          (status === 'active' && elBanned === 'false') ||
+          (status === 'banned' && elBanned === 'true');
+
+        el.style.display = matchesSearch && matchesRole && matchesStatus ? '' : 'none';
+      });
+    }
+
+    function applySort() {
+      const sortVal = sortSelect?.value ?? 'newest';
+      const sortContainer = (parent: HTMLElement | null, selector: string) => {
+        if (!parent) return;
+        const children = [...parent.querySelectorAll<HTMLElement>(selector)];
+        children.sort((a, b) => {
+          if (sortVal === 'name-asc') return (a.dataset.name ?? '').localeCompare(b.dataset.name ?? '');
+          if (sortVal === 'name-desc') return (b.dataset.name ?? '').localeCompare(a.dataset.name ?? '');
+          if (sortVal === 'oldest') return (a.dataset.date ?? '').localeCompare(b.dataset.date ?? '');
+          // newest (default)
+          return (b.dataset.date ?? '').localeCompare(a.dataset.date ?? '');
+        });
+        children.forEach((c) => parent.appendChild(c));
+      };
+
+      sortContainer(document.getElementById('admin-users-tbody'), '.admin-user-row');
+      sortContainer(document.getElementById('admin-users-cards'), '.admin-user-card');
+    }
+
+    searchInput?.addEventListener('input', applyFilters);
+    roleFilter?.addEventListener('change', applyFilters);
+    statusFilter?.addEventListener('change', applyFilters);
+    sortSelect?.addEventListener('change', () => { applySort(); applyFilters(); });
+
+    // ─── Role change via select ───
+    document.querySelectorAll<HTMLSelectElement>('.admin-role-select').forEach((sel) => {
+      const original = sel.value;
+      sel.addEventListener('change', async () => {
+        const userId = sel.dataset.userId;
+        if (!userId) return;
+        const { error } = await authClient.admin.setRole({ userId, role: sel.value as 'user' | 'admin' });
+        if (!error) {
+          toast.success(d.tRoleChanged ?? '');
+          location.reload();
+        } else {
+          toast.error(error.message ?? d.tError ?? '');
+          sel.value = original;
+        }
+      });
+    });
+
+    // ─── Ban ───
+    document.querySelectorAll<HTMLElement>('.admin-ban-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const userId = btn.dataset.userId;
+        if (!userId || !confirm(d.tConfirmBan ?? '')) return;
+        const { error } = await authClient.admin.banUser({ userId });
+        if (!error) { toast.success(d.tBanned ?? ''); location.reload(); }
+        else toast.error(error.message ?? d.tError ?? '');
+      });
+    });
+
+    // ─── Unban ───
+    document.querySelectorAll<HTMLElement>('.admin-unban-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const userId = btn.dataset.userId;
+        if (!userId) return;
+        const { error } = await authClient.admin.unbanUser({ userId });
+        if (!error) { toast.success(d.tUnbanned ?? ''); location.reload(); }
+        else toast.error(error.message ?? d.tError ?? '');
+      });
+    });
+
+    // ─── Impersonate ───
+    document.querySelectorAll<HTMLElement>('.admin-impersonate-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const userId = btn.dataset.userId;
+        if (!userId) return;
+        const { error } = await authClient.admin.impersonateUser({ userId });
+        if (!error) location.reload();
+        else toast.error(error.message ?? d.tError ?? '');
+      });
+    });
+
+    // ─── Delete ───
+    document.querySelectorAll<HTMLElement>('.admin-delete-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const userId = btn.dataset.userId;
+        if (!userId || !confirm(d.tConfirmDelete ?? '')) return;
+        const { error } = await authClient.admin.removeUser({ userId });
+        if (!error) { toast.success(d.tDeleted ?? ''); location.reload(); }
+        else toast.error(error.message ?? d.tError ?? '');
+      });
+    });
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

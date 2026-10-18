@@ -1,0 +1,11 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { getServices, getServiceCategories } from "@/modules/services/loaders";
+import ServicesListingPage from "@/modules/services/components/lists/ServicesListingPage.astro";
+import { getServiceTranslations } from "@/modules/services/i18n";
+import { buildServiceCategoryUrl } from "@/modules/services/utils";
+import type { Locale } from "@i18n/config";
+export const prerender = false;
+const locale=(Astro.params.lang ?? "fr") as Locale; const categorySlug=Astro.params.category!; const t=getServiceTranslations(locale); const page=Math.max(1,Number(Astro.url.searchParams.get("page") ?? "1") || 1); const categories=await getServiceCategories(locale,null); const category=categories.find((row)=>(row.translation?.slug ?? row.category.slug)===categorySlug); if(!category) return Astro.redirect(`/${locale}/services`); const data=await getServices({categoryId:category.category.id,page},locale,true); const items=categories.map((row)=>({slug:row.translation?.slug ?? row.category.slug,name:row.translation?.name ?? row.category.slug}));
+---
+<BaseLayout title={category.translation?.name ?? category.category.slug} description={category.translation?.description ?? t.meta.description}><main><ServicesListingPage locale={locale} title={category.translation?.name ?? category.category.slug} description={category.translation?.description} items={data.items} meta={data} baseUrl={buildServiceCategoryUrl(locale,null,categorySlug)} categories={items} activeCategorySlug={categorySlug} /></main></BaseLayout>

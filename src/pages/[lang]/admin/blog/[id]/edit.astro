@@ -1,0 +1,62 @@
+---
+import { requirePermission } from "@/lib/auth-guards";
+import { getBlogTranslations } from "@i18n/utils";
+import { getBlogCategories, getBlogTags } from "@database/loaders/blog.loader";
+import { getBlogPostEditorData } from "@database/loaders/blog-admin-editor.loader";
+import { hasBlogPermission, resolveBlogTenant } from "@/actions/blog/_helpers";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import AdminFormShell from "@organisms/AdminFormShell.astro";
+import AdminPostForm from "@/components/blog/AdminPostForm.astro";
+import type { BlogPostEditorData } from "@/lib/blog/editor-types";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { blog: ["update"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const tenant = resolveBlogTenant({});
+const [canCreate, canPublish, canDelete] = await Promise.all([
+  hasBlogPermission(Astro, tenant, { blog: ["create"] }),
+  hasBlogPermission(Astro, tenant, { blog: ["publish"] }),
+  hasBlogPermission(Astro, tenant, { blog: ["delete"] }),
+]);
+const blogT = await getBlogTranslations(locale);
+const postId = Astro.params.id;
+const baseAdminUrl = `/${locale}/admin/blog`;
+const basePublicUrl = `/${locale}/${blogT.routes.blog}`;
+if (!postId) return Astro.redirect(baseAdminUrl);
+
+const [postAdminData, categoryRows, tagRows] = await Promise.all([
+  getBlogPostEditorData(postId, locale),
+  getBlogCategories(null, locale),
+  getBlogTags(null, locale),
+]);
+if (!postAdminData || postAdminData.post.organizationId !== null) {
+  Astro.response.status = 404;
+  return Astro.rewrite("/404");
+}
+
+const categories = categoryRows.map((item) => ({ id: item.id, slug: item.slug, label: item.translation?.name ?? item.slug }));
+const tags = tagRows.map((item) => ({ id: item.id, slug: item.slug, label: item.translation?.name ?? item.slug }));
+const editorData: BlogPostEditorData = {
+  post: postAdminData.post,
+  translation: postAdminData.translations.find((translation) => translation.locale === locale) ?? null,
+  seo: postAdminData.seo ? { focusKeyword: postAdminData.seo.focusKeyword, focusKeywordScore: postAdminData.seo.focusKeywordScore } : null,
+  translations: postAdminData.translations.map((translation) => ({ locale: translation.locale, title: translation.title, slug: translation.slug })),
+  categoryIds: postAdminData.categoryIds,
+  tagIds: postAdminData.tagIds,
+  galleries: postAdminData.galleries,
+  links: postAdminData.links,
+  revisions: postAdminData.revisions,
+  lock: postAdminData.lock,
+};
+---
+<BaseLayout title={blogT.admin.editPost} description={blogT.admin.title}>
+  <AuthLayout title={blogT.admin.editPost}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="blog" />
+    <AdminFormShell>
+      <AdminPostForm locale={locale} blogT={blogT} mode="edit" editorData={editorData} categories={categories} tags={tags} baseAdminUrl={baseAdminUrl} basePublicUrl={basePublicUrl} canCreate={canCreate} canUpdate={true} canPublish={canPublish} canDelete={canDelete} />
+    </AdminFormShell>
+  </AuthLayout>
+</BaseLayout>

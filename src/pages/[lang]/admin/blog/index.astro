@@ -1,0 +1,64 @@
+---
+import { requirePermission } from "@/lib/auth-guards";
+import { getBlogTranslations } from "@i18n/utils";
+import { getBlogCategories, getBlogTags, getBlogModerationQueue } from "@database/loaders/blog.loader";
+import { getBlogAdminPostData, getBlogAdminAuthors, getBlogAdminTags } from "@database/loaders/blog-admin.loader";
+import { getBlogAdminModerationCount } from "@database/loaders/blog-admin-moderation.loader";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import BlogAdminPage from "@/components/blog/BlogAdminPage.astro";
+import { hasBlogPermission, resolveBlogTenant } from "@/actions/blog/_helpers";
+import { LOCALES, type Locale } from "@i18n/config";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { blog: ["read"], blogCategory: ["read"], blogTag: ["read"], blogComment: ["read"], blogReview: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT, user } = result;
+const blogT = await getBlogTranslations(locale);
+const p = Astro.url.searchParams;
+const page = Math.max(1, Number(p.get("page") ?? "1") || 1);
+const boolParam = (key: string) => p.get(key) === null ? undefined : p.get(key) === "true";
+const requestedLocale = p.get("translationLocale") as Locale | null;
+const translationLocale = requestedLocale && LOCALES.includes(requestedLocale) ? requestedLocale : locale;
+const filters = {
+  page,
+  translationLocale,
+  search: p.get("search") || undefined,
+  status: (p.get("status") || undefined) as import("@/lib/blog/constants").BlogPostStatus | undefined,
+  categoryId: p.get("categoryId") || undefined,
+  tagId: p.get("tagId") || undefined,
+  authorId: p.get("authorId") || undefined,
+  featured: boolParam("featured"),
+  sticky: boolParam("sticky"),
+  sortBy: (p.get("sortBy") || "updatedAt") as "createdAt" | "updatedAt" | "publishedAt" | "title" | "viewCount",
+  sortOrder: (p.get("sortOrder") || "desc") as "asc" | "desc",
+};
+const baseAdminUrl = `/${locale}/admin/blog`;
+const basePublicUrl = `/${locale}/${blogT.routes.blog}`;
+const globalTenant = resolveBlogTenant({});
+const [canCreate, canUpdate, canPublish, canDelete] = await Promise.all([
+  hasBlogPermission(Astro, globalTenant, { blog: ["create"] }),
+  hasBlogPermission(Astro, globalTenant, { blog: ["update"] }),
+  hasBlogPermission(Astro, globalTenant, { blog: ["publish"] }),
+  hasBlogPermission(Astro, globalTenant, { blog: ["delete"] }),
+]);
+const [{ rows, meta, stats }, categoryRows, tagRows, moderation, authors, adminTags, moderationCount] = await Promise.all([
+  getBlogAdminPostData(null, locale, filters),
+  getBlogCategories(null, locale),
+  getBlogTags(null, locale),
+  getBlogModerationQueue(null, { limit: 10 }),
+  getBlogAdminAuthors(null),
+  getBlogAdminTags(null, locale),
+  getBlogAdminModerationCount(null),
+]);
+const categories = categoryRows.map((item) => ({ id: item.id, slug: item.slug, name: item.translation?.name ?? item.slug, description: item.translation?.description ?? null, color: item.color, icon: item.icon, parentId: item.parentId, sortOrder: item.sortOrder, postCount: item.postCount }));
+const tags = tagRows.map((item) => ({ id: item.id, slug: item.slug, name: item.translation?.name ?? item.slug, color: item.color, postCount: item.postCount }));
+const filterOptions = { categories: categories.map(({ id, name }) => ({ id, name })), tags: adminTags.map(({ id, name }) => ({ id, name })), authors };
+---
+<BaseLayout title={blogT.admin.title} description={blogT.admin.title}>
+  <AuthLayout title={blogT.admin.title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="blog" />
+    <BlogAdminPage locale={locale} blogT={blogT} title={blogT.admin.title} posts={rows} postsMeta={meta} stats={stats} moderationCount={moderationCount} categories={categories} tags={tags} moderation={moderation} baseAdminUrl={baseAdminUrl} basePublicUrl={basePublicUrl} userId={user.id} canCreate={canCreate} canUpdate={canUpdate} canPublish={canPublish} canDelete={canDelete} filterOptions={filterOptions} />
+  </AuthLayout>
+</BaseLayout>

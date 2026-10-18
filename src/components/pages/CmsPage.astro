@@ -1,0 +1,30 @@
+---
+import type { PageWithSections } from '@database/loaders/page.loader';
+import type { Locale } from '@i18n/config';
+import SectionRenderer from '@pages/cms/SectionRenderer.astro';
+
+interface Props {
+  data: PageWithSections;
+  locale: Locale;
+}
+
+const { data } = Astro.props;
+const { page, sections } = data;
+---
+
+<article class="mx-auto w-full max-w-5xl px-4 py-16 md:py-24" aria-labelledby="cms-page-heading">
+  <header class="mb-12">
+    <h1 id="cms-page-heading" class="font-heading text-3xl font-semibold tracking-tight md:text-4xl lg:text-5xl">
+      {page.title}
+    </h1>
+    {page.metaDescription && (
+      <p class="text-muted-foreground mt-4 text-lg">{page.metaDescription}</p>
+    )}
+  </header>
+
+  <div class="space-y-8">
+    {sections.map((section) => (
+      <SectionRenderer section={section} />
+    ))}
+  </div>
+</article>

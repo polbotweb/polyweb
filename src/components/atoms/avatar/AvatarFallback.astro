@@ -1,0 +1,18 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import { tv } from "tailwind-variants";
+
+export const avatarFallback = tv({
+  base: "flex h-full w-full items-center justify-center rounded-full font-medium bg-muted text-foreground",
+});
+
+interface Props extends HTMLAttributes<"div"> {
+  class?: string;
+}
+
+const { class: className, ...rest } = Astro.props;
+---
+
+<div class={avatarFallback({ class: className })} {...rest} data-slot="avatar-fallback">
+  <slot />
+</div>

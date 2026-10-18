@@ -1,0 +1,98 @@
+---
+import type { AuthTranslations, Locale } from '@i18n/config';
+import { getAuthUrl } from '@i18n/utils';
+import { Avatar, AvatarImage, AvatarFallback } from '@atoms/avatar';
+import { Button } from '@atoms/button';
+import {
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  DropdownTrigger,
+} from '@atoms/dropdown';
+import { Separator } from '@atoms/separator';
+import { safeUrl } from '@lib/sanitize';
+import IconLogout from '@tabler/icons/outline/logout.svg';
+import IconDashboard from '@tabler/icons/outline/layout-dashboard.svg';
+import IconShield from '@tabler/icons/outline/shield.svg';
+import IconBuilding from '@tabler/icons/outline/building.svg';
+
+interface Props {
+  user: App.Locals['user'];
+  authTranslations: AuthTranslations;
+  locale: Locale;
+}
+
+const { user, authTranslations: authT, locale } = Astro.props;
+
+const signInUrl = getAuthUrl(locale, 'sign-in', authT);
+const dashboardUrl = getAuthUrl(locale, 'dashboard', authT);
+const adminUrl = getAuthUrl(locale, 'admin', authT);
+const organizationsUrl = getAuthUrl(locale, 'organizations', authT);
+
+const initials = user?.name
+  ? user.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
+  : '?';
+---
+
+{user ? (
+  <Dropdown>
+    <DropdownTrigger
+      class="cursor-pointer rounded-full outline-none focus-visible:ring-3 focus-visible:ring-outline/50"
+      aria-label={user.name ?? authT.userMenu.dashboard}
+    >
+        <Avatar size="sm">
+          {user.image && safeUrl(user.image) && <AvatarImage src={safeUrl(user.image)} alt={user.name ?? ''} />}
+          <AvatarFallback>{initials}</AvatarFallback>
+        </Avatar>
+    </DropdownTrigger>
+    <DropdownContent align="end" class="min-w-48">
+      <div class="px-3 py-2">
+        <p class="text-sm font-medium">{user.name}</p>
+        <p class="text-muted-foreground text-xs">{user.email}</p>
+      </div>
+      <Separator />
+      <DropdownItem as="a" href={dashboardUrl}>
+        <IconDashboard class="size-4" />
+        {authT.userMenu.dashboard}
+      </DropdownItem>
+      <DropdownItem as="a" href={organizationsUrl}>
+        <IconBuilding class="size-4" />
+        {authT.userMenu.organizations}
+      </DropdownItem>
+      {user.role === 'admin' && (
+        <DropdownItem as="a" href={adminUrl}>
+          <IconShield class="size-4" />
+          {authT.userMenu.admin}
+        </DropdownItem>
+      )}
+      <Separator />
+      <DropdownItem as="button" id="auth-user-sign-out" data-redirect={signInUrl}>
+        <IconLogout class="size-4" />
+        {authT.userMenu.signOut}
+      </DropdownItem>
+    </DropdownContent>
+  </Dropdown>
+) : (
+  <Button href={signInUrl} variant="outline" size="sm">
+    {authT.userMenu.signIn}
+  </Button>
+)}
+
+<script>
+  import { authClient } from '@lib/auth-client';
+
+  function init() {
+    const btn = document.getElementById('auth-user-sign-out');
+    if (!btn) return;
+
+    const redirectUrl = btn.dataset.redirect!;
+
+    btn.addEventListener('click', async () => {
+      await authClient.signOut();
+      window.location.href = redirectUrl;
+    });
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

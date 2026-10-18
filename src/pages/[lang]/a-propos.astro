@@ -1,0 +1,12 @@
+---
+import { toLocale, getAboutTranslations } from '@i18n/utils';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import AboutPage from '@pages/AboutPage/AboutPage.astro';
+
+const locale = toLocale(Astro.params.lang);
+const t = await getAboutTranslations(locale);
+---
+
+<BaseLayout>
+  <AboutPage t={t} />
+</BaseLayout>

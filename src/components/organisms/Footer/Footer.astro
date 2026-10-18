@@ -1,0 +1,188 @@
+---
+import { Icon } from "astro-icon/components";
+import type { HTMLAttributes } from "astro/types";
+import { tv } from "tailwind-variants";
+
+import { Button } from "@atoms/button";
+import { Container } from "@atoms/container";
+import { Separator } from "@atoms/separator";
+
+export interface FooterLink {
+  label: string;
+  href: string;
+  icon?: string | null;
+}
+
+export interface SocialLink {
+  name: string;
+  href: string;
+  icon: string;
+}
+
+interface Props extends HTMLAttributes<"footer"> {
+  navLinks?: FooterLink[];
+  navLinksSecondary?: FooterLink[];
+  legalLinks?: FooterLink[];
+  socialLinks?: SocialLink[];
+  copyrightText?: string;
+  copyrightHref?: string;
+  socialHeading?: string;
+  navPrimaryHeading?: string;
+  navSecondaryHeading?: string;
+  legalHeading?: string;
+  showNavPrimary?: boolean;
+  showNavSecondary?: boolean;
+  showLegal?: boolean;
+  showSocial?: boolean;
+  showCopyright?: boolean;
+}
+
+const footerStyles = tv({
+  base: "bg-background border-t border-border transition-colors duration-300",
+});
+
+const {
+  navLinks = [],
+  navLinksSecondary = [],
+  legalLinks = [],
+  socialLinks = [],
+  copyrightText = "© 2026 - Tous droits réservés",
+  copyrightHref = "#",
+  socialHeading = "Nos Réseaux Sociaux",
+  navPrimaryHeading = "Navigation Principale",
+  navSecondaryHeading = "Navigation Secondaire",
+  legalHeading: legalHeadingProp = "Mentions Légales",
+  showNavPrimary = true,
+  showNavSecondary = true,
+  showLegal = true,
+  showSocial = true,
+  showCopyright = true,
+  class: className,
+  ...rest
+} = Astro.props;
+
+const visibleSections =
+  (showSocial && socialLinks.length > 0 ? 1 : 0) +
+  (showNavPrimary && navLinks.length > 0 ? 1 : 0) +
+  (showNavSecondary && navLinksSecondary.length > 0 ? 1 : 0) +
+  (showLegal && legalLinks.length > 0 ? 1 : 0);
+
+const gridCols =
+  visibleSections <= 1 ? 'lg:grid-cols-1'
+  : visibleSections === 2 ? 'lg:grid-cols-2'
+  : visibleSections === 3 ? 'lg:grid-cols-3'
+  : 'lg:grid-cols-4';
+---
+
+<footer class={footerStyles({ class: className })} {...rest}>
+  <Container paddingY="md">
+    <div class:list={['grid grid-cols-1 gap-8 sm:grid-cols-2', gridCols]}>
+
+      {showSocial && socialLinks.length > 0 && (
+        <div>
+          {socialHeading && (
+            <span class="text-foreground text-sm font-semibold uppercase tracking-wide">
+              {socialHeading}
+            </span>
+          )}
+          <ul class="mt-4 flex flex-wrap gap-3">
+            {socialLinks.map((social) => (
+              <li>
+                <a
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={social.name}
+                  class="text-primary-foreground bg-primary hover:bg-primary/90 focus-visible:ring-primary/50 inline-flex size-9 items-center justify-center rounded-full transition-colors outline-none focus-visible:ring-3"
+                >
+                  <Icon name={social.icon} title={social.name} class="size-5" />
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {showNavPrimary && navLinks.length > 0 && (
+        <div>
+          {navPrimaryHeading && (
+            <span class="text-foreground text-sm font-semibold uppercase tracking-wide">
+              {navPrimaryHeading}
+            </span>
+          )}
+          <ul class="mt-4 space-y-2.5">
+            {navLinks.map((link) => (
+              <li>
+                <a
+                  href={link.href}
+                  class="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-sm transition-colors"
+                >
+                  {link.icon && <Icon name={link.icon} class="size-3.5 shrink-0" />}
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {showNavSecondary && navLinksSecondary.length > 0 && (
+        <div>
+          {navSecondaryHeading && (
+            <span class="text-foreground text-sm font-semibold uppercase tracking-wide">
+              {navSecondaryHeading}
+            </span>
+          )}
+          <ul class="mt-4 space-y-2.5">
+            {navLinksSecondary.map((link) => (
+              <li>
+                <a
+                  href={link.href}
+                  class="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-sm transition-colors"
+                >
+                  {link.icon && <Icon name={link.icon} class="size-3.5 shrink-0" />}
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {showLegal && legalLinks.length > 0 && (
+        <div>
+          {legalHeadingProp && (
+            <span class="text-foreground text-sm font-semibold uppercase tracking-wide">
+              {legalHeadingProp}
+            </span>
+          )}
+          <ul class="mt-4 space-y-2.5">
+            {legalLinks.map((link) => (
+              <li>
+                <a
+                  href={link.href}
+                  class="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-sm transition-colors"
+                >
+                  {link.icon && <Icon name={link.icon} class="size-3.5 shrink-0" />}
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+    </div>
+
+    {showCopyright && (
+      <div class="mt-8">
+        <Separator />
+        <div class="mt-6 flex justify-center">
+          <Button variant="ghost" href={copyrightHref} target="_blank" rel="noopener noreferrer">
+            {copyrightText}
+          </Button>
+        </div>
+      </div>
+    )}
+  </Container>
+</footer>

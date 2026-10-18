@@ -1,0 +1,24 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { getServiceCategories, getServices } from "@/modules/services/loaders";
+import ServicesListingPage from "@/modules/services/components/lists/ServicesListingPage.astro";
+import { getServiceTranslations } from "@/modules/services/i18n";
+import type { Locale } from "@i18n/config";
+
+export const prerender = false;
+const locale = (Astro.params.lang ?? "fr") as Locale;
+const t = getServiceTranslations(locale);
+const page = Math.max(1, Number(Astro.url.searchParams.get("page") ?? "1") || 1);
+const search = Astro.url.searchParams.get("search") ?? "";
+const [data, categoryRows] = await Promise.all([
+  getServices({ page, search: search || undefined }, locale, true),
+  getServiceCategories(locale, null),
+]);
+const categories = categoryRows.map((row) => ({ slug: row.translation?.slug ?? row.category.slug, name: row.translation?.name ?? row.category.slug }));
+---
+
+<BaseLayout title={t.meta.title} description={t.meta.description}>
+  <main>
+    <ServicesListingPage locale={locale} title={t.labels.services} description={t.meta.description} items={data.items} meta={data} baseUrl={`/${locale}/services`} categories={categories} searchQuery={search} />
+  </main>
+</BaseLayout>

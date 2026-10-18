@@ -1,0 +1,648 @@
+---
+/**
+ * AdminNavigationPage — Manage navigation menus and items (hierarchical, per locale).
+ * Two-section layout: menu management + item management with locale tabs.
+ */
+import type { AuthTranslations, Locale } from '@i18n/config';
+import { LOCALES, LOCALE_LABELS } from '@i18n/config';
+import type { navigationMenus, navigationItems } from '@database/schemas';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@atoms/card';
+import { Input } from '@atoms/input';
+import { Label } from '@atoms/label';
+import { NativeSelect, NativeSelectOption } from '@atoms/native-select';
+import { Switch } from '@atoms/switch';
+import { Separator } from '@atoms/separator';
+import { Badge } from '@atoms/badge';
+import Button from '@atoms/button/Button.astro';
+import { IconPicker } from '@atoms/icon-picker';
+import { PROTECTED_MENU_NAMES } from '@/actions/admin/menus';
+
+type MenuRow = typeof navigationMenus.$inferSelect;
+type ItemRow = typeof navigationItems.$inferSelect;
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  menus: MenuRow[];
+  items: ItemRow[];
+  selectedMenu: string;
+  selectedLocale: string;
+}
+
+const { t, locale, menus, items, selectedMenu, selectedLocale } = Astro.props;
+const cms = t.admin.cms.navigation;
+const currentMenu = menus.find((m) => m.id === selectedMenu);
+
+Astro.csp?.insertDirective("connect-src 'self' https://api.iconify.design");
+
+const rootItems = items.filter((i) => !i.parentId);
+const childItems = items.filter((i) => !!i.parentId);
+---
+
+<div
+  id="cms-nav-data"
+  data-locale={locale}
+  data-selected-menu={selectedMenu}
+  data-selected-locale={selectedLocale}
+  data-t-saved={cms.saved}
+  data-t-deleted={cms.deleted}
+  data-t-menu-saved={cms.menuSaved}
+  data-t-menu-deleted={cms.menuDeleted}
+  data-t-error={t.admin.cms.common.error}
+  data-t-confirm-delete={cms.confirmDelete}
+  data-t-confirm-delete-menu={cms.confirmDeleteMenu}
+  data-t-save-all={cms.saveAll}
+  data-t-menu-visible={cms.menuVisible}
+  data-t-add-item-label={cms.addItem}
+  class="grid gap-6"
+>
+  <!-- ═══════════════════════════════════════════════════════
+       SECTION 1 — Menus
+       ═══════════════════════════════════════════════════════ -->
+  <Card>
+    <CardHeader>
+      <div class="flex items-center justify-between">
+        <div>
+          <CardTitle>{cms.manageMenus}</CardTitle>
+          <CardDescription>{cms.description}</CardDescription>
+        </div>
+        <Button id="create-menu-btn" size="sm">{cms.createMenu}</Button>
+      </div>
+    </CardHeader>
+    <CardContent>
+      <!-- Create menu inline form (hidden by default) -->
+      <div id="create-menu-form" class="hidden mb-4 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
+        <div class="grid gap-3 sm:grid-cols-3 sm:items-end">
+          <div class="grid gap-1.5">
+            <Label for="new-menu-name">{cms.menuName}</Label>
+            <Input id="new-menu-name" placeholder={cms.menuName} />
+          </div>
+          <div class="grid gap-1.5">
+            <Label for="new-menu-desc">{cms.menuDescription}</Label>
+            <Input id="new-menu-desc" placeholder={cms.menuDescription} />
+          </div>
+          <div class="flex gap-2">
+            <Button id="create-menu-submit" size="sm">{cms.save}</Button>
+            <Button id="create-menu-cancel" size="sm" variant="outline">{cms.cancel}</Button>
+          </div>
+        </div>
+      </div>
+
+      {menus.length === 0 ? (
+        <div class="flex flex-col items-center justify-center py-8 text-center">
+          <div class="mb-3 rounded-full bg-muted p-3">
+            <svg class="size-6 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
+          </div>
+          <p class="text-muted-foreground text-sm">{cms.noMenus}</p>
+        </div>
+      ) : (
+        <div class="grid gap-2">
+          {menus.map((m) => {
+            const isActive = m.id === selectedMenu;
+            const isProtected = PROTECTED_MENU_NAMES.includes(m.name as typeof PROTECTED_MENU_NAMES[number]);
+            return (
+              <div
+                class:list={[
+                  'menu-row group flex items-center justify-between gap-3 rounded-lg border px-4 py-3 transition-colors cursor-pointer',
+                  { 'border-primary bg-primary/5 ring-1 ring-primary/20': isActive },
+                  { 'border-border hover:bg-muted/50': !isActive },
+                ]}
+                data-menu-id={m.id}
+              >
+                <div class="flex items-center gap-3 min-w-0 flex-1" data-menu-select={m.id}>
+                  <div class:list={[
+                    'flex size-8 shrink-0 items-center justify-center rounded-md text-xs font-bold',
+                    { 'bg-primary text-primary-foreground': isActive },
+                    { 'bg-muted text-muted-foreground': !isActive },
+                  ]}>
+                    <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
+                  </div>
+                  <div class="min-w-0">
+                    <p class="font-medium text-sm truncate">{m.name}</p>
+                    {m.description && (
+                      <p class="text-muted-foreground text-xs truncate">{m.description}</p>
+                    )}
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <Switch
+                    id={`menu-visible-${m.id}`}
+                    label={cms.menuVisible}
+                    checked={m.isVisible}
+                    size="sm"
+                  />
+                </div>
+                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                  <button
+                    type="button"
+                    class="menu-edit-btn inline-flex items-center justify-center size-7 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    title={cms.editMenu}
+                    data-menu-id={m.id}
+                    data-menu-name={m.name}
+                    data-menu-description={m.description ?? ''}
+                    data-menu-display-label={m.displayLabel ?? ''}
+                    data-menu-show-heading={String(m.showHeading)}
+                  >
+                    <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+                  </button>
+                  {!isProtected && (
+                    <button
+                      type="button"
+                      class="menu-delete-btn inline-flex items-center justify-center size-7 rounded-md text-muted-foreground hover:bg-error/10 hover:text-error transition-colors"
+                      title={cms.deleteMenu}
+                      data-menu-id={m.id}
+                    >
+                      <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <!-- Edit menu inline form (hidden by default) -->
+      <div id="edit-menu-form" class="hidden mt-4 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 sm:items-end">
+          <div class="grid gap-1.5">
+            <Label for="edit-menu-name">{cms.menuName}</Label>
+            <Input id="edit-menu-name" />
+          </div>
+          <div class="grid gap-1.5">
+            <Label for="edit-menu-desc">{cms.menuDescription}</Label>
+            <Input id="edit-menu-desc" />
+          </div>
+          <div class="grid gap-1.5">
+            <Label for="edit-menu-display-label">{cms.displayLabelField}</Label>
+            <Input id="edit-menu-display-label" placeholder={cms.displayLabelField} />
+          </div>
+          <div class="flex flex-col gap-3">
+            <Switch id="edit-menu-show-heading" label={cms.showHeadingField} checked={true} size="sm" />
+            <div class="flex gap-2">
+              <Button id="edit-menu-submit" size="sm">{cms.save}</Button>
+              <Button id="edit-menu-cancel" size="sm" variant="outline">{cms.cancel}</Button>
+            </div>
+          </div>
+        </div>
+        <input type="hidden" id="edit-menu-id" />
+      </div>
+    </CardContent>
+  </Card>
+
+  <!-- ═══════════════════════════════════════════════════════
+       SECTION 2 — Navigation Items
+       ═══════════════════════════════════════════════════════ -->
+  {selectedMenu && (
+    <Card>
+      <CardHeader>
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <CardTitle class="flex items-center gap-2">
+              {cms.items}
+              {currentMenu && <Badge variant="outline" size="sm">{currentMenu.name}</Badge>}
+            </CardTitle>
+          </div>
+          <div class="flex items-center gap-2">
+            <Button id="save-all-btn" size="sm">{cms.saveAll}</Button>
+            <Button id="add-nav-item-btn" size="sm" variant="outline">{cms.addItem}</Button>
+          </div>
+        </div>
+
+        <Separator />
+
+        <!-- Locale selector pills -->
+        <div class="flex gap-1.5 flex-wrap" id="locale-tabs">
+          {LOCALES.map((l) => (
+            <button
+              type="button"
+              class:list={[
+                'locale-tab-btn inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                { 'bg-primary text-primary-foreground': l === selectedLocale },
+                { 'bg-muted text-muted-foreground hover:bg-muted/80': l !== selectedLocale },
+              ]}
+              data-locale-tab={l}
+            >
+              {LOCALE_LABELS[l]}
+            </button>
+          ))}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {items.length === 0 ? (
+          <div class="flex flex-col items-center justify-center py-10 text-center">
+            <div class="mb-3 rounded-full bg-muted p-3">
+              <svg class="size-6 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" /></svg>
+            </div>
+            <p class="text-muted-foreground text-sm">{cms.noItems}</p>
+            <Button id="add-nav-item-empty-btn" size="sm" class="mt-3">{cms.addItem}</Button>
+          </div>
+        ) : (
+          <div id="nav-items-list" class="grid gap-3">
+            {rootItems.map((item, idx) => {
+              const children = childItems.filter((c) => c.parentId === item.id);
+              return (
+                <div class="nav-item-group">
+                  {/* ── Root Item ── */}
+                  <div
+                    class="nav-item-row rounded-lg border bg-card p-4 grid gap-4"
+                    data-id={item.id}
+                    data-sort={item.sortOrder}
+                  >
+                    <div class="flex items-center justify-between gap-3">
+                      <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="flex flex-col gap-0.5 shrink-0">
+                          <button
+                            type="button"
+                            class="nav-move-up inline-flex items-center justify-center size-5 rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30"
+                            title={cms.moveUp}
+                            disabled={idx === 0}
+                          >
+                            <svg class="size-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" /></svg>
+                          </button>
+                          <button
+                            type="button"
+                            class="nav-move-down inline-flex items-center justify-center size-5 rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30"
+                            title={cms.moveDown}
+                            disabled={idx === rootItems.length - 1}
+                          >
+                            <svg class="size-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                          </button>
+                        </div>
+                        <span class="font-medium text-sm truncate">{item.label}</span>
+                        {item.openInNewTab && (
+                          <svg class="size-3.5 text-muted-foreground shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-label={cms.openInNewTab}><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        class="nav-delete-btn inline-flex items-center justify-center size-7 rounded-md text-muted-foreground hover:bg-error/10 hover:text-error transition-colors shrink-0"
+                        title={t.admin.cms.common.delete}
+                      >
+                        <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+                      </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <div class="grid gap-1.5">
+                        <Label for={`nav-label-${item.id}`}>{cms.labelField}</Label>
+                        <Input id={`nav-label-${item.id}`} name="label" value={item.label} class="nav-label" />
+                      </div>
+                      <div class="grid gap-1.5">
+                        <Label for={`nav-url-${item.id}`}>{cms.urlField}</Label>
+                        <Input id={`nav-url-${item.id}`} name="url" value={item.url ?? ''} class="nav-url" placeholder="/" />
+                      </div>
+                      <div class="grid gap-1.5">
+                        <Label for={`nav-icon-${item.id}`}>{cms.iconField}</Label>
+                        <IconPicker
+                          id={`nav-icon-${item.id}`}
+                          value={item.icon}
+                          placeholder={cms.selectIcon}
+                          searchPlaceholder={cms.searchIcon}
+                          clearLabel={cms.clearIcon}
+                        />
+                      </div>
+                      <div class="grid gap-1.5">
+                        <Label for={`nav-sort-${item.id}`}>{cms.sortOrderField}</Label>
+                        <Input id={`nav-sort-${item.id}`} type="number" value={String(item.sortOrder ?? 0)} class="nav-sort" />
+                      </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+                      <Switch id={`nav-showicon-${item.id}`} label={cms.showIconField} checked={item.showIcon} size="sm" />
+                      <Switch id={`nav-newtab-${item.id}`} label={cms.openInNewTab} checked={item.openInNewTab} size="sm" />
+                      <div class="grid gap-1.5 w-48">
+                        <Label for={`nav-parent-${item.id}`}>{cms.parentField}</Label>
+                        <NativeSelect id={`nav-parent-${item.id}`} class="nav-parent">
+                          <NativeSelectOption value="">{cms.rootItem}</NativeSelectOption>
+                          {rootItems.filter((r) => r.id !== item.id).map((r) => (
+                            <NativeSelectOption value={r.id} selected={r.id === item.parentId}>
+                              {r.label}
+                            </NativeSelectOption>
+                          ))}
+                        </NativeSelect>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── Children ── */}
+                  {children.length > 0 && (
+                    <div class="ml-6 mt-1 grid gap-1.5 border-l-2 border-muted pl-4">
+                      {children.map((child, cidx) => (
+                        <div
+                          class="nav-item-row rounded-lg border bg-muted/30 p-3 grid gap-3"
+                          data-id={child.id}
+                          data-sort={child.sortOrder}
+                        >
+                          <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-2 min-w-0">
+                              <div class="flex flex-col gap-0.5 shrink-0">
+                                <button
+                                  type="button"
+                                  class="nav-move-up inline-flex items-center justify-center size-4 rounded text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30"
+                                  title={cms.moveUp}
+                                  disabled={cidx === 0}
+                                >
+                                  <svg class="size-2.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" /></svg>
+                                </button>
+                                <button
+                                  type="button"
+                                  class="nav-move-down inline-flex items-center justify-center size-4 rounded text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30"
+                                  title={cms.moveDown}
+                                  disabled={cidx === children.length - 1}
+                                >
+                                  <svg class="size-2.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                                </button>
+                              </div>
+                              <span class="text-sm truncate">{child.label}</span>
+                            </div>
+                            <button
+                              type="button"
+                              class="nav-delete-btn inline-flex items-center justify-center size-6 rounded text-muted-foreground hover:bg-error/10 hover:text-error transition-colors shrink-0"
+                              title={t.admin.cms.common.delete}
+                            >
+                              <svg class="size-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 00-7.5 0" /></svg>
+                            </button>
+                          </div>
+
+                          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            <div class="grid gap-1.5">
+                              <Label for={`nav-label-${child.id}`}>{cms.labelField}</Label>
+                              <Input id={`nav-label-${child.id}`} name="label" value={child.label} class="nav-label" size="sm" />
+                            </div>
+                            <div class="grid gap-1.5">
+                              <Label for={`nav-url-${child.id}`}>{cms.urlField}</Label>
+                              <Input id={`nav-url-${child.id}`} name="url" value={child.url ?? ''} class="nav-url" size="sm" placeholder="/" />
+                            </div>
+                            <div class="grid gap-1.5">
+                              <Label for={`nav-icon-${child.id}`}>{cms.iconField}</Label>
+                              <IconPicker
+                                id={`nav-icon-${child.id}`}
+                                value={child.icon}
+                                placeholder={cms.selectIcon}
+                                searchPlaceholder={cms.searchIcon}
+                                clearLabel={cms.clearIcon}
+                              />
+                            </div>
+                            <div class="grid gap-1.5">
+                              <Label for={`nav-sort-${child.id}`}>{cms.sortOrderField}</Label>
+                              <Input id={`nav-sort-${child.id}`} type="number" value={String(child.sortOrder ?? 0)} class="nav-sort" size="sm" />
+                            </div>
+                          </div>
+
+                          <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+                            <Switch id={`nav-showicon-${child.id}`} label={cms.showIconField} checked={child.showIcon} size="sm" />
+                            <Switch id={`nav-newtab-${child.id}`} label={cms.openInNewTab} checked={child.openInNewTab} size="sm" />
+                            <div class="grid gap-1.5 w-40">
+                              <Label for={`nav-parent-${child.id}`}>{cms.parentField}</Label>
+                              <NativeSelect id={`nav-parent-${child.id}`} class="nav-parent">
+                                <NativeSelectOption value="">{cms.rootItem}</NativeSelectOption>
+                                {rootItems.map((r) => (
+                                  <NativeSelectOption value={r.id} selected={r.id === child.parentId}>
+                                    {r.label}
+                                  </NativeSelectOption>
+                                ))}
+                              </NativeSelect>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )}
+</div>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { toast } from '@atoms/toast';
+
+  function init() {
+    const root = document.getElementById('cms-nav-data');
+    if (!root) return;
+    const menuId = root.dataset.selectedMenu!;
+    const navLocale = root.dataset.selectedLocale!;
+    const tSaved = root.dataset.tSaved ?? '';
+    const tDeleted = root.dataset.tDeleted ?? '';
+    const tMenuSaved = root.dataset.tMenuSaved ?? '';
+    const tMenuDeleted = root.dataset.tMenuDeleted ?? '';
+    const tError = root.dataset.tError ?? '';
+    const tConfirmDelete = root.dataset.tConfirmDelete ?? '';
+    const tConfirmDeleteMenu = root.dataset.tConfirmDeleteMenu ?? '';
+    const tAddItemLabel = root.dataset.tAddItemLabel ?? '';
+
+    // ─── Menu Select ───
+    document.querySelectorAll<HTMLElement>('[data-menu-select]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const id = el.dataset.menuSelect;
+        if (id && id !== menuId) {
+          const url = new URL(window.location.href);
+          url.searchParams.set('menu', id);
+          window.location.href = url.toString();
+        }
+      });
+    });
+
+    // ─── Menu Create ───
+    const createBtn = document.getElementById('create-menu-btn');
+    const createForm = document.getElementById('create-menu-form');
+    const createCancel = document.getElementById('create-menu-cancel');
+    createBtn?.addEventListener('click', () => {
+      createForm?.classList.toggle('hidden');
+    });
+    createCancel?.addEventListener('click', () => {
+      createForm?.classList.add('hidden');
+    });
+    document.getElementById('create-menu-submit')?.addEventListener('click', async () => {
+      const name = (document.getElementById('new-menu-name') as HTMLInputElement).value.trim();
+      const desc = (document.getElementById('new-menu-desc') as HTMLInputElement).value.trim();
+      if (!name) return;
+      const { error } = await actions.createNavigationMenu({ name, description: desc || null });
+      if (!error) { toast.success(tMenuSaved); location.reload(); }
+      else toast.error(error.message ?? tError);
+    });
+
+    // ─── Menu Edit ───
+    const editForm = document.getElementById('edit-menu-form');
+    const editCancel = document.getElementById('edit-menu-cancel');
+    document.querySelectorAll<HTMLElement>('.menu-edit-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!editForm) return;
+        editForm.classList.remove('hidden');
+        (document.getElementById('edit-menu-name') as HTMLInputElement).value = btn.dataset.menuName ?? '';
+        (document.getElementById('edit-menu-desc') as HTMLInputElement).value = btn.dataset.menuDescription ?? '';
+        (document.getElementById('edit-menu-display-label') as HTMLInputElement).value = btn.dataset.menuDisplayLabel ?? '';
+        (document.getElementById('edit-menu-id') as HTMLInputElement).value = btn.dataset.menuId ?? '';
+        // Sync showHeading switch state
+        const showHeadingEl = document.getElementById('edit-menu-show-heading');
+        if (showHeadingEl) {
+          const isChecked = btn.dataset.menuShowHeading === 'true';
+          showHeadingEl.setAttribute('aria-checked', String(isChecked));
+          showHeadingEl.setAttribute('data-state', isChecked ? 'checked' : 'unchecked');
+        }
+      });
+    });
+    editCancel?.addEventListener('click', () => {
+      editForm?.classList.add('hidden');
+    });
+    document.getElementById('edit-menu-submit')?.addEventListener('click', async () => {
+      const id = (document.getElementById('edit-menu-id') as HTMLInputElement).value;
+      const name = (document.getElementById('edit-menu-name') as HTMLInputElement).value.trim();
+      const desc = (document.getElementById('edit-menu-desc') as HTMLInputElement).value.trim();
+      const displayLabel = (document.getElementById('edit-menu-display-label') as HTMLInputElement).value.trim();
+      const showHeadingEl = document.getElementById('edit-menu-show-heading');
+      const showHeading = showHeadingEl?.getAttribute('aria-checked') === 'true';
+      if (!id || !name) return;
+      const { error } = await actions.updateNavigationMenu({ id, name, description: desc || null, displayLabel: displayLabel || null, showHeading });
+      if (!error) { toast.success(tMenuSaved); location.reload(); }
+      else toast.error(error.message ?? tError);
+    });
+
+    // ─── Menu Delete ───
+    document.querySelectorAll<HTMLElement>('.menu-delete-btn').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.menuId;
+        if (!id || !confirm(tConfirmDeleteMenu)) return;
+        const { error } = await actions.deleteNavigationMenu({ id });
+        if (!error) { toast.success(tMenuDeleted); location.reload(); }
+        else toast.error(error.message ?? tError);
+      });
+    });
+
+    // ─── Menu Visibility Toggle ───
+    document.querySelectorAll<HTMLElement>('.menu-row').forEach((row) => {
+      const menuId = row.dataset.menuId;
+      if (!menuId) return;
+      const switchEl = row.querySelector<HTMLElement>(`[id="menu-visible-${menuId}"]`);
+      if (!switchEl) return;
+      switchEl.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const isVisible = switchEl.getAttribute('aria-checked') === 'true';
+        const { error } = await actions.updateNavigationMenu({ id: menuId, isVisible });
+        if (error) toast.error(error.message ?? tError);
+        else toast.success(tMenuSaved);
+      });
+    });
+
+    // ─── Locale Tab Switch ───
+    document.querySelectorAll<HTMLElement>('.locale-tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const loc = btn.dataset.localeTab;
+        if (loc && loc !== navLocale) {
+          const url = new URL(window.location.href);
+          url.searchParams.set('locale', loc);
+          window.location.href = url.toString();
+        }
+      });
+    });
+
+    // ─── Read Switch State helper ───
+    function readSwitch(row: HTMLElement, idFragment: string): boolean {
+      const switchBtn = row.querySelector<HTMLElement>(`[id*="nav-${idFragment}"]`);
+      return switchBtn?.getAttribute('aria-checked') === 'true';
+    }
+
+    // ─── Save All Items ───
+    document.getElementById('save-all-btn')?.addEventListener('click', async () => {
+      const rows = document.querySelectorAll<HTMLElement>('.nav-item-row');
+      if (!rows.length) return;
+      const btn = document.getElementById('save-all-btn') as HTMLButtonElement;
+      btn.disabled = true;
+      let hasError = false;
+      for (const row of rows) {
+        const id = row.dataset.id;
+        if (!id) continue;
+        const label = (row.querySelector('.nav-label') as HTMLInputElement).value;
+        const url = (row.querySelector('.nav-url') as HTMLInputElement).value || null;
+        const parentSelect = row.querySelector('.nav-parent select') as HTMLSelectElement | null;
+        const parentId = parentSelect?.value || null;
+        const iconInput = row.querySelector<HTMLInputElement>(`[id$="-value"]`);
+        const icon = iconInput?.value || null;
+        const showIcon = readSwitch(row, 'showicon');
+        const openInNewTab = readSwitch(row, 'newtab');
+        const sortOrder = parseInt((row.querySelector('.nav-sort') as HTMLInputElement)?.value ?? '0', 10) || 0;
+        const { error } = await actions.updateNavigationItem({ id, label, url, parentId, icon, showIcon, openInNewTab, sortOrder });
+        if (error) { toast.error(error.message ?? tError); hasError = true; break; }
+      }
+      btn.disabled = false;
+      if (!hasError) toast.success(tSaved);
+    });
+
+    // ─── Delete Item ───
+    document.querySelectorAll<HTMLElement>('.nav-delete-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const row = btn.closest('.nav-item-row') as HTMLElement;
+        const id = row?.dataset.id;
+        if (!id) return;
+        if (!confirm(tConfirmDelete)) return;
+        const { error } = await actions.deleteNavigationItem({ id });
+        if (!error) { toast.success(tDeleted); row.remove(); }
+        else toast.error(error.message ?? tError);
+      });
+    });
+
+    // ─── Move Up/Down (swap sort orders and reload) ───
+    function bindMoveButtons() {
+      document.querySelectorAll<HTMLElement>('.nav-move-up, .nav-move-down').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const row = btn.closest('.nav-item-row') as HTMLElement;
+          if (!row) return;
+          const isUp = btn.classList.contains('nav-move-up');
+          // Find sibling rows at same level
+          const parent = row.parentElement;
+          if (!parent) return;
+          const siblings = Array.from(parent.querySelectorAll<HTMLElement>(':scope > .nav-item-row'));
+          const idx = siblings.indexOf(row);
+          const swapIdx = isUp ? idx - 1 : idx + 1;
+          if (swapIdx < 0 || swapIdx >= siblings.length) return;
+
+          const currentId = row.dataset.id!;
+          const currentSort = parseInt(row.dataset.sort ?? '0', 10);
+          const swapRow = siblings[swapIdx]!;
+          const swapId = swapRow.dataset.id!;
+          const swapSort = parseInt(swapRow.dataset.sort ?? '0', 10);
+
+          const { error } = await actions.reorderNavigationItems({
+            items: [
+              { id: currentId, sortOrder: swapSort },
+              { id: swapId, sortOrder: currentSort },
+            ],
+          });
+          if (!error) location.reload();
+          else toast.error(error.message ?? tError);
+        });
+      });
+    }
+    bindMoveButtons();
+
+    // ─── Add Item ───
+    function addItem() {
+      actions.createNavigationItem({
+        menuId,
+        locale: navLocale as 'fr' | 'en' | 'es' | 'ar',
+        label: tAddItemLabel,
+        url: '/',
+        parentId: null,
+        icon: null,
+        openInNewTab: false,
+        sortOrder: 99,
+      }).then(({ error }) => {
+        if (!error) location.reload();
+        else toast.error(error.message ?? tError);
+      });
+    }
+    document.getElementById('add-nav-item-btn')?.addEventListener('click', addItem);
+    document.getElementById('add-nav-item-empty-btn')?.addEventListener('click', addItem);
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

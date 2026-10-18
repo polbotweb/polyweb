@@ -1,0 +1,126 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import type { ImageMetadata } from "astro";
+import { Image } from "astro:assets";
+import { tv } from "tailwind-variants";
+
+/** Logo item data */
+export interface LogoData {
+  /** Logo name for alt text */
+  name: string;
+  /** Logo image source */
+  src: ImageMetadata;
+}
+
+interface Props extends HTMLAttributes<"section"> {
+  /** Array of logos to display */
+  logos?: LogoData[];
+}
+
+const logoCloud3Styles = tv({
+  base: "@container relative mx-auto w-full max-w-7xl overflow-hidden px-4 py-12",
+});
+
+const { logos = [], class: className, ...rest } = Astro.props;
+---
+
+<section class={logoCloud3Styles({ class: className })} {...rest}>
+  <div class="group relative">
+    <!-- Gradient overlays for fade effect -->
+    <div
+      class="from-background pointer-events-none absolute inset-y-0 left-0 z-10 w-20 bg-linear-to-r to-transparent pl-4"
+    >
+    </div>
+    <div
+      class="from-background pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-linear-to-l to-transparent pr-4"
+    >
+    </div>
+
+    <!-- Marquee container - CSS variabes determine marquee item gap and duration (speed of animation) -->
+    <div
+      class="flex gap-(--gap) overflow-hidden"
+      id="marquee-logo-cloud-03"
+      style={{ "--gap": "3rem", "--marquee-duration": "25s" }}
+    >
+      <!-- First set of logos -->
+      <div class="animate-marquee flex min-w-full shrink-0 items-center justify-around gap-(--gap)">
+        {
+          logos.map((logo) => (
+            <div class="flex h-10 w-28 items-center justify-center opacity-70 grayscale transition-opacity hover:opacity-100 @xl:h-12 @xl:w-32 dark:invert">
+              <Image src={logo.src} alt={logo.name} class="h-full w-full object-contain" width={128} height={48} loading="lazy" />
+            </div>
+          ))
+        }
+      </div>
+
+      <!-- Duplicate set for seamless loop -->
+      <div class="animate-marquee flex min-w-full shrink-0 items-center justify-around gap-(--gap)">
+        {
+          logos.map((logo) => (
+            <div class="flex h-10 w-28 items-center justify-center opacity-70 grayscale transition-opacity hover:opacity-100 @xl:h-12 @xl:w-32 dark:invert">
+              <Image src={logo.src} alt={logo.name} class="h-full w-full object-contain" width={128} height={48} loading="lazy" />
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  let controller: AbortController | null = null;
+
+  function initMarquee() {
+    controller?.abort();
+    controller = new AbortController();
+    const { signal } = controller;
+
+    const marqueeContainer = document.querySelector("#marquee-logo-cloud-03");
+
+    if (!marqueeContainer) {
+      return;
+    }
+
+    const animations = marqueeContainer.querySelectorAll(".animate-marquee");
+
+    marqueeContainer.addEventListener("mouseenter", () => {
+      animations.forEach((animation) => {
+        (animation as HTMLElement).style.animationPlayState = "paused";
+      });
+    }, { signal });
+
+    marqueeContainer.addEventListener("mouseleave", () => {
+      animations.forEach((animation) => {
+        (animation as HTMLElement).style.animationPlayState = "running";
+      });
+    }, { signal });
+  }
+
+  // Initialize on page load
+  initMarquee();
+
+  // Re-initialize on page navigation (for SPAs)
+  document.addEventListener("astro:after-swap", initMarquee);
+  document.addEventListener("astro:before-swap", () => { controller?.abort(); controller = null; });
+</script>
+
+<style>
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+
+  .animate-marquee {
+    animation: marquee var(--marquee-duration) linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-marquee {
+      animation-play-state: paused;
+    }
+  }
+</style>

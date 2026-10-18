@@ -1,0 +1,8 @@
+---
+export const prerender = false;
+const locale = Astro.params.lang ?? "fr";
+const organization = Astro.params.organization;
+const id = Astro.params.id;
+if (!organization || !id) return Astro.redirect(`/${locale}/admin/services`);
+return Astro.rewrite(`/${locale}/organizations/${organization}/admin/services/${id}/edit${Astro.url.search}`);
+---

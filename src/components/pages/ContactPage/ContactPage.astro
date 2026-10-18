@@ -1,0 +1,314 @@
+---
+import IconArrowRight from "@tabler/icons/outline/arrow-right.svg";
+import IconCheck from "@tabler/icons/outline/check.svg";
+import type { ContactTranslations } from "@i18n/config";
+import { tv } from "tailwind-variants";
+
+import { Badge } from "@atoms/badge";
+import { Button } from "@atoms/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@atoms/card";
+import { Checkbox } from "@atoms/checkbox";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@atoms/select";
+import { Textarea } from "@atoms/textarea";
+import ScrollReveal from "@wow/ScrollReveal.astro";
+
+interface Props {
+  t: ContactTranslations;
+}
+
+const sectionStyles = tv({
+  base: "@container mx-auto w-full max-w-7xl px-4 py-24",
+});
+
+const { t } = Astro.props;
+---
+
+<section id="contact-section" class={sectionStyles()}>
+  <!-- Header -->
+  <ScrollReveal direction="up" duration={600}>
+    <div class="mb-12 text-center">
+      <Badge variant="primary" class="mb-4">{t.badge}</Badge>
+      <h2 class="font-heading text-3xl font-bold tracking-tight @xl:text-4xl @3xl:text-5xl">
+        {t.heading}
+      </h2>
+      <p class="text-muted-foreground mx-auto mt-4 max-w-2xl text-lg">
+        {t.description}
+      </p>
+    </div>
+  </ScrollReveal>
+
+  <div class="grid gap-8 @4xl:grid-cols-2">
+    <!-- Reasons Grid -->
+    <ScrollReveal direction="up" duration={700} delay={100}>
+      <div class="space-y-4">
+        <h3 class="font-heading mb-6 text-lg font-semibold">{t.reasonsHeading}</h3>
+        <div class="grid gap-4 @xl:grid-cols-2">
+          {
+            t.reasons.map((reason) => (
+              <Card
+                class:list={[
+                  "relative overflow-hidden transition-all hover:shadow-lg",
+                  reason.popular && "border-primary ring-primary/20 ring-2",
+                ]}
+              >
+                {reason.popular && (
+                  <div class="bg-primary text-primary-foreground absolute top-0 inset-e-0 rounded-es-lg px-3 py-1 text-xs font-medium">
+                    {t.popularLabel}
+                  </div>
+                )}
+                <CardHeader>
+                  <CardTitle class="text-base">{reason.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p class="text-muted-foreground mb-4 text-sm">{reason.description}</p>
+                  <ul class="flex flex-col gap-1">
+                    {reason.features.map((feature) => (
+                      <li class="flex items-center gap-2 text-sm">
+                        <IconCheck class="text-primary size-4 shrink-0" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    class="mt-4 w-full justify-between"
+                    data-reason-select={reason.value}
+                  >
+                    {t.selectReasonButton}
+                    <IconArrowRight class="size-4 rtl:-scale-x-100" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ))
+          }
+        </div>
+      </div>
+    </ScrollReveal>
+
+    <!-- Contact Form -->
+    <ScrollReveal direction="up" duration={700} delay={200}>
+      <div>
+        <Card class="@container/form sticky top-20 border-2">
+          <CardContent>
+            <h3 class="font-heading mb-2 text-xl font-semibold">{t.form.heading}</h3>
+            <p class="text-muted-foreground mb-6 text-sm">
+              {t.form.description}
+            </p>
+
+            <form class="space-y-5" id="contact-form" name="contact-form"
+              data-feedback-success={t.feedback.success}
+              data-feedback-error={t.feedback.error}
+              data-feedback-network={t.feedback.networkError}
+              data-feedback-rate-limited={t.feedback.rateLimited}
+            >
+              <div class="grid gap-5 @md/form:grid-cols-2">
+                <div class="flex flex-col gap-1">
+                  <Label for="contact-firstname">{t.form.firstName}</Label>
+                  <Input
+                    id="contact-firstname"
+                    name="firstName"
+                    type="text"
+                    placeholder={t.form.firstNamePlaceholder}
+                    required
+                  />
+                </div>
+                <div class="flex flex-col gap-1">
+                  <Label for="contact-lastname">{t.form.lastName}</Label>
+                  <Input
+                    id="contact-lastname"
+                    name="lastName"
+                    type="text"
+                    placeholder={t.form.lastNamePlaceholder}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <Label for="contact-email">{t.form.email}</Label>
+                <Input
+                  id="contact-email"
+                  name="email"
+                  type="email"
+                  placeholder={t.form.emailPlaceholder}
+                  required
+                />
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <Label for="contact-phone">{t.form.phone}</Label>
+                <Input
+                  id="contact-phone"
+                  name="phone"
+                  type="tel"
+                  placeholder={t.form.phonePlaceholder}
+                  required
+                />
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <Label for="contact-reason">{t.form.reason}</Label>
+                <Select id="contact-reason" name="reason">
+                  <SelectTrigger class="w-full">
+                    <SelectValue placeholder={t.form.reasonPlaceholder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {
+                        t.reasons.map((reason) => (
+                          <SelectItem value={reason.value}>{reason.title}</SelectItem>
+                        ))
+                      }
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <Label for="contact-message">{t.form.message}</Label>
+                <Textarea
+                  id="contact-message"
+                  name="message"
+                  placeholder={t.form.messagePlaceholder}
+                  rows={4}
+                  required
+                />
+              </div>
+
+              <div class="flex items-start gap-2">
+                <div class="mt-0.5">
+                  <Checkbox id="contact-urgent" variant="primary" name="urgent" />
+                </div>
+                <div>
+                  <Label for="contact-urgent" class="cursor-pointer">{t.form.urgent}</Label>
+                  <p class="text-muted-foreground text-xs">
+                    {t.form.urgentDescription}
+                  </p>
+                </div>
+              </div>
+
+              <Button variant="primary" type="submit" class="w-full">{t.form.submit}</Button>
+
+              <p class="text-muted-foreground text-center text-xs">
+                {t.form.disclaimer}
+              </p>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </ScrollReveal>
+  </div>
+</section>
+
+<script>
+  let controller: AbortController | null = null;
+
+  function initContactForm() {
+    controller?.abort();
+    controller = new AbortController();
+    const { signal } = controller;
+
+    const section = document.getElementById("contact-section");
+    const form = document.getElementById("contact-form") as HTMLFormElement;
+    const reasonButtons = section?.querySelectorAll("[data-reason-select]");
+
+    // Handle reason card selection — set the reason select
+    reasonButtons?.forEach((button) => {
+      button.addEventListener("click", (e) => {
+        e.preventDefault();
+        const value = (button as HTMLElement).dataset.reasonSelect;
+        document.dispatchEvent(
+          new CustomEvent("starwind-select:select", {
+            detail: {
+              selectId: "contact-reason",
+              value,
+            },
+          }),
+        );
+
+        // Scroll to form
+        const formCard = form?.closest(".sticky");
+        if (formCard) {
+          formCard.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, { signal });
+    });
+
+    // Handle form submission
+    if (form) {
+      const feedbackSuccess = form.dataset.feedbackSuccess ?? "Message sent.";
+      const feedbackError = form.dataset.feedbackError ?? "Send failed. Try again.";
+      const feedbackNetwork = form.dataset.feedbackNetwork ?? "Network error.";
+      const feedbackRateLimited = form.dataset.feedbackRateLimited ?? "Too many requests.";
+
+      function showFeedback(type: "success" | "error", text: string) {
+        // Remove previous feedback
+        form!.querySelector("[data-feedback]")?.remove();
+        const div = document.createElement("div");
+        div.setAttribute("data-feedback", "");
+        div.setAttribute("role", "alert");
+        div.className =
+          type === "success"
+            ? "mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200"
+            : "mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200";
+        div.textContent = type === "success" ? `✓ ${text}` : text;
+        form!.prepend(div);
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+        if (submitBtn) submitBtn.disabled = true;
+
+        const formData = new FormData(form);
+        const locale = document.documentElement.lang || "fr";
+
+        const payload = {
+          firstName: formData.get("firstName") ?? "",
+          lastName: formData.get("lastName") ?? "",
+          email: formData.get("email") ?? "",
+          phone: formData.get("phone") ?? "",
+          reason: formData.get("reason") ?? "",
+          message: formData.get("message") ?? "",
+          urgent: formData.get("urgent") === "on",
+          locale,
+        };
+
+        try {
+          const res = await fetch("/api/contact", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          if (res.ok) {
+            form.reset();
+            showFeedback("success", feedbackSuccess);
+          } else if (res.status === 429) {
+            showFeedback("error", feedbackRateLimited);
+          } else {
+            showFeedback("error", feedbackError);
+          }
+        } catch {
+          showFeedback("error", feedbackNetwork);
+        } finally {
+          if (submitBtn) submitBtn.disabled = false;
+        }
+      }, { signal });
+    }
+  }
+
+  initContactForm();
+  document.addEventListener("astro:after-swap", initContactForm);
+  document.addEventListener("astro:before-swap", () => { controller?.abort(); controller = null; });
+</script>

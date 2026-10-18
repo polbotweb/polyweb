@@ -1,0 +1,152 @@
+---
+import type { PageWithSections } from '@database/loaders/page.loader';
+import type { Locale } from '@i18n/config';
+import { getSiteSettings, getContactInfo } from '@database/loaders/site.loader';
+import { safeJsonLd } from '@/lib/sanitize';
+import { Badge } from '@atoms/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@atoms/tabs';
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from '@atoms/accordion';
+
+interface FaqItem { question: string; answer: string; }
+interface FaqSection { title: string; intro?: string; items: FaqItem[]; }
+
+interface Props {
+  data: PageWithSections;
+  locale: Locale;
+}
+
+const { data, locale } = Astro.props;
+const { page, sections } = data;
+
+// ─── Load site data for template variable interpolation ─────────────────────
+const [siteData, contactData] = await Promise.all([
+  getSiteSettings(locale),
+  getContactInfo(),
+]);
+
+const vars: Record<string, string> = {
+  siteName: siteData?.siteName ?? '',
+  email: contactData?.email ?? '',
+  phone: contactData?.phone ?? '',
+  address: contactData?.address ?? '',
+  city: contactData?.city ?? '',
+  postalCode: contactData?.postalCode ?? '',
+  country: contactData?.country ?? '',
+};
+
+/** Replace {{key}} placeholders in a string with values from vars map. */
+function interpolate(text: string): string {
+  return text.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? '');
+}
+
+// Parse FAQ sections from CMS JSON content, interpolating template variables
+const faqSections: FaqSection[] = sections
+  .filter((s) => s.type === 'faq')
+  .map((s) => {
+    try {
+      const raw = s.content;
+      return (typeof raw === 'string' ? JSON.parse(raw) : raw) as FaqSection;
+    } catch { return null; }
+  })
+  .filter((s): s is FaqSection => s !== null && Array.isArray(s.items))
+  .map((s) => ({
+    title: interpolate(s.title),
+    intro: s.intro ? interpolate(s.intro) : undefined,
+    items: s.items.map((item) => ({
+      question: interpolate(item.question),
+      answer: interpolate(item.answer),
+    })),
+  }));
+
+const firstTab = `section-0`;
+
+// ─── JSON-LD FAQPage structured data ────────────────────────────────────────
+const faqJsonLd = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqSections.flatMap((s) =>
+    s.items.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: { '@type': 'Answer', text: item.answer },
+    })),
+  ),
+});
+---
+
+<section class="mx-auto w-full max-w-5xl px-4 py-16 md:py-24" aria-labelledby="legal-heading">
+  <div class="mb-12">
+    <Badge variant="primary" size="sm">{page.metaTitle ? interpolate(page.metaTitle) : page.title}</Badge>
+    <h1 id="legal-heading" class="font-heading mt-3 text-3xl font-semibold tracking-tight md:text-4xl lg:text-5xl">
+      {page.title}
+    </h1>
+  </div>
+
+  <Tabs defaultValue={firstTab} class="min-h-96">
+    <TabsList class="mb-8 flex w-full flex-wrap gap-2" aria-label={page.title}>
+      {faqSections.map((section, i) => (
+        <TabsTrigger value={`section-${i}`} defaultActive={i === 0}>
+          {section.title}
+        </TabsTrigger>
+      ))}
+    </TabsList>
+
+    {faqSections.map((section, i) => (
+      <TabsContent value={`section-${i}`} defaultActive={i === 0}>
+        {section.intro && (
+          <p class="text-muted-foreground mb-6 text-pretty leading-relaxed">
+            {section.intro}
+          </p>
+        )}
+        <Accordion type="single">
+          {section.items.map((item, j) => (
+            <AccordionItem value={`section-${i}-item-${j}`}>
+              <AccordionTrigger>{item.question}</AccordionTrigger>
+              <AccordionContent>
+                <p class="text-muted-foreground leading-relaxed whitespace-pre-line">
+                  {item.answer}
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </TabsContent>
+    ))}
+  </Tabs>
+</section>
+
+{/* eslint-disable-next-line astro/no-set-html-directive -- faqJsonLd is pre-escaped via safeJsonLd() (neutralizes </script> breakout); it is structured data (JSON.stringify output), not arbitrary HTML */}
+<script is:inline type="application/ld+json" set:html={safeJsonLd(faqJsonLd)} />
+
+<script>
+  let legalController: AbortController | null = null;
+
+  function activateTabFromHash() {
+    const hash = window.location.hash.replace('#', '');
+    if (!hash) return;
+
+    const trigger = document.querySelector<HTMLButtonElement>(
+      `[role="tab"][data-value="${hash}"]`
+    );
+    if (trigger) trigger.click();
+
+    const target = document.getElementById(hash);
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function initLegal() {
+    legalController?.abort();
+    legalController = new AbortController();
+    window.addEventListener('hashchange', activateTabFromHash, { signal: legalController.signal });
+    activateTabFromHash();
+  }
+
+  initLegal();
+  document.addEventListener('astro:after-swap', initLegal);
+  document.addEventListener('astro:before-swap', () => { legalController?.abort(); legalController = null; });
+</script>

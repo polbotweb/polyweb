@@ -1,0 +1,27 @@
+---
+import { getRelativeLocaleUrl } from "astro:i18n";
+import { LOCALES, LOCALE_LABELS, type Locale } from "@i18n/config";
+import type { ServiceDetail } from "@/modules/services/domain";
+import { getServiceTranslations } from "@/modules/services/i18n";
+
+const { locale, service = null, availableLocales = LOCALES } = Astro.props as { locale: Locale; service?: ServiceDetail | null; availableLocales?: readonly string[] };
+const available = new Set(availableLocales);
+const t = getServiceTranslations(locale);
+function buildLocaleHref(targetLocale: Locale): string {
+  const currentPath = Astro.url.pathname.replace(new RegExp(`^/${locale}(?=/|$)`), "") || "/";
+  return `${getRelativeLocaleUrl(targetLocale, currentPath)}${Astro.url.search}`;
+}
+---
+<nav class="flex flex-wrap items-center gap-2" aria-label={t.admin.fields.locale}>
+  {LOCALES.map((targetLocale) => {
+    const active = targetLocale === locale;
+    const exists = !service || available.has(targetLocale);
+    return (
+      <a href={buildLocaleHref(targetLocale)} data-service-locale-link data-service-locale-exists={exists ? "true" : "false"} class:list={["rounded-full border px-3 py-1.5 text-xs font-medium", {"border-primary bg-primary text-primary-foreground": active, "border-border bg-background hover:border-primary/50": !active}]} aria-current={active ? "page" : undefined} aria-disabled={!exists ? "true" : undefined}>
+        {LOCALE_LABELS[targetLocale]}
+        {service && <span class="ml-1 opacity-70" aria-hidden="true">{exists ? "✓" : "·"}</span>}
+        {service && !exists && <span class="sr-only">{LOCALE_LABELS[targetLocale]}: {t.admin.fields.locale}</span>}
+      </a>
+    );
+  })}
+</nav>

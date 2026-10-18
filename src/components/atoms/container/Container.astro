@@ -1,0 +1,228 @@
+---
+import type { HTMLTag, Polymorphic } from "astro/types";
+import { tv, type VariantProps } from "tailwind-variants";
+
+export const container = tv({
+  base: "mx-auto w-full",
+  variants: {
+    size: {
+      xs: "max-w-xs",
+      sm: "max-w-sm",
+      md: "max-w-2xl",
+      lg: "max-w-4xl",
+      xl: "max-w-6xl",
+      "2xl": "max-w-7xl",
+      prose: "max-w-[65ch]",
+      full: "max-w-full",
+    },
+    gutter: {
+      none: "px-0",
+      sm: "px-3 sm:px-4",
+      md: "px-4 sm:px-6 lg:px-8",
+      lg: "px-6 sm:px-8 lg:px-12",
+      xl: "px-8 sm:px-12 lg:px-16",
+    },
+    paddingY: {
+      none: "",
+      sm: "py-4 sm:py-6",
+      md: "py-6 sm:py-10 lg:py-12",
+      lg: "py-10 sm:py-16 lg:py-20",
+      xl: "py-16 sm:py-12 lg:py-32",
+    },
+    background: {
+      none: "",
+      background: "bg-background text-foreground",
+      card: "bg-card text-card-foreground",
+      muted: "bg-muted text-foreground",
+      accent: "bg-accent text-accent-foreground",
+      primary: "bg-primary text-primary-foreground",
+      secondary: "bg-secondary text-secondary-foreground",
+      dark: "dark bg-background text-foreground",
+      "gradient-primary": "bg-gradient-to-br from-primary/20 to-background text-foreground",
+      "gradient-warm": "dark bg-gradient-to-br from-gradient-warm/40 via-card to-background text-foreground",
+      "gradient-cool": "dark bg-gradient-to-br from-gradient-cool/40 via-card to-background text-foreground",
+    },
+    border: {
+      none: "",
+      all: "border border-border",
+      top: "border-t border-border",
+      bottom: "border-b border-border",
+      x: "border-x border-border",
+      y: "border-y border-border",
+    },
+    rounded: {
+      none: "",
+      sm: "rounded-sm",
+      md: "rounded-md",
+      lg: "rounded-lg",
+      xl: "rounded-xl",
+      "2xl": "rounded-2xl",
+      "3xl": "rounded-3xl",
+    },
+    minHeight: {
+      none: "",
+      screen: "min-h-screen",
+      half: "min-h-[50vh]",
+    },
+    layout: {
+      stack: "flex flex-col items-start gap-6",
+      centered: "flex flex-col items-center text-center gap-6",
+      split: "grid grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-16",
+    },
+  },
+  defaultVariants: {
+    size: "2xl",
+    gutter: "md",
+    paddingY: "none",
+    background: "none",
+    border: "none",
+    rounded: "none",
+    minHeight: "none",
+    layout: "stack",
+  },
+});
+
+const outerStyles = tv({
+  base: "w-full",
+  variants: {
+    background: {
+      none: "",
+      background: "bg-background text-foreground",
+      card: "bg-card text-card-foreground",
+      muted: "bg-muted text-foreground",
+      accent: "bg-accent text-accent-foreground",
+      primary: "bg-primary text-primary-foreground",
+      secondary: "bg-secondary text-secondary-foreground",
+      dark: "dark bg-background text-foreground",
+      "gradient-primary": "bg-gradient-to-br from-primary/20 to-background text-foreground",
+      "gradient-warm": "dark bg-gradient-to-br from-gradient-warm/40 via-card to-background text-foreground",
+      "gradient-cool": "dark bg-gradient-to-br from-gradient-cool/40 via-card to-background text-foreground",
+    },
+    paddingY: {
+      none: "",
+      sm: "py-4 sm:py-6",
+      md: "py-6 sm:py-10 lg:py-12",
+      lg: "py-10 sm:py-16 lg:py-20",
+      xl: "py-16 sm:py-12 lg:py-32",
+    },
+    minHeight: {
+      none: "",
+      screen: "min-h-screen",
+      half: "min-h-[50vh]",
+    },
+    border: {
+      none: "",
+      all: "border border-border",
+      top: "border-t border-border",
+      bottom: "border-b border-border",
+      x: "border-x border-border",
+      y: "border-y border-border",
+    },
+    rounded: {
+      none: "",
+      sm: "rounded-sm",
+      md: "rounded-md",
+      lg: "rounded-lg",
+      xl: "rounded-xl",
+      "2xl": "rounded-2xl",
+      "3xl": "rounded-3xl",
+    },
+  },
+  defaultVariants: {
+    background: "none",
+    paddingY: "none",
+    minHeight: "none",
+    border: "none",
+    rounded: "none",
+  },
+});
+
+const innerStyles = tv({
+  base: "mx-auto w-full",
+  variants: {
+    size: {
+      xs: "max-w-xs",
+      sm: "max-w-sm",
+      md: "max-w-2xl",
+      lg: "max-w-4xl",
+      xl: "max-w-6xl",
+      "2xl": "max-w-7xl",
+      prose: "max-w-[65ch]",
+      full: "max-w-full",
+    },
+    gutter: {
+      none: "px-0",
+      sm: "px-3 sm:px-4",
+      md: "px-4 sm:px-6 lg:px-8",
+      lg: "px-6 sm:px-8 lg:px-12",
+      xl: "px-8 sm:px-12 lg:px-16",
+    },
+    layout: {
+      stack: "flex flex-col items-start gap-6",
+      centered: "flex flex-col items-center text-center gap-6",
+      split: "grid grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-16",
+    },
+  },
+  defaultVariants: {
+    size: "2xl",
+    gutter: "md",
+    layout: "stack",
+  },
+});
+
+type Props<Tag extends HTMLTag> = Polymorphic<{ as: Tag }> &
+  VariantProps<typeof container> & {
+    /**
+     * Full-width background: outer element spans the viewport, inner content
+     * is constrained to `size`. Required for split layout to work properly.
+     * @default false
+     */
+    bleed?: boolean;
+    /** @deprecated Use layout="centered" instead. */
+    centered?: boolean;
+  };
+
+const {
+  as: Tag = "div",
+  bleed = false,
+  size,
+  gutter,
+  paddingY,
+  background,
+  border,
+  rounded,
+  minHeight,
+  layout: layoutProp,
+  centered,
+  class: className,
+  ...rest
+} = Astro.props;
+
+const layout = centered ? "centered" : (layoutProp ?? "stack");
+const useWrapper = bleed || layout === "split";
+---
+
+{useWrapper ? (
+  <Tag
+    class={outerStyles({ background, paddingY, minHeight, border, rounded, class: className })}
+    data-slot="container"
+    {...rest}
+  >
+    <div class={innerStyles({ size, gutter, layout })}>
+      <div class="flex flex-col items-start justify-center gap-6">
+        <slot />
+      </div>
+      <div class="flex items-center justify-center">
+        <slot name="media" />
+      </div>
+    </div>
+  </Tag>
+) : (
+  <Tag
+    class={container({ size, gutter, paddingY, background, border, rounded, minHeight, layout, class: className })}
+    data-slot="container"
+    {...rest}
+  >
+    <slot />
+  </Tag>
+)}

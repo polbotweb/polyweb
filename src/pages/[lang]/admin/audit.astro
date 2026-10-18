@@ -1,0 +1,34 @@
+---
+import { requirePermission } from '@/lib/auth-guards';
+import { fetchAdminAuditLogs } from '@/lib/auth-data';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import AuthLayout from '@organisms/AuthLayout/AuthLayout.astro';
+import AdminSidebar from '@organisms/AdminSidebar/AdminSidebar.astro';
+import AdminAuditPage from '@pages/admin/AdminAuditPage.astro';
+
+export const prerender = false;
+
+const result = await requirePermission(Astro, { audit: ["read"] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT } = result;
+
+const PER_PAGE = 25;
+const requestedPage = Math.max(1, Number(Astro.url.searchParams.get('page')) || 1);
+const { rows: adminAuditLogs, total } = await fetchAdminAuditLogs(Astro.request.headers, requestedPage, PER_PAGE);
+const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+const page = Math.min(requestedPage, totalPages);
+---
+
+<BaseLayout title={authT.meta.admin.title} description={authT.meta.admin.description}>
+  <AuthLayout title={authT.admin.tabs.auditLog}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="audit" />
+    <AdminAuditPage
+      t={authT}
+      locale={locale}
+      adminAuditLogs={adminAuditLogs}
+      currentPage={page}
+      totalPages={totalPages}
+      baseUrl={Astro.url}
+    />
+  </AuthLayout>
+</BaseLayout>

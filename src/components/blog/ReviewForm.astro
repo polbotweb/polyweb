@@ -1,0 +1,116 @@
+---
+import { Icon } from "astro-icon/components";
+import type { Locale } from "@i18n/config";
+import type { BlogTranslations } from "@i18n/config";
+import type { AppUser } from "@/lib/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@atoms/card";
+import { Textarea } from "@atoms/textarea";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import StarRating from "./comments/StarRating.astro";
+import Button from "@atoms/button/Button.astro";
+
+interface Props {
+  locale: Locale;
+  blogT: BlogTranslations;
+  postId: string;
+  user: AppUser | null;
+}
+
+const { blogT, postId } = Astro.props;
+---
+
+<Card>
+  <CardHeader>
+    <CardTitle class="text-base">{blogT.labels.submitReview}</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <form id="review-form" class="space-y-4">
+      <input type="hidden" name="postId" value={postId} />
+
+      <div class="space-y-1.5">
+        <Label>{blogT.labels.yourRating}</Label>
+        <StarRating name="rating" size="lg" required showValue={false} />
+      </div>
+
+      <div class="space-y-1.5">
+        <Label for="review-title">{blogT.labels.reviewTitleLabel}</Label>
+        <Input id="review-title" name="title" type="text" placeholder={blogT.labels.reviewTitlePlaceholder} />
+      </div>
+
+      <div class="space-y-1.5">
+        <Label for="review-content">{blogT.labels.writeComment}</Label>
+        <Textarea
+          id="review-content"
+          name="content"
+          rows={4}
+          required
+          placeholder={blogT.labels.writeComment}
+        />
+      </div>
+
+      <div class="flex items-center gap-2">
+        <input type="checkbox" id="review-recommended" name="isRecommended" value="true" class="rounded" />
+        <Label for="review-recommended" class="text-sm font-normal">{blogT.labels.recommendLabel}</Label>
+      </div>
+
+      <div class="flex justify-end">
+        <Button type="submit" size="sm">
+          <Icon name="mdi:send" class="size-4" />
+          {blogT.labels.submitReview}
+        </Button>
+      </div>
+
+      <input
+        type="hidden"
+        class="review-form-i18n"
+        data-t-error={blogT.labels.genericError}
+        data-t-submitted={blogT.labels.reviewSubmitted}
+      />
+    </form>
+  </CardContent>
+</Card>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { toast } from '@atoms/toast';
+
+  function init() {
+    const form = document.getElementById('review-form') as HTMLFormElement | null;
+    if (!form) return;
+
+    const i18nEl = form.querySelector<HTMLInputElement>('.review-form-i18n');
+    const errorText = i18nEl?.dataset.tError ?? 'Error';
+    const submittedText = i18nEl?.dataset.tSubmitted ?? 'Review submitted';
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const postId = String(formData.get('postId') ?? '');
+      const rating = Number(formData.get('rating') ?? '5');
+      const title = String(formData.get('title') ?? '');
+      const content = String(formData.get('content') ?? '').trim();
+      const isRecommended = formData.get('isRecommended') === 'true';
+
+      if (!postId || !content) return;
+
+      const { error } = await actions.createBlogReview({
+        postId,
+        rating,
+        title,
+        content,
+        isRecommended,
+      });
+
+      if (error) {
+        toast.error(error.message ?? errorText);
+      } else {
+        toast.success(submittedText);
+        form.reset();
+      }
+    });
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

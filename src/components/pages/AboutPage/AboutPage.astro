@@ -1,0 +1,58 @@
+---
+import type { AboutTranslations } from '@i18n/config';
+import AboutHeroSection from './AboutHeroSection.astro';
+import MissionSection from './MissionSection.astro';
+import ValuesSection from './ValuesSection.astro';
+import TeamSection from './TeamSection.astro';
+import CTABannerSection from '@pages/HomePage/CTABannerSection.astro';
+import ScrollReveal from '@wow/ScrollReveal.astro';
+import { houseCivilization } from '@assets/images/brand';
+
+interface Props {
+  t: AboutTranslations;
+}
+
+const { t } = Astro.props;
+---
+
+
+  <AboutHeroSection
+    eyebrow={t.hero.eyebrow}
+    title={t.hero.title}
+    description={t.hero.description}
+  />
+
+<ScrollReveal direction="up" duration={700}>
+  <MissionSection
+    eyebrow={t.mission.eyebrow}
+    title={t.mission.title}
+    description={t.mission.description}
+    cards={t.mission.cards}
+  />
+</ScrollReveal>
+
+<ScrollReveal direction="up" duration={700} delay={100}>
+  <ValuesSection
+    eyebrow={t.values.eyebrow}
+    title={t.values.title}
+    description={t.values.description}
+    items={t.values.items}
+  />
+</ScrollReveal>
+
+<ScrollReveal direction="up" duration={700} delay={100}>
+  <TeamSection
+    eyebrow={t.team.eyebrow}
+    title={t.team.title}
+    description={t.team.description}
+    members={t.team.members}
+  />
+</ScrollReveal>
+
+<CTABannerSection
+  title={t.cta.title}
+  description={t.cta.description}
+  backgroundImage={houseCivilization}
+  primaryButton={t.cta.primaryButton}
+  secondaryButton={t.cta.secondaryButton}
+/>

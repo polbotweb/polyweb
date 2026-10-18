@@ -1,0 +1,45 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import { tv } from "tailwind-variants";
+import HoverBlurCards, { type HoverBlurCardItem } from "@wow/HoverBlurCards.astro";
+
+interface Props extends HTMLAttributes<"section"> {
+  eyebrow?: string;
+  title?: string;
+  description?: string;
+  cards?: HoverBlurCardItem[];
+}
+
+const sectionStyles = tv({
+  base: "@container mx-auto w-full max-w-7xl px-4 py-24",
+});
+
+const {
+  eyebrow,
+  title,
+  description,
+  cards = [],
+  class: className,
+  ...rest
+} = Astro.props;
+---
+
+<section class={sectionStyles({ class: className })} {...rest}>
+  <div class="grid gap-8 @4xl:grid-cols-3 @4xl:gap-12">
+    <div class="mx-auto w-full max-w-lg text-center @4xl:text-start">
+      {eyebrow && (
+        <p class="text-primary-deep mb-2 text-sm font-medium tracking-wider uppercase">
+          {eyebrow}
+        </p>
+      )}
+      <h2 class="font-heading text-3xl font-semibold tracking-tight @xl:text-4xl">
+        {title}
+      </h2>
+      {description && <p class="text-muted-foreground mt-4 text-pretty">{description}</p>}
+    </div>
+
+    <div class="flex-1 @4xl:col-span-2">
+      <HoverBlurCards cards={cards} />
+    </div>
+  </div>
+</section>

@@ -1,0 +1,13 @@
+---
+import { formatServiceDuration, formatServicePrice, formatServiceRating } from "@/modules/services/utils";
+import { getServiceTranslations } from "@/modules/services/i18n";
+const { service, locale = "fr" } = Astro.props as { service: { priceMinor: number | null; currency: string | null; durationMinutes: number | null; maxParticipants: number | null; ratingAverage100: number; ratingCount: number; isMobile: boolean }; locale?: string };
+const t = getServiceTranslations(locale);
+---
+<div class="flex flex-wrap gap-3 text-sm text-muted-foreground" aria-label={t.labels.service}>
+  {formatServicePrice(service.priceMinor, service.currency, locale) && <span>{formatServicePrice(service.priceMinor, service.currency, locale)}</span>}
+  {formatServiceDuration(service.durationMinutes) && <span>{formatServiceDuration(service.durationMinutes)}</span>}
+  {service.maxParticipants && <span>{service.maxParticipants} {t.labels.participants}</span>}
+  {service.ratingCount > 0 && <span aria-label={`${formatServiceRating(service.ratingAverage100)} / 5`}>★ {formatServiceRating(service.ratingAverage100)} ({service.ratingCount})</span>}
+  {service.isMobile && <span>{t.labels.mobile}</span>}
+</div>

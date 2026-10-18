@@ -1,0 +1,21 @@
+---
+interface Stat {
+  label: string;
+  value: string | number;
+  description?: string;
+}
+interface Props {
+  stats: readonly Stat[];
+  class?: string;
+}
+const { stats, class: className } = Astro.props;
+---
+<div class:list={["grid gap-4 sm:grid-cols-2 xl:grid-cols-4", className]} data-admin-resource-stats>
+  {stats.map((stat) => (
+    <div class="rounded-lg border bg-background p-4">
+      <p class="text-sm text-muted-foreground">{stat.label}</p>
+      <p class="mt-2 text-3xl font-bold tracking-tight">{stat.value}</p>
+      {stat.description ? <p class="mt-1 text-xs text-muted-foreground">{stat.description}</p> : null}
+    </div>
+  ))}
+</div>

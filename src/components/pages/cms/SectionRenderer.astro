@@ -1,0 +1,196 @@
+---
+/**
+ * SectionRenderer — Renders a CMS page section based on its type.
+ * Content is stored as jsonb in the DB; each type maps to a layout.
+ */
+import type { pageSections } from '@database/schemas';
+import { sanitizeHtml, safeUrl, safeEmbedUrl } from '@lib/sanitize';
+import { sectionTypes } from '@/actions/admin/sections';
+
+type SectionRow = typeof pageSections.$inferSelect;
+
+interface Props {
+  section: SectionRow;
+}
+
+const { section } = Astro.props;
+
+// jsonb content — Drizzle returns a parsed object. Support legacy text as fallback.
+let content: Record<string, unknown> = {};
+if (section.content && typeof section.content === 'object') {
+  content = section.content as Record<string, unknown>;
+} else if (typeof section.content === 'string') {
+  try { content = JSON.parse(section.content); } catch { content = { raw: section.content }; }
+}
+
+const { type } = section;
+
+// i18n labels for iframe titles
+const SUPPORTED_IFRAME_LOCALES = ['fr', 'en', 'es', 'ar'] as const;
+const locale = Astro.currentLocale ?? 'fr';
+const IFRAME_LABELS: Record<string, { map: string; video: string }> = {
+  fr: { map: 'Carte interactive', video: 'Lecteur vidéo' },
+  en: { map: 'Interactive map', video: 'Video player' },
+  es: { map: 'Mapa interactivo', video: 'Reproductor de vídeo' },
+  ar: { map: 'خريطة تفاعلية', video: 'مشغل فيديو' },
+};
+const safeLocale = (SUPPORTED_IFRAME_LOCALES as readonly string[]).includes(locale) ? locale : 'fr';
+const labels = IFRAME_LABELS[safeLocale];
+
+type GalleryImage = { src: string; alt?: string; width?: number; height?: number };
+const galleryImages: GalleryImage[] = Array.isArray(content.images)
+  ? (content.images as GalleryImage[]).filter((img) => safeUrl(img.src))
+  : [];
+---
+
+{type === 'hero' && (
+  <section class="cms-section cms-hero py-16 md:py-24 text-center">
+    {content.title && <h1 class="text-4xl font-bold mb-4">{content.title}</h1>}
+    {content.subtitle && <p class="text-xl text-muted-foreground mb-6">{content.subtitle}</p>}
+    {content.ctaText && content.ctaUrl && safeUrl(content.ctaUrl) && (
+      <a href={safeUrl(content.ctaUrl)} class="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-6 py-3 font-medium">
+        {content.ctaText}
+      </a>
+    )}
+    {content.image && safeUrl(content.image) && <img src={safeUrl(content.image)!} alt={content.imageAlt ? String(content.imageAlt) : ''} role={content.imageAlt ? undefined : 'presentation'} class="mt-8 mx-auto rounded-lg max-w-3xl w-full h-auto" loading="lazy" decoding="async" width={Number(content.imageWidth) || 1200} height={Number(content.imageHeight) || 630} />}
+  </section>
+)}
+
+{type === 'text' && (
+  <section class="cms-section cms-text prose max-w-none py-8">
+    <Fragment set:html={sanitizeHtml(content.html ?? content.raw ?? '')} />
+  </section>
+)}
+
+{type === 'image' && (
+  <section class="cms-section cms-image py-8 text-center">
+    {safeUrl(content.src) && <img
+      src={safeUrl(content.src)!}
+      alt={content.alt ? String(content.alt) : ''}
+      role={content.alt ? undefined : 'presentation'}
+      class="mx-auto rounded-lg max-w-4xl w-full h-auto"
+      loading="lazy"
+      decoding="async"
+      width={Number(content.width) || 1200}
+      height={Number(content.height) || 800}
+    />}
+    {content.caption && <p class="text-sm text-muted-foreground mt-2">{content.caption}</p>}
+  </section>
+)}
+
+{type === 'gallery' && (
+  <section class="cms-section cms-gallery py-8">
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+      {galleryImages.map((img) => (
+        <img src={safeUrl(img.src)!} alt={img.alt || ''} role={img.alt ? undefined : 'presentation'} class="rounded-lg w-full h-auto object-cover aspect-square" loading="lazy" decoding="async" width={Number(img.width) || 400} height={Number(img.height) || 400} />
+      ))}
+    </div>
+  </section>
+)}
+
+{type === 'cta' && (
+  <section class="cms-section cms-cta py-12 text-center bg-muted rounded-lg">
+    {content.title && <h2 class="text-3xl font-bold mb-4">{content.title}</h2>}
+    {content.text && <p class="text-muted-foreground mb-6">{content.text}</p>}
+    {content.buttonText && content.buttonUrl && safeUrl(content.buttonUrl) && (
+      <a href={safeUrl(content.buttonUrl)} class="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-6 py-3 font-medium">
+        {content.buttonText}
+      </a>
+    )}
+  </section>
+)}
+
+{type === 'features' && (
+  <section class="cms-section cms-features py-12">
+    {content.title && <h2 class="text-3xl font-bold text-center mb-8">{content.title}</h2>}
+    <div class="grid md:grid-cols-3 gap-8">
+      {Array.isArray(content.items) && (content.items as { title: string; description: string; icon?: string }[]).map((item) => (
+        <div class="text-center">
+          {item.icon && <div class="text-4xl mb-3">{item.icon}</div>}
+          <h3 class="text-xl font-semibold mb-2">{item.title}</h3>
+          <p class="text-muted-foreground">{item.description}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+)}
+
+{type === 'testimonials' && (
+  <section class="cms-section cms-testimonials py-12 bg-muted/50 rounded-lg">
+    {content.title && <h2 class="text-3xl font-bold text-center mb-8">{content.title}</h2>}
+    <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+      {Array.isArray(content.items) && (content.items as { quote: string; author: string; role?: string }[]).map((item) => (
+        <blockquote class="border-l-4 border-primary pl-4 py-2">
+          <p class="italic mb-2">"{item.quote}"</p>
+          <footer class="text-sm text-muted-foreground">— {item.author}{item.role ? `, ${item.role}` : ''}</footer>
+        </blockquote>
+      ))}
+    </div>
+  </section>
+)}
+
+{type === 'faq' && (
+  <section class="cms-section cms-faq py-12">
+    {content.title && <h2 class="text-3xl font-bold text-center mb-8">{content.title}</h2>}
+    <div class="max-w-2xl mx-auto divide-y">
+      {Array.isArray(content.items) && (content.items as { question: string; answer: string }[]).map((item) => (
+        <details class="py-4 group">
+          <summary class="cursor-pointer font-medium">{item.question}</summary>
+          <p class="mt-2 text-muted-foreground">{item.answer}</p>
+        </details>
+      ))}
+    </div>
+  </section>
+)}
+
+{type === 'contact' && (
+  <section class="cms-section cms-contact py-12 text-center">
+    {content.title && <h2 class="text-3xl font-bold mb-4">{content.title}</h2>}
+    {content.text && <p class="text-muted-foreground mb-6">{content.text}</p>}
+    {content.email && safeUrl(`mailto:${content.email}`) && <p><a href={safeUrl(`mailto:${content.email}`)} class="underline">{content.email}</a></p>}
+    {content.phone && safeUrl(`tel:${content.phone}`) && <p><a href={safeUrl(`tel:${content.phone}`)} class="underline">{content.phone}</a></p>}
+  </section>
+)}
+
+{type === 'map' && safeEmbedUrl(content.embedUrl) && (
+  <section class="cms-section cms-map py-8">
+    <iframe
+      src={safeEmbedUrl(content.embedUrl)}
+      width="100%"
+      height="400"
+      class="rounded-lg border-0"
+      loading="lazy"
+      title={labels.map}
+    />
+  </section>
+)}
+
+{type === 'video' && (
+  <section class="cms-section cms-video py-8 text-center">
+    {safeEmbedUrl(content.embedUrl) && (
+      <iframe
+        src={safeEmbedUrl(content.embedUrl)}
+        width="100%"
+        height="450"
+        class="rounded-lg border-0 max-w-3xl mx-auto aspect-video"
+        loading="lazy"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+        title={labels.video}
+      />
+    )}
+    {content.caption && <p class="text-sm text-muted-foreground mt-2">{content.caption}</p>}
+  </section>
+)}
+
+{type === 'custom' && (
+  <section class="cms-section cms-custom py-8">
+    <Fragment set:html={sanitizeHtml(content.html ?? '')} />
+  </section>
+)}
+
+{!(sectionTypes as readonly string[]).includes(type) && (
+  <section class="cms-section cms-unknown py-8 text-center text-muted-foreground text-sm">
+    <p>Unknown section type: {type}</p>
+  </section>
+)}

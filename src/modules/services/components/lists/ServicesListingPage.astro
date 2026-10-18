@@ -1,0 +1,92 @@
+---
+import { Icon } from "astro-icon/components";
+import type { Locale } from "@i18n/config";
+import type { ServiceListItem } from "@/modules/services/domain";
+import { getServiceTranslations } from "@/modules/services/i18n";
+import { Input } from "@atoms/input";
+import Button from "@atoms/button/Button.astro";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@atoms/pagination";
+import ServiceGrid from "./ServiceGrid.astro";
+
+interface CategoryLink {
+  slug: string;
+  name: string;
+}
+
+interface Props {
+  locale: Locale;
+  title: string;
+  description?: string | null;
+  items: ServiceListItem[];
+  meta: { total: number; page: number; totalPages: number };
+  baseUrl: string;
+  categories?: CategoryLink[];
+  organizationSlug?: string | null;
+  organizationName?: string | null;
+  searchQuery?: string;
+  activeCategorySlug?: string;
+  activeTagSlug?: string;
+}
+
+const {
+  locale,
+  title,
+  description,
+  items,
+  meta,
+  baseUrl,
+  categories = [],
+  organizationSlug = null,
+  organizationName = null,
+  searchQuery = "",
+  activeCategorySlug,
+  activeTagSlug,
+} = Astro.props;
+const t = getServiceTranslations(locale);
+const activeFilter = activeCategorySlug || activeTagSlug || searchQuery;
+const queryForPage = (page: number) => {
+  const params = new URLSearchParams(Astro.url.searchParams);
+  if (page === 1) params.delete("page"); else params.set("page", String(page));
+  const query = params.toString();
+  return query ? `?${query}` : "";
+};
+const pageNumbers = Array.from({ length: meta.totalPages }, (_, index) => index + 1)
+  .filter((page) => page === 1 || page === meta.totalPages || Math.abs(page - meta.page) <= 1);
+---
+
+<section class="mx-auto w-full max-w-7xl pb-14" data-services-listing>
+  <header class="relative overflow-hidden border-b bg-muted/35 px-4 py-12 sm:px-6 md:py-16">
+    <div class="absolute inset-y-0 right-0 hidden w-1/3 border-l border-primary/15 bg-[repeating-linear-gradient(135deg,transparent_0,transparent_12px,hsl(var(--primary)/0.06)_12px,hsl(var(--primary)/0.06)_13px)] md:block"></div>
+    <div class="relative flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
+      <div class="max-w-3xl">
+        {(organizationName || activeCategorySlug || activeTagSlug) && <nav class="mb-4 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground" aria-label="Breadcrumb"><a href={baseUrl} class="transition-colors hover:text-foreground">{t.labels.services}</a>{organizationName && <><Icon name="mdi:chevron-right" class="size-4" /><span>{organizationName}</span></>}{(activeCategorySlug || activeTagSlug) && <><Icon name="mdi:chevron-right" class="size-4" /><span class="font-medium text-foreground">{title}</span></>}</nav>}
+        <p class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-primary"><Icon name="mdi:compass-outline" class="size-4" />{organizationName ?? t.labels.services}</p>
+        <h1 class="font-heading text-4xl font-extrabold leading-tight md:text-5xl">{title}</h1>
+        {description && <p class="mt-4 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">{description}</p>}
+        <p class="mt-5 flex items-center gap-2 text-sm text-muted-foreground"><Icon name="mdi:calendar-check-outline" class="size-4 text-primary" /><strong class="font-semibold text-foreground">{meta.total}</strong> {meta.total === 1 ? t.labels.service : t.labels.services}</p>
+      </div>
+
+      <form method="get" action={Astro.url.pathname} class="flex w-full max-w-md gap-2 lg:w-96">
+        <div class="relative min-w-0 flex-1"><Icon name="mdi:magnify" class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input type="search" name="search" value={searchQuery} placeholder={t.labels.search} class="bg-background pl-9" /></div>
+        <Button type="submit" size="icon" aria-label={t.labels.search}><Icon name="mdi:magnify" class="size-4" /></Button>
+        {activeFilter && <Button href={baseUrl} variant="outline" size="icon" aria-label={t.labels.actions}><Icon name="mdi:close" class="size-4" /></Button>}
+      </form>
+    </div>
+  </header>
+
+  {categories.length > 0 && !activeTagSlug && <nav class="flex gap-2 overflow-x-auto border-b px-4 py-3 sm:px-6" aria-label={t.labels.categories}><a href={baseUrl} class:list={["shrink-0 rounded-md border px-3 py-1.5 text-sm transition-colors", { "border-primary bg-primary text-primary-foreground": !activeCategorySlug, "hover:border-primary/40 hover:bg-muted": activeCategorySlug }]}>{t.labels.categories}</a>{categories.map((category) => <a href={`${baseUrl}/${category.slug}`} class:list={["shrink-0 rounded-md border px-3 py-1.5 text-sm transition-colors", { "border-primary bg-primary text-primary-foreground": activeCategorySlug === category.slug, "hover:border-primary/40 hover:bg-muted": activeCategorySlug !== category.slug }]}>{category.name}</a>)}</nav>}
+
+  <div class="px-4 pt-8 sm:px-6">
+    {searchQuery && <div class="mb-6 flex items-center gap-2 border-l-2 border-primary bg-muted/45 px-4 py-3 text-sm"><Icon name="mdi:magnify" class="size-4 text-primary" /><span>{t.labels.search}: <strong>{searchQuery}</strong></span></div>}
+    {items.length ? <ServiceGrid items={items} locale={locale} organizationSlug={organizationSlug} /> : <div class="grid min-h-64 place-items-center border border-dashed p-8 text-center"><div><Icon name="mdi:calendar-blank-outline" class="mx-auto size-9 text-muted-foreground" /><p class="mt-3 font-medium">{t.labels.noResults}</p><a href={baseUrl} class="mt-3 inline-block text-sm font-semibold text-primary hover:underline">{t.labels.services}</a></div></div>}
+
+    {meta.totalPages > 1 && <Pagination class="mt-10"><PaginationContent>{meta.page > 1 && <PaginationItem><PaginationPrevious href={queryForPage(meta.page - 1)} aria-label={t.labels.previous} /></PaginationItem>}{pageNumbers.map((page) => <PaginationItem><PaginationLink href={queryForPage(page)} isActive={page === meta.page} aria-current={page === meta.page ? "page" : undefined}>{page}</PaginationLink></PaginationItem>)}{meta.page < meta.totalPages && <PaginationItem><PaginationNext href={queryForPage(meta.page + 1)} aria-label={t.labels.next} /></PaginationItem>}</PaginationContent></Pagination>}
+  </div>
+</section>

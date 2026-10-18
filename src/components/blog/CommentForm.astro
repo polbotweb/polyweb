@@ -1,0 +1,119 @@
+---
+import { Icon } from "astro-icon/components";
+import type { Locale } from "@i18n/config";
+import type { BlogTranslations } from "@i18n/config";
+import type { AppUser } from "@/lib/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@atoms/card";
+import { Textarea } from "@atoms/textarea";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import Button from "@atoms/button/Button.astro";
+
+interface Props {
+  locale: Locale;
+  blogT: BlogTranslations;
+  postId: string;
+  user: AppUser | null;
+  parentId?: string;
+}
+
+const { blogT, postId, user, parentId } = Astro.props;
+---
+
+<Card data-post-id={postId}>
+  <CardHeader>
+    <CardTitle class="text-base">{blogT.labels.writeComment}</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <form id="comment-form" class="space-y-4">
+      <input type="hidden" name="postId" value={postId} />
+      {parentId && <input type="hidden" name="parentId" value={parentId} />}
+
+      {!user && (
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="space-y-1.5">
+            <Label for="comment-guest-name">{blogT.labels.guestNameLabel}</Label>
+            <Input id="comment-guest-name" name="guestName" type="text" required />
+          </div>
+          <div class="space-y-1.5">
+            <Label for="comment-guest-email">{blogT.labels.guestEmailLabel}</Label>
+            <Input id="comment-guest-email" name="guestEmail" type="email" required />
+          </div>
+        </div>
+      )}
+
+      <div class="space-y-1.5">
+        <Label for="comment-content">{blogT.labels.writeComment}</Label>
+        <Textarea
+          id="comment-content"
+          name="content"
+          rows={4}
+          required
+          placeholder={blogT.labels.writeComment}
+        />
+      </div>
+
+      <div class="flex justify-end">
+        <Button type="submit" size="sm">
+          <Icon name="mdi:send" class="size-4" />
+          {blogT.labels.submitComment}
+        </Button>
+      </div>
+
+      <input
+        type="hidden"
+        class="comment-form-i18n"
+        data-t-error={blogT.labels.genericError}
+        data-t-submitted={blogT.labels.commentSubmitted}
+      />
+    </form>
+  </CardContent>
+</Card>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { toast } from '@atoms/toast';
+
+  function init() {
+    const form = document.getElementById('comment-form') as HTMLFormElement | null;
+    if (!form) return;
+
+    const i18nEl = form.querySelector<HTMLInputElement>('.comment-form-i18n');
+    const errorText = i18nEl?.dataset.tError ?? 'Error';
+    const submittedText = i18nEl?.dataset.tSubmitted ?? 'Comment submitted';
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const postId = String(formData.get('postId') ?? '');
+      const content = String(formData.get('content') ?? '').trim();
+      const parentId = formData.get('parentId') ? String(formData.get('parentId')) : undefined;
+      const guestName = formData.get('guestName') ? String(formData.get('guestName')) : undefined;
+      const guestEmail = formData.get('guestEmail') ? String(formData.get('guestEmail')) : undefined;
+
+      if (!postId || !content) return;
+
+      const { error } = await actions.createBlogComment({
+        postId,
+        content,
+        parentId,
+        guestName,
+        guestEmail,
+      });
+
+      if (error) {
+        toast.error(error.message ?? errorText);
+      } else {
+        toast.success(submittedText);
+        form.reset();
+        // The comment is queued for moderation (PENDING) and is not shown
+        // publicly until approved, so a full page reload would be wasteful
+        // (lost scroll position, re-downloaded JS/CSS, re-triggered view
+        // counter). The success toast is the only required feedback.
+      }
+    });
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

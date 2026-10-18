@@ -1,0 +1,51 @@
+---
+import { requirePermission } from '@/lib/auth-guards';
+import { getDrizzle } from '@database/drizzle';
+import { navigationMenus, navigationItems } from '@database/schemas';
+import { asc, eq, and } from 'drizzle-orm';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import AuthLayout from '@organisms/AuthLayout/AuthLayout.astro';
+import AdminSidebar from '@organisms/AdminSidebar/AdminSidebar.astro';
+import AdminNavigationPage from '@pages/admin/AdminNavigationPage.astro';
+
+export const prerender = false;
+
+const result = await requirePermission(Astro, { navigation: ["read"] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT } = result;
+
+const db = getDrizzle();
+
+const menus = await db.select().from(navigationMenus).orderBy(asc(navigationMenus.name));
+
+const selectedMenu = Astro.url.searchParams.get('menu') ?? menus[0]?.id ?? '';
+const selectedLocale = Astro.url.searchParams.get('locale') ?? locale;
+
+let items: (typeof navigationItems.$inferSelect)[] = [];
+if (selectedMenu) {
+  items = await db
+    .select()
+    .from(navigationItems)
+    .where(
+      and(
+        eq(navigationItems.menuId, selectedMenu),
+        eq(navigationItems.locale, selectedLocale),
+      ),
+    )
+    .orderBy(asc(navigationItems.sortOrder));
+}
+---
+
+<BaseLayout title={authT.admin.cms.navigation.title} description={authT.admin.cms.navigation.description}>
+  <AuthLayout title={authT.admin.cms.navigation.title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="navigation" />
+    <AdminNavigationPage
+      t={authT}
+      locale={locale}
+      menus={menus}
+      items={items}
+      selectedMenu={selectedMenu}
+      selectedLocale={selectedLocale}
+    />
+  </AuthLayout>
+</BaseLayout>

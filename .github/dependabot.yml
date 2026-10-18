@@ -1,0 +1,31 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    groups:
+      astro:
+        patterns:
+          - "astro"
+          - "@astrojs/*"
+      auth:
+        patterns:
+          - "better-auth"
+      database:
+        patterns:
+          - "drizzle-*"
+          - "pg"
+      testing:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "@playwright/*"
+          - "playwright"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

@@ -1,0 +1,57 @@
+---
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@atoms/sidebar';
+import Separator from '@atoms/separator/Separator.astro';
+
+interface Props {
+  title?: string;
+}
+
+const { title } = Astro.props;
+---
+
+<div class="auth-layout">
+  <SidebarProvider>
+    <slot name="sidebar" />
+    <SidebarInset>
+      <header class="flex h-12 shrink-0 items-center gap-2 border-b px-4 sticky top-16 z-10 bg-background">
+        <SidebarTrigger />
+        {title && (
+          <>
+            <Separator orientation="vertical" class="mx-2 h-4" />
+            <span class="text-muted-foreground text-sm font-medium truncate">{title}</span>
+          </>
+        )}
+      </header>
+      <div class="flex-1 p-4 md:p-6">
+        <slot />
+      </div>
+    </SidebarInset>
+  </SidebarProvider>
+</div>
+
+<style>
+  .auth-layout {
+    display: flex;
+    flex: 1;
+  }
+
+  /* Provider: don't force full viewport height, fill the <main> flex area */
+  .auth-layout :global([data-slot="sidebar-provider"]) {
+    min-height: 0;
+    flex: 1;
+  }
+
+  /* Hide the gap placeholder — not needed when container is sticky (in-flow) */
+  .auth-layout :global([data-slot="sidebar-gap"]) {
+    display: none;
+  }
+
+  /* Sidebar container: sticky below the site header instead of fixed full-viewport */
+  .auth-layout :global([data-slot="sidebar-container"]) {
+    position: sticky;
+    top: 4rem; /* h-16 site header */
+    height: calc(100svh - 4rem);
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+  }
+</style>

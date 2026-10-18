@@ -1,0 +1,259 @@
+---
+/**
+ * CookieConsent — RGPD cookie consent banner.
+ * All text comes from the DB (consent_settings table).
+ * User choice is stored in localStorage as JSON.
+ * When not yet consented, no analytics/marketing scripts should fire.
+ */
+import type { InferSelectModel } from "drizzle-orm";
+import type { consentSettings } from "@database/schemas";
+
+type ConsentRow = InferSelectModel<typeof consentSettings>;
+
+interface Props {
+  consent: ConsentRow;
+}
+
+const { consent } = Astro.props;
+---
+
+{/* eslint-disable-next-line astro/jsx-a11y/prefer-tag-over-role -- non-modal banner toggled via a CSS class + localStorage (see script below); native <dialog> requires showModal()/close() JS calls and top-layer semantics that don't fit this always-in-DOM, class-toggled consent banner */}
+<div
+  id="cookie-consent"
+  class="fixed inset-x-0 bottom-0 z-9999 hidden"
+  role="dialog"
+  aria-modal="false"
+  aria-label={consent.title}
+  data-consent={JSON.stringify({
+    title: consent.title,
+    description: consent.description,
+    acceptAll: consent.acceptAll,
+    rejectAll: consent.rejectAll,
+    customize: consent.customize,
+    savePreferences: consent.savePreferences,
+    necessaryLabel: consent.necessaryLabel,
+    necessaryDescription: consent.necessaryDescription,
+    analyticsLabel: consent.analyticsLabel,
+    analyticsDescription: consent.analyticsDescription,
+    marketingLabel: consent.marketingLabel,
+    marketingDescription: consent.marketingDescription,
+    privacyPolicyLabel: consent.privacyPolicyLabel,
+    privacyPolicyUrl: consent.privacyPolicyUrl,
+  })}
+>
+  <!-- Banner (initial view) -->
+  <div id="cc-banner" class="border-border mx-auto max-w-2xl border-t bg-white p-4 text-stone-950 shadow-lg sm:mb-4 sm:mx-4 sm:rounded-lg sm:border md:mx-auto dark:bg-stone-950 dark:text-stone-50">
+    <div class="mb-3">
+      <h2 class="text-base font-semibold">{consent.title}</h2>
+      <p class="mt-1 bg-white text-sm leading-relaxed text-stone-800 dark:bg-stone-950 dark:text-stone-200">{consent.description}</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        id="cc-accept-all"
+        class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center rounded-md px-4 text-sm font-medium transition-colors"
+      >
+        {consent.acceptAll}
+      </button>
+      <button
+        type="button"
+        id="cc-reject-all"
+        class="bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex h-9 items-center rounded-md px-4 text-sm font-medium transition-colors"
+      >
+        {consent.rejectAll}
+      </button>
+      <button
+        type="button"
+        id="cc-customize"
+        class="inline-flex h-9 items-center rounded-md px-4 text-sm font-medium text-stone-700 underline-offset-4 transition-colors hover:text-stone-950 hover:underline dark:text-stone-300 dark:hover:text-stone-50"
+      >
+        {consent.customize}
+      </button>
+    </div>
+    {consent.privacyPolicyUrl && (
+      <a
+        href={consent.privacyPolicyUrl}
+        class="mt-2 inline-block text-xs text-stone-700 underline hover:text-stone-950 dark:text-stone-300 dark:hover:text-stone-50"
+      >
+        {consent.privacyPolicyLabel}
+      </a>
+    )}
+  </div>
+
+  <!-- Preferences panel (hidden by default) -->
+  <div id="cc-preferences" class="border-border mx-auto hidden max-w-2xl border-t bg-white p-4 text-stone-950 shadow-lg sm:mb-4 sm:mx-4 sm:rounded-lg sm:border md:mx-auto dark:bg-stone-950 dark:text-stone-50">
+    <h2 class="mb-4 text-base font-semibold">{consent.customize}</h2>
+
+    <!-- Necessary (always on) -->
+    <div class="mb-3 flex items-start justify-between gap-4">
+      <div>
+        <p class="text-sm font-medium">{consent.necessaryLabel}</p>
+        <p class="text-xs text-stone-700 dark:text-stone-300">{consent.necessaryDescription}</p>
+      </div>
+      <button
+        type="button"
+        class="bg-primary relative inline-flex h-5 w-9 shrink-0 cursor-not-allowed items-center rounded-full opacity-70"
+        disabled
+        aria-checked="true"
+        role="switch"
+      >
+        <span class="bg-primary-foreground pointer-events-none block size-4 translate-x-4 rounded-full shadow-sm transition-transform"></span>
+      </button>
+    </div>
+
+    <!-- Analytics -->
+    <div class="mb-3 flex items-start justify-between gap-4">
+      <div>
+        <p class="text-sm font-medium">{consent.analyticsLabel}</p>
+        <p class="text-xs text-stone-700 dark:text-stone-300">{consent.analyticsDescription}</p>
+      </div>
+      <button
+        type="button"
+        id="cc-toggle-analytics"
+        class="bg-muted relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors"
+        role="switch"
+        aria-checked="false"
+        data-category="analytics"
+      >
+        <span class="bg-foreground pointer-events-none block size-4 translate-x-0.5 rounded-full shadow-sm transition-transform"></span>
+      </button>
+    </div>
+
+    <!-- Marketing -->
+    <div class="mb-3 flex items-start justify-between gap-4">
+      <div>
+        <p class="text-sm font-medium">{consent.marketingLabel}</p>
+        <p class="text-xs text-stone-700 dark:text-stone-300">{consent.marketingDescription}</p>
+      </div>
+      <button
+        type="button"
+        id="cc-toggle-marketing"
+        class="bg-muted relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors"
+        role="switch"
+        aria-checked="false"
+        data-category="marketing"
+      >
+        <span class="bg-foreground pointer-events-none block size-4 translate-x-0.5 rounded-full shadow-sm transition-transform"></span>
+      </button>
+    </div>
+
+    <div class="mt-4 flex flex-wrap gap-2">
+      <button
+        type="button"
+        id="cc-save-preferences"
+        class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center rounded-md px-4 text-sm font-medium transition-colors"
+      >
+        {consent.savePreferences}
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'cookie-consent';
+
+  interface ConsentChoice {
+    necessary: true;
+    analytics: boolean;
+    marketing: boolean;
+    timestamp: number;
+  }
+
+  function getStoredConsent(): ConsentChoice | null {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as ConsentChoice;
+      // Expire after 365 days
+      if (Date.now() - parsed.timestamp > 365 * 24 * 60 * 60 * 1000) {
+        localStorage.removeItem(STORAGE_KEY);
+        return null;
+      }
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  function storeConsent(choice: ConsentChoice) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(choice));
+    dispatchConsentEvent(choice);
+  }
+
+  function dispatchConsentEvent(choice: ConsentChoice) {
+    document.dispatchEvent(new CustomEvent('cookie-consent-update', { detail: choice }));
+  }
+
+  function init() {
+    const wrapper = document.getElementById('cookie-consent');
+    if (!wrapper) return;
+
+    const existing = getStoredConsent();
+    if (existing) {
+      // Already consented — dispatch event for scripts that need it and don't show banner
+      dispatchConsentEvent(existing);
+      return;
+    }
+
+    // Show the banner
+    wrapper.classList.remove('hidden');
+
+    const banner = document.getElementById('cc-banner')!;
+    const prefs = document.getElementById('cc-preferences')!;
+
+    // ── Accept all ──
+    document.getElementById('cc-accept-all')?.addEventListener('click', () => {
+      storeConsent({ necessary: true, analytics: true, marketing: true, timestamp: Date.now() });
+      wrapper.classList.add('hidden');
+    });
+
+    // ── Reject all ──
+    document.getElementById('cc-reject-all')?.addEventListener('click', () => {
+      storeConsent({ necessary: true, analytics: false, marketing: false, timestamp: Date.now() });
+      wrapper.classList.add('hidden');
+    });
+
+    // ── Customize ──
+    document.getElementById('cc-customize')?.addEventListener('click', () => {
+      banner.classList.add('hidden');
+      prefs.classList.remove('hidden');
+    });
+
+    // ── Toggle switches ──
+    const toggles = prefs.querySelectorAll<HTMLButtonElement>('[role="switch"][data-category]');
+    toggles.forEach((toggle) => {
+      toggle.addEventListener('click', () => {
+        const isOn = toggle.getAttribute('aria-checked') === 'true';
+        toggle.setAttribute('aria-checked', String(!isOn));
+        const thumb = toggle.querySelector('span')!;
+        if (!isOn) {
+          toggle.classList.remove('bg-muted');
+          toggle.classList.add('bg-primary');
+          thumb.classList.remove('translate-x-0.5');
+          thumb.classList.add('translate-x-4');
+        } else {
+          toggle.classList.remove('bg-primary');
+          toggle.classList.add('bg-muted');
+          thumb.classList.remove('translate-x-4');
+          thumb.classList.add('translate-x-0.5');
+        }
+      });
+    });
+
+    // ── Save preferences ──
+    document.getElementById('cc-save-preferences')?.addEventListener('click', () => {
+      const analytics = document.getElementById('cc-toggle-analytics')?.getAttribute('aria-checked') === 'true';
+      const marketing = document.getElementById('cc-toggle-marketing')?.getAttribute('aria-checked') === 'true';
+      storeConsent({ necessary: true, analytics, marketing, timestamp: Date.now() });
+      wrapper.classList.add('hidden');
+    });
+  }
+
+  // Run on DOMContentLoaded and on Astro page transitions
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+  document.addEventListener('astro:page-load', init);
+</script>

@@ -1,0 +1,73 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import { Icon } from "astro-icon/components";
+import { tv } from "tailwind-variants";
+
+export interface HoverBlurCardItem {
+  icon: string;
+  title: string;
+  description: string;
+}
+
+interface Props extends HTMLAttributes<"div"> {
+  cards?: HoverBlurCardItem[];
+}
+
+const wrapperStyles = tv({
+  base: "starwind-hover-blur grid gap-4 @lg:grid-cols-2",
+});
+
+const { cards = [], class: className, ...rest } = Astro.props;
+---
+
+<div class={wrapperStyles({ class: className })} {...rest}>
+  {cards.map((card, i) => (
+    <div
+      class="group/card bg-card ring-border relative overflow-hidden rounded-2xl p-6 ring-1 transition-all duration-300"
+      style={`animation: blur-card-enter 0.6s ease-out ${i * 150}ms both;`}
+    >
+      <div class="relative z-10">
+        <div class="bg-primary/10 text-primary mb-4 flex size-12 items-center justify-center rounded-xl">
+          <Icon name={card.icon} class="size-6" />
+        </div>
+        <h3 class="font-heading text-foreground mb-2 text-lg font-semibold">{card.title}</h3>
+        <p class="text-muted-foreground text-sm leading-relaxed">{card.description}</p>
+      </div>
+    </div>
+  ))}
+</div>
+
+<style>
+  @keyframes blur-card-enter {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    @keyframes blur-card-enter {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  }
+
+  .starwind-hover-blur:hover > div {
+    opacity: 0.5;
+    filter: blur(2px);
+    transform: scale(0.98);
+  }
+  .starwind-hover-blur > div:hover {
+    opacity: 1;
+    filter: blur(0px);
+    transform: scale(1);
+    box-shadow: 0 0 0 1px var(--color-primary);
+  }
+  .starwind-hover-blur > div {
+    transition: opacity 0.3s, filter 0.3s, transform 0.3s, box-shadow 0.3s;
+  }
+</style>

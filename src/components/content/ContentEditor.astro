@@ -1,0 +1,348 @@
+---
+/**
+ * ContentEditor — generic, reusable rich-text editor for editorial HTML content.
+ * Decoupled from any domain: the blog (and later services, formations, …) only
+ * supply a `resolverName` (registered in the content link-resolver registry) and
+ * an optional MediaPicker id for image insertion.
+ *
+ * Features:
+ *  - formatting toolbar (bold / italic / heading / list / link / image)
+ *  - live sanitized preview
+ *  - internal-link picker (resolves & validates via the registered resolver)
+ *  - external-link insertion
+ *  - image insertion via the shared MediaPicker
+ */
+import type { Locale } from "@i18n/config";
+import { Icon } from "astro-icon/components";
+import { Textarea } from "@atoms/textarea";
+import { Label } from "@atoms/label";
+import { Input } from "@atoms/input";
+import Button from "@atoms/button/Button.astro";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@atoms/dialog";
+
+interface Props {
+  name: string;
+  value?: string;
+  locale: Locale;
+  organizationId?: string | null;
+  /** Key of the registered internal-link resolver (e.g. "blog"). */
+  resolverName?: string;
+  /** Id of a MediaPicker instance to use for image insertion. */
+  mediaPickerId?: string;
+  label?: string;
+  required?: boolean;
+  rows?: number;
+  /** i18n overrides; falls back to sensible defaults if omitted. */
+  i18n?: {
+    toolbarLabel?: string;
+    bold?: string;
+    italic?: string;
+    heading?: string;
+    list?: string;
+    link?: string;
+    image?: string;
+    preview?: string;
+    hint?: string;
+    linkDialogTitle?: string;
+    linkInternal?: string;
+    linkExternal?: string;
+    linkSearchPlaceholder?: string;
+    linkText?: string;
+    linkUrl?: string;
+    linkInsert?: string;
+    linkNoResult?: string;
+    imageAlt?: string;
+  };
+}
+
+const {
+  name,
+  value = "",
+  locale,
+  organizationId,
+  resolverName,
+  mediaPickerId,
+  label,
+  required = false,
+  rows = 14,
+  i18n = {},
+} = Astro.props;
+
+const t = {
+  toolbarLabel: i18n.toolbarLabel ?? "Éditeur de contenu",
+  bold: i18n.bold ?? "Gras",
+  italic: i18n.italic ?? "Italique",
+  heading: i18n.heading ?? "Titre",
+  list: i18n.list ?? "Liste",
+  link: i18n.link ?? "Lien",
+  image: i18n.image ?? "Image",
+  preview: i18n.preview ?? "Aperçu",
+  hint: i18n.hint ?? "Contenu HTML. Utilisez la barre d'outils pour formater, insérer des liens et des images.",
+  linkDialogTitle: i18n.linkDialogTitle ?? "Insérer un lien",
+  linkInternal: i18n.linkInternal ?? "Article interne",
+  linkExternal: i18n.linkExternal ?? "Lien externe",
+  linkSearchPlaceholder: i18n.linkSearchPlaceholder ?? "Rechercher un article…",
+  linkText: i18n.linkText ?? "Texte du lien",
+  linkUrl: i18n.linkUrl ?? "URL",
+  linkInsert: i18n.linkInsert ?? "Insérer",
+  linkNoResult: i18n.linkNoResult ?? "Aucun résultat.",
+  imageAlt: i18n.imageAlt ?? "Texte alternatif (alt)",
+};
+
+const editorId = `content-editor-${name}`;
+const textareaId = `${editorId}-textarea`;
+const previewId = `${editorId}-preview`;
+const linkDialogId = `${editorId}-link-dialog`;
+const resolverAttr = resolverName ?? "";
+const orgAttr = organizationId ?? "";
+---
+
+<div
+  class="content-editor"
+  data-editor-id={editorId}
+  data-resolver={resolverAttr}
+  data-org={orgAttr}
+  data-locale={locale}
+  data-media-picker-target={mediaPickerId ?? ""}
+  data-t-noresult={t.linkNoResult}
+>
+  <div class="flex items-center justify-between gap-3">
+    {label && <Label for={textareaId}>{label}{required && <span class="text-destructive"> *</span>}</Label>}
+    <div class="flex items-center gap-1" role="toolbar" aria-label={t.toolbarLabel}>
+      <Button type="button" variant="ghost" size="icon-sm" class="ce-btn" data-cmd="bold" title={t.bold} aria-label={t.bold}><Icon name="mdi:format-bold" class="size-4" /></Button>
+      <Button type="button" variant="ghost" size="icon-sm" class="ce-btn" data-cmd="italic" title={t.italic} aria-label={t.italic}><Icon name="mdi:format-italic" class="size-4" /></Button>
+      <Button type="button" variant="ghost" size="icon-sm" class="ce-btn" data-cmd="h2" title={t.heading} aria-label={t.heading}><Icon name="mdi:format-header-2" class="size-4" /></Button>
+      <Button type="button" variant="ghost" size="icon-sm" class="ce-btn" data-cmd="ul" title={t.list} aria-label={t.list}><Icon name="mdi:format-list-bulleted" class="size-4" /></Button>
+      <Button type="button" variant="ghost" size="icon-sm" class="ce-btn" data-cmd="link" title={t.link} aria-label={t.link}><Icon name="mdi:link-variant" class="size-4" /></Button>
+      <Button type="button" variant="ghost" size="icon-sm" class="ce-btn" data-cmd="image" title={t.image} aria-label={t.image}><Icon name="mdi:image-outline" class="size-4" /></Button>
+    </div>
+  </div>
+
+  <Textarea id={textareaId} name={name} rows={rows} required={required} defaultValue={value} class="font-mono text-sm" />
+
+  <p class="text-xs text-muted-foreground">{t.hint}</p>
+
+  <details class="rounded-lg border">
+    <summary class="cursor-pointer px-3 py-2 text-sm font-medium">{t.preview}</summary>
+    <div id={previewId} class="prose max-w-none px-3 py-3 text-sm" aria-live="polite"></div>
+  </details>
+
+  <!-- Link dialog -->
+  <Dialog id={linkDialogId}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>{t.linkDialogTitle}</DialogTitle>
+        <DialogDescription></DialogDescription>
+      </DialogHeader>
+      <div class="space-y-3">
+        <div class="flex gap-2" role="tablist">
+          <Button type="button" variant="outline" size="sm" class="ce-link-tab" data-tab="internal" data-active="true">{t.linkInternal}</Button>
+          <Button type="button" variant="outline" size="sm" class="ce-link-tab" data-tab="external">{t.linkExternal}</Button>
+        </div>
+
+        <div data-panel="internal" class="space-y-2">
+          <Input type="search" class="ce-link-search" placeholder={t.linkSearchPlaceholder} />
+          <div class="ce-link-results max-h-48 overflow-auto rounded border p-2 text-sm"></div>
+        </div>
+
+        <div data-panel="external" class="hidden space-y-2">
+          <Input type="text" class="ce-link-text" placeholder={t.linkText} />
+          <Input type="url" class="ce-link-url" placeholder="https://…" />
+        </div>
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" size="sm" data-dialog-close>{t.linkInsert}</Button>
+        <Button type="button" size="sm" class="ce-link-insert">{t.linkInsert}</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+</div>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { toast } from '@atoms/toast';
+  import {
+    wrapSelection,
+    formatHeadingSelection,
+    formatUnorderedListSelection,
+    insertAtCaret,
+    buildImageToken,
+    buildExternalLinkToken,
+    buildInternalLinkToken,
+    previewHtml,
+  } from '@/lib/content/editor-helpers';
+
+  function initContentEditor(root: HTMLElement) {
+    if (root.dataset.bound === '1') return;
+    root.dataset.bound = '1';
+
+    const textarea = root.querySelector('textarea') as HTMLTextAreaElement | null;
+    if (!textarea) return;
+    const preview = root.querySelector('[id$="-preview"]') as HTMLElement | null;
+    const resolverName = root.getAttribute('data-resolver') ?? '';
+    const orgId = root.getAttribute('data-org') ?? '';
+    const locale = root.getAttribute('data-locale') ?? 'fr';
+    const mediaPickerId = root.getAttribute('data-media-picker-target') ?? '';
+
+    function refreshPreview() {
+      if (preview) preview.innerHTML = previewHtml(textarea!.value);
+    }
+    refreshPreview();
+    textarea.addEventListener('input', refreshPreview);
+
+    function applyEdit(edit: { value: string; selStart: number; selEnd: number }) {
+      textarea!.value = edit.value;
+      textarea!.focus();
+      textarea!.setSelectionRange(edit.selStart, edit.selEnd);
+      // Keep the preview and parent form's dirty-state guard in sync with
+      // programmatic toolbar edits.
+      textarea!.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    root.querySelectorAll<HTMLButtonElement>('.ce-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const cmd = btn.dataset.cmd;
+        const s = textarea!.selectionStart;
+        const e = textarea!.selectionEnd;
+        const val = textarea!.value;
+        switch (cmd) {
+          case 'bold': return applyEdit(wrapSelection(val, s, e, '<strong>', '</strong>', 'texte'));
+          case 'italic': return applyEdit(wrapSelection(val, s, e, '<em>', '</em>', 'texte'));
+          case 'h2': return applyEdit(formatHeadingSelection(val, s, e));
+          case 'ul': return applyEdit(formatUnorderedListSelection(val, s, e));
+          case 'link': return openLinkDialog();
+          case 'image': return openImagePicker();
+        }
+      });
+    });
+
+    // ── Image insertion via MediaPicker ──────────────────────────────
+    function openImagePicker() {
+      if (!mediaPickerId) {
+        toast.error('Aucun sélecteur de médias configuré.');
+        return;
+      }
+      const picker = document.getElementById(mediaPickerId);
+      if (!picker) return;
+      const handler = (ev: Event) => {
+        const detail = (ev as CustomEvent).detail;
+        const alt = window.prompt('Texte alternatif (alt) :', '') ?? '';
+        const token = buildImageToken(detail.url ?? '', alt);
+        const s = textarea!.selectionStart;
+        const e = textarea!.selectionEnd;
+        applyEdit(insertAtCaret(textarea!.value, s, e, token));
+        picker.removeEventListener('media-select', handler);
+      };
+      picker.addEventListener('media-select', handler);
+      picker.dispatchEvent(new CustomEvent('open'));
+    }
+
+    // ── Link dialog ─────────────────────────────────────────────────
+    const dialog = root.querySelector('[id$="-link-dialog"]') as HTMLElement | null;
+    let pendingSelection = { start: 0, end: 0 };
+
+    function openLinkDialog() {
+      pendingSelection = { start: textarea!.selectionStart, end: textarea!.selectionEnd };
+      dialog?.dispatchEvent(new CustomEvent('open'));
+      const search = dialog?.querySelector('.ce-link-search') as HTMLInputElement | null;
+      search?.focus();
+      if (resolverName) runSearch('');
+    }
+
+    async function runSearch(q: string) {
+      const resultsEl = dialog?.querySelector('.ce-link-results') as HTMLElement | null;
+      if (!resultsEl || !resolverName) return;
+      const replaceWithStatus = (message: string, className: string) => {
+        const status = document.createElement('p');
+        status.className = className;
+        status.textContent = message;
+        resultsEl.replaceChildren(status);
+      };
+      replaceWithStatus('…', 'text-muted-foreground');
+      const { data, error } = await actions.resolveBlogInternalLink({
+        target: '',
+        mode: 'search',
+        query: q,
+        organizationId: orgId || null,
+        locale,
+      });
+      if (error || !data) {
+        replaceWithStatus(error?.message ?? 'Erreur', 'text-destructive');
+        return;
+      }
+      const results = data.results ?? [];
+      if (results.length === 0) {
+        replaceWithStatus(
+          root.getAttribute('data-t-noresult') ?? 'Aucun résultat.',
+          'text-muted-foreground',
+        );
+        return;
+      }
+      resultsEl.replaceChildren();
+      results.forEach((r: { id: string; label: string; href: string }) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'block w-full rounded px-2 py-1.5 text-left hover:bg-muted';
+        item.textContent = r.label;
+        item.addEventListener('click', () => {
+          insertInternalLink(r.href, r.label, r.id);
+        });
+        resultsEl.appendChild(item);
+      });
+    }
+
+    function insertInternalLink(href: string, label: string, target: string) {
+      const token = buildInternalLinkToken(label, href, label, target);
+      applyEdit(insertAtCaret(textarea!.value, pendingSelection.start, pendingSelection.end, token));
+      dialog?.dispatchEvent(new CustomEvent('close'));
+    }
+
+    function insertExternalLink() {
+      const textEl = dialog?.querySelector('.ce-link-text') as HTMLInputElement | null;
+      const urlEl = dialog?.querySelector('.ce-link-url') as HTMLInputElement | null;
+      const url = (urlEl?.value ?? '').trim();
+      if (!url) {
+        toast.error('URL requise.');
+        return;
+      }
+      const token = buildExternalLinkToken(textEl?.value ?? '', url);
+      applyEdit(insertAtCaret(textarea!.value, pendingSelection.start, pendingSelection.end, token));
+      dialog?.dispatchEvent(new CustomEvent('close'));
+    }
+
+    dialog?.querySelector('.ce-link-insert')?.addEventListener('click', () => {
+      const activeTab = dialog?.querySelector('.ce-link-tab[data-active="true"]')?.getAttribute('data-tab');
+      if (activeTab === 'external') insertExternalLink();
+      else {
+        const first = dialog?.querySelector('.ce-link-results button') as HTMLButtonElement | null;
+        if (first) first.click();
+        else toast.error('Sélectionnez un article.');
+      }
+    });
+
+    dialog?.querySelectorAll<HTMLButtonElement>('.ce-link-tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        dialog?.querySelectorAll('.ce-link-tab').forEach((t) => t.removeAttribute('data-active'));
+        tab.setAttribute('data-active', 'true');
+        const tabName = tab.dataset.tab;
+        const internalPanel = dialog?.querySelector('[data-panel="internal"]') as HTMLElement | null;
+        const externalPanel = dialog?.querySelector('[data-panel="external"]') as HTMLElement | null;
+        internalPanel?.classList.toggle('hidden', tabName !== 'internal');
+        externalPanel?.classList.toggle('hidden', tabName !== 'external');
+      });
+    });
+
+    const searchEl = dialog?.querySelector('.ce-link-search') as HTMLInputElement | null;
+    let debounce: number | undefined;
+    searchEl?.addEventListener('input', () => {
+      window.clearTimeout(debounce);
+      debounce = window.setTimeout(() => runSearch(searchEl.value), 250);
+    });
+  }
+
+  function bindAll() {
+    document.querySelectorAll<HTMLElement>('.content-editor').forEach(initContentEditor);
+  }
+  bindAll();
+  document.addEventListener('astro:after-swap', bindAll);
+</script>

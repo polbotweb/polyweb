@@ -1,0 +1,171 @@
+---
+import { Icon } from "astro-icon/components";
+import type { Locale } from "@i18n/config";
+import type { BlogTranslations } from "@i18n/config";
+import { Card, CardContent } from "@atoms/card";
+import { Input } from "@atoms/input";
+import { Button } from "@atoms/button";
+
+interface Props {
+  locale: Locale;
+  blogT: BlogTranslations;
+  organizationId?: string | null;
+  showTitle?: boolean;
+  showDescription?: boolean;
+}
+
+const {
+  locale,
+  blogT,
+  organizationId = null,
+  showTitle = true,
+  showDescription = true,
+} = Astro.props;
+---
+
+<Card>
+  <CardContent>
+    <div class="newsletter-sidebar__inner">
+      <div class="newsletter-sidebar__text">
+        <Icon name="mdi:email-newsletter" />
+        <div>
+          {showTitle && (
+            <h3 class="newsletter-sidebar__title">
+              {blogT.labels.newsletterTitle}
+            </h3>
+          )}
+          {showDescription && (
+            <p class="newsletter-sidebar__desc">
+              {blogT.labels.newsletterDescription}
+            </p>
+          )}
+        </div>
+      </div>
+      
+      <form class="newsletter-sidebar__form" id="newsletter-form">
+        <label for="newsletter-email" class="sr-only">
+          {blogT.labels.newsletterEmail}
+        </label>
+        <Input
+          type="email"
+          id="newsletter-email"
+          name="email"
+          placeholder={blogT.labels.newsletterPlaceholder}
+          required
+          class="newsletter-sidebar__input"
+          autocomplete="email"
+        />
+        <Button type="submit" variant="outline" size="sm">
+          {blogT.labels.newsletterSubscribe}
+        </Button>
+        <input type="hidden" class="newsletter-i18n" data-locale={locale} data-org={organizationId ?? ""} data-t-error={blogT.labels.newsletterError} data-t-success={blogT.labels.newsletterSuccess} />
+      </form>
+    </div>
+  </CardContent>
+</Card>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { toast } from '@atoms/toast';
+
+  function init() {
+    const form = document.getElementById('newsletter-form') as HTMLFormElement | null;
+    if (!form) return;
+
+    const i18nEl = form.querySelector<HTMLInputElement>('.newsletter-i18n');
+    const errorText = i18nEl?.dataset.tError ?? 'Error';
+    const successText = i18nEl?.dataset.tSuccess ?? 'Subscribed';
+    const locale = i18nEl?.dataset.locale ?? 'fr';
+    const organizationId = i18nEl?.dataset.org ? String(i18nEl.dataset.org) : null;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const email = String(formData.get('email') ?? '').trim();
+      if (!email) return;
+
+      const { error } = await actions.subscribeBlogNewsletter({
+        email,
+        locale: locale as never,
+        organizationId,
+      });
+
+      if (error) {
+        toast.error(error.message ?? errorText);
+      } else {
+        toast.success(successText);
+        form.reset();
+      }
+    });
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>
+
+<style>
+  .newsletter-sidebar__inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .newsletter-sidebar__text {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .newsletter-sidebar__text :global(svg) {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: var(--color-primary);
+    flex-shrink: 0;
+  }
+
+  .newsletter-sidebar__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--heading-color, var(--text-default));
+  }
+
+  .newsletter-sidebar__desc {
+    margin: var(--space-1) 0 0;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .newsletter-sidebar__form {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+
+  .newsletter-sidebar__input {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (max-width: 640px) {
+    .newsletter-sidebar__form {
+      flex-direction: column;
+    }
+    .newsletter-sidebar__input {
+      min-width: 0;
+    }
+  }
+</style>

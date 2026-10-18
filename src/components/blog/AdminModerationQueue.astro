@@ -1,0 +1,209 @@
+---
+import { Icon } from "astro-icon/components";
+import type { BlogTranslations } from "@i18n/config";
+import { Card, CardContent, CardHeader, CardTitle } from "@atoms/card";
+import { Badge } from "@atoms/badge";
+import Button from "@atoms/button/Button.astro";
+
+interface PendingComment {
+  comment: { id: string; content: string; createdAt: Date; guestName: string | null; guestEmail: string | null; status: string };
+  post: { id: string; slug: string };
+}
+
+interface PendingReview {
+  review: { id: string; rating: number; title: string | null; content: string; createdAt: Date; status: string };
+  post: { id: string; slug: string };
+}
+
+interface PendingReport {
+  report: { id: string; reason: string; description: string | null; createdAt: Date; status: string };
+  post: { id: string; slug: string } | null;
+}
+
+interface Props {
+  blogT: BlogTranslations;
+  moderation: {
+    comments: PendingComment[];
+    reviews: PendingReview[];
+    reports: PendingReport[];
+  };
+  organizationId?: string | null;
+}
+
+const { blogT, moderation, organizationId } = Astro.props;
+const actionT = blogT.admin.actionLabels;
+const feedbackT = blogT.admin.feedback;
+const moderationT = blogT.admin.moderationQueue;
+const reportReasonT = blogT.admin.reportReasons;
+---
+
+<div class="grid gap-6 lg:grid-cols-3">
+  <Card>
+    <CardHeader>
+      <CardTitle class="text-base">{blogT.admin.comments}</CardTitle>
+    </CardHeader>
+    <CardContent>
+      {moderation.comments.length === 0 ? (
+        <p class="text-sm text-muted-foreground">{moderationT.noPendingComments}</p>
+      ) : (
+        <div class="space-y-4">
+          {moderation.comments.map(({ comment, post }) => (
+            <div class="rounded-lg border px-4 py-3" data-comment-id={comment.id}>
+              <div class="flex items-center justify-between gap-3">
+                <Badge variant="warning" size="sm">{blogT.labels.pending}</Badge>
+                <span class="text-xs text-muted-foreground">/{post.slug}</span>
+              </div>
+              <p class="mt-2 text-sm whitespace-pre-wrap">{comment.content}</p>
+              <div class="mt-3 flex gap-2 flex-wrap">
+                <Button type="button" size="sm" class="comment-action-btn" data-action="APPROVE" data-comment-id={comment.id}>
+                  <Icon name="mdi:check" class="size-4" />
+                  {actionT.approve}
+                </Button>
+                <Button type="button" variant="outline" size="sm" class="comment-action-btn" data-action="REJECT" data-comment-id={comment.id}>
+                  <Icon name="mdi:close" class="size-4" />
+                  {actionT.reject}
+                </Button>
+                <Button type="button" variant="error" size="sm" class="comment-action-btn" data-action="DELETE" data-comment-id={comment.id}>
+                  <Icon name="mdi:delete" class="size-4" />
+                  {actionT.trash}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </CardContent>
+  </Card>
+
+  <Card>
+    <CardHeader>
+      <CardTitle class="text-base">{blogT.admin.reviews}</CardTitle>
+    </CardHeader>
+    <CardContent>
+      {moderation.reviews.length === 0 ? (
+        <p class="text-sm text-muted-foreground">{moderationT.noPendingReviews}</p>
+      ) : (
+        <div class="space-y-4">
+          {moderation.reviews.map(({ review, post }) => (
+            <div class="rounded-lg border px-4 py-3" data-review-id={review.id}>
+              <div class="flex items-center justify-between gap-3">
+                <Badge variant="warning" size="sm">{blogT.labels.pending}</Badge>
+                <span class="text-xs text-muted-foreground">/{post.slug}</span>
+              </div>
+              <p class="mt-2 text-sm font-medium">{review.title ?? `${moderationT.ratingLabel} ${review.rating}/5`}</p>
+              <p class="mt-1 text-sm whitespace-pre-wrap">{review.content}</p>
+              <div class="mt-3 flex gap-2 flex-wrap">
+                <Button type="button" size="sm" class="review-action-btn" data-status="APPROVED" data-review-id={review.id}>
+                  <Icon name="mdi:check" class="size-4" />
+                  {actionT.approve}
+                </Button>
+                <Button type="button" variant="outline" size="sm" class="review-action-btn" data-status="REJECTED" data-review-id={review.id}>
+                  <Icon name="mdi:close" class="size-4" />
+                  {actionT.reject}
+                </Button>
+                <Button type="button" variant="error" size="sm" class="review-action-btn" data-status="SPAM" data-review-id={review.id}>
+                  <Icon name="mdi:alert-circle-outline" class="size-4" />
+                  {actionT.spam}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </CardContent>
+  </Card>
+
+  <Card>
+    <CardHeader>
+      <CardTitle class="text-base">{blogT.admin.reports}</CardTitle>
+    </CardHeader>
+    <CardContent>
+      {moderation.reports.length === 0 ? (
+        <p class="text-sm text-muted-foreground">{moderationT.noPendingReports}</p>
+      ) : (
+        <div class="space-y-4">
+          {moderation.reports.map(({ report, post }) => (
+            <div class="rounded-lg border px-4 py-3" data-report-id={report.id}>
+              <div class="flex items-center justify-between gap-3">
+                <Badge variant="warning" size="sm">{reportReasonT[report.reason as keyof typeof reportReasonT] ?? report.reason}</Badge>
+                <span class="text-xs text-muted-foreground">{post ? `/${post.slug}` : "—"}</span>
+              </div>
+              {report.description && <p class="mt-2 text-sm whitespace-pre-wrap">{report.description}</p>}
+              <div class="mt-3 flex gap-2 flex-wrap">
+                <Button type="button" size="sm" class="report-action-btn" data-status="RESOLVED" data-report-id={report.id}>
+                  <Icon name="mdi:check-decagram" class="size-4" />
+                  {actionT.resolve}
+                </Button>
+                <Button type="button" variant="outline" size="sm" class="report-action-btn" data-status="REVIEWED" data-report-id={report.id}>
+                  <Icon name="mdi:eye-check-outline" class="size-4" />
+                  {actionT.review}
+                </Button>
+                <Button type="button" variant="error" size="sm" class="report-action-btn" data-status="REJECTED" data-report-id={report.id}>
+                  <Icon name="mdi:close-octagon-outline" class="size-4" />
+                  {actionT.reject}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </CardContent>
+  </Card>
+
+  <input
+    type="hidden"
+    id="moderation-data"
+    value={organizationId ?? ""}
+    data-organization-id={organizationId ?? ""}
+    data-t-error={feedbackT.genericError}
+    data-t-saved={feedbackT.saved}
+  />
+</div>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { toast } from '@atoms/toast';
+
+  function init() {
+    const dataEl = document.getElementById('moderation-data') as HTMLInputElement | null;
+    const organizationId = dataEl?.dataset.organizationId || undefined;
+    const errorText = dataEl?.dataset.tError ?? '';
+    const savedText = dataEl?.dataset.tSaved ?? '';
+
+    document.querySelectorAll<HTMLButtonElement>('.comment-action-btn').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const commentId = button.dataset.commentId;
+        const moderationAction = button.dataset.action as 'APPROVE' | 'REJECT' | 'DELETE' | 'RESTORE' | 'EDIT' | undefined;
+        if (!commentId || !moderationAction) return;
+        const { error } = await actions.moderateBlogComment({ commentId, moderationAction, organizationId } as never);
+        if (error) toast.error(error.message ?? errorText);
+        else { toast.success(savedText); window.location.reload(); }
+      });
+    });
+
+    document.querySelectorAll<HTMLButtonElement>('.review-action-btn').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const reviewId = button.dataset.reviewId;
+        const status = button.dataset.status as 'APPROVED' | 'REJECTED' | 'SPAM' | undefined;
+        if (!reviewId || !status) return;
+        const { error } = await actions.moderateBlogReview({ reviewId, status, organizationId } as never);
+        if (error) toast.error(error.message ?? errorText);
+        else { toast.success(savedText); window.location.reload(); }
+      });
+    });
+
+    document.querySelectorAll<HTMLButtonElement>('.report-action-btn').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const reportId = button.dataset.reportId;
+        const status = button.dataset.status as 'PENDING' | 'REJECTED' | 'REVIEWED' | 'RESOLVED' | undefined;
+        if (!reportId || !status) return;
+        const { error } = await actions.updateBlogReport({ reportId, status, organizationId } as never);
+        if (error) toast.error(error.message ?? errorText);
+        else { toast.success(savedText); window.location.reload(); }
+      });
+    });
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

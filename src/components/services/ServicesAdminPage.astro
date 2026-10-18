@@ -1,0 +1,170 @@
+---
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@atoms/tabs";
+import AdminResourceShell from "@organisms/AdminResourceShell.astro";
+import AdminResourceStats from "@molecules/AdminResourceStats.astro";
+import AdminServiceList from "@/components/services/AdminServiceList.astro";
+import { getServiceTranslations, getServiceErrorMessage } from "@/modules/services/i18n";
+import { getServiceEngagementTranslations } from "@/modules/services/i18n/engagement";
+import type { Locale } from "@i18n/config";
+import type { ServiceListItem } from "@/modules/services/domain";
+import type { ServiceAdminFilters } from "@/modules/services/admin";
+
+interface Props {
+  locale: Locale;
+  title: string;
+  items: ServiceListItem[];
+  meta: { page: number; totalPages: number };
+  stats: { total: number; published: number; draft: number; archived: number; deleted: number; featured: number; views: number; reviews: number; comments: number; moderation: number };
+  filters: ServiceAdminFilters;
+  baseAdminUrl: string;
+  organizationId: string | null;
+  canCreate: boolean;
+  canUpdate: boolean;
+  canPublish: boolean;
+  canDelete: boolean;
+  canModerate: boolean;
+  canManageTaxonomy: boolean;
+  categoryOptions: { category: { id: string; slug: string }; translation: { name: string } | null }[];
+  tagOptions: { tag: { id: string; slug: string }; translation: { name: string } | null }[];
+  providerOptions: { id: string; name: string | null }[];
+  localeOptions: readonly string[];
+  taxonomy: { categories: { category: { id: string; organizationId: string | null; parentId: string | null; slug: string }; translation: { name: string; slug: string } | null }[]; tags: { tag: { id: string; organizationId: string | null; slug: string }; translation: { name: string; slug: string } | null }[] };
+  moderation: {
+    reviews: { review: { id: string; serviceId: string; title: string | null; content: string; rating: number; createdAt: Date } }[];
+    comments: { comment: { id: string; serviceId: string; content: string; createdAt: Date } }[];
+    reports: { report: { id: string; serviceId: string | null; commentId: string | null; reviewId: string | null; reason: string; description: string | null; createdAt: Date }; serviceId: string }[];
+  };
+}
+
+const props = Astro.props as Props;
+const t = getServiceTranslations(props.locale);
+const et = getServiceEngagementTranslations(props.locale);
+---
+<div data-services-admin-workspace data-organization-id={props.organizationId ?? ""} data-locale={props.locale} data-confirm-taxonomy-delete={t.admin.confirmDelete}>
+  <AdminResourceShell title={props.title} description={t.admin.title}>
+    <div class="p-4 sm:p-6">
+      <p data-service-admin-status class="mb-4 text-sm" aria-live="polite" aria-atomic="true"></p>
+      <Tabs defaultValue="services">
+        <TabsList class="flex-wrap">
+          <TabsTrigger value="services" defaultActive>{t.labels.services}</TabsTrigger>
+          <TabsTrigger value="categories">{et.admin.categories}</TabsTrigger>
+          <TabsTrigger value="tags">{et.admin.tags}</TabsTrigger>
+          <TabsTrigger value="moderation">{et.admin.moderation}</TabsTrigger>
+          <TabsTrigger value="stats">{t.labels.views}</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="services" defaultActive class="pt-4">
+          <AdminServiceList locale={props.locale} items={props.items} total={props.stats.total} published={props.stats.published} draft={props.stats.draft} archived={props.stats.archived} deleted={props.stats.deleted} featured={props.stats.featured} views={props.stats.views} reviews={props.stats.reviews} comments={props.stats.comments} page={props.meta.page} totalPages={props.meta.totalPages} baseUrl={props.baseAdminUrl} organizationId={props.organizationId} canCreate={props.canCreate} canUpdate={props.canUpdate} canPublish={props.canPublish} canDelete={props.canDelete} categoryOptions={props.categoryOptions} tagOptions={props.tagOptions} providerOptions={props.providerOptions} localeOptions={props.localeOptions} />
+        </TabsContent>
+
+        <TabsContent value="categories" class="space-y-6 pt-4">
+          {!props.canManageTaxonomy && <p class="rounded-xl border p-6 text-sm text-muted-foreground">{t.admin.errors.forbidden}</p>}
+          {props.canManageTaxonomy && <>
+            <form data-service-category-create class="grid gap-3 rounded-xl border p-4 md:grid-cols-4">
+              <input name="name" required class="h-10 rounded-md border bg-background px-3" placeholder={et.admin.name} aria-label={et.admin.name} />
+              <input name="slug" required class="h-10 rounded-md border bg-background px-3" placeholder={et.admin.slug} aria-label={et.admin.slug} />
+              <select name="parentId" class="h-10 rounded-md border bg-background px-3" aria-label={et.admin.parent}><option value="">{et.admin.parent}</option>{props.taxonomy.categories.map((item) => <option value={item.category.id}>{item.translation?.name ?? item.category.slug}</option>)}</select>
+              <button type="submit" class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">{et.admin.create}</button>
+              <p data-category-status class="md:col-span-4 text-sm" aria-live="polite"></p>
+            </form>
+            <div class="space-y-3">
+              {props.taxonomy.categories.map((item) => <form data-service-category-update class="grid gap-2 rounded-xl border p-4 md:grid-cols-[1fr_1fr_1fr_auto_auto]" data-id={item.category.id}>
+                <input name="name" value={item.translation?.name ?? item.category.slug} class="h-10 rounded-md border bg-background px-3" aria-label={et.admin.name} />
+                <input name="slug" value={item.translation?.slug ?? item.category.slug} class="h-10 rounded-md border bg-background px-3" aria-label={et.admin.slug} />
+                <select name="parentId" class="h-10 rounded-md border bg-background px-3" aria-label={et.admin.parent}><option value="">{et.admin.parent}</option>{props.taxonomy.categories.filter((candidate) => candidate.category.id !== item.category.id).map((candidate) => <option value={candidate.category.id} selected={candidate.category.id === item.category.parentId}>{candidate.translation?.name ?? candidate.category.slug}</option>)}</select>
+                <button type="submit" class="rounded-md border px-3 py-2 text-sm">{et.admin.save}</button>
+                <button type="button" data-category-delete class="rounded-md border px-3 py-2 text-sm text-destructive">{et.admin.delete}</button>
+              </form>)}
+            </div>
+          </>}
+        </TabsContent>
+
+        <TabsContent value="tags" class="space-y-6 pt-4">
+          {!props.canManageTaxonomy && <p class="rounded-xl border p-6 text-sm text-muted-foreground">{t.admin.errors.forbidden}</p>}
+          {props.canManageTaxonomy && <>
+            <form data-service-tag-create class="grid gap-3 rounded-xl border p-4 md:grid-cols-3">
+              <input name="name" required class="h-10 rounded-md border bg-background px-3" placeholder={et.admin.name} aria-label={et.admin.name} />
+              <input name="slug" required class="h-10 rounded-md border bg-background px-3" placeholder={et.admin.slug} aria-label={et.admin.slug} />
+              <button type="submit" class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">{et.admin.create}</button>
+              <p data-tag-status class="md:col-span-3 text-sm" aria-live="polite"></p>
+            </form>
+            <div class="space-y-3">
+              {props.taxonomy.tags.map((item) => <form data-service-tag-update class="grid gap-2 rounded-xl border p-4 md:grid-cols-[1fr_1fr_auto_auto]" data-id={item.tag.id}>
+                <input name="name" value={item.translation?.name ?? item.tag.slug} class="h-10 rounded-md border bg-background px-3" aria-label={et.admin.name} />
+                <input name="slug" value={item.translation?.slug ?? item.tag.slug} class="h-10 rounded-md border bg-background px-3" aria-label={et.admin.slug} />
+                <button type="submit" class="rounded-md border px-3 py-2 text-sm">{et.admin.save}</button>
+                <button type="button" data-tag-delete class="rounded-md border px-3 py-2 text-sm text-destructive">{et.admin.delete}</button>
+              </form>)}
+            </div>
+          </>}
+        </TabsContent>
+
+        <TabsContent value="moderation" class="space-y-8 pt-4">
+          {!props.canModerate && <p class="rounded-xl border p-6 text-sm text-muted-foreground">{t.admin.errors.forbidden}</p>}
+          {props.canModerate && <>
+            <section class="space-y-3"><h2 class="text-xl font-semibold">{et.reviewTitle}</h2>{props.moderation.reviews.length ? props.moderation.reviews.map(({ review }) => <article class="rounded-xl border p-4"><div class="text-sm text-muted-foreground">{new Intl.DateTimeFormat(props.locale, { dateStyle: "medium" }).format(review.createdAt)}</div><div class="mt-2 font-semibold">{review.title ?? ""} · {review.rating}/5</div><p class="mt-2 whitespace-pre-wrap text-sm">{review.content}</p><div class="mt-3 flex flex-wrap gap-2"><button type="button" data-moderate-review="APPROVED" data-id={review.id} data-service-id={review.serviceId} class="rounded-md border px-3 py-1.5 text-sm">{et.admin.approve}</button><button type="button" data-moderate-review="REJECTED" data-id={review.id} data-service-id={review.serviceId} class="rounded-md border px-3 py-1.5 text-sm">{et.admin.reject}</button><button type="button" data-moderate-review="SPAM" data-id={review.id} data-service-id={review.serviceId} class="rounded-md border px-3 py-1.5 text-sm">{et.admin.spam}</button></div></article>) : <p class="text-sm text-muted-foreground">{et.admin.noPending}</p>}</section>
+            <section class="space-y-3"><h2 class="text-xl font-semibold">{et.commentTitle}</h2>{props.moderation.comments.length ? props.moderation.comments.map(({ comment }) => <article class="rounded-xl border p-4"><p class="whitespace-pre-wrap text-sm">{comment.content}</p><div class="mt-3 flex flex-wrap gap-2"><button type="button" data-moderate-comment="APPROVED" data-id={comment.id} data-service-id={comment.serviceId} class="rounded-md border px-3 py-1.5 text-sm">{et.admin.approve}</button><button type="button" data-moderate-comment="REJECTED" data-id={comment.id} data-service-id={comment.serviceId} class="rounded-md border px-3 py-1.5 text-sm">{et.admin.reject}</button><button type="button" data-moderate-comment="SPAM" data-id={comment.id} data-service-id={comment.serviceId} class="rounded-md border px-3 py-1.5 text-sm">{et.admin.spam}</button></div></article>) : <p class="text-sm text-muted-foreground">{et.admin.noPending}</p>}</section>
+            <section class="space-y-3"><h2 class="text-xl font-semibold">{et.report}</h2>{props.moderation.reports.length ? props.moderation.reports.map(({ report, serviceId }) => <article class="rounded-xl border p-4"><div class="text-sm font-medium">{report.reason}</div>{report.description && <p class="mt-2 text-sm text-muted-foreground">{report.description}</p>}<button type="button" data-resolve-report="RESOLVED" data-id={report.id} data-service-id={serviceId} class="mt-3 rounded-md border px-3 py-1.5 text-sm">{et.admin.resolve}</button></article>) : <p class="text-sm text-muted-foreground">{et.admin.noPending}</p>}</section>
+          </>}
+        </TabsContent>
+
+        <TabsContent value="stats" class="pt-4"><AdminResourceStats stats={[{ label: t.labels.services, value: props.stats.total }, { label: t.admin.status.PUBLISHED, value: props.stats.published }, { label: t.admin.status.DRAFT, value: props.stats.draft }, { label: t.admin.status.ARCHIVED, value: props.stats.archived }, { label: t.admin.status.DELETED, value: props.stats.deleted }, { label: t.labels.featured, value: props.stats.featured }, { label: t.labels.views, value: props.stats.views }, { label: t.labels.reviews, value: props.stats.reviews }, { label: et.commentTitle, value: props.stats.comments }, { label: et.admin.moderation, value: props.stats.moderation }]}/></TabsContent>
+      </Tabs>
+    </div>
+  </AdminResourceShell>
+</div>
+<script>
+  import { actions } from "astro:actions";
+  import { getServiceErrorMessage } from "@/modules/services/i18n";
+
+  for (const root of document.querySelectorAll<HTMLElement>("[data-services-admin-workspace]")) {
+    const organizationId = root.dataset.organizationId || null;
+    const locale = (root.dataset.locale ?? "fr") as "fr" | "en" | "es" | "ar";
+    const confirmTaxonomyDelete = root.dataset.confirmTaxonomyDelete ?? "";
+    const refresh = () => window.location.reload();
+    const status = root.querySelector<HTMLElement>("[data-service-admin-status]");
+    const showError = (error: { code?: string } | undefined) => { if (status) status.textContent = getServiceErrorMessage(locale, error?.code); };
+    const confirmDelete = (message: string) => window.confirm(message);
+
+    root.querySelector<HTMLFormElement>("[data-service-category-create]")?.addEventListener("submit", async (event) => {
+      event.preventDefault(); const form = event.currentTarget as HTMLFormElement; const data = new FormData(form);
+      const result = await actions.createServiceCategory({ organizationId, locale, name: String(data.get("name")), slug: String(data.get("slug")), parentId: String(data.get("parentId") || "") || null, sortOrder: 0 });
+      const inline = form.querySelector<HTMLElement>("[data-category-status]"); if (inline) inline.textContent = result.error ? getServiceErrorMessage(locale, result.error.code) : ""; if (!result.error) refresh();
+    });
+
+    root.querySelectorAll<HTMLFormElement>("[data-service-category-update]").forEach((form) => form.addEventListener("submit", async (event) => {
+      event.preventDefault(); const data = new FormData(form); const result = await actions.updateServiceCategory({ id: form.dataset.id!, organizationId, locale, name: String(data.get("name")), slug: String(data.get("slug")), parentId: String(data.get("parentId") || "") || null, sortOrder: 0 });
+      if (result.error) showError(result.error); else refresh();
+    }));
+
+    root.querySelectorAll<HTMLButtonElement>("[data-category-delete]").forEach((button) => button.addEventListener("click", async () => {
+      const form = button.closest("form"); if (!form || !confirmDelete(confirmTaxonomyDelete)) return;
+      const result = await actions.deleteServiceCategory({ id: form.dataset.id!, organizationId }); if (result.error) showError(result.error); else refresh();
+    }));
+
+    root.querySelector<HTMLFormElement>("[data-service-tag-create]")?.addEventListener("submit", async (event) => {
+      event.preventDefault(); const form = event.currentTarget as HTMLFormElement; const data = new FormData(form); const result = await actions.createServiceTag({ organizationId, locale, name: String(data.get("name")), slug: String(data.get("slug")) });
+      const inline = form.querySelector<HTMLElement>("[data-tag-status]"); if (inline) inline.textContent = result.error ? getServiceErrorMessage(locale, result.error.code) : ""; if (!result.error) refresh();
+    });
+
+    root.querySelectorAll<HTMLFormElement>("[data-service-tag-update]").forEach((form) => form.addEventListener("submit", async (event) => {
+      event.preventDefault(); const data = new FormData(form); const result = await actions.updateServiceTag({ id: form.dataset.id!, organizationId, locale, name: String(data.get("name")), slug: String(data.get("slug") || "") });
+      if (result.error) showError(result.error); else refresh();
+    }));
+
+    root.querySelectorAll<HTMLButtonElement>("[data-tag-delete]").forEach((button) => button.addEventListener("click", async () => {
+      const form = button.closest("form"); if (!form || !confirmDelete(confirmTaxonomyDelete)) return;
+      const result = await actions.deleteServiceTag({ id: form.dataset.id!, organizationId }); if (result.error) showError(result.error); else refresh();
+    }));
+
+    root.querySelectorAll<HTMLButtonElement>("[data-moderate-review]").forEach((button) => button.addEventListener("click", async () => {
+      const result = await actions.moderateServiceReview({ id: button.dataset.id!, serviceId: button.dataset.serviceId!, organizationId, status: button.dataset.moderateReview as "APPROVED" | "REJECTED" | "SPAM" }); if (result.error) showError(result.error); else refresh();
+    }));
+    root.querySelectorAll<HTMLButtonElement>("[data-moderate-comment]").forEach((button) => button.addEventListener("click", async () => {
+      const result = await actions.moderateServiceComment({ id: button.dataset.id!, serviceId: button.dataset.serviceId!, organizationId, status: button.dataset.moderateComment as "APPROVED" | "REJECTED" | "SPAM" | "TRASH" }); if (result.error) showError(result.error); else refresh();
+    }));
+    root.querySelectorAll<HTMLButtonElement>("[data-resolve-report]").forEach((button) => button.addEventListener("click", async () => {
+      const result = await actions.resolveServiceReport({ id: button.dataset.id!, serviceId: button.dataset.serviceId!, organizationId, status: button.dataset.resolveReport as "REVIEWED" | "RESOLVED" | "REJECTED" }); if (result.error) showError(result.error); else refresh();
+    }));
+  }
+</script>

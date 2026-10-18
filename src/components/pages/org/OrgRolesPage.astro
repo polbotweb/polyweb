@@ -1,0 +1,518 @@
+---
+/**
+ * OrgRolesPage — Tabs layout: custom role CRUD + built-in roles matrix + member assignment.
+ *
+ * Tab 1: Custom roles — CRUD with Dialog for create/edit.
+ * Tab 2: Built-in roles — read-only CMS permission matrix (owner/admin/member).
+ * Tab 3: Members — role assignment per member.
+ *
+ * Pattern: Tabs + Dialog (same as AdminPage.astro), init() + astro:after-swap.
+ */
+import type { AuthTranslations, Locale } from '@i18n/config';
+import type { AppUser } from '@/lib/types';
+import type { FullOrganization } from '@/lib/auth-data';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@atoms/tabs';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@atoms/card';
+import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@atoms/table';
+import Badge from '@atoms/badge/Badge.astro';
+import Button from '@atoms/button/Button.astro';
+import { Input } from '@atoms/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@atoms/dialog';
+import {
+  statement,
+  orgOwnerRole,
+  orgAdminRole,
+  orgMemberRole,
+} from '@/lib/permissions';
+import CheckIcon from '@tabler/icons/outline/check.svg';
+import XIcon from '@tabler/icons/outline/x.svg';
+import PlusIcon from '@tabler/icons/outline/plus.svg';
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  user: AppUser;
+  activeOrg: FullOrganization;
+  activeOrgRole: string | null;
+}
+
+const { t, user, activeOrg } = Astro.props;
+const tr = t.organizations.roles;
+
+type RoleDef = { name: string; statements: Record<string, readonly string[]> };
+
+const builtinRoles: RoleDef[] = [
+  { name: t.organizations.members.owner, statements: orgOwnerRole.statements as Record<string, readonly string[]> },
+  { name: t.organizations.members.admin, statements: orgAdminRole.statements as Record<string, readonly string[]> },
+  { name: t.organizations.members.member, statements: orgMemberRole.statements as Record<string, readonly string[]> },
+];
+
+const cmsResources = ['page', 'section', 'media', 'site', 'navigation', 'audit', 'theme'] as const;
+const resourceNames = tr.resourceName as Record<string, string>;
+
+function hasAction(role: RoleDef, resource: string, action: string): boolean {
+  const perms = role.statements[resource];
+  return Array.isArray(perms) && perms.includes(action);
+}
+---
+
+<p class="text-muted-foreground text-sm mb-4">{tr.description}</p>
+
+<Tabs defaultValue="custom-roles">
+  <TabsList>
+    <TabsTrigger value="custom-roles" defaultActive>{tr.title}</TabsTrigger>
+    <TabsTrigger value="builtin-matrix">{tr.builtinTitle}</TabsTrigger>
+    <TabsTrigger value="members">{tr.assignToMembers}</TabsTrigger>
+  </TabsList>
+
+  {/* ═══ Tab 1: Custom Roles CRUD ═══ */}
+  <TabsContent value="custom-roles" defaultActive>
+    <div class="mt-4 space-y-4">
+      {/* Toolbar */}
+      <div class="flex items-center justify-end">
+        <Button type="button" id="org-role-add-btn" size="sm">
+          <PlusIcon class="size-4 me-1.5" />
+          {tr.createRole}
+        </Button>
+      </div>
+
+      {/* Role list */}
+      <div id="org-roles-list" class="space-y-2">
+        <div id="org-roles-items"></div>
+        <p id="org-roles-empty" class="text-muted-foreground text-sm py-12 text-center hidden">{tr.noCustomRoles}</p>
+        <div id="org-roles-loading" class="flex items-center justify-center py-12">
+          <div class="size-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent"></div>
+        </div>
+      </div>
+
+      {/* ─── Dialog for Create / Edit ─── */}
+      <Dialog id="org-role-dialog">
+        <DialogContent class="max-w-lg sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              <span id="org-role-dialog-title">{tr.createRole}</span>
+            </DialogTitle>
+            <DialogDescription>{tr.description}</DialogDescription>
+          </DialogHeader>
+          <input type="hidden" id="org-role-edit-id" value="" />
+          <div class="space-y-4 py-2">
+            <div>
+              <label for="org-role-name" class="text-sm font-medium mb-1.5 block">{tr.roleNameLabel}</label>
+              <Input type="text" id="org-role-name" placeholder={tr.roleNamePlaceholder} size="sm" />
+            </div>
+            <fieldset>
+              <legend class="text-sm font-medium mb-3">{tr.permissionsLabel}</legend>
+              <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {cmsResources.map((resource) => (
+                  <div class="border rounded-lg p-3 bg-muted/20">
+                    <p class="text-xs font-semibold mb-2">{resourceNames[resource] ?? resource}</p>
+                    <div class="space-y-1.5">
+                      {(statement[resource] as readonly string[]).map((action) => (
+                        <label class="flex items-center gap-2 text-xs cursor-pointer hover:text-foreground transition-colors">
+                          <input
+                            type="checkbox"
+                            class="org-role-perm-cb rounded"
+                            data-resource={resource}
+                            data-action={action}
+                          />
+                          {action}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </fieldset>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">{tr.cancel}</Button>
+            </DialogClose>
+            <Button type="button" id="org-role-save-btn">{tr.save}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Delete confirmation Dialog ─── */}
+      <Dialog id="org-role-delete-dialog">
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{tr.deleteRole}</DialogTitle>
+            <DialogDescription>{tr.confirmDelete}</DialogDescription>
+          </DialogHeader>
+          <input type="hidden" id="org-role-delete-id" value="" />
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">{tr.cancel}</Button>
+            </DialogClose>
+            <Button type="button" id="org-role-confirm-delete-btn" variant="error">{tr.deleteRole}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  </TabsContent>
+
+  {/* ═══ Tab 2: Built-in Roles Matrix ═══ */}
+  <TabsContent value="builtin-matrix">
+    <Card class="mt-4">
+      <CardHeader>
+        <CardTitle class="text-base">{tr.builtinTitle}</CardTitle>
+        <CardDescription>{tr.builtinDescription}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div class="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead class="sticky inset-s-0 bg-background z-10 min-w-35">{t.admin.roles.resource}</TableHead>
+                <TableHead class="min-w-30">{t.admin.roles.permissions}</TableHead>
+                {builtinRoles.map((role) => (
+                  <TableHead class="text-center min-w-25">{role.name}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {cmsResources.map((resource) => {
+                const actions = statement[resource] as readonly string[];
+                return actions.map((action, i) => (
+                  <TableRow>
+                    {i === 0 ? (
+                      <TableCell rowspan={actions.length} class="sticky inset-s-0 bg-background z-10 font-medium align-top border-e">
+                        {resourceNames[resource] ?? resource}
+                      </TableCell>
+                    ) : null}
+                    <TableCell>
+                      <Badge variant="outline">{action}</Badge>
+                    </TableCell>
+                    {builtinRoles.map((role) => (
+                      <TableCell class="text-center">
+                        {hasAction(role, resource, action) ? (
+                          <CheckIcon class="text-emerald-500 size-4 inline-block" aria-label="✓" />
+                        ) : (
+                          <XIcon class="text-muted-foreground/30 size-4 inline-block" aria-label="✗" />
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ));
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  </TabsContent>
+
+  {/* ═══ Tab 3: Assign Roles to Members ═══ */}
+  <TabsContent value="members">
+    <Card class="mt-4">
+      <CardHeader>
+        <CardTitle class="text-base">{tr.assignToMembers}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div id="org-members-roles" class="divide-y">
+          {(activeOrg.members ?? []).map((m: any) => {
+            const memberUser = m.user;
+            const isCurrentUser = memberUser?.id === user?.id;
+            const isMemberOwner = m.role === 'owner';
+            const mi = memberUser?.name
+              ? memberUser.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
+              : '?';
+            return (
+              <div class="flex items-center gap-4 py-3 flex-wrap sm:flex-nowrap" data-member-id={m.id} data-member-role={m.role}>
+                <div class="size-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium shrink-0">
+                  {mi}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium truncate">
+                    {memberUser?.name ?? memberUser?.email}
+                    {isCurrentUser && <span class="text-muted-foreground"> {t.organizations.members.you}</span>}
+                  </p>
+                  <p class="text-xs text-muted-foreground">{memberUser?.email}</p>
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                  {(!isCurrentUser && !isMemberOwner) ? (
+                    <select
+                      class="member-role-select text-sm border rounded px-2 py-1 bg-background"
+                      data-member-id={m.id}
+                    >
+                      <option value="member" selected={m.role === 'member'}>{t.organizations.members.member}</option>
+                      <option value="admin" selected={m.role === 'admin'}>{t.organizations.members.admin}</option>
+                    </select>
+                  ) : (
+                    <Badge variant="outline" size="sm">{
+                      m.role === 'owner' ? t.organizations.members.owner
+                      : m.role === 'admin' ? t.organizations.members.admin
+                      : t.organizations.members.member
+                    }</Badge>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  </TabsContent>
+</Tabs>
+
+<div
+  id="org-roles-data"
+  class="hidden"
+  data-org-id={activeOrg.id}
+  data-t-created={tr.created}
+  data-t-updated={tr.updated}
+  data-t-deleted={tr.deleted}
+  data-t-edit={tr.editRole}
+  data-t-delete={tr.deleteRole}
+  data-t-create={tr.createRole}
+  data-t-edit-title={tr.editRole}
+  data-t-no-custom={tr.noCustomRoles}
+  data-t-member-role-updated={tr.memberRoleUpdated}
+  data-t-error={t.admin.cms.common.error}
+></div>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { toast } from '@atoms/toast';
+
+  function init() {
+    const d = document.getElementById('org-roles-data')?.dataset ?? {};
+    const orgId = d.orgId ?? '';
+    if (!orgId) return;
+
+    const itemsEl = document.getElementById('org-roles-items');
+    const emptyEl = document.getElementById('org-roles-empty');
+    const loadingEl = document.getElementById('org-roles-loading');
+    const editIdInput = document.getElementById('org-role-edit-id') as HTMLInputElement | null;
+    const nameInput = document.getElementById('org-role-name') as HTMLInputElement | null;
+    const deleteIdInput = document.getElementById('org-role-delete-id') as HTMLInputElement | null;
+    const saveBtn = document.getElementById('org-role-save-btn');
+    const addBtn = document.getElementById('org-role-add-btn');
+    const confirmDeleteBtn = document.getElementById('org-role-confirm-delete-btn');
+
+    const roleDialogEl = document.getElementById('org-role-dialog');
+    const deleteDialogEl = document.getElementById('org-role-delete-dialog');
+    const dialogTitle = document.getElementById('org-role-dialog-title');
+
+    function openDialog(el: HTMLElement | null) {
+      const dialog = el?.querySelector<HTMLDialogElement>('dialog');
+      const backdrop = el?.querySelector<HTMLElement>('.starwind-dialog-backdrop');
+      if (dialog && !dialog.open) {
+        dialog.showModal();
+        dialog.dataset.state = 'open';
+        if (backdrop) { backdrop.style.display = 'block'; backdrop.dataset.state = 'open'; }
+      }
+    }
+
+    function closeDialog(el: HTMLElement | null) {
+      el?.querySelector<HTMLButtonElement>('[data-slot="dialog-close"]')?.click();
+    }
+
+    function getSelectedPermissions(): Record<string, string[]> {
+      const perms: Record<string, string[]> = {};
+      document.querySelectorAll<HTMLInputElement>('.org-role-perm-cb:checked').forEach((cb) => {
+        const r = cb.dataset.resource!;
+        const a = cb.dataset.action!;
+        if (!perms[r]) perms[r] = [];
+        perms[r].push(a);
+      });
+      return perms;
+    }
+
+    function setPermissionCheckboxes(perms: Record<string, string[]>) {
+      document.querySelectorAll<HTMLInputElement>('.org-role-perm-cb').forEach((cb) => {
+        cb.checked = perms[cb.dataset.resource!]?.includes(cb.dataset.action!) ?? false;
+      });
+    }
+
+    function resetForm() {
+      if (editIdInput) editIdInput.value = '';
+      if (nameInput) nameInput.value = '';
+      document.querySelectorAll<HTMLInputElement>('.org-role-perm-cb').forEach((cb) => { cb.checked = false; });
+    }
+
+    function renderRoles(roles: Array<{ id: string; role: string; permission: Record<string, string[]> }>) {
+      if (!itemsEl) return;
+      loadingEl?.classList.add('hidden');
+      itemsEl.innerHTML = '';
+
+      if (roles.length === 0) {
+        emptyEl?.classList.remove('hidden');
+        return;
+      }
+      emptyEl?.classList.add('hidden');
+
+      for (const r of roles) {
+        const card = document.createElement('div');
+        card.className = 'flex items-start justify-between gap-3 rounded-lg border p-4 bg-background hover:bg-muted/30 transition-colors';
+
+        const badges = Object.entries(r.permission)
+          .filter(([, acts]) => (acts as string[]).length > 0)
+          .map(([res, acts]) =>
+            `<span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium text-muted-foreground bg-muted/40">${res}: ${(acts as string[]).join(', ')}</span>`
+          )
+          .join('') || '<span class="text-[11px] text-muted-foreground italic">—</span>';
+
+        card.innerHTML = `
+          <div class="min-w-0 flex-1 space-y-1.5">
+            <p class="font-semibold text-sm">${r.role}</p>
+            <div class="flex flex-wrap gap-1">${badges}</div>
+          </div>
+          <div class="flex gap-1.5 shrink-0 pt-0.5">
+            <button type="button" class="org-role-edit-btn inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium hover:bg-muted transition-colors" data-role-id="${r.id}">${d.tEdit ?? ''}</button>
+            <button type="button" class="org-role-delete-btn inline-flex items-center rounded-md border border-red-200 dark:border-red-900 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 transition-colors" data-role-id="${r.id}">${d.tDelete ?? ''}</button>
+          </div>
+        `;
+
+        card.querySelector('.org-role-edit-btn')?.addEventListener('click', () => {
+          if (editIdInput) editIdInput.value = r.id;
+          if (nameInput) nameInput.value = r.role;
+          if (dialogTitle) dialogTitle.textContent = d.tEditTitle ?? '';
+          setPermissionCheckboxes(r.permission as Record<string, string[]>);
+          openDialog(roleDialogEl);
+        });
+
+        card.querySelector('.org-role-delete-btn')?.addEventListener('click', () => {
+          if (deleteIdInput) deleteIdInput.value = r.id;
+          openDialog(deleteDialogEl);
+        });
+
+        itemsEl.appendChild(card);
+      }
+
+      updateMemberRoleSelects(roles);
+    }
+
+    function updateMemberRoleSelects(customRoles: Array<{ id: string; role: string }>) {
+      document.querySelectorAll<HTMLSelectElement>('.member-role-select').forEach((select) => {
+        select.querySelectorAll('option[data-custom]').forEach((opt) => opt.remove());
+        const memberRow = select.closest('[data-member-role]');
+        const currentRole = memberRow?.getAttribute('data-member-role') ?? '';
+        customRoles.forEach((cr) => {
+          const opt = document.createElement('option');
+          opt.value = cr.role;
+          opt.textContent = cr.role;
+          opt.dataset.custom = '1';
+          if (currentRole === cr.role) opt.selected = true;
+          select.appendChild(opt);
+        });
+      });
+    }
+
+    async function loadRoles() {
+      loadingEl?.classList.remove('hidden');
+      emptyEl?.classList.add('hidden');
+      if (itemsEl) itemsEl.innerHTML = '';
+
+      try {
+        const { data, error } = await actions.orgListRoles({ organizationId: orgId });
+        if (error) {
+          loadingEl?.classList.add('hidden');
+          toast.error(error.message ?? d.tError ?? '');
+          return;
+        }
+        const roles = Array.isArray(data) ? data : (data as { data: unknown[] })?.data ?? [];
+        renderRoles(roles as Array<{ id: string; role: string; permission: Record<string, string[]> }>);
+      } catch {
+        loadingEl?.classList.add('hidden');
+        renderRoles([]);
+      }
+    }
+
+    // + Create
+    addBtn?.addEventListener('click', () => {
+      resetForm();
+      if (dialogTitle) dialogTitle.textContent = d.tCreate ?? '';
+      openDialog(roleDialogEl);
+      setTimeout(() => nameInput?.focus(), 100);
+    });
+
+    // Save
+    saveBtn?.addEventListener('click', async () => {
+      const roleName = nameInput?.value.trim();
+      if (!roleName) return;
+      const perms = getSelectedPermissions();
+      const editId = editIdInput?.value;
+
+      saveBtn.setAttribute('disabled', '');
+      try {
+        if (editId) {
+          const { error } = await actions.orgUpdateRole({
+            organizationId: orgId,
+            roleId: editId,
+            data: { roleName, permission: perms },
+          });
+          if (error) { toast.error(error.message ?? d.tError ?? ''); return; }
+          toast.success(d.tUpdated ?? '');
+        } else {
+          const { error } = await actions.orgCreateRole({
+            organizationId: orgId,
+            role: roleName,
+            permission: perms,
+          });
+          if (error) { toast.error(error.message ?? d.tError ?? ''); return; }
+          toast.success(d.tCreated ?? '');
+        }
+        closeDialog(roleDialogEl);
+        resetForm();
+        await loadRoles();
+      } finally {
+        saveBtn.removeAttribute('disabled');
+      }
+    });
+
+    // Confirm delete
+    confirmDeleteBtn?.addEventListener('click', async () => {
+      const roleId = deleteIdInput?.value;
+      if (!roleId) return;
+
+      confirmDeleteBtn.setAttribute('disabled', '');
+      try {
+        const { error } = await actions.orgDeleteRole({
+          organizationId: orgId,
+          roleId,
+        });
+        if (error) { toast.error(error.message ?? d.tError ?? ''); return; }
+        toast.success(d.tDeleted ?? '');
+        closeDialog(deleteDialogEl);
+        await loadRoles();
+      } finally {
+        confirmDeleteBtn.removeAttribute('disabled');
+      }
+    });
+
+    // Member role change
+    document.querySelectorAll<HTMLSelectElement>('.member-role-select').forEach((select) => {
+      select.addEventListener('change', async () => {
+        const memberId = select.dataset.memberId;
+        if (!memberId) return;
+        const { error } = await actions.orgUpdateMemberRole({
+          memberId,
+          role: select.value,
+          organizationId: orgId,
+        });
+        if (!error) {
+          toast.success(d.tMemberRoleUpdated ?? '');
+          const row = select.closest('[data-member-role]');
+          if (row) row.setAttribute('data-member-role', select.value);
+        } else {
+          toast.error(error.message ?? d.tError ?? '');
+        }
+      });
+    });
+
+    loadRoles();
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

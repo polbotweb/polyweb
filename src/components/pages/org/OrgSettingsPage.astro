@@ -1,0 +1,180 @@
+---
+import type { AuthTranslations, Locale } from '@i18n/config';
+import type { AppUser } from '@/lib/types';
+import type { FullOrganization } from '@/lib/auth-data';
+import { getAuthUrl } from '@i18n/utils';
+import { Card, CardHeader, CardTitle, CardContent } from '@atoms/card';
+import { Input } from '@atoms/input';
+import { Label } from '@atoms/label';
+import Button from '@atoms/button/Button.astro';
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  user: AppUser;
+  activeOrg: FullOrganization;
+  activeOrgRole: string | null;
+}
+
+const {
+  t,
+  locale,
+  activeOrg,
+  activeOrgRole,
+} = Astro.props;
+
+const dashboardUrl = getAuthUrl(locale, 'dashboard', t);
+const isOwner = activeOrgRole === 'owner';
+---
+
+<div class="grid gap-6">
+  <!-- Edit org -->
+  <Card>
+    <CardHeader>
+      <CardTitle>{t.organizations.settings.title}</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <form id="update-org-form" class="grid gap-4">
+        <div>
+          <Label for="edit-org-name">{t.organizations.settings.name}</Label>
+          <Input id="edit-org-name" name="name" value={activeOrg.name} placeholder={t.organizations.settings.namePlaceholder} />
+        </div>
+        <div>
+          <Label for="edit-org-slug">{t.organizations.settings.slug}</Label>
+          <Input id="edit-org-slug" name="slug" value={activeOrg.slug} placeholder={t.organizations.settings.slugPlaceholder} />
+        </div>
+        <div>
+          <Label>{t.organizations.settings.logo}</Label>
+          <input type="file" id="edit-org-logo-input" accept="image/*" class="block w-full text-sm file:mr-4 file:rounded-md file:border-0 file:bg-muted file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-muted/80 cursor-pointer" />
+        </div>
+        <div>
+          <Button type="submit">{t.organizations.settings.save}</Button>
+        </div>
+      </form>
+    </CardContent>
+  </Card>
+
+  <!-- Danger zone -->
+  <Card class="border-error/30">
+    <CardHeader>
+      <CardTitle class="text-error">{t.organizations.danger.title}</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <p class="text-sm text-muted-foreground mb-4">{t.organizations.danger.description}</p>
+      <div class="flex gap-3 flex-wrap">
+        {!isOwner && (
+          <Button variant="outline" id="leave-org-btn">
+            {t.organizations.danger.leave}
+          </Button>
+        )}
+        {isOwner && (
+          <Button variant="error" id="delete-org-btn">
+            {t.organizations.danger.delete}
+          </Button>
+        )}
+      </div>
+    </CardContent>
+  </Card>
+</div>
+
+<!-- Pass data to the client script -->
+<div
+  id="org-settings-data"
+  class="hidden"
+  data-dashboard-url={dashboardUrl}
+  data-org-id={activeOrg.id}
+  data-org-slug={activeOrg.slug}
+  data-org-logo={activeOrg.logo ?? ''}
+  data-locale={locale}
+  data-t-saved={t.organizations.settings.saved}
+  data-t-left={t.organizations.danger.left}
+  data-t-deleted={t.organizations.danger.deleted}
+  data-t-leave-confirm={t.organizations.danger.leaveConfirm}
+  data-t-delete-confirm={t.organizations.danger.deleteConfirm}
+  data-t-error={t.admin.cms.common.error}
+></div>
+
+<script>
+  import { authClient } from '@lib/auth-client';
+  import { toast } from '@atoms/toast';
+
+  function init() {
+    const el = document.getElementById('org-settings-data');
+    if (!el) return;
+    const d = el.dataset;
+    const dashboardUrl = d.dashboardUrl!;
+    const orgId = d.orgId!;
+    const orgSlug = d.orgSlug!;
+    const orgLogo = d.orgLogo || null;
+    const locale = d.locale!;
+
+    // ─── Update organization settings ───
+    const updateForm = document.getElementById('update-org-form') as HTMLFormElement | null;
+    updateForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = (document.getElementById('edit-org-name') as HTMLInputElement).value.trim();
+      const slug = (document.getElementById('edit-org-slug') as HTMLInputElement).value.trim();
+
+      // Upload new logo if provided
+      let logoUrl: string | undefined;
+      const logoInput = document.getElementById('edit-org-logo-input') as HTMLInputElement;
+      if (logoInput?.files?.[0]) {
+        const formData = new FormData();
+        formData.append('file', logoInput.files[0]);
+        formData.append('type', 'brand');
+        if (orgLogo) formData.append('oldUrl', orgLogo);
+        const resp = await fetch('/api/upload', { method: 'POST', body: formData });
+        if (resp.ok) {
+          const json = await resp.json();
+          logoUrl = json.url;
+        }
+      }
+
+      // Set active org first
+      await authClient.organization.setActive({ organizationId: orgId });
+
+      const updateData: Record<string, string> = {};
+      if (name) updateData.name = name;
+      if (slug) updateData.slug = slug;
+      if (logoUrl) updateData.logo = logoUrl;
+
+      const { error } = await authClient.organization.update({ data: updateData });
+      if (error) {
+        toast.error(error.message ?? d.tError ?? '');
+      } else {
+        toast.success(d.tSaved ?? '');
+        const newSlug = slug || orgSlug;
+        window.location.href = `/${locale}/organizations/${newSlug}/settings`;
+      }
+    });
+
+    // ─── Leave organization ───
+    const leaveBtn = document.getElementById('leave-org-btn');
+    leaveBtn?.addEventListener('click', async () => {
+      if (!confirm(d.tLeaveConfirm ?? '')) return;
+      const { error } = await authClient.organization.leave({ organizationId: orgId });
+      if (error) {
+        toast.error(error.message ?? d.tError ?? '');
+      } else {
+        toast.success(d.tLeft ?? '');
+        window.location.href = dashboardUrl;
+      }
+    });
+
+    // ─── Delete organization ───
+    const deleteBtn = document.getElementById('delete-org-btn');
+    deleteBtn?.addEventListener('click', async () => {
+      if (!confirm(d.tDeleteConfirm ?? '')) return;
+      const { error } = await authClient.organization.delete({ organizationId: orgId });
+      if (error) {
+        toast.error(error.message ?? d.tError ?? '');
+      } else {
+        toast.success(d.tDeleted ?? '');
+        window.location.href = dashboardUrl;
+      }
+    });
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

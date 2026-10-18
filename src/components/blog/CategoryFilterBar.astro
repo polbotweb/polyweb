@@ -1,0 +1,89 @@
+---
+import { Icon } from "astro-icon/components";
+import type { Locale } from "@i18n/config";
+import type { BlogTranslations } from "@i18n/config";
+import { buildBlogCategoryUrl, extractOrgSlugFromBaseUrl } from "@lib/blog/utils";
+
+interface CategoryItem {
+  id: string;
+  slug: string;
+  name: string;
+  postCount: number;
+  color?: string | null;
+  icon?: string | null;
+}
+
+interface Props {
+  locale: Locale;
+  blogT: BlogTranslations;
+  categories: CategoryItem[];
+  baseUrl: string;
+  activeSlug?: string;
+  showAll?: boolean;
+  maxVisible?: number;
+}
+
+const {
+  locale,
+  categories,
+  baseUrl,
+  activeSlug,
+  showAll = true,
+  maxVisible = 8,
+} = Astro.props;
+
+const visibleCategories = showAll ? categories : categories.slice(0, maxVisible);
+const hasMore = !showAll && categories.length > maxVisible;
+const organizationSlug = extractOrgSlugFromBaseUrl(baseUrl);
+---
+
+<nav
+  class="flex items-center gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]"
+  aria-label="Filtrer par catégorie"
+>
+  {showAll && (
+    <a
+      href={baseUrl}
+      aria-current={!activeSlug ? "page" : undefined}
+      class:list={[
+        "inline-flex shrink-0 items-center gap-1.5 rounded-full border-2 px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+        {"border-primary bg-primary text-primary-foreground": !activeSlug, "border-border bg-background text-foreground hover:border-primary hover:text-primary": activeSlug},
+      ]}
+    >
+      Tout
+    </a>
+  )}
+
+  {visibleCategories.map((cat) => {
+    const isActive = cat.slug === activeSlug;
+    return (
+      <a
+        href={buildBlogCategoryUrl(locale, organizationSlug, cat.slug)}
+        aria-current={isActive ? "page" : undefined}
+        class:list={[
+          "inline-flex shrink-0 items-center gap-1.5 rounded-full border-2 px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+          {"border-primary bg-primary text-primary-foreground": isActive, "border-border bg-background text-foreground hover:border-primary hover:text-primary": !isActive},
+        ]}
+      >
+        {cat.icon && (
+          <Icon name={cat.icon} class="size-4 shrink-0" />
+        )}
+        <span>{cat.name}</span>
+        {cat.postCount > 0 && (
+          <span class:list={[
+            "rounded-full px-1.5 py-0.5 text-xs font-normal",
+            {"bg-white/20 text-current": isActive, "bg-muted text-muted-foreground": !isActive},
+          ]}>
+            {cat.postCount}
+          </span>
+        )}
+      </a>
+    );
+  })}
+
+  {hasMore && (
+    <span class="shrink-0 rounded-full border-2 border-border px-3 py-1.5 text-sm font-semibold text-muted-foreground">
+      +{categories.length - maxVisible}
+    </span>
+  )}
+</nav>

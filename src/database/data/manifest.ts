@@ -1,0 +1,76 @@
+// Seed manifest — source de vérité pour l'ordre et le mapping data → schema.
+// Chaque entrée lie un fichier de données à son export de schéma Drizzle.
+// L'ordre du tableau respecte les dépendances FK.
+
+export interface SeedEntry {
+  dataFile: string;
+  schemaExport: string;
+  label: string;
+}
+
+export const seedManifest: SeedEntry[] = [
+  { dataFile: '00-media.data.ts', schemaExport: 'mediaFolders', label: 'media folders' },
+  { dataFile: '00b-media-files.data.ts', schemaExport: 'mediaFiles', label: 'media files' },
+  { dataFile: '01-users.data.ts', schemaExport: 'user', label: 'users' },
+  { dataFile: '01b-user-accounts.data.ts', schemaExport: 'account', label: 'user accounts' },
+  { dataFile: '02-organizations.data.ts', schemaExport: 'organization', label: 'organizations' },
+  { dataFile: '02b-organization-members.data.ts', schemaExport: 'member', label: 'organization members' },
+  { dataFile: '03-site-settings.data.ts', schemaExport: 'siteSettings', label: 'site settings' },
+  { dataFile: '04-social-links.data.ts', schemaExport: 'socialLinks', label: 'social links' },
+  { dataFile: '05-contact-info.data.ts', schemaExport: 'contactInfo', label: 'contact info' },
+  { dataFile: '06-opening-hours.data.ts', schemaExport: 'openingHours', label: 'opening hours' },
+  { dataFile: '07-navigation.data.ts', schemaExport: 'navigationMenus', label: 'navigation menus' },
+  { dataFile: '07b-navigation-items.data.ts', schemaExport: 'navigationItems', label: 'navigation items' },
+  { dataFile: '08-theme.data.ts', schemaExport: 'themeSettings', label: 'theme settings' },
+  { dataFile: '09-legal-pages.data.ts', schemaExport: 'pages', label: 'legal pages' },
+  { dataFile: '09b-legal-sections.data.ts', schemaExport: 'pageSections', label: 'legal page sections' },
+  { dataFile: '10-consent-settings.data.ts', schemaExport: 'consentSettings', label: 'consent settings' },
+
+  { dataFile: '11-blog-categories.data.ts', schemaExport: 'blogCategories', label: 'blog categories' },
+  { dataFile: '11b-blog-category-translations.data.ts', schemaExport: 'blogCategoryTranslations', label: 'blog category translations' },
+  { dataFile: '12-blog-tags.data.ts', schemaExport: 'blogTags', label: 'blog tags' },
+  { dataFile: '12b-blog-tag-translations.data.ts', schemaExport: 'blogTagTranslations', label: 'blog tag translations' },
+  { dataFile: '13-blog-posts.data.ts', schemaExport: 'blogPosts', label: 'blog posts' },
+  { dataFile: '13b-blog-post-translations.data.ts', schemaExport: 'blogPostTranslations', label: 'blog post translations' },
+  { dataFile: '14-blog-post-categories.data.ts', schemaExport: 'blogPostCategories', label: 'blog post categories' },
+  { dataFile: '14b-blog-post-tags.data.ts', schemaExport: 'blogPostTags', label: 'blog post tags' },
+  { dataFile: '15-blog-post-seo.data.ts', schemaExport: 'blogPostSeo', label: 'blog post seo' },
+  { dataFile: '15b-blog-post-revisions.data.ts', schemaExport: 'blogPostRevisions', label: 'blog post revisions' },
+  { dataFile: '16-blog-comments.data.ts', schemaExport: 'blogComments', label: 'blog comments' },
+  { dataFile: '16b-blog-comment-moderations.data.ts', schemaExport: 'blogCommentModerations', label: 'blog comment moderations' },
+  { dataFile: '17-blog-reviews.data.ts', schemaExport: 'blogPostReviews', label: 'blog reviews' },
+  { dataFile: '17b-blog-review-helpful.data.ts', schemaExport: 'blogPostReviewHelpful', label: 'blog review helpful' },
+  { dataFile: '18-blog-reactions.data.ts', schemaExport: 'blogPostReactions', label: 'blog reactions' },
+  { dataFile: '18b-blog-favorites.data.ts', schemaExport: 'blogPostFavorites', label: 'blog favorites' },
+  { dataFile: '19-blog-reports.data.ts', schemaExport: 'blogReports', label: 'blog reports' },
+  { dataFile: '20-blog-post-links.data.ts', schemaExport: 'blogPostLinks', label: 'blog post links' },
+  { dataFile: '20b-blog-post-locks.data.ts', schemaExport: 'blogPostLocks', label: 'blog post locks' },
+  { dataFile: '21-blog-notifications.data.ts', schemaExport: 'blogNotifications', label: 'blog notifications' },
+  { dataFile: '22-blog-subscribers.data.ts', schemaExport: 'blogSubscribers', label: 'blog subscribers' },
+  { dataFile: '23-blog-post-galleries.data.ts', schemaExport: 'blogPostGalleries', label: 'blog post galleries' },
+  { dataFile: '23b-blog-post-gallery-media.data.ts', schemaExport: 'blogPostGalleryMedia', label: 'blog post gallery media' },
+
+  { dataFile: '24-services.data.ts', schemaExport: 'services', label: 'services' },
+  { dataFile: '24b-service-translations.data.ts', schemaExport: 'serviceTranslations', label: 'service translations' },
+  { dataFile: '25-service-categories.data.ts', schemaExport: 'serviceCategories', label: 'service categories' },
+  { dataFile: '25b-service-category-translations.data.ts', schemaExport: 'serviceCategoryTranslations', label: 'service category translations' },
+  { dataFile: '26-service-tags.data.ts', schemaExport: 'serviceTags', label: 'service tags' },
+  { dataFile: '26b-service-tag-translations.data.ts', schemaExport: 'serviceTagTranslations', label: 'service tag translations' },
+  { dataFile: '27-service-category-links.data.ts', schemaExport: 'serviceCategoryLinks', label: 'service category links' },
+  { dataFile: '27b-service-tag-links.data.ts', schemaExport: 'serviceTagLinks', label: 'service tag links' },
+  { dataFile: '28-service-media.data.ts', schemaExport: 'serviceMedia', label: 'service media' },
+  { dataFile: '29-service-availability.data.ts', schemaExport: 'serviceAvailability', label: 'service availability' },
+  { dataFile: '30-service-revisions.data.ts', schemaExport: 'serviceRevisions', label: 'service revisions' },
+  { dataFile: '31-service-locks.data.ts', schemaExport: 'serviceLocks', label: 'service locks' },
+  { dataFile: '32-service-seo.data.ts', schemaExport: 'serviceSeo', label: 'service seo' },
+  { dataFile: '33-service-favorites.data.ts', schemaExport: 'serviceFavorites', label: 'service favorites' },
+  { dataFile: '34-service-reviews.data.ts', schemaExport: 'serviceReviews', label: 'service reviews' },
+  { dataFile: '34b-service-review-helpful.data.ts', schemaExport: 'serviceReviewHelpful', label: 'service review helpful' },
+  { dataFile: '35-service-comments.data.ts', schemaExport: 'serviceComments', label: 'service comments' },
+  { dataFile: '36-service-reports.data.ts', schemaExport: 'serviceReports', label: 'service reports' },
+  { dataFile: '37-service-view-stats.data.ts', schemaExport: 'serviceViewStats', label: 'service view stats' },
+  { dataFile: '38-service-reactions.data.ts', schemaExport: 'serviceReactions', label: 'service reactions' },
+  { dataFile: '39-service-notifications.data.ts', schemaExport: 'serviceNotifications', label: 'service notifications' },
+  { dataFile: '40-service-attribute-definitions.data.ts', schemaExport: 'serviceAttributeDefinitions', label: 'service attribute definitions' },
+  { dataFile: '40b-service-attribute-values.data.ts', schemaExport: 'serviceAttributeValues', label: 'service attribute values' },
+];

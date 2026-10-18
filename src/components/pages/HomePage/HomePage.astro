@@ -1,0 +1,85 @@
+---
+import type { HomeTranslations } from '@i18n/config';
+import HeroSection from './HeroSection.astro';
+import RisingParticles from "@wow/RisingParticles.astro";
+import LogoCloud from '@wow/LogoCloud.astro';
+import PillarsSection from './PillarsSection.astro';
+import CategorySection from './CategorySection.astro';
+import SideCarouselCards from '@organisms/Testimonials/SideCarouselCards.astro';
+import PricingSection from './PricingSection.astro';
+import CTABannerSection from './CTABannerSection.astro';
+import ScrollReveal from '@wow/ScrollReveal.astro';
+
+interface Props {
+  t: HomeTranslations;
+}
+
+const { t } = Astro.props;
+---
+
+
+
+<RisingParticles
+  id="effect-10"
+  class="@container w-full"
+  particleCount={50}
+  minSize={2}
+  maxSize={5}
+  minDuration={10}
+  maxDuration={18}
+  particleColor="var(--color-foreground)"
+  minOpacity={0.15}
+  maxOpacity={0.5}
+>
+<HeroSection
+  badgeText={t.hero.badge}
+  heading={t.hero.title}
+  description={t.hero.description}
+  primaryButtonText={t.hero.ctaPrimary}
+  primaryButtonHref="#pricing"
+  secondaryButtonText={t.hero.ctaSecondary}
+  secondaryButtonHref="#evolution"
+  socialProofHeading={t.hero.socialProofHeading}
+  socialProofSubtext={t.hero.socialProofSubtext}
+  carouselImages={t.hero.carouselImages}
+/>
+<LogoCloud logos={t.logos} />
+</RisingParticles>
+
+<ScrollReveal direction="up" duration={700}>
+  <PillarsSection t={t.pillars} />
+</ScrollReveal>
+
+<ScrollReveal direction="up" duration={700} delay={100}>
+  <CategorySection />
+</ScrollReveal>
+
+<ScrollReveal direction="up" duration={700} delay={100}>
+  <SideCarouselCards
+    badge={t.testimonials.badge}
+    heading={t.testimonials.heading}
+    description={t.testimonials.description}
+    testimonials={t.testimonials.items}
+  />
+</ScrollReveal>
+
+<ScrollReveal direction="up" duration={700} delay={100}>
+  <PricingSection
+    eyebrow={t.pricing.eyebrow}
+    heading={t.pricing.heading}
+    description={t.pricing.description}
+    plans={t.pricing.plans}
+    monthlyLabel={t.pricing.monthlyLabel}
+    yearlyLabel={t.pricing.yearlyLabel}
+    discountBadge={t.pricing.discountBadge}
+  />
+</ScrollReveal>
+
+<ScrollReveal direction="up" duration={800} delay={100}>
+  <CTABannerSection
+    title={t.ctaBanner.title}
+    description={t.ctaBanner.description}
+    primaryButton={t.ctaBanner.primaryButton}
+    secondaryButton={t.ctaBanner.secondaryButton}
+  />
+</ScrollReveal>

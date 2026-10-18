@@ -1,0 +1,4 @@
+Contact: mailto:security@atomic.fr
+Preferred-Languages: fr, en
+Canonical: https://atomic.fr/.well-known/security.txt
+Expires: 2027-03-30T00:00:00.000Z

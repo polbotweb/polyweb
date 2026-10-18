@@ -1,0 +1,109 @@
+---
+import { Icon } from "astro-icon/components";
+import type { BlogTranslations } from "@i18n/config";
+import { getBlogNotifications, getUnreadBlogNotificationCount } from "@database/loaders/blog.loader";
+import { Dropdown, DropdownContent, DropdownItem, DropdownLabel, DropdownTrigger } from "@atoms/dropdown";
+import { Separator } from "@atoms/separator";
+
+interface Props {
+  blogT: BlogTranslations;
+  userId: string;
+  /** Admin base URL (e.g. `/fr/admin/blog` or `/fr/organizations/acme/admin/blog`) used to link notifications to their post's editor. */
+  baseAdminUrl: string;
+  organizationId?: string | null;
+}
+
+const { blogT, userId, baseAdminUrl, organizationId = null } = Astro.props;
+
+const [notifications, unreadCount] = await Promise.all([
+  getBlogNotifications(userId, { limit: 10, organizationId }),
+  getUnreadBlogNotificationCount(userId, organizationId),
+]);
+
+function formatRelative(date: Date): string {
+  const diffMs = Date.now() - new Date(date).getTime();
+  const diffMin = Math.round(diffMs / 60000);
+  if (diffMin < 1) return "now";
+  if (diffMin < 60) return `${diffMin}m`;
+  const diffH = Math.round(diffMin / 60);
+  if (diffH < 24) return `${diffH}h`;
+  const diffD = Math.round(diffH / 24);
+  return `${diffD}d`;
+}
+---
+
+<Dropdown>
+  <DropdownTrigger
+    class="relative inline-flex items-center justify-center rounded-full p-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    aria-label={`${blogT.labels.notifications}${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
+  >
+    <Icon name="mdi:bell-outline" class="size-5" />
+    {unreadCount > 0 && (
+      <span class="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-error px-1 text-[10px] font-semibold text-error-foreground">
+        {unreadCount > 99 ? "99+" : unreadCount}
+      </span>
+    )}
+  </DropdownTrigger>
+  <DropdownContent align="end" class="w-80 p-0">
+    <div class="flex items-center justify-between px-3 py-2">
+      <DropdownLabel class="p-0 text-sm font-semibold">{blogT.labels.notifications}</DropdownLabel>
+      {unreadCount > 0 && (
+        <button type="button" id="notification-mark-all" class="text-xs text-primary hover:underline">
+          {blogT.labels.markAllRead}
+        </button>
+      )}
+    </div>
+    <Separator />
+    <div
+      class="max-h-96 overflow-y-auto py-1"
+      id="notification-list"
+      data-organization-id={organizationId ?? ""}
+    >
+      {notifications.length === 0 ? (
+        <p class="px-3 py-4 text-center text-sm text-muted-foreground">{blogT.labels.noNotifications}</p>
+      ) : (
+        notifications.map(({ notification, post }) => (
+          <DropdownItem
+            as="a"
+            href={post ? `${baseAdminUrl}/${post.id}/edit` : baseAdminUrl}
+            class:list={["notification-item flex flex-col items-start gap-0.5 whitespace-normal", { "bg-muted/50": !notification.isRead }]}
+            data-notification-id={notification.id}
+            data-organization-id={organizationId ?? ""}
+          >
+            <span class="text-sm font-medium">{blogT.admin.notificationTypes[notification.type]}</span>
+            {post?.slug && <span class="text-xs text-muted-foreground">/{post.slug}</span>}
+            <span class="text-xs text-muted-foreground">{formatRelative(notification.createdAt)}</span>
+          </DropdownItem>
+        ))
+      )}
+    </div>
+  </DropdownContent>
+</Dropdown>
+
+<script>
+  import { actions } from "astro:actions";
+
+  function init() {
+    document.querySelectorAll<HTMLAnchorElement>(".notification-item").forEach((item) => {
+      item.addEventListener("click", () => {
+        const id = item.dataset.notificationId;
+        if (id) {
+          const organizationId = item.dataset.organizationId || null;
+          void actions.markBlogNotificationRead({ id, organizationId });
+        }
+      });
+    });
+
+    document.getElementById("notification-mark-all")?.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const root = document.getElementById('notification-list');
+      await actions.markAllBlogNotificationsRead({
+        organizationId: root?.dataset.organizationId || null,
+      });
+      window.location.reload();
+    });
+  }
+
+  init();
+  document.addEventListener("astro:after-swap", init);
+</script>

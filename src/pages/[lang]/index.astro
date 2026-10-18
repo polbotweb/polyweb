@@ -1,0 +1,12 @@
+---
+import { toLocale, getHomeTranslations } from '@i18n/utils';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import HomePage from '@pages/HomePage/HomePage.astro';
+
+const locale = toLocale(Astro.params.lang);
+const t = await getHomeTranslations(locale);
+---
+
+<BaseLayout>
+  <HomePage t={t} />
+</BaseLayout>

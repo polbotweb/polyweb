@@ -1,0 +1,55 @@
+---
+import { Icon } from "astro-icon/components";
+import type { HTMLAttributes } from "astro/types";
+import type { BlogTranslations } from "@i18n/config";
+
+interface Props extends HTMLAttributes<"div"> {
+  blogT?: BlogTranslations;
+}
+
+const { class: className, blogT, ...rest } = Astro.props;
+
+// Read from cookie — server decides which view is active
+const currentView = (Astro.cookies.get("blog-view")?.value ?? "grid") as "grid" | "horizontal";
+
+const views = [
+  { key: "grid",       icon: "mdi:view-grid",    label: blogT?.labels.gridView ?? "Vue grille" },
+  { key: "horizontal", icon: "mdi:view-headline", label: blogT?.labels.listView ?? "Vue liste"  },
+] as const;
+---
+
+{/* eslint-disable-next-line astro/jsx-a11y/prefer-tag-over-role -- WAI-ARIA "group" is the correct role for a non-form icon toggle-button toolbar; <fieldset> would be semantically wrong outside a <form> */}
+<div
+  class:list={["flex items-center gap-0.5 rounded-lg border bg-card p-1 shadow-sm", className]}
+  role="group"
+  aria-label={blogT?.labels.displayMode ?? "Mode d'affichage"}
+  {...rest}
+>
+  {views.map(({ key, icon, label }) => (
+    <button
+      type="button"
+      data-view={key}
+      aria-label={label}
+      aria-pressed={currentView === key ? "true" : "false"}
+      class:list={[
+        "inline-flex items-center justify-center rounded-md p-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+        {"bg-primary text-primary-foreground shadow-sm": currentView === key, "text-muted-foreground hover:bg-muted hover:text-foreground": currentView !== key},
+      ]}
+    >
+      <Icon name={icon} class="size-4" />
+    </button>
+  ))}
+</div>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const view = btn.dataset.view!;
+      // Set cookie (1 year, same-site, no URL param)
+      document.cookie = `blog-view=${view}; path=/; max-age=31536000; SameSite=Lax`;
+      window.location.reload();
+    });
+  });
+</script>
+
+

@@ -1,0 +1,5 @@
+export default [
+  { id: "99000000-0000-0000-0000-000000000001", serviceId: "90000000-0000-0000-0000-000000000001", authorId: "22222222-2222-2222-2222-222222222222", parentId: null, content: "Commentaire de démonstration sur le service.", status: "APPROVED", createdAt: new Date("2026-02-23T11:00:00.000Z"), updatedAt: new Date("2026-02-23T11:00:00.000Z") },
+  { id: "99000000-0000-0000-0000-000000000002", serviceId: "90000000-0000-0000-0000-000000000001", authorId: "33333333-3333-3333-3333-333333333333", parentId: "99000000-0000-0000-0000-000000000001", content: "Merci pour ce retour !", status: "APPROVED", createdAt: new Date("2026-02-23T11:05:00.000Z"), updatedAt: new Date("2026-02-23T11:05:00.000Z") },
+  { id: "99000000-0000-0000-0000-000000000003", serviceId: "90000000-0000-0000-0000-000000000003", authorId: "22222222-2222-2222-2222-222222222222", parentId: null, content: "Question sur le parcours.", status: "PENDING", createdAt: new Date("2026-02-20T11:00:00.000Z"), updatedAt: new Date("2026-02-20T11:00:00.000Z") },
+];

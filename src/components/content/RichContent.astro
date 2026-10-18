@@ -1,0 +1,29 @@
+---
+/**
+ * RichContent — safe rendering of editorial HTML content.
+ * Reusable across modules (blog, services, formations, …).
+ *
+ * Security: the HTML is re-sanitized on render (defence in depth — the server
+ * already sanitizes on write). Internal links marked with `data-internal-link`
+ * whose target is NOT in `validTargets` are flagged with `class="dead-link"`
+ * so a visible warning can be shown instead of a broken navigation.
+ */
+import { sanitizeHtml } from "@/lib/sanitize";
+import { markDeadInternalLinks } from "@/lib/content/editor-helpers";
+
+interface Props {
+  html: string;
+  /** Slugs/ids of existing internal targets for the current tenant+locale. */
+  validTargets?: string[];
+  class?: string;
+}
+
+const { html, validTargets = [], class: className = "" } = Astro.props;
+
+const validSet = new Set(validTargets);
+const safeHtml = sanitizeHtml(html);
+const rendered = validSet.size > 0 ? markDeadInternalLinks(safeHtml, validSet) : safeHtml;
+---
+
+{/* eslint-disable-next-line astro/no-set-html-directive -- content is re-sanitized here via sanitizeHtml()/DOMPurify (see src/lib/sanitize.ts) before render (defence in depth) */}
+<div class:list={["rich-content", className]} set:html={rendered} />

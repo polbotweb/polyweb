@@ -1,0 +1,181 @@
+---
+import { Icon } from "astro-icon/components";
+
+interface Props {
+  rating?: number;
+  size?: "xs" | "sm" | "md" | "lg";
+  readOnly?: boolean;
+  name?: string;
+  required?: boolean;
+  showValue?: boolean;
+}
+
+const { 
+  rating = 0, 
+  size = "md", 
+  readOnly = false, 
+  name = "rating",
+  required = false,
+  showValue = false
+} = Astro.props;
+
+const displayRating = Math.round(rating);
+const stars = [1, 2, 3, 4, 5];
+
+const sizeClasses = {
+  xs: "star-rating--xs",
+  sm: "star-rating--sm", 
+  md: "star-rating--md",
+  lg: "star-rating--lg"
+};
+---
+
+<div class:list={["star-rating", sizeClasses[size], { "star-rating--read-only": readOnly }]}>
+  {readOnly ? (
+    /* Display only */
+    <div class="star-rating__display">
+      {stars.map((n) => (
+        <span 
+          class:list={[
+            "star-rating__star",
+            { "star-rating__star--filled": n <= displayRating },
+            { "star-rating__star--empty": n > displayRating }
+          ]}
+        >
+          <Icon name="mdi:star" />
+        </span>
+      ))}
+      {showValue && displayRating > 0 && (
+        <span class="star-rating__value">{displayRating}/5</span>
+      )}
+    </div>
+  ) : (
+    /* Interactive */
+    <>
+      {[...stars].reverse().map((n) => (
+        <>
+          <input
+            type="radio"
+            id={`${name}-${n}`}
+            name={name}
+            value={n}
+            required={required}
+            class="star-rating__input"
+            checked={n === displayRating}
+          />
+          <label 
+            for={`${name}-${n}`} 
+            class="star-rating__label"
+            title={`${n} ${n > 1 ? 'stars' : 'star'}`}
+          >
+            <Icon name="mdi:star" />
+          </label>
+        </>
+      ))}
+      {showValue && displayRating > 0 && (
+        <span class="star-rating__value">{displayRating}/5</span>
+      )}
+    </>
+  )}
+</div>
+
+<style>
+  .star-rating {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  .star-rating__display {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  .star-rating__star {
+    color: var(--color-warning);
+    transition: transform 150ms ease;
+  }
+
+  .star-rating__star--filled {
+    opacity: 1;
+  }
+
+  .star-rating__star--empty {
+    opacity: 0.3;
+  }
+
+  .star-rating__value {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  /* Fieldset (interactive) */
+  .star-rating__input {
+    position: absolute;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .star-rating__label {
+    cursor: pointer;
+    color: var(--border-default, #d1d5db);
+    transition: color 150ms ease, transform 150ms ease;
+    display: inline-flex;
+  }
+
+  .star-rating__label:hover,
+  .star-rating__label:hover ~ .star-rating__label {
+    color: var(--color-warning);
+    transform: scale(1.15);
+  }
+
+  .star-rating__input:checked ~ .star-rating__label {
+    color: var(--color-warning);
+  }
+
+  .star-rating__input:focus-visible ~ .star-rating__label:first-of-type {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Sizes */
+  .star-rating--xs .star-rating__star :global(svg),
+  .star-rating--xs .star-rating__label :global(svg) {
+    width: 14px;
+    height: 14px;
+  }
+
+  .star-rating--sm .star-rating__star :global(svg),
+  .star-rating--sm .star-rating__label :global(svg) {
+    width: 18px;
+    height: 18px;
+  }
+
+  .star-rating--md .star-rating__star :global(svg),
+  .star-rating--md .star-rating__label :global(svg) {
+    width: 22px;
+    height: 22px;
+  }
+
+  .star-rating--lg .star-rating__star :global(svg),
+  .star-rating--lg .star-rating__label :global(svg) {
+    width: 28px;
+    height: 28px;
+  }
+
+  .star-rating--read-only {
+    cursor: default;
+  }
+
+  .star-rating--read-only .star-rating__star :global(svg) {
+    width: 20px;
+    height: 20px;
+  }
+</style>

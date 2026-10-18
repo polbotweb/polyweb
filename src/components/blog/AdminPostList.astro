@@ -1,0 +1,88 @@
+---
+import { Icon } from "astro-icon/components";
+import { LOCALES, LOCALE_LABELS, type Locale } from "@/core/localization";
+import type { BlogTranslations } from "@i18n/config";
+import type { BlogPostStatus } from "@/modules/blog/domain";
+import { buildBlogPostHref } from "@/modules/blog/utils";
+import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@atoms/table";
+import { Badge } from "@atoms/badge";
+import Button from "@atoms/button/Button.astro";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@atoms/pagination";
+import { DataView } from "@/core/admin";
+
+interface AdminPostRow { post: { id: string; status: BlogPostStatus; viewCount: number; seoScore: number | null; isFeatured: boolean; isSticky: boolean; publishedAt: Date | null; createdAt: Date; updatedAt: Date }; translation: { title: string; slug: string } | null; author: { id: string; name: string | null } | null; categories: { id: string; slug: string; name: string | null }[] }
+interface FilterOptions { categories: { id: string; name: string }[]; tags: { id: string; name: string }[]; authors: { id: string; name: string | null }[] }
+interface Props {
+  locale: Locale;
+  blogT: BlogTranslations;
+  rows: AdminPostRow[];
+  meta: { total: number; page: number; limit: number; totalPages: number; hasNextPage: boolean; hasPrevPage: boolean };
+  baseAdminUrl: string;
+  basePublicUrl: string;
+  canCreate: boolean;
+  canUpdate: boolean;
+  canPublish: boolean;
+  canDelete: boolean;
+  organizationId?: string | null;
+  filterOptions: FilterOptions;
+}
+const { blogT, rows, meta, baseAdminUrl, basePublicUrl, canCreate, canUpdate, canPublish, canDelete, organizationId, filterOptions, locale } = Astro.props;
+const params = new URLSearchParams(Astro.url.searchParams);
+const current = { search: params.get("search") ?? "", status: params.get("status") ?? "", categoryId: params.get("categoryId") ?? "", tagId: params.get("tagId") ?? "", authorId: params.get("authorId") ?? "", featured: params.get("featured") ?? "", sticky: params.get("sticky") ?? "", translationLocale: params.get("translationLocale") ?? locale, sortBy: params.get("sortBy") ?? "updatedAt", sortOrder: params.get("sortOrder") ?? "desc" };
+function buildPageUrl(page: number): string { const url = new URL(Astro.url.href); if (page === 1) url.searchParams.delete("page"); else url.searchParams.set("page", String(page)); return url.pathname + url.search; }
+function statusVariant(status: BlogPostStatus) { return status === "PUBLISHED" ? "success" : status === "DRAFT" ? "warning" : status === "ARCHIVED" ? "secondary" : "error"; }
+const pageTokens: Array<number | null> = [];
+for (let i = 1; i <= meta.totalPages; i += 1) { if (i === 1 || i === meta.totalPages || (i >= meta.page - 1 && i <= meta.page + 1)) pageTokens.push(i); else if (pageTokens[pageTokens.length - 1] !== null) pageTokens.push(null); }
+---
+<div class="space-y-4">
+  <div class="flex items-center justify-between gap-3 flex-wrap"><h2 class="font-heading text-lg font-semibold">{blogT.admin.posts}</h2>{canCreate && <Button size="sm" href={`${baseAdminUrl}/new`}><Icon name="mdi:plus" class="size-4" />{blogT.admin.newPost}</Button>}</div>
+  <DataView showModeSelector={false}>
+    <Fragment slot="toolbar-start">
+      <form method="get" class="grid w-full gap-3 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-5" aria-label={blogT.labels.search}>
+        <input name="search" value={current.search} placeholder={blogT.labels.search} class="h-9 rounded-md border bg-background px-3 text-sm lg:col-span-2" />
+        <select name="status" class="h-9 rounded-md border bg-background px-3 text-sm" aria-label={blogT.admin.status}><option value="">{blogT.admin.status}</option>{(["DRAFT", "PUBLISHED", "ARCHIVED", "DELETED"] as const).map((status) => <option value={status} selected={current.status === status}>{blogT.statuses[status]}</option>)}</select>
+        <select name="categoryId" class="h-9 rounded-md border bg-background px-3 text-sm" aria-label={blogT.labels.category}><option value="">{blogT.labels.categories}</option>{filterOptions.categories.map((category) => <option value={category.id} selected={current.categoryId === category.id}>{category.name}</option>)}</select>
+        <select name="authorId" class="h-9 rounded-md border bg-background px-3 text-sm" aria-label={blogT.labels.byAuthor}><option value="">{blogT.labels.byAuthor}</option>{filterOptions.authors.map((author) => <option value={author.id} selected={current.authorId === author.id}>{author.name ?? blogT.admin.sidebar.unknownAuthor}</option>)}</select>
+        <div class="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-5">
+          <select name="tagId" class="h-9 rounded-md border bg-background px-3 text-sm" aria-label={blogT.labels.tag}><option value="">{blogT.labels.tags}</option>{filterOptions.tags.map((tag) => <option value={tag.id} selected={current.tagId === tag.id}>{tag.name}</option>)}</select>
+          <select name="featured" class="h-9 rounded-md border bg-background px-3 text-sm" aria-label={blogT.labels.featured}><option value="">{blogT.labels.featured}</option><option value="true" selected={current.featured === "true"}>✓</option><option value="false" selected={current.featured === "false"}>×</option></select>
+          <select name="sticky" class="h-9 rounded-md border bg-background px-3 text-sm" aria-label={blogT.labels.sticky}><option value="">{blogT.labels.sticky}</option><option value="true" selected={current.sticky === "true"}>✓</option><option value="false" selected={current.sticky === "false"}>×</option></select>
+          <select name="translationLocale" class="h-9 rounded-md border bg-background px-3 text-sm" aria-label={blogT.admin.localeSwitcher.title}><option value="">{blogT.admin.localeSwitcher.title}</option>{LOCALES.map((loc) => <option value={loc} selected={current.translationLocale === loc}>{LOCALE_LABELS[loc]}</option>)}</select>
+          <select name="sortBy" class="h-9 rounded-md border bg-background px-3 text-sm" aria-label={blogT.admin.actions}><option value="updatedAt" selected={current.sortBy === "updatedAt"}>updatedAt</option><option value="createdAt" selected={current.sortBy === "createdAt"}>createdAt</option><option value="publishedAt" selected={current.sortBy === "publishedAt"}>{blogT.admin.fields.publishedAt}</option><option value="title" selected={current.sortBy === "title"}>{blogT.admin.fields.title}</option><option value="viewCount" selected={current.sortBy === "viewCount"}>{blogT.admin.views}</option></select>
+          <select name="sortOrder" class="h-9 rounded-md border bg-background px-3 text-sm" aria-label={blogT.admin.actions}><option value="desc" selected={current.sortOrder === "desc"}>↓</option><option value="asc" selected={current.sortOrder === "asc"}>↑</option></select>
+          <Button type="submit" size="sm">{blogT.labels.search}</Button><Button type="button" size="sm" variant="outline" href={Astro.url.pathname}>{blogT.labels.reset}</Button>
+        </div>
+      </form>
+    </Fragment>
+
+    <div slot="table" class="overflow-x-auto rounded-lg border">
+      <Table>
+        <TableHeader><TableRow><TableHead>{blogT.admin.fields.title}</TableHead><TableHead>{blogT.labels.categories}</TableHead><TableHead>{blogT.labels.byAuthor}</TableHead><TableHead>{blogT.admin.status}</TableHead><TableHead>{blogT.admin.fields.publishedAt}</TableHead><TableHead>{blogT.admin.seoScore}</TableHead><TableHead>{blogT.admin.views}</TableHead><TableHead>{blogT.admin.actions}</TableHead></TableRow></TableHeader>
+        <TableBody>
+          {rows.map((row) => { const editUrl = `${baseAdminUrl}/${row.post.id}/edit`; const publicUrl = row.translation ? buildBlogPostHref(basePublicUrl, row.translation.slug, row.categories[0]?.slug ?? null) : null; return <TableRow><TableCell><div class="min-w-48 space-y-0.5"><p class="font-medium">{row.translation?.title ?? row.post.id}</p><p class="text-xs text-muted-foreground">{row.translation?.slug ?? "—"}</p><div class="flex gap-1">{row.post.isFeatured && <Badge variant="outline" size="sm">{blogT.labels.featured}</Badge>}{row.post.isSticky && <Badge variant="outline" size="sm">{blogT.labels.sticky}</Badge>}</div></div></TableCell><TableCell><div class="flex min-w-32 flex-wrap gap-1">{row.categories.slice(0, 3).map((category) => <Badge variant="outline" size="sm">{category.name ?? category.slug}</Badge>)}</div></TableCell><TableCell class="whitespace-nowrap">{row.author?.name ?? blogT.admin.sidebar.unknownAuthor}</TableCell><TableCell><Badge variant={statusVariant(row.post.status)} size="sm">{blogT.statuses[row.post.status]}</Badge></TableCell><TableCell class="whitespace-nowrap text-sm">{row.post.publishedAt?.toLocaleDateString(locale) ?? "—"}</TableCell><TableCell>{row.post.seoScore ?? "—"}</TableCell><TableCell>{row.post.viewCount}</TableCell><TableCell><div class="flex min-w-52 flex-wrap items-center gap-1"><Button size="icon-sm" variant="ghost" href={editUrl} aria-label={blogT.admin.editPost}><Icon name="mdi:pencil" class="size-4" /></Button>{publicUrl && <Button size="icon-sm" variant="ghost" href={publicUrl} aria-label={blogT.admin.preview}><Icon name="mdi:open-in-new" class="size-4" /></Button>}{row.post.status === "DRAFT" && canPublish && <Button size="icon-sm" variant="ghost" class="publish-btn text-success" data-post-id={row.post.id} aria-label={blogT.admin.publish}><Icon name="mdi:publish" class="size-4" /></Button>}{row.post.status === "PUBLISHED" && canPublish && <Button size="icon-sm" variant="ghost" class="unpublish-btn" data-post-id={row.post.id} aria-label={blogT.admin.saveDraft}><Icon name="mdi:publish-off" class="size-4" /></Button>}{(row.post.status === "DRAFT" || row.post.status === "PUBLISHED") && canUpdate && <Button size="icon-sm" variant="ghost" class="archive-btn" data-post-id={row.post.id} aria-label={blogT.admin.archive}><Icon name="mdi:archive" class="size-4" /></Button>}{(row.post.status === "ARCHIVED" || row.post.status === "DELETED") && canUpdate && <Button size="icon-sm" variant="ghost" class="restore-btn" data-post-id={row.post.id} aria-label={blogT.admin.saveDraft}><Icon name="mdi:restore" class="size-4" /></Button>}{canCreate && <Button size="icon-sm" variant="ghost" class="duplicate-btn" data-post-id={row.post.id} aria-label={blogT.admin.newPost}><Icon name="mdi:content-copy" class="size-4" /></Button>}{canDelete && row.post.status !== "DELETED" && <Button size="icon-sm" variant="ghost" class="delete-btn text-error" data-post-id={row.post.id} aria-label={blogT.admin.delete}><Icon name="mdi:delete" class="size-4" /></Button>}</div></TableCell></TableRow>; })}
+        </TableBody>
+      </Table>
+    </div>
+
+    <div slot="cards" class="grid gap-3">
+      {rows.map((row) => {
+        const editUrl = `${baseAdminUrl}/${row.post.id}/edit`;
+        const publicUrl = row.translation ? buildBlogPostHref(basePublicUrl, row.translation.slug, row.categories[0]?.slug ?? null) : null;
+        return <article class="rounded-lg border p-4">
+          <div class="flex items-start justify-between gap-3"><div class="min-w-0"><h3 class="font-medium">{row.translation?.title ?? row.post.id}</h3><p class="truncate text-xs text-muted-foreground">{row.translation?.slug ?? "—"}</p></div><Badge variant={statusVariant(row.post.status)} size="sm">{blogT.statuses[row.post.status]}</Badge></div>
+          <div class="mt-3 flex flex-wrap gap-1">{row.categories.map((category) => <Badge variant="outline" size="sm">{category.name ?? category.slug}</Badge>)}{row.post.isFeatured && <Badge variant="outline" size="sm">{blogT.labels.featured}</Badge>}{row.post.isSticky && <Badge variant="outline" size="sm">{blogT.labels.sticky}</Badge>}</div>
+          <dl class="mt-3 grid grid-cols-2 gap-2 text-sm"><div><dt class="text-muted-foreground">{blogT.labels.byAuthor}</dt><dd>{row.author?.name ?? blogT.admin.sidebar.unknownAuthor}</dd></div><div><dt class="text-muted-foreground">{blogT.admin.views}</dt><dd>{row.post.viewCount}</dd></div><div><dt class="text-muted-foreground">{blogT.admin.seoScore}</dt><dd>{row.post.seoScore ?? "—"}</dd></div><div><dt class="text-muted-foreground">{blogT.admin.fields.publishedAt}</dt><dd>{row.post.publishedAt?.toLocaleDateString(locale) ?? "—"}</dd></div></dl>
+          <div class="mt-4 flex flex-wrap gap-1"><Button size="sm" variant="outline" href={editUrl}>{blogT.admin.editPost}</Button>{publicUrl && <Button size="sm" variant="ghost" href={publicUrl}>{blogT.admin.preview}</Button>}{row.post.status === "DRAFT" && canPublish && <Button size="sm" variant="ghost" class="publish-btn" data-post-id={row.post.id}>{blogT.admin.publish}</Button>}{row.post.status === "PUBLISHED" && canPublish && <Button size="sm" variant="ghost" class="unpublish-btn" data-post-id={row.post.id}>{blogT.admin.saveDraft}</Button>}{(row.post.status === "DRAFT" || row.post.status === "PUBLISHED") && canUpdate && <Button size="sm" variant="ghost" class="archive-btn" data-post-id={row.post.id}>{blogT.admin.archive}</Button>}{(row.post.status === "ARCHIVED" || row.post.status === "DELETED") && canUpdate && <Button size="sm" variant="ghost" class="restore-btn" data-post-id={row.post.id}>{blogT.admin.saveDraft}</Button>}{canCreate && <Button size="sm" variant="ghost" class="duplicate-btn" data-post-id={row.post.id}>{blogT.admin.newPost}</Button>}{canDelete && row.post.status !== "DELETED" && <Button size="sm" variant="ghost" class="delete-btn text-error" data-post-id={row.post.id}>{blogT.admin.delete}</Button>}</div>
+        </article>;
+      })}
+    </div>
+  </DataView>
+  {meta.totalPages > 1 && <Pagination class="mt-6"><PaginationContent>{meta.hasPrevPage && <PaginationItem><PaginationPrevious href={buildPageUrl(meta.page - 1)} /></PaginationItem>}{pageTokens.map((token) => token === null ? <PaginationItem><span class="px-2 text-muted-foreground">…</span></PaginationItem> : <PaginationItem><PaginationLink href={buildPageUrl(token)} isActive={token === meta.page} aria-current={token === meta.page ? "page" : undefined}>{token}</PaginationLink></PaginationItem>)}{meta.hasNextPage && <PaginationItem><PaginationNext href={buildPageUrl(meta.page + 1)} /></PaginationItem>}</PaginationContent></Pagination>}
+  <input type="hidden" id="admin-post-list-data" value={organizationId ?? ""} data-organization-id={organizationId ?? ""} data-t-error={blogT.admin.feedback.genericError} data-t-confirm-delete={blogT.admin.feedback.confirmDeletePost} />
+</div>
+<script>
+  import { actions } from "astro:actions";
+  import { toast } from "@atoms/toast";
+  function init() { const dataEl = document.getElementById("admin-post-list-data") as HTMLInputElement | null; const orgId = dataEl?.dataset.organizationId || undefined; const errorText = dataEl?.dataset.tError ?? ""; const bind = <T extends HTMLElement>(selector: string, handler: (element: T) => void) => document.querySelectorAll<T>(selector).forEach((element) => { if (element.dataset.blogBound === "true") return; element.dataset.blogBound = "true"; handler(element); }); const run = async (btn: HTMLButtonElement, operation: (id: string) => Promise<{ error?: { message?: string } }>) => { const id = btn.dataset.postId; if (!id) return; btn.disabled = true; try { const { error } = await operation(id); if (error) toast.error(error.message ?? errorText); else window.location.reload(); } finally { btn.disabled = false; } }; bind<HTMLButtonElement>(".publish-btn", (btn) => btn.addEventListener("click", () => void run(btn, (id) => actions.publishBlogPost({ id, organizationId: orgId })))); bind<HTMLButtonElement>(".unpublish-btn", (btn) => btn.addEventListener("click", () => void run(btn, (id) => actions.unpublishBlogPost({ id, organizationId: orgId })))); bind<HTMLButtonElement>(".archive-btn", (btn) => btn.addEventListener("click", () => void run(btn, (id) => actions.archiveBlogPost({ id, organizationId: orgId })))); bind<HTMLButtonElement>(".restore-btn", (btn) => btn.addEventListener("click", () => void run(btn, (id) => actions.restoreBlogPost({ id, organizationId: orgId })))); bind<HTMLButtonElement>(".duplicate-btn", (btn) => btn.addEventListener("click", () => void run(btn, (id) => actions.duplicateBlogPost({ id, organizationId: orgId })))); bind<HTMLButtonElement>(".delete-btn", (btn) => btn.addEventListener("click", () => { if (!confirm(dataEl?.dataset.tConfirmDelete ?? "")) return; void run(btn, (id) => actions.deleteBlogPost({ id, organizationId: orgId })); })); }
+  init(); document.addEventListener("astro:after-swap", init);
+</script>

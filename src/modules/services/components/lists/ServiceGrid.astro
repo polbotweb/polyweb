@@ -1,0 +1,8 @@
+---
+import ServiceCard from "../cards/ServiceCard.astro";
+import type { ServiceListItem } from "@/modules/services/domain";
+const { items, locale = "fr", organizationSlug = null } = Astro.props as { items: ServiceListItem[]; locale?: string; organizationSlug?: string | null };
+---
+<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" data-service-grid>
+  {items.map((item) => <ServiceCard item={item} locale={locale} organizationSlug={organizationSlug} />)}
+</div>

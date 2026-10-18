@@ -1,0 +1,28 @@
+---
+import { Card, CardContent } from "@atoms/card";
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<section class="space-y-6" data-admin-resource-shell>
+  <header class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div class="min-w-0">
+      <h1 class="font-heading text-2xl font-semibold">{title}</h1>
+      {description ? <p class="mt-1 text-sm text-muted-foreground">{description}</p> : null}
+    </div>
+    <div class="flex shrink-0 items-center gap-2" data-admin-resource-actions>
+      <slot name="actions" />
+    </div>
+  </header>
+
+  <Card>
+    <CardContent class="p-0">
+      <slot />
+    </CardContent>
+  </Card>
+</section>

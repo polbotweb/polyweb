@@ -1,0 +1,56 @@
+---
+import { auth } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth-guards';
+import { fetchOrgData, getUserOrgRole, fetchOrgInvitations, type Invitation } from '@/lib/auth-data';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import AuthLayout from '@organisms/AuthLayout/AuthLayout.astro';
+import OrgSidebar from '@organisms/OrgSidebar/OrgSidebar.astro';
+import OrgMembersPage from '@pages/org/OrgMembersPage.astro';
+
+export const prerender = false;
+
+const result = await requireAuth(Astro);
+if ('redirect' in result) return result.redirect;
+const { user, locale, authT } = result;
+
+const orgSlug = Astro.params.slug;
+if (!orgSlug) return Astro.redirect(`/${locale}/auth/${authT.routes['dashboard']}`);
+
+// Handle ?invitation= auto-accept BEFORE membership check (invitees are not yet members)
+const invitationId = Astro.url.searchParams.get('invitation');
+if (invitationId && /^[\w-]{1,64}$/.test(invitationId)) {
+  try {
+    await auth.api.acceptInvitation({
+      body: { invitationId },
+      headers: Astro.request.headers,
+    });
+  } catch { /* invitation may be expired or already accepted */ }
+  return Astro.redirect(`/${locale}/organizations/${orgSlug}/members`);
+}
+
+const orgData = await fetchOrgData(Astro.request.headers, orgSlug);
+if (!orgData) return Astro.redirect(`/${locale}/auth/${authT.routes['dashboard']}`);
+
+const { org, members } = orgData;
+const activeOrgRole = getUserOrgRole(members, user.id);
+
+let invitations: Invitation[] = [];
+if (activeOrgRole === 'admin' || activeOrgRole === 'owner') {
+  invitations = await fetchOrgInvitations(Astro.request.headers, org.id);
+}
+---
+
+<BaseLayout title={authT.meta.organizations.title} description={authT.meta.organizations.description}>
+  <AuthLayout title={org.name}>
+    <OrgSidebar slot="sidebar" t={authT} locale={locale} org={org} activeItem="members" orgRole={activeOrgRole} />
+    <OrgMembersPage
+      t={authT}
+      locale={locale}
+      user={user}
+      activeOrg={org}
+      activeOrgMembers={members}
+      activeOrgInvitations={invitations}
+      activeOrgRole={activeOrgRole}
+    />
+  </AuthLayout>
+</BaseLayout>

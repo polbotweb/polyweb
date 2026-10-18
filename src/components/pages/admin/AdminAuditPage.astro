@@ -1,0 +1,128 @@
+---
+import type { AuthTranslations, Locale } from '@i18n/config';
+import type { AuditLogRow } from '@/lib/auth-data';
+import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@atoms/table';
+import { Card, CardContent } from '@atoms/card';
+import Badge from '@atoms/badge/Badge.astro';
+import { NativeSelect, NativeSelectOption } from '@atoms/native-select';
+import { DataView } from '@molecules/DataView';
+import AdminPagination from '@molecules/AdminPagination/AdminPagination.astro';
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  adminAuditLogs: AuditLogRow[];
+  currentPage: number;
+  totalPages: number;
+  baseUrl: URL;
+}
+
+const { t, locale, adminAuditLogs, currentPage, totalPages, baseUrl } = Astro.props;
+const ta = t.admin;
+
+function formatDate(d: Date | string | null) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString(locale, {
+    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+}
+
+const uniqueActions = [...new Set(adminAuditLogs.map((l: any) => l.action))].sort();
+---
+
+<DataView>
+  <NativeSelect slot="toolbar-start" id="audit-action-filter" class="max-w-xs text-sm">
+    <NativeSelectOption value="">{ta.auditLog.allActions}</NativeSelectOption>
+    {uniqueActions.map((action: string) => (
+      <NativeSelectOption value={action}>{action}</NativeSelectOption>
+    ))}
+  </NativeSelect>
+
+  <!-- ─── Table view ─── -->
+  <div slot="table" class="rounded-md border overflow-x-auto">
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>{ta.auditLog.columns.date}</TableHead>
+          <TableHead>{ta.auditLog.columns.user}</TableHead>
+          <TableHead>{ta.auditLog.columns.action}</TableHead>
+          <TableHead>{ta.auditLog.columns.resource}</TableHead>
+          <TableHead>{ta.auditLog.columns.ip}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody id="audit-log-tbody">
+        {adminAuditLogs.length === 0 ? (
+          <TableRow>
+            <TableCell colspan={5} class="text-center text-muted-foreground py-8">
+              {ta.auditLog.noResults}
+            </TableCell>
+          </TableRow>
+        ) : (
+          adminAuditLogs.map((log: any) => (
+            <TableRow class="audit-log-row" data-action={log.action}>
+              <TableCell class="text-sm text-muted-foreground whitespace-nowrap">
+                {formatDate(log.createdAt)}
+              </TableCell>
+              <TableCell class="text-sm">{log.userName ?? '—'}</TableCell>
+              <TableCell>
+                <Badge variant="outline" size="sm">{log.action}</Badge>
+              </TableCell>
+              <TableCell class="text-sm">
+                {log.resource}{log.resourceId ? ` #${log.resourceId.slice(0, 8)}` : ''}
+              </TableCell>
+              <TableCell class="text-sm text-muted-foreground">{log.ipAddress ?? '—'}</TableCell>
+            </TableRow>
+          ))
+        )}
+      </TableBody>
+    </Table>
+  </div>
+
+  <!-- ─── Cards view (mobile) ─── -->
+  <div slot="cards" class="grid gap-3" id="audit-log-cards">
+    {adminAuditLogs.length === 0 ? (
+      <p class="text-center text-muted-foreground py-8">{ta.auditLog.noResults}</p>
+    ) : (
+      adminAuditLogs.map((log: any) => (
+        <Card class="audit-log-card" data-action={log.action}>
+          <CardContent class="p-4 space-y-1">
+            <div class="flex items-center justify-between">
+              <Badge variant="outline" size="sm">{log.action}</Badge>
+              <span class="text-xs text-muted-foreground">{formatDate(log.createdAt)}</span>
+            </div>
+            <p class="text-sm">
+              <span class="text-muted-foreground">{ta.auditLog.columns.user}:</span> {log.userName ?? '—'}
+            </p>
+            <p class="text-sm">
+              <span class="text-muted-foreground">{ta.auditLog.columns.resource}:</span> {log.resource}{log.resourceId ? ` #${log.resourceId.slice(0, 8)}` : ''}
+            </p>
+            <p class="text-xs text-muted-foreground">{ta.auditLog.columns.ip}: {log.ipAddress ?? '—'}</p>
+          </CardContent>
+        </Card>
+      ))
+    )}
+  </div>
+</DataView>
+
+<AdminPagination currentPage={currentPage} totalPages={totalPages} baseUrl={baseUrl} />
+
+<script>
+  function init() {
+    const actionFilter = document.getElementById('audit-action-filter') as HTMLSelectElement | null;
+    const nativeSelect = actionFilter?.closest('[data-slot="native-select-wrapper"]')?.querySelector('select') ?? actionFilter;
+    nativeSelect?.addEventListener('change', () => {
+      const val = (nativeSelect as HTMLSelectElement).value;
+      // Filter table rows
+      document.querySelectorAll<HTMLElement>('.audit-log-row').forEach((row) => {
+        row.style.display = !val || row.dataset.action === val ? '' : 'none';
+      });
+      // Filter cards
+      document.querySelectorAll<HTMLElement>('.audit-log-card').forEach((card) => {
+        card.style.display = !val || card.dataset.action === val ? '' : 'none';
+      });
+    });
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

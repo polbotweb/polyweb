@@ -1,0 +1,203 @@
+---
+import { Icon } from "astro-icon/components";
+import type { Locale } from "@i18n/config";
+import type { BlogTranslations } from "@i18n/config";
+import type { BlogReviewWithAuthor } from "@/lib/blog/types";
+import type { AppUser } from "@/lib/types";
+import { Card, CardContent, CardHeader } from "@atoms/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@atoms/avatar";
+import { Badge } from "@atoms/badge";
+import { Progress } from "@atoms/progress";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@atoms/tabs";
+import StarRating from "./comments/StarRating.astro";
+import ReviewForm from "./ReviewForm.astro";
+
+interface Props {
+  locale: Locale;
+  blogT: BlogTranslations;
+  postId: string;
+  reviews: BlogReviewWithAuthor[];
+  stats: { total: number; average: number; distribution: { rating: number; count: number }[] };
+  user: AppUser | null;
+  allowReviews: boolean;
+}
+
+const { locale, blogT, postId, reviews, stats, user, allowReviews } = Astro.props;
+const hasReviews = reviews.length > 0;
+const defaultTab = hasReviews ? "list" : "write";
+
+function formatDate(date: Date): string {
+  return new Date(date).toLocaleDateString(locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+---
+
+<section class="flex flex-col gap-6" id="reviews-section">
+  <h2 class="flex items-center gap-2 font-heading text-lg font-semibold">
+    <Icon name="mdi:star-outline" class="size-5 text-muted-foreground" />
+    {blogT.labels.reviews} ({reviews.length})
+  </h2>
+
+  {!allowReviews ? (
+    <Card>
+      <CardContent class="py-8 text-center text-sm text-muted-foreground">
+        {blogT.errors.reviewDisabled}
+      </CardContent>
+    </Card>
+  ) : (
+    <>
+      {/* Stats — always visible summary */}
+      {stats.total > 0 && (
+        <Card>
+          <CardContent class="py-6">
+            <div class="grid items-center gap-6 sm:grid-cols-2">
+              <div class="text-center">
+                <p class="font-heading text-5xl font-bold">{stats.average}</p>
+                <div class="mt-2 inline-flex text-warning">
+                  <StarRating rating={stats.average} size="sm" readOnly showValue={false} />
+                </div>
+                <p class="mt-1 text-sm text-muted-foreground">{stats.total} reviews</p>
+              </div>
+              <div class="space-y-2">
+                {[5, 4, 3, 2, 1].map((star) => {
+                  const row = stats.distribution.find((d) => d.rating === star);
+                  const count = row ? Number(row.count) : 0;
+                  const percent = stats.total > 0 ? (count / stats.total) * 100 : 0;
+                  return (
+                    <div class="flex items-center gap-2 text-sm">
+                      <span class="w-3">{star}</span>
+                      <Icon name="mdi:star" class="size-3 text-warning" />
+                      <Progress value={percent} class="h-2 flex-1" />
+                      <span class="w-8 text-right text-xs text-muted-foreground">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Tabs defaultValue={defaultTab}>
+        <TabsList>
+          <TabsTrigger value="list" defaultActive={defaultTab === "list"}>
+            <Icon name="mdi:message-star-outline" class="size-4" />
+            {blogT.labels.reviews} ({reviews.length})
+          </TabsTrigger>
+          <TabsTrigger value="write" defaultActive={defaultTab === "write"}>
+            <Icon name="mdi:pencil-outline" class="size-4" />
+            {blogT.labels.writeReview}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="list" defaultActive={defaultTab === "list"}>
+          {hasReviews ? (
+            <div class="flex flex-col gap-4">
+              {reviews.map((review) => {
+                const authorName = review.author?.name ?? "Anonymous";
+                const initials = authorName.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+                return (
+                  <Card data-review-id={review.id}>
+                    <CardHeader>
+                      <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                          <Avatar size="sm">
+                            {review.author?.image && <AvatarImage src={review.author.image} alt={authorName} />}
+                            <AvatarFallback>{initials}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p class="text-sm font-medium">{authorName}</p>
+                            <p class="text-xs text-muted-foreground">{formatDate(review.createdAt)}</p>
+                          </div>
+                        </div>
+                        <div class="text-right">
+                          <div class="inline-flex text-warning">
+                            <StarRating rating={review.rating} size="sm" readOnly showValue={false} />
+                          </div>
+                          {review.isRecommended !== null && (
+                            <Badge variant={review.isRecommended ? "success" : "error"} size="sm" class="mt-1">
+                              {review.isRecommended ? "Recommended" : "Not recommended"}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent class="space-y-2">
+                      {review.title && <p class="font-medium">{review.title}</p>}
+                      <p class="text-sm text-muted-foreground">{review.content}</p>
+                      {user && (
+                        <div class="flex items-center gap-2 pt-2">
+                          <button
+                            type="button"
+                            class="review-helpful-btn inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-muted"
+                            data-review-id={review.id}
+                            data-value="true"
+                          >
+                            <Icon name="mdi:thumb-up" class="size-3" />
+                            Helpful
+                          </button>
+                          <button
+                            type="button"
+                            class="review-helpful-btn inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-muted"
+                            data-review-id={review.id}
+                            data-value="false"
+                          >
+                            <Icon name="mdi:thumb-down" class="size-3" />
+                            Not helpful
+                          </button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card>
+              <CardContent class="py-8 text-center text-sm text-muted-foreground">
+                {blogT.labels.noReviews}
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="write" defaultActive={defaultTab === "write"}>
+          <ReviewForm
+            locale={locale}
+            blogT={blogT}
+            postId={postId}
+            user={user}
+          />
+        </TabsContent>
+      </Tabs>
+    </>
+  )}
+</section>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { toast } from '@atoms/toast';
+
+  function init() {
+    document.querySelectorAll<HTMLButtonElement>('.review-helpful-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const reviewId = btn.dataset.reviewId;
+        const isHelpful = btn.dataset.value === 'true';
+        if (!reviewId) return;
+
+        const { error } = await actions.voteBlogReviewHelpful({ reviewId, isHelpful });
+        if (error) {
+          toast.error(error.message ?? 'Error');
+        } else {
+          toast.success('Vote recorded');
+        }
+      });
+    });
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

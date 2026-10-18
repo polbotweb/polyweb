@@ -1,0 +1,13 @@
+---
+interface Props {
+  resourceId?: string;
+}
+const { resourceId } = Astro.props;
+---
+
+<section class="space-y-4" data-admin-resource-list={resourceId}>
+  {Astro.slots.has("header") && <div class="flex flex-wrap items-center justify-between gap-3"><slot name="header" /></div>}
+  {Astro.slots.has("filters") && <div><slot name="filters" /></div>}
+  <div><slot name="content" /></div>
+  {Astro.slots.has("pagination") && <div><slot name="pagination" /></div>}
+</section>

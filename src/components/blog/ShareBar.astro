@@ -1,0 +1,84 @@
+---
+import { Icon } from "astro-icon/components";
+import type { BlogTranslations } from "@i18n/config";
+import { Button } from "@atoms/button";
+
+interface Props {
+  blogT: BlogTranslations;
+  url: string;
+  title: string;
+}
+
+const { blogT, url, title } = Astro.props;
+const encodedUrl = encodeURIComponent(url);
+const encodedTitle = encodeURIComponent(title);
+---
+
+<div class="flex flex-wrap items-center gap-2" data-share-bar data-t-copied={blogT.labels.linkCopied} data-t-copy-error={blogT.labels.copyLinkError}>
+  <span class="me-2 text-sm font-medium text-muted-foreground">{blogT.labels.share}</span>
+  <Button
+    type="button"
+    variant="outline"
+    size="icon-sm"
+    href={`https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label={blogT.labels.shareOnX}
+  >
+    <Icon name="mdi:twitter" class="size-4" />
+  </Button>
+  <Button
+    type="button"
+    variant="outline"
+    size="icon-sm"
+    href={`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label={blogT.labels.shareOnFacebook}
+  >
+    <Icon name="mdi:facebook" class="size-4" />
+  </Button>
+  <Button
+    type="button"
+    variant="outline"
+    size="icon-sm"
+    href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label={blogT.labels.shareOnLinkedIn}
+  >
+    <Icon name="mdi:linkedin" class="size-4" />
+  </Button>
+  <Button
+    type="button"
+    variant="outline"
+    size="icon-sm"
+    id="copy-link-btn"
+    aria-label={blogT.labels.copyLink}
+  >
+    <Icon name="mdi:link" class="size-4" />
+  </Button>
+</div>
+
+<script>
+  import { toast } from '@atoms/toast';
+
+  function init() {
+    const btn = document.getElementById('copy-link-btn');
+    const bar = btn?.closest('[data-share-bar]') as HTMLElement | null;
+    const copiedText = bar?.dataset.tCopied ?? 'Link copied';
+    const copyErrorText = bar?.dataset.tCopyError ?? 'Could not copy link';
+
+    btn?.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success(copiedText);
+      } catch {
+        toast.error(copyErrorText);
+      }
+    });
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

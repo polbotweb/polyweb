@@ -1,0 +1,139 @@
+---
+import type { AuthTranslations, Locale } from '@i18n/config';
+import type { AppUser } from '@/lib/types';
+import { getAuthUrl } from '@i18n/utils';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@atoms/card';
+import Separator from '@atoms/separator/Separator.astro';
+import Spinner from '@atoms/spinner/Spinner.astro';
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  user: AppUser | null;
+}
+
+const { t, locale } = Astro.props;
+const signInUrl = getAuthUrl(locale, 'sign-in', t);
+const dashboardUrl = getAuthUrl(locale, 'dashboard', t);
+---
+
+<section class="flex min-h-[calc(100vh-8rem)] items-center justify-center px-4 py-12">
+  <Card class="w-full max-w-md">
+    <CardHeader class="text-center">
+      <CardTitle class="text-2xl">{t.verifyEmail.title}</CardTitle>
+      <CardDescription>{t.verifyEmail.description}</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <div id="verify-email-checking" class="flex flex-col items-center gap-3 py-6"
+        data-errors={JSON.stringify(t.errors)}
+        data-success-title={t.verifyEmail.successTitle}
+        data-success-description={t.verifyEmail.successDescription}
+        data-error-title={t.verifyEmail.errorTitle}
+        data-error-description={t.verifyEmail.errorDescription}
+        data-resend-label={t.verifyEmail.resend}
+        data-resend-success={t.verifyEmail.resendSuccess}
+        data-sign-in-url={signInUrl}
+        data-dashboard-url={dashboardUrl}
+      >
+        <Spinner class="size-8" />
+        <p class="text-muted-foreground text-sm">{t.verifyEmail.checking}</p>
+      </div>
+
+      <div id="verify-email-success" class="hidden text-center py-4">
+        <div class="text-success mb-2 text-lg font-semibold" id="success-title"></div>
+        <p class="text-muted-foreground text-sm mb-4" id="success-description"></p>
+        <a id="success-link" href={dashboardUrl} class="text-primary-deep hover:underline font-medium">{t.verifyEmail.goToSignIn}</a>
+      </div>
+
+      <div id="verify-email-error" class="hidden text-center py-4">
+        <div class="text-destructive mb-2 text-lg font-semibold" id="error-title"></div>
+        <p class="text-muted-foreground text-sm mb-4" id="error-description"></p>
+        <button id="resend-btn" class="text-primary-deep hover:underline font-medium cursor-pointer">{t.verifyEmail.resend}</button>
+      </div>
+    </CardContent>
+    <CardFooter class="flex-col gap-4">
+      <Separator />
+      <p class="text-muted-foreground text-sm">
+        <a href={signInUrl} class="text-primary-deep hover:underline font-medium">{t.verifyEmail.goToSignIn}</a>
+      </p>
+    </CardFooter>
+  </Card>
+</section>
+
+<script>
+  import { authClient } from '@lib/auth-client';
+  import { toast } from '@atoms/toast';
+
+  async function init() {
+    const checkingEl = document.getElementById('verify-email-checking');
+    if (!checkingEl || checkingEl.dataset.authInit === 'true') return;
+    checkingEl.dataset.authInit = 'true';
+
+    const errors: Record<string, string> = JSON.parse(checkingEl.dataset.errors!);
+    const successTitle = checkingEl.dataset.successTitle!;
+    const successDescription = checkingEl.dataset.successDescription!;
+    const errorTitle = checkingEl.dataset.errorTitle!;
+    const errorDescription = checkingEl.dataset.errorDescription!;
+    const resendLabel = checkingEl.dataset.resendLabel!;
+    const dashboardUrl = checkingEl.dataset.dashboardUrl!;
+
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+
+    function showSuccess() {
+      checkingEl!.classList.add('hidden');
+      const el = document.getElementById('verify-email-success')!;
+      document.getElementById('success-title')!.textContent = successTitle;
+      document.getElementById('success-description')!.textContent = successDescription;
+      el.classList.remove('hidden');
+      // Auto-redirect to dashboard after 2s (autoSignInAfterVerification is enabled)
+      setTimeout(() => window.location.href = dashboardUrl, 2000);
+    }
+
+    function showError() {
+      checkingEl!.classList.add('hidden');
+      const el = document.getElementById('verify-email-error')!;
+      document.getElementById('error-title')!.textContent = errorTitle;
+      document.getElementById('error-description')!.textContent = errorDescription;
+      el.classList.remove('hidden');
+    }
+
+    if (!token) {
+      showError();
+      return;
+    }
+
+    try {
+      const { error } = await authClient.verifyEmail({ query: { token } });
+      if (error) {
+        showError();
+      } else {
+        showSuccess();
+      }
+    } catch {
+      showError();
+    }
+
+    // Resend button handler
+    const resendBtn = document.getElementById('resend-btn');
+    if (resendBtn) {
+      resendBtn.addEventListener('click', async () => {
+        // We need the email — try to extract from token or ask user to go to sign-in
+        // Since we don't have the email in the URL, show a toast with instructions
+        try {
+          // The user must be known for resend to work — prompt them to sign in again
+          toast.info(resendLabel + ' — ' + errors.UNKNOWN || '');
+        } catch {
+          toast.error(errors.UNKNOWN || '');
+        }
+      });
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+  document.addEventListener('astro:after-swap', init);
+</script>

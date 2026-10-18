@@ -1,0 +1,41 @@
+# ── Docker ignore — keep image lean ──────────────────────────────────
+node_modules/
+dist/
+.astro/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+
+# Tests & reports
+tests/
+test-results/
+tests-results/
+playwright-report/
+coverage/
+.lighthouseci/
+.a11y-cookies.json
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Environment (secrets must be passed at runtime, never baked in)
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs (generated at runtime)
+logs/
+
+# Uploads (mounted as volume)
+public/uploads/*
+!public/uploads/.gitkeep

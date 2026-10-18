@@ -1,0 +1,880 @@
+---
+/**
+ * AdminSitePage — Tabbed admin for site settings, social links, contact info & opening hours.
+ * Uses Astro Actions for mutations, server-rendered forms with client JS.
+ */
+import type { AuthTranslations, Locale } from '@i18n/config';
+import { LOCALES, LOCALE_LABELS } from '@i18n/config';
+import type {
+  siteSettings,
+  socialLinks,
+  contactInfo,
+  openingHours,
+} from '@database/schemas';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@atoms/tabs';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@atoms/card';
+import { Input } from '@atoms/input';
+import { Label } from '@atoms/label';
+import { Textarea } from '@atoms/textarea';
+import { Switch } from '@atoms/switch';
+import Button from '@atoms/button/Button.astro';
+import { safeUrl } from '@lib/sanitize';
+
+type SiteRow = typeof siteSettings.$inferSelect;
+type SocialRow = typeof socialLinks.$inferSelect;
+type ContactRow = typeof contactInfo.$inferSelect;
+type HoursRow = typeof openingHours.$inferSelect;
+
+const SOCIAL_PLATFORMS = [
+  { key: 'facebook',  label: 'Facebook',  icon: 'brand-facebook',  urlHint: 'https://facebook.com/' },
+  { key: 'x',         label: 'X (Twitter)', icon: 'brand-x',       urlHint: 'https://x.com/' },
+  { key: 'instagram', label: 'Instagram', icon: 'brand-instagram', urlHint: 'https://instagram.com/' },
+  { key: 'linkedin',  label: 'LinkedIn',  icon: 'brand-linkedin',  urlHint: 'https://linkedin.com/in/' },
+  { key: 'youtube',   label: 'YouTube',   icon: 'brand-youtube',   urlHint: 'https://youtube.com/@' },
+  { key: 'tiktok',    label: 'TikTok',    icon: 'brand-tiktok',    urlHint: 'https://tiktok.com/@' },
+  { key: 'github',    label: 'GitHub',    icon: 'brand-github',    urlHint: 'https://github.com/' },
+  { key: 'pinterest', label: 'Pinterest', icon: 'brand-pinterest', urlHint: 'https://pinterest.com/' },
+  { key: 'snapchat',  label: 'Snapchat',  icon: 'brand-snapchat',  urlHint: 'https://snapchat.com/add/' },
+  { key: 'whatsapp',  label: 'WhatsApp',  icon: 'brand-whatsapp',  urlHint: 'https://wa.me/' },
+  { key: 'telegram',  label: 'Telegram',  icon: 'brand-telegram',  urlHint: 'https://t.me/' },
+  { key: 'discord',   label: 'Discord',   icon: 'brand-discord',   urlHint: 'https://discord.gg/' },
+  { key: 'reddit',    label: 'Reddit',    icon: 'brand-reddit',    urlHint: 'https://reddit.com/r/' },
+  { key: 'twitch',    label: 'Twitch',    icon: 'brand-twitch',    urlHint: 'https://twitch.tv/' },
+  { key: 'threads',   label: 'Threads',   icon: 'brand-threads',   urlHint: 'https://threads.net/@' },
+  { key: 'bluesky',   label: 'Bluesky',   icon: 'brand-bluesky',   urlHint: 'https://bsky.app/profile/' },
+] as const;
+
+const platformKeys = new Set<string>(SOCIAL_PLATFORMS.map((p) => p.key));
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  allSettings: Record<Locale, SiteRow | null>;
+  socialLinks: SocialRow[];
+  contactInfo: ContactRow | null;
+  openingHours: HoursRow[];
+}
+
+const { t, locale, allSettings, socialLinks: socials, contactInfo: contact, openingHours: hours } = Astro.props;
+const cms = t.admin.cms.site;
+---
+
+<div
+  id="cms-site-data"
+  data-locale={locale}
+  data-contact-id={contact?.id ?? ''}
+  data-t-saved={cms.saved}
+  data-t-error={t.admin.cms.common.error}
+  data-t-select-platform={cms.selectPlatform}
+  data-t-other-platform={cms.otherPlatform}
+  data-t-custom-platform={cms.customPlatformName}
+  data-t-url={cms.url}
+  data-t-label={cms.label}
+  data-t-save={cms.save}
+  data-t-delete={t.admin.cms.common.delete}
+  data-t-platform={cms.platform}
+  data-platforms={JSON.stringify(SOCIAL_PLATFORMS)}
+>
+  <Tabs defaultValue="settings" class="w-full">
+    <TabsList>
+      <TabsTrigger value="settings">{cms.tabSettings}</TabsTrigger>
+      <TabsTrigger value="social">{cms.tabSocial}</TabsTrigger>
+      <TabsTrigger value="contact">{cms.tabContact}</TabsTrigger>
+      <TabsTrigger value="hours">{cms.tabHours}</TabsTrigger>
+      <TabsTrigger value="header">{cms.tabHeader}</TabsTrigger>
+      <TabsTrigger value="footer">{cms.tabFooter}</TabsTrigger>
+    </TabsList>
+
+    <!-- ─── General Settings (per locale) ─── -->
+    <TabsContent value="settings">
+      <Card>
+        <CardHeader>
+          <CardTitle>{cms.tabSettings}</CardTitle>
+          <CardDescription>{cms.description}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <!-- Locale selector -->
+          <div class="flex gap-1 mb-6 border-b pb-3" id="locale-tabs">
+            {LOCALES.map((l) => (
+              <button
+                type="button"
+                class:list={[
+                  'locale-tab-btn px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                  { 'bg-primary text-primary-foreground': l === locale },
+                  { 'hover:bg-muted text-muted-foreground': l !== locale },
+                ]}
+                data-locale-tab={l}
+              >
+                {LOCALE_LABELS[l]}
+              </button>
+            ))}
+          </div>
+
+          <!-- One form per locale -->
+          {LOCALES.map((l) => {
+            const s = allSettings[l];
+            const fieldIds = {
+              siteName: `site-name-${l}`,
+              siteDescription: `site-description-${l}`,
+              siteSlogan: `site-slogan-${l}`,
+              metaTitle: `meta-title-${l}`,
+              metaDescription: `meta-description-${l}`,
+            };
+
+            return (
+              <form
+                class="grid gap-4 locale-settings-form"
+                data-form-locale={l}
+                style={l !== locale ? 'display:none' : ''}
+              >
+                <div class="grid gap-2">
+                  <Label for={fieldIds.siteName}>{cms.siteName}</Label>
+                  <Input id={fieldIds.siteName} name="siteName" value={s?.siteName ?? ''} required />
+                </div>
+                <div class="grid gap-2">
+                  <Label for={fieldIds.siteDescription}>{cms.siteDescription}</Label>
+                  <Textarea id={fieldIds.siteDescription} name="siteDescription" defaultValue={s?.siteDescription ?? ''} />
+                </div>
+                <div class="grid gap-2">
+                  <Label for={fieldIds.siteSlogan}>{cms.siteSlogan}</Label>
+                  <Input id={fieldIds.siteSlogan} name="siteSlogan" value={s?.siteSlogan ?? ''} />
+                </div>
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div class="grid gap-2">
+                    <Label for={fieldIds.metaTitle}>{cms.metaTitle}</Label>
+                    <Input id={fieldIds.metaTitle} name="metaTitle" value={s?.metaTitle ?? ''} />
+                  </div>
+                  <div class="grid gap-2">
+                    <Label for={fieldIds.metaDescription}>{cms.metaDescription}</Label>
+                    <Input id={fieldIds.metaDescription} name="metaDescription" value={s?.metaDescription ?? ''} />
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div class="grid gap-2">
+                    <Label>{cms.logoLight}</Label>
+                    <div class="site-upload-field flex items-center gap-3" data-field="logoLight">
+                      {s?.logoLight && safeUrl(s.logoLight) && <img src={safeUrl(s.logoLight)!} alt="" role="presentation" class="site-upload-preview h-10 w-10 rounded border object-contain" />}
+                      <Input type="hidden" name="logoLight" value={s?.logoLight ?? ''} class="site-upload-value" />
+                      <Button type="button" size="sm" variant="outline" class="site-upload-btn">{cms.uploadImage}</Button>
+                      <input type="file" accept="image/*" class="site-upload-input hidden" />
+                      <span class="text-muted-foreground text-xs truncate max-w-48">{s?.logoLight ?? ''}</span>
+                    </div>
+                  </div>
+                  <div class="grid gap-2">
+                    <Label>{cms.logoDark}</Label>
+                    <div class="site-upload-field flex items-center gap-3" data-field="logoDark">
+                      {s?.logoDark && safeUrl(s.logoDark) && <img src={safeUrl(s.logoDark)!} alt="" role="presentation" class="site-upload-preview h-10 w-10 rounded border object-contain" />}
+                      <Input type="hidden" name="logoDark" value={s?.logoDark ?? ''} class="site-upload-value" />
+                      <Button type="button" size="sm" variant="outline" class="site-upload-btn">{cms.uploadImage}</Button>
+                      <input type="file" accept="image/*" class="site-upload-input hidden" />
+                      <span class="text-muted-foreground text-xs truncate max-w-48">{s?.logoDark ?? ''}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div class="grid gap-2">
+                    <Label>{cms.favicon}</Label>
+                    <div class="site-upload-field flex items-center gap-3" data-field="favicon">
+                      {s?.favicon && safeUrl(s.favicon) && <img src={safeUrl(s.favicon)!} alt="" role="presentation" class="site-upload-preview h-10 w-10 rounded border object-contain" />}
+                      <Input type="hidden" name="favicon" value={s?.favicon ?? ''} class="site-upload-value" />
+                      <Button type="button" size="sm" variant="outline" class="site-upload-btn">{cms.uploadImage}</Button>
+                      <input type="file" accept="image/*,.ico" class="site-upload-input hidden" />
+                      <span class="text-muted-foreground text-xs truncate max-w-48">{s?.favicon ?? ''}</span>
+                    </div>
+                  </div>
+                  <div class="grid gap-2">
+                    <Label>{cms.ogImage}</Label>
+                    <div class="site-upload-field flex items-center gap-3" data-field="ogImage">
+                      {s?.ogImage && safeUrl(s.ogImage) && <img src={safeUrl(s.ogImage)!} alt="" role="presentation" class="site-upload-preview h-10 w-10 rounded border object-contain" />}
+                      <Input type="hidden" name="ogImage" value={s?.ogImage ?? ''} class="site-upload-value" />
+                      <Button type="button" size="sm" variant="outline" class="site-upload-btn">{cms.uploadImage}</Button>
+                      <input type="file" accept="image/*" class="site-upload-input hidden" />
+                      <span class="text-muted-foreground text-xs truncate max-w-48">{s?.ogImage ?? ''}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex justify-end">
+                  <Button type="submit">{cms.save}</Button>
+                </div>
+              </form>
+            );
+          })}
+        </CardContent>
+      </Card>
+    </TabsContent>
+
+    <!-- ─── Social Links ─── -->
+    <TabsContent value="social">
+      <Card>
+        <CardHeader>
+          <CardTitle>{cms.tabSocial}</CardTitle>
+          <div class="flex justify-end">
+            <Button id="add-social-btn" size="sm">{cms.addLink}</Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div id="social-links-list" class="grid gap-4">
+            {socials.length === 0 && (
+              <p id="social-no-links" class="text-muted-foreground text-sm">{cms.noLinks}</p>
+            )}
+            {socials.map((link) => {
+              const isKnown = platformKeys.has(link.platform);
+              return (
+                <div class="social-link-row border rounded-lg p-4 grid grid-cols-1 gap-3 sm:grid-cols-5 sm:items-end" data-id={link.id}>
+                  <div class="grid gap-1">
+                    <Label>{cms.platform}</Label>
+                    <select name="platform" class="social-platform border-input dark:bg-input/30 text-foreground ring-offset-background w-full rounded-md border bg-transparent shadow-xs h-9 px-2 text-sm focus-visible:border-outline focus-visible:ring-outline/50 transition-[color,box-shadow] outline-none focus-visible:ring-3">
+                      <option value="" disabled>{cms.selectPlatform}</option>
+                      {SOCIAL_PLATFORMS.map((p) => (
+                        <option value={p.key} selected={p.key === link.platform}>{p.label}</option>
+                      ))}
+                      <option value="__other" selected={!isKnown}>{cms.otherPlatform}</option>
+                    </select>
+                  </div>
+                  <div class="grid gap-1" style={isKnown ? 'display:none' : ''} data-custom-wrap>
+                    <Label>{cms.customPlatformName}</Label>
+                    <Input name="customPlatform" value={isKnown ? '' : link.platform} class="social-custom-platform" />
+                  </div>
+                  <div class="grid gap-1">
+                    <Label>{cms.url}</Label>
+                    <Input name="url" type="url" value={link.url} class="social-url" />
+                  </div>
+                  <div class="grid gap-1">
+                    <Label>{cms.label}</Label>
+                    <Input name="label" value={link.label ?? ''} class="social-label" />
+                  </div>
+                  <div class="flex gap-2 items-end">
+                    <Button size="sm" class="social-save-btn">{cms.save}</Button>
+                    <Button size="sm" variant="error" class="social-delete-btn">{t.admin.cms.common.delete}</Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    </TabsContent>
+
+    <!-- ─── Contact ─── -->
+    <TabsContent value="contact">
+      <Card>
+        <CardHeader>
+          <CardTitle>{cms.tabContact}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form id="contact-form" class="grid gap-4">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div class="grid gap-2">
+                <Label for="contact-email">{cms.email}</Label>
+                <Input id="contact-email" name="email" type="email" value={contact?.email ?? ''} />
+              </div>
+              <div class="grid gap-2">
+                <Label for="contact-phone">{cms.phone}</Label>
+                <Input id="contact-phone" name="phone" value={contact?.phone ?? ''} />
+              </div>
+            </div>
+            <div class="grid gap-2">
+              <Label for="contact-address">{cms.address}</Label>
+              <Input id="contact-address" name="address" value={contact?.address ?? ''} />
+            </div>
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div class="grid gap-2">
+                <Label for="contact-city">{cms.city}</Label>
+                <Input id="contact-city" name="city" value={contact?.city ?? ''} />
+              </div>
+              <div class="grid gap-2">
+                <Label for="contact-postal">{cms.postalCode}</Label>
+                <Input id="contact-postal" name="postalCode" value={contact?.postalCode ?? ''} />
+              </div>
+              <div class="grid gap-2">
+                <Label for="contact-country">{cms.country}</Label>
+                <Input id="contact-country" name="country" value={contact?.country ?? ''} />
+              </div>
+            </div>
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div class="grid gap-2">
+                <Label for="contact-map">{cms.mapUrl}</Label>
+                <Input id="contact-map" name="mapUrl" type="url" value={contact?.mapUrl ?? ''} />
+              </div>
+              <div class="grid gap-2">
+                <Label for="contact-lat">{cms.latitude}</Label>
+                <Input id="contact-lat" name="latitude" value={contact?.latitude ?? ''} />
+              </div>
+              <div class="grid gap-2">
+                <Label for="contact-lng">{cms.longitude}</Label>
+                <Input id="contact-lng" name="longitude" value={contact?.longitude ?? ''} />
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <Button type="submit" id="contact-submit">{cms.save}</Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </TabsContent>
+
+    <!-- ─── Opening Hours ─── -->
+    <TabsContent value="hours">
+      <Card>
+        <CardHeader>
+          <CardTitle>{cms.tabHours}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form id="hours-form" class="grid gap-3">
+            {Array.from({ length: 7 }, (_, i) => {
+              const row = hours.find((h) => h.dayOfWeek === i);
+              const midday = row?.hasMiddayBreak ?? false;
+              return (
+                <div class="hours-row rounded-lg border p-3 grid gap-2" data-day={i} data-id={row?.id ?? ''}>
+                  <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <span class="font-medium min-w-24">{cms.dayNames[i]}</span>
+                    <label class="flex items-center gap-1.5 text-sm">
+                      <input type="checkbox" name="isClosed" class="hours-closed" checked={row?.isClosed ?? false} />
+                      {cms.closed}
+                    </label>
+                    <label class="flex items-center gap-1.5 text-sm">
+                      <input type="checkbox" name="hasMiddayBreak" class="hours-midday-toggle" checked={midday} />
+                      {cms.middayBreak}
+                    </label>
+                  </div>
+                  {/* Standard hours (no midday break) */}
+                  <div class="hours-standard flex flex-wrap gap-3" style={midday ? 'display:none' : ''}>
+                    <div class="grid gap-1">
+                      <Label class="text-xs">{cms.openTime}</Label>
+                      <Input type="time" value={row?.openTime ?? '09:00'} class="hours-open w-28" />
+                    </div>
+                    <div class="grid gap-1">
+                      <Label class="text-xs">{cms.closeTime}</Label>
+                      <Input type="time" value={row?.closeTime ?? '17:00'} class="hours-close w-28" />
+                    </div>
+                  </div>
+                  {/* Midday break hours */}
+                  <div class="hours-split flex flex-wrap gap-3" style={midday ? '' : 'display:none'}>
+                    <div class="grid gap-1">
+                      <Label class="text-xs">{cms.morningOpen}</Label>
+                      <Input type="time" value={row?.morningOpen ?? '09:00'} class="hours-morning-open w-28" />
+                    </div>
+                    <div class="grid gap-1">
+                      <Label class="text-xs">{cms.morningClose}</Label>
+                      <Input type="time" value={row?.morningClose ?? '12:00'} class="hours-morning-close w-28" />
+                    </div>
+                    <div class="grid gap-1">
+                      <Label class="text-xs">{cms.afternoonOpen}</Label>
+                      <Input type="time" value={row?.afternoonOpen ?? '14:00'} class="hours-afternoon-open w-28" />
+                    </div>
+                    <div class="grid gap-1">
+                      <Label class="text-xs">{cms.afternoonClose}</Label>
+                      <Input type="time" value={row?.afternoonClose ?? '18:00'} class="hours-afternoon-close w-28" />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            <div class="flex justify-end pt-2">
+              <Button type="submit" id="hours-submit">{cms.save}</Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </TabsContent>
+
+    <!-- ─── Header Settings (per locale) ─── -->
+    <TabsContent value="header">
+      <Card>
+        <CardHeader>
+          <CardTitle>{cms.tabHeader}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="flex gap-1 mb-6 border-b pb-3" id="header-locale-tabs">
+            {LOCALES.map((l) => (
+              <button
+                type="button"
+                class:list={[
+                  'header-locale-btn px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                  { 'bg-primary text-primary-foreground': l === locale },
+                  { 'hover:bg-muted text-muted-foreground': l !== locale },
+                ]}
+                data-locale-tab={l}
+              >
+                {LOCALE_LABELS[l]}
+              </button>
+            ))}
+          </div>
+          {LOCALES.map((l) => {
+            const s = allSettings[l];
+            return (
+              <form
+                class="grid gap-4 header-settings-form"
+                data-form-locale={l}
+                style={l !== locale ? 'display:none' : ''}
+              >
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div class="grid gap-2">
+                    <Label>{cms.headerCtaText}</Label>
+                    <Input name="headerCtaText" value={s?.headerCtaText ?? ''} />
+                  </div>
+                  <div class="grid gap-2">
+                    <Label>{cms.headerCtaUrl}</Label>
+                    <Input name="headerCtaUrl" value={s?.headerCtaUrl ?? ''} placeholder="/" />
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div class="grid gap-2">
+                    <Label>{cms.headerSecondaryText}</Label>
+                    <Input name="headerSecondaryText" value={s?.headerSecondaryText ?? ''} />
+                  </div>
+                  <div class="grid gap-2">
+                    <Label>{cms.headerSecondaryUrl}</Label>
+                    <Input name="headerSecondaryUrl" value={s?.headerSecondaryUrl ?? ''} placeholder="/" />
+                  </div>
+                </div>
+                <Switch id={`header-sticky-${l}`} label={cms.headerSticky} checked={s?.headerSticky ?? true} size="sm" />
+                <div class="flex justify-end">
+                  <Button type="submit">{cms.save}</Button>
+                </div>
+              </form>
+            );
+          })}
+        </CardContent>
+      </Card>
+    </TabsContent>
+
+    <!-- ─── Footer Settings (per locale) ─── -->
+    <TabsContent value="footer">
+      <Card>
+        <CardHeader>
+          <CardTitle>{cms.tabFooter}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="flex gap-1 mb-6 border-b pb-3" id="footer-locale-tabs">
+            {LOCALES.map((l) => (
+              <button
+                type="button"
+                class:list={[
+                  'footer-locale-btn px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                  { 'bg-primary text-primary-foreground': l === locale },
+                  { 'hover:bg-muted text-muted-foreground': l !== locale },
+                ]}
+                data-locale-tab={l}
+              >
+                {LOCALE_LABELS[l]}
+              </button>
+            ))}
+          </div>
+          {LOCALES.map((l) => {
+            const s = allSettings[l];
+            return (
+              <form
+                class="grid gap-4 footer-settings-form"
+                data-form-locale={l}
+                style={l !== locale ? 'display:none' : ''}
+              >
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div class="grid gap-2">
+                    <Label>{cms.footerCopyrightText}</Label>
+                    <Input name="footerCopyrightText" value={s?.footerCopyrightText ?? ''} />
+                  </div>
+                  <div class="grid gap-2">
+                    <Label>{cms.footerCopyrightUrl}</Label>
+                    <Input name="footerCopyrightUrl" value={s?.footerCopyrightUrl ?? ''} placeholder="/" />
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div class="grid gap-2">
+                    <Label>{cms.footerSocialHeading}</Label>
+                    <Input name="footerSocialHeading" value={s?.footerSocialHeading ?? ''} />
+                  </div>
+                  <div class="grid gap-2">
+                    <Label>{cms.footerNavPrimaryHeading}</Label>
+                    <Input name="footerNavPrimaryHeading" value={s?.footerNavPrimaryHeading ?? ''} />
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div class="grid gap-2">
+                    <Label>{cms.footerNavSecondaryHeading}</Label>
+                    <Input name="footerNavSecondaryHeading" value={s?.footerNavSecondaryHeading ?? ''} />
+                  </div>
+                  <div class="grid gap-2">
+                    <Label>{cms.footerLegalHeading}</Label>
+                    <Input name="footerLegalHeading" value={s?.footerLegalHeading ?? ''} />
+                  </div>
+                </div>
+                <div class="flex justify-end">
+                  <Button type="submit">{cms.save}</Button>
+                </div>
+              </form>
+            );
+          })}
+        </CardContent>
+      </Card>
+    </TabsContent>
+  </Tabs>
+</div>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { toast } from '@atoms/toast';
+
+  function init() {
+    const root = document.getElementById('cms-site-data');
+    if (!root) return;
+    const tSaved = root.dataset.tSaved ?? '';
+    const tError = root.dataset.tError ?? '';
+
+    // ─── Site Upload Fields ───
+    document.querySelectorAll<HTMLElement>('.site-upload-field').forEach((field) => {
+      const btn = field.querySelector('.site-upload-btn') as HTMLElement;
+      const fileInput = field.querySelector('.site-upload-input') as HTMLInputElement;
+      const hiddenInput = field.querySelector('.site-upload-value') as HTMLInputElement;
+      const preview = field.querySelector('.site-upload-preview') as HTMLImageElement | null;
+      const label = field.querySelector('span') as HTMLElement | null;
+
+      btn?.addEventListener('click', () => fileInput?.click());
+
+      fileInput?.addEventListener('change', async () => {
+        const file = fileInput.files?.[0];
+        if (!file) return;
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', 'media');
+        const oldUrl = hiddenInput.value;
+        if (oldUrl) formData.append('oldUrl', oldUrl);
+        try {
+          const res = await fetch('/api/upload', { method: 'POST', body: formData });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          hiddenInput.value = data.url;
+          if (label) label.textContent = data.url;
+          if (preview) {
+            preview.src = data.url;
+          } else {
+            const img = document.createElement('img');
+            img.src = data.url;
+            img.alt = '';
+            img.setAttribute('role', 'presentation');
+            img.className = 'site-upload-preview h-10 w-10 rounded border object-contain';
+            field.insertBefore(img, field.firstChild);
+          }
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : tError);
+        }
+      });
+    });
+
+    // ─── Locale Tabs for General Settings ───
+    const localeBtns = document.querySelectorAll<HTMLButtonElement>('.locale-tab-btn');
+    const localeForms = document.querySelectorAll<HTMLFormElement>('.locale-settings-form');
+
+    localeBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.localeTab;
+        // Update button styles
+        localeBtns.forEach((b) => {
+          if (b.dataset.localeTab === target) {
+            b.classList.add('bg-primary', 'text-primary-foreground');
+            b.classList.remove('hover:bg-muted', 'text-muted-foreground');
+          } else {
+            b.classList.remove('bg-primary', 'text-primary-foreground');
+            b.classList.add('hover:bg-muted', 'text-muted-foreground');
+          }
+        });
+        // Show/hide forms
+        localeForms.forEach((form) => {
+          form.style.display = form.dataset.formLocale === target ? '' : 'none';
+        });
+      });
+    });
+
+    // ─── Site Settings (upsert per locale) ───
+    localeForms.forEach((form) => {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formLocale = form.dataset.formLocale!;
+        const fd = new FormData(form);
+        const { error } = await actions.upsertSiteSettings({
+          locale: formLocale,
+          siteName: fd.get('siteName') as string,
+          siteDescription: (fd.get('siteDescription') as string) || null,
+          siteSlogan: (fd.get('siteSlogan') as string) || null,
+          metaTitle: (fd.get('metaTitle') as string) || null,
+          metaDescription: (fd.get('metaDescription') as string) || null,
+          logoLight: (fd.get('logoLight') as string) || null,
+          logoDark: (fd.get('logoDark') as string) || null,
+          favicon: (fd.get('favicon') as string) || null,
+          ogImage: (fd.get('ogImage') as string) || null,
+        });
+        if (!error) toast.success(tSaved);
+        else toast.error(error.message ?? tError);
+      });
+    });
+
+    // ─── Social Links - Platform data ───
+    const platforms: { key: string; label: string; icon: string; urlHint: string }[] =
+      JSON.parse(root.dataset.platforms ?? '[]');
+    const platformMap = new Map(platforms.map((p) => [p.key, p]));
+
+    function bindPlatformSelect(row: HTMLElement) {
+      const select = row.querySelector('.social-platform') as HTMLSelectElement;
+      const customWrap = row.querySelector('[data-custom-wrap]') as HTMLElement | null;
+      select?.addEventListener('change', () => {
+        if (customWrap) {
+          customWrap.style.display = select.value === '__other' ? '' : 'none';
+        }
+        const info = platformMap.get(select.value);
+        // Auto-fill URL hint
+        const urlInput = row.querySelector('.social-url') as HTMLInputElement;
+        if (info && urlInput && (!urlInput.value || urlInput.value === 'https://')) {
+          urlInput.value = info.urlHint;
+          urlInput.focus();
+          urlInput.setSelectionRange(info.urlHint.length, info.urlHint.length);
+        }
+        // Auto-fill label with platform name
+        const labelInput = row.querySelector('.social-label') as HTMLInputElement;
+        if (info && labelInput && !labelInput.value) {
+          labelInput.value = info.label;
+        }
+      });
+    }
+
+    document.querySelectorAll<HTMLElement>('.social-link-row').forEach(bindPlatformSelect);
+
+    function getPlatformValue(row: HTMLElement): string {
+      const select = row.querySelector('.social-platform') as HTMLSelectElement;
+      if (select.value === '__other') {
+        return (row.querySelector('.social-custom-platform') as HTMLInputElement)?.value?.trim() || '';
+      }
+      return select.value;
+    }
+
+    function getIconForPlatform(row: HTMLElement): string | null {
+      const select = row.querySelector('.social-platform') as HTMLSelectElement;
+      return platformMap.get(select.value)?.icon ?? null;
+    }
+
+    // ─── Social Links - Save ───
+    function bindSaveBtn(btn: HTMLElement) {
+      btn.addEventListener('click', async () => {
+        const row = btn.closest('.social-link-row') as HTMLElement;
+        const id = row?.dataset.id;
+        const platform = getPlatformValue(row);
+        const url = (row.querySelector('.social-url') as HTMLInputElement).value;
+        const label = (row.querySelector('.social-label') as HTMLInputElement).value || null;
+        const icon = getIconForPlatform(row);
+        if (!platform) return;
+        if (id) {
+          const { error } = await actions.updateSocialLink({ id, platform, url, label, icon });
+          if (!error) toast.success(tSaved);
+          else toast.error(error.message ?? tError);
+        } else {
+          const { data, error } = await actions.createSocialLink({ platform, url, label, icon });
+          if (!error && data) {
+            row.dataset.id = data.id;
+            toast.success(tSaved);
+          } else {
+            toast.error(error?.message ?? tError);
+          }
+        }
+      });
+    }
+
+    document.querySelectorAll<HTMLElement>('.social-save-btn').forEach(bindSaveBtn);
+
+    // ─── Social Links - Delete ───
+    function bindDeleteBtn(btn: HTMLElement) {
+      btn.addEventListener('click', async () => {
+        const row = btn.closest('.social-link-row') as HTMLElement;
+        const id = row?.dataset.id;
+        if (!id) { row?.remove(); return; }
+        const { error } = await actions.deleteSocialLink({ id });
+        if (!error) { toast.success(tSaved); row.remove(); }
+        else toast.error(error.message ?? tError);
+      });
+    }
+
+    document.querySelectorAll<HTMLElement>('.social-delete-btn').forEach(bindDeleteBtn);
+
+    // ─── Social Links - Add (client-side row) ───
+    document.getElementById('add-social-btn')?.addEventListener('click', () => {
+      const list = document.getElementById('social-links-list');
+      if (!list) return;
+      document.getElementById('social-no-links')?.remove();
+
+      const tSelectPlatform = root.dataset.tSelectPlatform ?? '';
+      const tOtherPlatform = root.dataset.tOtherPlatform ?? '';
+      const tCustomPlatform = root.dataset.tCustomPlatform ?? '';
+      const tUrl = root.dataset.tUrl ?? '';
+      const tLabel = root.dataset.tLabel ?? '';
+      const tSaveBtn = root.dataset.tSave ?? '';
+      const tDeleteBtn = root.dataset.tDelete ?? '';
+      const tPlatform = root.dataset.tPlatform ?? '';
+
+      const options = platforms.map((p) =>
+        `<option value="${p.key}">${p.label}</option>`
+      ).join('');
+
+      const row = document.createElement('div');
+      row.className = 'social-link-row border rounded-lg p-4 grid grid-cols-1 gap-3 sm:grid-cols-5 sm:items-end';
+      row.innerHTML = `
+        <div class="grid gap-1">
+          <label class="text-sm font-medium">${tPlatform}</label>
+          <select name="platform" class="social-platform border-input dark:bg-input/30 text-foreground ring-offset-background w-full rounded-md border bg-transparent shadow-xs h-9 px-2 text-sm focus-visible:border-outline focus-visible:ring-outline/50 transition-[color,box-shadow] outline-none focus-visible:ring-3">
+            <option value="" disabled selected>${tSelectPlatform}</option>
+            ${options}
+            <option value="__other">${tOtherPlatform}</option>
+          </select>
+        </div>
+        <div class="grid gap-1" style="display:none" data-custom-wrap>
+          <label class="text-sm font-medium">${tCustomPlatform}</label>
+          <input name="customPlatform" class="social-custom-platform border-input dark:bg-input/30 text-foreground ring-offset-background w-full rounded-md border bg-transparent shadow-xs h-9 px-3 text-sm focus-visible:border-outline focus-visible:ring-outline/50 transition-[color,box-shadow] outline-none focus-visible:ring-3" />
+        </div>
+        <div class="grid gap-1">
+          <label class="text-sm font-medium">${tUrl}</label>
+          <input name="url" type="url" value="https://" class="social-url border-input dark:bg-input/30 text-foreground ring-offset-background w-full rounded-md border bg-transparent shadow-xs h-9 px-3 text-sm focus-visible:border-outline focus-visible:ring-outline/50 transition-[color,box-shadow] outline-none focus-visible:ring-3" />
+        </div>
+        <div class="grid gap-1">
+          <label class="text-sm font-medium">${tLabel}</label>
+          <input name="label" value="" class="social-label border-input dark:bg-input/30 text-foreground ring-offset-background w-full rounded-md border bg-transparent shadow-xs h-9 px-3 text-sm focus-visible:border-outline focus-visible:ring-outline/50 transition-[color,box-shadow] outline-none focus-visible:ring-3" />
+        </div>
+        <div class="flex gap-2 items-end">
+          <button type="button" class="social-save-btn inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-3 bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 cursor-pointer">${tSaveBtn}</button>
+          <button type="button" class="social-delete-btn inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-3 bg-error text-error-foreground shadow-xs hover:bg-error/90 cursor-pointer">${tDeleteBtn}</button>
+        </div>
+      `;
+      list.appendChild(row);
+      bindPlatformSelect(row);
+      bindSaveBtn(row.querySelector('.social-save-btn') as HTMLElement);
+      bindDeleteBtn(row.querySelector('.social-delete-btn') as HTMLElement);
+    });
+
+    // ─── Contact Info ───
+    document.getElementById('contact-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target as HTMLFormElement);
+      const { error } = await actions.updateContactInfo({
+        id: root.dataset.contactId!,
+        email: (fd.get('email') as string) || null,
+        phone: (fd.get('phone') as string) || null,
+        address: (fd.get('address') as string) || null,
+        city: (fd.get('city') as string) || null,
+        postalCode: (fd.get('postalCode') as string) || null,
+        country: (fd.get('country') as string) || null,
+        mapUrl: (fd.get('mapUrl') as string) || null,
+        latitude: (fd.get('latitude') as string) || null,
+        longitude: (fd.get('longitude') as string) || null,
+      });
+      if (!error) toast.success(tSaved);
+      else toast.error(error.message ?? tError);
+    });
+
+    // ─── Opening Hours ───
+    document.querySelectorAll<HTMLInputElement>('.hours-midday-toggle').forEach((cb) => {
+      cb.addEventListener('change', () => {
+        const row = cb.closest('.hours-row') as HTMLElement;
+        const standard = row.querySelector('.hours-standard') as HTMLElement;
+        const split = row.querySelector('.hours-split') as HTMLElement;
+        if (cb.checked) {
+          standard.style.display = 'none';
+          split.style.display = '';
+        } else {
+          standard.style.display = '';
+          split.style.display = 'none';
+        }
+      });
+    });
+
+    document.getElementById('hours-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const rows = document.querySelectorAll<HTMLElement>('.hours-row');
+      const items = [...rows].filter((row) => row.dataset.id).map((row) => {
+        const hasMiddayBreak = (row.querySelector('.hours-midday-toggle') as HTMLInputElement).checked;
+        return {
+          id: row.dataset.id!,
+          isClosed: (row.querySelector('.hours-closed') as HTMLInputElement).checked,
+          hasMiddayBreak,
+          openTime: hasMiddayBreak ? null : (row.querySelector('.hours-open') as HTMLInputElement).value || null,
+          closeTime: hasMiddayBreak ? null : (row.querySelector('.hours-close') as HTMLInputElement).value || null,
+          morningOpen: hasMiddayBreak ? (row.querySelector('.hours-morning-open') as HTMLInputElement).value || null : null,
+          morningClose: hasMiddayBreak ? (row.querySelector('.hours-morning-close') as HTMLInputElement).value || null : null,
+          afternoonOpen: hasMiddayBreak ? (row.querySelector('.hours-afternoon-open') as HTMLInputElement).value || null : null,
+          afternoonClose: hasMiddayBreak ? (row.querySelector('.hours-afternoon-close') as HTMLInputElement).value || null : null,
+        };
+      });
+      const { error } = await actions.updateOpeningHours({ items });
+      if (!error) toast.success(tSaved);
+      else toast.error(error.message ?? tError);
+    });
+
+    // ─── Header/Footer locale tab helpers ───
+    function bindLocaleTabs(
+      btnSelector: string,
+      formSelector: string,
+    ) {
+      const btns = document.querySelectorAll<HTMLButtonElement>(btnSelector);
+      const forms = document.querySelectorAll<HTMLFormElement>(formSelector);
+      btns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const target = btn.dataset.localeTab;
+          btns.forEach((b) => {
+            if (b.dataset.localeTab === target) {
+              b.classList.add('bg-primary', 'text-primary-foreground');
+              b.classList.remove('hover:bg-muted', 'text-muted-foreground');
+            } else {
+              b.classList.remove('bg-primary', 'text-primary-foreground');
+              b.classList.add('hover:bg-muted', 'text-muted-foreground');
+            }
+          });
+          forms.forEach((f) => {
+            f.style.display = f.dataset.formLocale === target ? '' : 'none';
+          });
+        });
+      });
+    }
+
+    bindLocaleTabs('.header-locale-btn', '.header-settings-form');
+    bindLocaleTabs('.footer-locale-btn', '.footer-settings-form');
+
+    // ─── Header Settings (upsert per locale) ───
+    document.querySelectorAll<HTMLFormElement>('.header-settings-form').forEach((form) => {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formLocale = form.dataset.formLocale!;
+        const fd = new FormData(form);
+        const stickyEl = form.querySelector<HTMLElement>(`[id^="header-sticky-"]`);
+        const headerSticky = stickyEl?.getAttribute('aria-checked') === 'true';
+        const { error } = await actions.upsertSiteSettings({
+          locale: formLocale,
+          headerCtaText: (fd.get('headerCtaText') as string) || null,
+          headerCtaUrl: (fd.get('headerCtaUrl') as string) || null,
+          headerSecondaryText: (fd.get('headerSecondaryText') as string) || null,
+          headerSecondaryUrl: (fd.get('headerSecondaryUrl') as string) || null,
+          headerSticky,
+        });
+        if (!error) toast.success(tSaved);
+        else toast.error(error.message ?? tError);
+      });
+    });
+
+    // ─── Footer Settings (upsert per locale) ───
+    document.querySelectorAll<HTMLFormElement>('.footer-settings-form').forEach((form) => {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formLocale = form.dataset.formLocale!;
+        const fd = new FormData(form);
+        const { error } = await actions.upsertSiteSettings({
+          locale: formLocale,
+          footerCopyrightText: (fd.get('footerCopyrightText') as string) || null,
+          footerCopyrightUrl: (fd.get('footerCopyrightUrl') as string) || null,
+          footerSocialHeading: (fd.get('footerSocialHeading') as string) || null,
+          footerNavPrimaryHeading: (fd.get('footerNavPrimaryHeading') as string) || null,
+          footerNavSecondaryHeading: (fd.get('footerNavSecondaryHeading') as string) || null,
+          footerLegalHeading: (fd.get('footerLegalHeading') as string) || null,
+        });
+        if (!error) toast.success(tSaved);
+        else toast.error(error.message ?? tError);
+      });
+    });
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

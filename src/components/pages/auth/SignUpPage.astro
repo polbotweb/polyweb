@@ -1,0 +1,190 @@
+---
+import type { AuthTranslations, Locale } from '@i18n/config';
+import type { AppUser } from '@/lib/types';
+import { getAuthUrl } from '@i18n/utils';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@atoms/card';
+import Label from '@atoms/label/Label.astro';
+import Input from '@atoms/input/Input.astro';
+import Separator from '@atoms/separator/Separator.astro';
+import AsyncButton from '@wow/AsyncButton.astro';
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  user: AppUser | null;
+}
+
+const { t, locale } = Astro.props;
+const signInUrl = getAuthUrl(locale, 'sign-in', t);
+---
+
+<section class="flex min-h-[calc(100vh-8rem)] items-center justify-center px-4 py-12">
+  <Card class="w-full max-w-md">
+    <CardHeader class="text-center">
+      <CardTitle class="text-2xl">{t.signUp.title}</CardTitle>
+      <CardDescription>{t.signUp.description}</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <form id="sign-up-form" class="grid gap-4"
+        data-success={t.signUp.success}
+        data-errors={JSON.stringify(t.errors)}
+        data-redirect={signInUrl}
+      >
+        <div class="grid gap-2">
+          <Label for="name">{t.signUp.name}</Label>
+          <Input id="name" name="name" type="text" placeholder={t.signUp.namePlaceholder} required autocomplete="name" />
+        </div>
+
+        <div class="grid gap-2">
+          <Label for="username">{t.signUp.username}</Label>
+          <Input id="username" name="username" type="text" placeholder={t.signUp.usernamePlaceholder} required />
+        </div>
+
+        <div class="grid gap-2">
+          <Label for="email">{t.signUp.email}</Label>
+          <Input id="email" name="email" type="email" placeholder={t.signUp.emailPlaceholder} required autocomplete="email" />
+        </div>
+
+        <div class="grid gap-2">
+          <Label for="password">{t.signUp.password}</Label>
+          <Input id="password" name="password" type="password" placeholder={t.signUp.passwordPlaceholder} required autocomplete="new-password" />
+        </div>
+
+        <AsyncButton
+          id="sign-up-btn"
+          text={t.signUp.submit}
+          variant="primary"
+          size="md"
+          class="w-full"
+          type="submit"
+        />
+      </form>
+    </CardContent>
+    <CardFooter class="flex-col gap-4">
+      <Separator />
+      <p class="text-muted-foreground text-sm">
+        {t.signUp.hasAccount}{' '}
+        <a href={signInUrl} class="text-primary-deep hover:underline font-medium">{t.signUp.signInLink}</a>
+      </p>
+    </CardFooter>
+  </Card>
+</section>
+
+<script>
+  import { authClient } from '@lib/auth-client';
+  import { toast } from '@atoms/toast';
+
+  function init() {
+    const form = document.getElementById('sign-up-form') as HTMLFormElement | null;
+    const btn = document.getElementById('sign-up-btn');
+    if (!form || !btn || btn.dataset.authInit === 'true') return;
+    btn.dataset.authInit = 'true';
+
+    const successMsg = form.dataset.success!;
+    const errors: Record<string, string> = JSON.parse(form.dataset.errors!);
+    const redirectUrl = form.dataset.redirect!;
+
+    const inputs = {
+      name: form.querySelector('#name') as HTMLInputElement,
+      username: form.querySelector('#username') as HTMLInputElement,
+      email: form.querySelector('#email') as HTMLInputElement,
+      password: form.querySelector('#password') as HTMLInputElement,
+    };
+
+    const getErrorMsg = (code?: string) => (code && errors[code]) || errors.UNKNOWN || code || '';
+
+    const codeToField: Record<string, keyof typeof inputs> = {
+      INVALID_EMAIL: 'email',
+      USER_ALREADY_EXISTS: 'email',
+      USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: 'email',
+      INVALID_PASSWORD: 'password',
+      PASSWORD_TOO_SHORT: 'password',
+      PASSWORD_TOO_LONG: 'password',
+      USERNAME_IS_ALREADY_TAKEN: 'username',
+      USERNAME_TOO_SHORT: 'username',
+      USERNAME_TOO_LONG: 'username',
+      INVALID_USERNAME: 'username',
+    };
+
+    function clearErrors() {
+      for (const input of Object.values(inputs)) {
+        input.removeAttribute('aria-invalid');
+      }
+    }
+
+    function markError(field: keyof typeof inputs) {
+      inputs[field].setAttribute('aria-invalid', 'true');
+      inputs[field].focus();
+    }
+
+    // Clear invalid state on input
+    for (const input of Object.values(inputs)) {
+      input.addEventListener('input', () => input.removeAttribute('aria-invalid'), { once: false });
+    }
+
+    function validate(): string | null {
+      clearErrors();
+      if (!inputs.name.value.trim()) { markError('name'); return 'MISSING_FIELD'; }
+      if (!inputs.username.value.trim()) { markError('username'); return 'USERNAME_TOO_SHORT'; }
+      if (inputs.username.value.trim().length < 3) { markError('username'); return 'USERNAME_TOO_SHORT'; }
+      if (!inputs.email.value.trim()) { markError('email'); return 'INVALID_EMAIL'; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.email.value.trim())) { markError('email'); return 'INVALID_EMAIL'; }
+      if (!inputs.password.value) { markError('password'); return 'PASSWORD_TOO_SHORT'; }
+      if (inputs.password.value.length < 8) { markError('password'); return 'PASSWORD_TOO_SHORT'; }
+      return null;
+    }
+
+    form.addEventListener('submit', (e) => e.preventDefault());
+
+    btn.addEventListener('async-button:execute', async (e) => {
+      const { resolve, reject } = (e as CustomEvent).detail;
+
+      const validationError = validate();
+      if (validationError) {
+        toast.error(getErrorMsg(validationError));
+        return reject();
+      }
+
+      let settled = false;
+      const timeout = setTimeout(() => {
+        if (!settled) { settled = true; toast.error(errors.UNKNOWN || ''); reject(); }
+      }, 15000);
+
+      try {
+        const { error } = await authClient.signUp.email({
+          name: inputs.name.value.trim(),
+          username: inputs.username.value.trim(),
+          email: inputs.email.value.trim(),
+          password: inputs.password.value,
+        });
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        if (error) {
+          const code = error.code;
+          clearErrors();
+          const field = code ? codeToField[code] : undefined;
+          if (field) markError(field);
+          toast.error(getErrorMsg(code));
+          return reject();
+        }
+        toast.success(successMsg);
+        resolve();
+        setTimeout(() => window.location.href = redirectUrl, 600);
+      } catch {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        toast.error(errors.UNKNOWN || '');
+        reject();
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+  document.addEventListener('astro:after-swap', init);
+</script>

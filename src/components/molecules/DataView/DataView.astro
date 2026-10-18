@@ -1,0 +1,79 @@
+---
+/**
+ * DataView — responsive data display molecule.
+ * Cards are the mobile fallback; tables are the desktop fallback.
+ * An explicit mode selector is opt-in so localized admin resources can provide
+ * their own labels without leaking hard-coded English UI into the platform.
+ */
+import { NativeSelect, NativeSelectOption } from '@atoms/native-select';
+
+interface Props {
+  tableLabel?: string;
+  cardsLabel?: string;
+  showModeSelector?: boolean;
+  class?: string;
+}
+
+const {
+  tableLabel = 'Table',
+  cardsLabel = 'Cards',
+  showModeSelector = true,
+  class: className,
+} = Astro.props;
+---
+
+<div class:list={['data-view', className]} data-mode="auto">
+  <div class="mb-4 flex flex-wrap items-center gap-3">
+    <slot name="toolbar-start" />
+    {showModeSelector ? (
+      <div class="ml-auto flex items-center gap-3">
+        <slot name="toolbar-end" />
+        <NativeSelect class="data-view-mode w-auto text-sm" aria-label={`${tableLabel} / ${cardsLabel}`}>
+          <NativeSelectOption value="table">{tableLabel}</NativeSelectOption>
+          <NativeSelectOption value="cards">{cardsLabel}</NativeSelectOption>
+        </NativeSelect>
+      </div>
+    ) : <slot name="toolbar-end" />}
+  </div>
+
+  <div class="data-view-table" data-view="table"><slot name="table" /></div>
+  <div class="data-view-cards" data-view="cards"><slot name="cards" /></div>
+</div>
+
+<style>
+  .data-view[data-mode="auto"] [data-view="table"] { display: none; }
+  .data-view[data-mode="auto"] [data-view="cards"] { display: block; }
+  @media (min-width: 768px) {
+    .data-view[data-mode="auto"] [data-view="table"] { display: block; }
+    .data-view[data-mode="auto"] [data-view="cards"] { display: none; }
+  }
+  :global(.data-view[data-mode="table"]) [data-view="table"] { display: block; }
+  :global(.data-view[data-mode="table"]) [data-view="cards"] { display: none; }
+  :global(.data-view[data-mode="cards"]) [data-view="table"] { display: none; }
+  :global(.data-view[data-mode="cards"]) [data-view="cards"] { display: block; }
+</style>
+
+<script>
+  function initDataViews() {
+    document.querySelectorAll<HTMLElement>('.data-view').forEach((container) => {
+      const select = container.querySelector('.data-view-mode');
+      const nativeSelect = select?.closest('[data-slot="native-select-wrapper"]')?.querySelector('select') ?? select;
+      if (!nativeSelect) {
+        const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+        container.dataset.mode = isDesktop ? 'table' : 'cards';
+        return;
+      }
+      const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+      const initialMode = isDesktop ? 'table' : 'cards';
+      (nativeSelect as HTMLSelectElement).value = initialMode;
+      container.dataset.mode = initialMode;
+      if (container.dataset.bound === 'true') return;
+      container.dataset.bound = 'true';
+      nativeSelect.addEventListener('change', () => {
+        container.dataset.mode = (nativeSelect as HTMLSelectElement).value;
+      });
+    });
+  }
+  initDataViews();
+  document.addEventListener('astro:after-swap', initDataViews);
+</script>

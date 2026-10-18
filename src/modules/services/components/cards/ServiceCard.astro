@@ -1,0 +1,56 @@
+---
+import { Icon } from "astro-icon/components";
+import type { Locale } from "@i18n/config";
+import type { ServiceListItem } from "@/modules/services/domain";
+import { formatServicePrice, formatServiceDuration, formatServiceRating, buildServiceUrl } from "@/modules/services/utils";
+import { getServiceTranslations } from "@/modules/services/i18n";
+
+const { item, locale = "fr", variant = "default", organizationSlug = null } = Astro.props as {
+  item: ServiceListItem;
+  locale?: Locale;
+  variant?: "default" | "compact" | "featured" | "horizontal";
+  organizationSlug?: string | null;
+};
+const t = getServiceTranslations(locale);
+const title = item.translation?.title ?? item.service.slug;
+const category = item.categories[0];
+const href = buildServiceUrl(locale, organizationSlug, item.translation?.slug ?? item.service.slug, category?.slug ?? null);
+const price = formatServicePrice(item.service.priceMinor, item.service.currency, locale);
+const duration = formatServiceDuration(item.service.durationMinutes);
+const rating = item.service.ratingCount ? formatServiceRating(item.service.ratingAverage100) : null;
+const compact = variant === "compact";
+const horizontal = variant === "horizontal";
+---
+
+<article class:list={["group relative grid overflow-hidden rounded-lg border bg-background shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-within:ring-2 focus-within:ring-primary/60", { "md:grid-cols-[15rem_1fr]": horizontal, "ring-2 ring-primary/50": variant === "featured" }]}>
+  <div class:list={["relative min-h-44 overflow-hidden bg-muted", { "min-h-32": compact, "md:min-h-full": horizontal }]}>
+    {item.coverMedia ? (
+      <img src={item.coverMedia.url} alt={item.coverMedia.alt || title} class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" loading="lazy" />
+    ) : (
+      <div class="absolute inset-0 grid place-items-center bg-muted text-muted-foreground"><Icon name="mdi:calendar-star" class="size-8" /></div>
+    )}
+    <div class="absolute inset-x-3 top-3 flex items-center justify-between gap-2">
+      <span class="rounded-md bg-background/95 px-2.5 py-1 text-xs font-semibold shadow-sm backdrop-blur">{category?.name ?? t.labels.service}</span>
+      {item.service.isFeatured && <span class="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground shadow-sm"><Icon name="mdi:star-four-points" class="size-3.5" />{t.labels.featured}</span>}
+    </div>
+  </div>
+
+  <div class:list={["flex min-w-0 flex-col", { "gap-2 p-4": compact, "gap-4 p-5": !compact }]}>
+    <div class="flex items-start justify-between gap-4">
+      <div class="min-w-0">
+        <p class="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground"><Icon name="mdi:account-outline" class="size-3.5" />{item.provider?.name ?? t.labels.provider}</p>
+        <h2 class:list={["font-heading font-bold leading-tight", { "text-base": compact, "text-xl": !compact }]}><a class="after:absolute after:inset-0 focus-visible:outline-none" href={href}>{title}</a></h2>
+      </div>
+      {price && <span class="shrink-0 text-right font-heading text-lg font-bold text-primary">{price}</span>}
+    </div>
+
+    {item.translation?.excerpt && <p class:list={["text-muted-foreground", { "line-clamp-2 text-xs": compact, "line-clamp-3 text-sm leading-6": !compact }]}>{item.translation.excerpt}</p>}
+
+    <div class="mt-auto flex flex-wrap gap-x-4 gap-y-2 border-t pt-3 text-sm text-muted-foreground">
+      {duration && <span class="inline-flex items-center gap-1.5"><Icon name="mdi:clock-outline" class="size-4 text-primary" />{duration}</span>}
+      {item.service.maxParticipants && <span class="inline-flex items-center gap-1.5"><Icon name="mdi:account-group-outline" class="size-4 text-primary" />{item.service.maxParticipants} {t.labels.participants}</span>}
+      {rating !== null && <span class="inline-flex items-center gap-1.5"><Icon name="mdi:star-outline" class="size-4 text-primary" /><span aria-label={`${rating} / 5`}>{rating} <span class="text-xs">({item.service.ratingCount})</span></span></span>}
+      {item.service.isMobile && <span class="inline-flex items-center gap-1.5"><Icon name="mdi:home-map-marker" class="size-4 text-primary" />{t.labels.mobile}</span>}
+    </div>
+  </div>
+</article>

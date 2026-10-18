@@ -1,0 +1,72 @@
+---
+import { Icon } from "astro-icon/components";
+import type { Locale } from "@i18n/config";
+import type { ServiceDetail as ServiceDetailData } from "@/modules/services/domain";
+import { formatServicePrice, formatServiceDuration, formatServiceRating, buildServiceUrl, buildServiceCategoryUrl } from "@/modules/services/utils";
+import { getServiceTranslations } from "@/modules/services/i18n";
+import RichContent from "@components/content/RichContent.astro";
+import { Prose } from "@atoms/prose";
+import ServiceEngagement from "./ServiceEngagement.astro";
+
+const { item, locale = "fr", organizationSlug = null } = Astro.props as { item: ServiceDetailData; locale?: Locale; organizationSlug?: string | null };
+const t = getServiceTranslations(locale);
+const title = item.translation?.title ?? item.service.slug;
+const price = formatServicePrice(item.service.priceMinor, item.service.currency, locale);
+const duration = formatServiceDuration(item.service.durationMinutes);
+const rating = item.service.ratingCount ? formatServiceRating(item.service.ratingAverage100) : null;
+const base = organizationSlug ? `/${locale}/${organizationSlug}/services` : `/${locale}/services`;
+const serviceHref = buildServiceUrl(locale, organizationSlug, item.translation?.slug ?? item.service.slug, item.categories[0]?.slug ?? null);
+const location = item.translation?.locationLabel ?? item.translation?.locationAddress;
+const facts = [
+  duration && { icon: "mdi:clock-outline", label: t.labels.duration, value: duration },
+  item.service.maxParticipants && { icon: "mdi:account-group-outline", label: t.labels.participants, value: String(item.service.maxParticipants) },
+  item.service.isMobile && { icon: "mdi:home-map-marker", label: t.labels.mobile, value: t.labels.mobile },
+  location && { icon: "mdi:map-marker-outline", label: t.admin.fields.location, value: location },
+].filter(Boolean) as { icon: string; label: string; value: string }[];
+
+function weekday(dayOfWeek: number): string {
+  const anchor = new Date(Date.UTC(2024, 0, 1 + dayOfWeek));
+  return new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" }).format(anchor);
+}
+---
+<article class="mx-auto max-w-7xl" data-service-detail data-service-id={item.service.id} data-organization-id={item.service.organizationId ?? ""}>
+  <header class="border-b bg-muted/30 px-4 py-10 sm:px-6 md:px-8 md:py-14">
+    <div class="mx-auto max-w-6xl">
+      <nav class="mb-6 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground" aria-label="Breadcrumb"><a href={base} class="hover:text-foreground">{t.labels.services}</a>{item.categories.slice(0, 1).map((category) => <><Icon name="mdi:chevron-right" class="size-4" /><a href={buildServiceCategoryUrl(locale, organizationSlug, category.slug)} class="hover:text-foreground">{category.name ?? category.slug}</a></>)}</nav>
+      <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-end">
+        <div>
+          <div class="mb-4 flex flex-wrap gap-2">{item.categories.map((category) => <a href={buildServiceCategoryUrl(locale, organizationSlug, category.slug)} class="border border-primary/25 bg-background px-2.5 py-1 text-xs font-semibold text-primary hover:bg-primary hover:text-primary-foreground">{category.name ?? category.slug}</a>)}{item.service.isFeatured && <span class="bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">{t.labels.featured}</span>}</div>
+          <h1 class="font-heading text-4xl font-extrabold leading-tight md:text-5xl">{title}</h1>
+          {item.translation?.excerpt && <p class="mt-5 max-w-3xl text-lg leading-8 text-muted-foreground">{item.translation.excerpt}</p>}
+          {item.provider?.name && <p class="mt-5 flex items-center gap-2 text-sm font-medium"><Icon name="mdi:storefront-outline" class="size-4 text-primary" />{t.labels.provider}: {item.provider.name}</p>}
+        </div>
+        <div class="border-s-4 border-primary bg-background p-5 shadow-sm"><p class="text-sm text-muted-foreground">{t.labels.price}</p><p class="mt-1 text-3xl font-bold">{price ?? "-"}</p>{rating !== null && <p class="mt-3 flex items-center gap-1.5 text-sm"><Icon name="mdi:star" class="size-4 text-amber-500" /><strong>{rating}</strong><span class="text-muted-foreground">({item.service.ratingCount} {t.labels.reviews})</span></p>}</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="grid gap-10 px-4 py-10 sm:px-6 md:px-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:py-14">
+    <div>
+      {item.coverMedia && <figure class="mb-10 overflow-hidden border bg-muted"><img src={item.coverMedia.url} alt={item.coverMedia.alt || title} class="aspect-video w-full object-cover" loading="eager" /></figure>}
+      <Prose size="full" class="max-w-none"><RichContent html={item.translation?.content ?? ""} /></Prose>
+
+      {item.availability.length > 0 && <section class="mt-12 border-t pt-8"><div class="flex items-center gap-2"><Icon name="mdi:calendar-clock-outline" class="size-5 text-primary" /><h2 class="font-heading text-2xl font-bold">{t.labels.availability}</h2></div><div class="mt-5 grid gap-3 sm:grid-cols-2">{item.availability.map((slot) => <div class="border bg-muted/25 p-4"><p class="font-semibold capitalize">{weekday(slot.dayOfWeek)}</p><p class="mt-1 text-sm text-muted-foreground">{slot.startTime} - {slot.endTime}</p><p class="mt-1 text-xs text-muted-foreground">{slot.timezone}{slot.maxParticipants ? ` - ${slot.maxParticipants} ${t.labels.participants}` : ""}</p></div>)}</div></section>}
+
+      {item.tags.length > 0 && <footer class="mt-10 flex flex-wrap gap-2 border-t pt-7">{item.tags.map((tag) => <a href={`${base}/tag/${tag.slug}`} class="border bg-muted/45 px-3 py-1.5 text-sm transition-colors hover:border-primary hover:bg-background">#{tag.name ?? tag.slug}</a>)}</footer>}
+    </div>
+
+    <aside class="h-fit border-t-4 border-primary bg-muted/35 p-5 lg:sticky lg:top-6"><h2 class="font-heading text-lg font-bold">{t.labels.service}</h2><dl class="mt-5 space-y-4">{facts.map((fact) => <div class="flex gap-3"><Icon name={fact.icon} class="mt-0.5 size-5 shrink-0 text-primary" /><div><dt class="text-xs font-medium text-muted-foreground">{fact.label}</dt><dd class="mt-0.5 text-sm font-semibold">{fact.value}</dd></div></div>)}</dl>{item.translation?.locationAddress && item.translation.locationLabel && <p class="mt-5 border-t pt-4 text-sm leading-6 text-muted-foreground">{item.translation.locationAddress}</p>}</aside>
+  </div>
+  <div class="border-t px-4 py-8 sm:px-6 md:px-8"><div class="mx-auto max-w-6xl"><ServiceEngagement serviceId={item.service.id} organizationId={item.service.organizationId} locale={locale} /></div></div>
+</article>
+<script>
+  import { actions } from "astro:actions";
+  for (const root of document.querySelectorAll<HTMLElement>("[data-service-detail]")) {
+    const serviceId = root.dataset.serviceId;
+    if (!serviceId) continue;
+    const organizationId = root.dataset.organizationId || null;
+    let recorded = false;
+    const recordView = async () => { if (recorded) return; recorded = true; try { await actions.recordServiceView({ serviceId, organizationId, referrer: document.referrer || null }); } catch { recorded = false; } };
+    if ("IntersectionObserver" in window) { const observer = new IntersectionObserver((entries) => { if (entries.some((entry) => entry.isIntersecting)) { void recordView(); observer.disconnect(); } }, { threshold: 0.01 }); observer.observe(root); } else { void recordView(); }
+  }
+</script>

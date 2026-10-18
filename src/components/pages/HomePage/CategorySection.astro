@@ -1,0 +1,114 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import { tv } from "tailwind-variants";
+
+import CategoryCard from "@organisms/Category/CategoryCard.astro";
+import HorizontalScrollCarousel from "@wow/HorizontalScrollCarousel/HorizontalScrollCarousel.astro";
+import { Button } from "@atoms/button";
+import IconArrowRight from "@tabler/icons/outline/arrow-right.svg";
+
+export interface Service {
+  image: string;
+  title: string;
+  tagline: string;
+  href?: string;
+}
+
+interface Props extends HTMLAttributes<"section"> {
+  badge?: string;
+  heading?: string;
+  description?: string;
+  services?: Service[];
+  ctaText?: string;
+  ctaHref?: string;
+}
+
+const sectionStyles = tv({
+  base: "@container w-full py-24",
+});
+
+const {
+  badge = "Atomic en pratique",
+  heading = "Fonctionnalités clés d'Atomic",
+  description = "Un ensemble de cartes pour illustrer les capacités du framework et de la plateforme.",
+  services = [
+    {
+      image: "/uploads/images/site/3003c88e-678d-4cde-87b4-615d994d02b3.jpg",
+      title: "Design système Atomic",
+      tagline: "Composants atomiques prêts à l'emploi",
+      href: "#",
+    },
+    {
+      image: "/uploads/images/site/8e150a52-baa8-4d64-8b91-5572d05f5c03.jpg",
+      title: "Authentification intégrée",
+      tagline: "Flux utilisateur, organisations et gestion des accès",
+      href: "#",
+    },
+    {
+      image: "/uploads/images/site/d7675c34-f18b-4c1f-8daa-3f9fbe65672d.png",
+      title: "Gestion des médias",
+      tagline: "Uploads sécurisés et catalogue de fichiers",
+      href: "#",
+    },
+    {
+      image: "/uploads/images/site/f331e3ba-802a-4f1d-9ecc-da6fd3a40980.png",
+      title: "Audit et observabilité",
+      tagline: "Traçabilité des actions et conformité",
+      href: "#",
+    },
+    {
+      image: "/uploads/images/site/37e5a20c-649c-4c1f-8d0e-e39e2f528d32.png",
+      title: "Contenu éditorial",
+      tagline: "Sections flexibles, multilingue et CMS léger",
+      href: "#",
+    },
+    {
+      image: "/uploads/images/site/342d5cf3-bd8a-402b-a97a-977d7039bbe7.png",
+      title: "Performances Astro",
+      tagline: "Pages rapides, rendering côté serveur et chargement progressif",
+      href: "#",
+    },
+  ],
+  ctaText = "Découvrir Atomic",
+  ctaHref = "#",
+  class: className,
+  ...rest
+} = Astro.props;
+---
+
+<section class={sectionStyles({ class: className })} {...rest}>
+  <!-- HEADER -->
+  <div class="mx-auto mb-12 max-w-7xl px-4">
+    <div class="flex flex-col gap-6 @2xl:flex-row @2xl:items-end @2xl:justify-between">
+      <div class="max-w-2xl">
+        <span class="text-sm font-semibold uppercase tracking-widest text-primary-accent">
+          {badge}
+        </span>
+
+        <h2 class="font-heading mt-3 text-3xl font-semibold @3xl:text-5xl">
+          {heading}
+        </h2>
+
+        <p class="text-muted-foreground mt-4 @xl:text-lg">
+          {description}
+        </p>
+      </div>
+
+      {
+        ctaText && (
+          <Button variant="outline" href={ctaHref} class="group">
+            {ctaText}
+            <IconArrowRight class="size-4 transition-transform group-hover:translate-x-1" />
+          </Button>
+        )
+      }
+    </div>
+  </div>
+
+  <!-- CAROUSEL -->
+  <HorizontalScrollCarousel id="category">
+    {services.map((service) => (
+      <CategoryCard {...service} />
+    ))}
+  </HorizontalScrollCarousel>
+</section>

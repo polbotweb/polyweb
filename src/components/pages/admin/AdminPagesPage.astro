@@ -1,0 +1,362 @@
+---
+/**
+ * AdminPagesPage — List, create, publish/unpublish, delete CMS pages.
+ * Uses DataView for responsive table/card layout with search, filters, and sort.
+ */
+import { LOCALES, type AuthTranslations, type Locale } from '@i18n/config';
+import type { pages } from '@database/schemas';
+import { Card, CardContent } from '@atoms/card';
+import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@atoms/table';
+import Badge from '@atoms/badge/Badge.astro';
+import Button from '@atoms/button/Button.astro';
+import { Input } from '@atoms/input';
+import { NativeSelect, NativeSelectOption } from '@atoms/native-select';
+import { DataView } from '@molecules/DataView';
+import AdminPagination from '@molecules/AdminPagination/AdminPagination.astro';
+
+type PageRow = Pick<
+  typeof pages.$inferSelect,
+  'id' | 'locale' | 'title' | 'slug' | 'template' | 'metaTitle' | 'metaDescription' |
+  'ogImage' | 'isPublished' | 'publishedAt' | 'sortOrder' | 'lockedBy' | 'lockedAt' |
+  'createdAt' | 'updatedAt'
+> & { sectionCount: number };
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  pages: PageRow[];
+  currentPage: number;
+  totalPages: number;
+  baseUrl: URL;
+}
+
+const { t, locale, pages: allPages, currentPage, totalPages, baseUrl } = Astro.props;
+const cms = t.admin.cms.pages;
+const LOCK_TTL_MS = 5 * 60 * 1000;
+
+function isLocked(page: PageRow) {
+  if (!page.lockedBy || !page.lockedAt) return false;
+  return Date.now() - new Date(page.lockedAt).getTime() < LOCK_TTL_MS;
+}
+
+function formatShortDate(d: Date | string | null) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function isoDate(d: Date | string | null) {
+  if (!d) return '';
+  return new Date(d).toISOString();
+}
+---
+
+<pages-manager
+  id="cms-pages-data"
+  data-locale={locale}
+  data-t-saved={cms.saved}
+  data-t-deleted={cms.deleted}
+  data-t-error={t.admin.cms.common.error}
+  data-t-confirm={cms.confirmDelete}
+  data-t-create-title={cms.createPage}
+>
+  <div class="mb-4 flex items-center justify-between">
+    <div>
+      <h2 class="text-lg font-semibold">{cms.title}</h2>
+      <p class="text-sm text-muted-foreground">{cms.description}</p>
+    </div>
+    <Button id="create-page-btn" size="sm">{cms.createPage}</Button>
+  </div>
+
+  <DataView>
+    <Fragment slot="toolbar-start">
+      <Input
+        type="search"
+        id="admin-page-search"
+        placeholder={cms.searchPlaceholder}
+        class="max-w-xs"
+      />
+      <NativeSelect id="admin-page-filter-status" class="w-auto text-sm">
+        <NativeSelectOption value="">{cms.filter.allStatuses}</NativeSelectOption>
+        <NativeSelectOption value="published">{cms.published}</NativeSelectOption>
+        <NativeSelectOption value="draft">{cms.draft}</NativeSelectOption>
+      </NativeSelect>
+      <NativeSelect id="admin-page-filter-template" class="w-auto text-sm">
+        <NativeSelectOption value="">{cms.filter.allTemplates}</NativeSelectOption>
+        <NativeSelectOption value="legal">legal</NativeSelectOption>
+        <NativeSelectOption value="default">default</NativeSelectOption>
+      </NativeSelect>
+      <NativeSelect id="admin-page-filter-locale" class="w-auto text-sm">
+        <NativeSelectOption value="">{cms.filter.allLocales}</NativeSelectOption>
+        {LOCALES.map((loc) => (
+          <NativeSelectOption value={loc}>{loc.toUpperCase()}</NativeSelectOption>
+        ))}
+      </NativeSelect>
+    </Fragment>
+
+    <Fragment slot="toolbar-end">
+      <NativeSelect id="admin-page-sort" class="w-auto text-sm">
+        <NativeSelectOption value="newest">{cms.sort.newest}</NativeSelectOption>
+        <NativeSelectOption value="oldest">{cms.sort.oldest}</NativeSelectOption>
+        <NativeSelectOption value="name-asc">{cms.sort.nameAsc}</NativeSelectOption>
+        <NativeSelectOption value="name-desc">{cms.sort.nameDesc}</NativeSelectOption>
+      </NativeSelect>
+    </Fragment>
+
+    <!-- ─── Table view ─── -->
+    <div slot="table" class="rounded-md border overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{cms.columns.locale}</TableHead>
+            <TableHead>{cms.columns.title}</TableHead>
+            <TableHead>{cms.columns.slug}</TableHead>
+            <TableHead>{cms.columns.template}</TableHead>
+            <TableHead class="text-center">{cms.columns.sections}</TableHead>
+            <TableHead class="text-center">{cms.columns.status}</TableHead>
+            <TableHead class="text-center">{cms.columns.locked}</TableHead>
+            <TableHead class="text-right">{cms.columns.actions}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody id="admin-pages-tbody">
+          {allPages.length === 0 ? (
+            <TableRow>
+              <TableCell colspan={8} class="text-center text-muted-foreground py-8">
+                {cms.noResults}
+              </TableCell>
+            </TableRow>
+          ) : (
+            allPages.map((page) => (
+              <TableRow
+                class="cms-page-row"
+                data-id={page.id}
+                data-title={page.title.toLowerCase()}
+                data-slug={page.slug.toLowerCase()}
+                data-template={page.template ?? 'default'}
+                data-locale={page.locale}
+                data-published={String(page.isPublished)}
+                data-date={isoDate(page.publishedAt)}
+              >
+                <TableCell>
+                  <Badge variant="outline" size="sm">{page.locale.toUpperCase()}</Badge>
+                </TableCell>
+                <TableCell class="font-medium">{page.title}</TableCell>
+                <TableCell class="text-muted-foreground text-sm">/{page.slug}</TableCell>
+                <TableCell class="text-sm">{page.template ?? 'default'}</TableCell>
+                <TableCell class="text-center text-sm text-muted-foreground">{page.sectionCount ?? 0}</TableCell>
+                <TableCell class="text-center">
+                  <Badge variant={page.isPublished ? 'default' : 'secondary'}>
+                    {page.isPublished ? cms.published : cms.draft}
+                  </Badge>
+                </TableCell>
+                <TableCell class="text-center">
+                  {isLocked(page) ? (
+                    <span class="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400" title={`Locked by ${page.lockedBy}`}>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                      </svg>
+                    </span>
+                  ) : (
+                    <span class="text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+                <TableCell class="text-right">
+                  <div class="flex gap-1 justify-end flex-wrap">
+                    <Button size="sm" variant="outline" class="page-toggle-btn" data-id={page.id} data-published={String(page.isPublished)}>
+                      {page.isPublished ? cms.unpublish : cms.publish}
+                    </Button>
+                    <Button size="sm" variant="outline" class="page-edit-btn" data-id={page.id}>
+                      {cms.editPage}
+                    </Button>
+                    <Button size="sm" variant="error" class="page-delete-btn" data-id={page.id}>
+                      {t.admin.cms.common.delete}
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+
+    <!-- ─── Cards view ─── -->
+    <div slot="cards" class="grid gap-3" id="admin-pages-cards">
+      {allPages.length === 0 ? (
+        <p class="text-center text-muted-foreground py-8">{cms.noResults}</p>
+      ) : (
+        allPages.map((page) => (
+          <Card
+            class="cms-page-row"
+            data-id={page.id}
+            data-title={page.title.toLowerCase()}
+            data-slug={page.slug.toLowerCase()}
+            data-template={page.template ?? 'default'}
+            data-locale={page.locale}
+            data-published={String(page.isPublished)}
+            data-date={isoDate(page.publishedAt)}
+          >
+            <CardContent class="p-4">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex-1 min-w-0">
+                  <p class="font-medium text-sm truncate">{page.title}</p>
+                  <p class="text-xs text-muted-foreground truncate">/{page.slug}</p>
+                </div>
+                <div class="flex gap-1 items-center">
+                  <Badge variant="outline" size="sm">{page.locale.toUpperCase()}</Badge>
+                  <Badge variant="outline" size="sm">{page.template ?? 'default'}</Badge>
+                  <Badge variant={page.isPublished ? 'default' : 'secondary'} size="sm">
+                    {page.isPublished ? cms.published : cms.draft}
+                  </Badge>
+                  {isLocked(page) && (
+                    <span class="inline-flex items-center text-amber-600 dark:text-amber-400" title={`Locked by ${page.lockedBy}`}>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                      </svg>
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div class="flex items-center justify-between text-xs text-muted-foreground mb-3">
+                <span>{cms.columns.sections}: {page.sectionCount ?? 0}</span>
+                <span>{formatShortDate(page.publishedAt)}</span>
+              </div>
+              <div class="flex gap-2 flex-wrap">
+                <Button size="sm" variant="outline" class="page-toggle-btn" data-id={page.id} data-published={String(page.isPublished)}>
+                  {page.isPublished ? cms.unpublish : cms.publish}
+                </Button>
+                <Button size="sm" variant="outline" class="page-edit-btn" data-id={page.id}>
+                  {cms.editPage}
+                </Button>
+                <Button size="sm" variant="error" class="page-delete-btn" data-id={page.id}>
+                  {t.admin.cms.common.delete}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))
+      )}
+    </div>
+  </DataView>
+
+  <AdminPagination currentPage={currentPage} totalPages={totalPages} baseUrl={baseUrl} />
+</pages-manager>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { toast } from '@atoms/toast';
+
+  class PagesManager extends HTMLElement {
+    connectedCallback() {
+      const locale = this.dataset.locale!;
+      const tDeleted = this.dataset.tDeleted ?? '';
+      const tError = this.dataset.tError ?? '';
+      const tConfirm = this.dataset.tConfirm ?? '';
+      const tCreateTitle = this.dataset.tCreateTitle ?? '';
+
+      // ─── Create page ───
+      this.querySelector('#create-page-btn')?.addEventListener('click', async () => {
+        const { error } = await actions.createPage({
+          locale: locale as 'fr' | 'en' | 'es' | 'ar',
+          slug: 'new-page-' + Date.now(),
+          title: tCreateTitle,
+        });
+        if (!error) location.reload();
+        else toast.error(error.message ?? tError);
+      });
+
+      // ─── Toggle publish ───
+      this.querySelectorAll<HTMLElement>('.page-toggle-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id!;
+          const isPublished = btn.dataset.published === 'true';
+          const { error } = await actions.publishPage({ id, isPublished: !isPublished });
+          if (!error) location.reload();
+          else toast.error(error.message ?? tError);
+        });
+      });
+
+      // ─── Delete page ───
+      this.querySelectorAll<HTMLElement>('.page-delete-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          if (!confirm(tConfirm)) return;
+          const id = btn.dataset.id!;
+          const { error } = await actions.deletePage({ id });
+          if (!error) { toast.success(tDeleted); btn.closest('.cms-page-row')?.remove(); }
+          else toast.error(error.message ?? tError);
+        });
+      });
+
+      // ─── Edit page ───
+      this.querySelectorAll<HTMLElement>('.page-edit-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.id!;
+          const url = new URL(window.location.href);
+          url.searchParams.set('edit', id);
+          window.location.href = url.toString();
+        });
+      });
+
+      // ─── Client-side search, filter, sort ───
+      const searchInput = this.querySelector('#admin-page-search') as HTMLInputElement | null;
+      const filterStatus = this.querySelector('#admin-page-filter-status');
+      const statusSelect = (filterStatus?.closest('[data-slot="native-select-wrapper"]')?.querySelector('select') ?? filterStatus) as HTMLSelectElement | null;
+      const filterTemplate = this.querySelector('#admin-page-filter-template');
+      const templateSelect = (filterTemplate?.closest('[data-slot="native-select-wrapper"]')?.querySelector('select') ?? filterTemplate) as HTMLSelectElement | null;
+      const filterLocale = this.querySelector('#admin-page-filter-locale');
+      const localeSelect = (filterLocale?.closest('[data-slot="native-select-wrapper"]')?.querySelector('select') ?? filterLocale) as HTMLSelectElement | null;
+      const sortEl = this.querySelector('#admin-page-sort');
+      const sortSelect = (sortEl?.closest('[data-slot="native-select-wrapper"]')?.querySelector('select') ?? sortEl) as HTMLSelectElement | null;
+
+      const rows = Array.from(this.querySelectorAll<HTMLElement>('.cms-page-row'));
+
+      const applyFilters = () => {
+        const q = (searchInput?.value ?? '').toLowerCase();
+        const statusFilter = statusSelect?.value ?? '';
+        const templateFilter = templateSelect?.value ?? '';
+        const localeFilter = localeSelect?.value ?? '';
+
+        rows.forEach((row) => {
+          const title = row.dataset.title ?? '';
+          const slug = row.dataset.slug ?? '';
+          const template = row.dataset.template ?? '';
+          const rowLocale = row.dataset.locale ?? '';
+          const isPublished = row.dataset.published === 'true';
+
+          let visible = true;
+          if (q && !title.includes(q) && !slug.includes(q)) visible = false;
+          if (statusFilter === 'published' && !isPublished) visible = false;
+          if (statusFilter === 'draft' && isPublished) visible = false;
+          if (templateFilter && template !== templateFilter) visible = false;
+          if (localeFilter && rowLocale !== localeFilter) visible = false;
+
+          row.style.display = visible ? '' : 'none';
+        });
+      };
+
+      const applySort = () => {
+        const sortValue = sortSelect?.value ?? 'newest';
+        const parent = rows[0]?.parentElement;
+        if (!parent) return;
+
+        const sorted = [...rows].sort((a, b) => {
+          switch (sortValue) {
+            case 'oldest': return (a.dataset.date ?? '').localeCompare(b.dataset.date ?? '');
+            case 'newest': return (b.dataset.date ?? '').localeCompare(a.dataset.date ?? '');
+            case 'name-asc': return (a.dataset.title ?? '').localeCompare(b.dataset.title ?? '');
+            case 'name-desc': return (b.dataset.title ?? '').localeCompare(a.dataset.title ?? '');
+            default: return 0;
+          }
+        });
+        sorted.forEach((row) => parent.appendChild(row));
+      };
+
+      searchInput?.addEventListener('input', applyFilters);
+      statusSelect?.addEventListener('change', applyFilters);
+      templateSelect?.addEventListener('change', applyFilters);
+      localeSelect?.addEventListener('change', applyFilters);
+      sortSelect?.addEventListener('change', () => { applySort(); applyFilters(); });
+    }
+  }
+
+  customElements.define('pages-manager', PagesManager);
+</script>
