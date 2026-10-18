@@ -143,3 +143,32 @@ test("services admin: facets (links with counts) and saved views (save, open, de
     await db.delete(schema.services).where(eq(schema.services.id, serviceId));
   }
 });
+
+test("blog admin: saved views keep the canonical list query (save, open, delete)", async ({ browser }) => {
+  const { getDrizzle, schema } = await import("../../src/database/drizzle");
+  const { and, eq } = await import("drizzle-orm");
+  const db = getDrizzle();
+  const owner = await seedUserId();
+  const name = `E2E blog ${randomUUID().slice(0, 6)}`;
+  try {
+    const { context, page } = await authedPage(browser);
+    await page.goto("/fr/admin/blog?status=DRAFT&translationLocale=en", { waitUntil: "networkidle" });
+    const views = page.getByRole("region", { name: "Vues enregistrées" });
+    await views.getByLabel("Nom de la vue").fill(name);
+    await views.getByRole("button", { name: "Enregistrer la vue actuelle" }).click();
+    await expect(views.getByRole("link", { name })).toHaveAttribute("aria-current", "page");
+    const [row] = await db.select().from(schema.adminSavedViews).where(and(eq(schema.adminSavedViews.userId, owner), eq(schema.adminSavedViews.resource, "blog-post"), eq(schema.adminSavedViews.name, name)));
+    expect(new URLSearchParams(row?.query).get("status")).toBe("DRAFT");
+    expect(new URLSearchParams(row?.query).get("translationLocale")).toBe("en");
+
+    await page.goto("/fr/admin/blog", { waitUntil: "networkidle" });
+    await page.getByRole("region", { name: "Vues enregistrées" }).getByRole("link", { name }).click();
+    await page.waitForURL(/status=DRAFT/);
+    await page.getByRole("region", { name: "Vues enregistrées" }).getByRole("button", { name: `Supprimer la vue « ${name} »` }).click();
+    await page.getByRole("dialog", { name: "Supprimer la vue" }).getByRole("button", { name: "Supprimer", exact: true }).click();
+    await expect.poll(async () => (await db.select().from(schema.adminSavedViews).where(and(eq(schema.adminSavedViews.userId, owner), eq(schema.adminSavedViews.name, name)))).length).toBe(0);
+    await context.close();
+  } finally {
+    await db.delete(schema.adminSavedViews).where(and(eq(schema.adminSavedViews.userId, owner), eq(schema.adminSavedViews.name, name)));
+  }
+});
