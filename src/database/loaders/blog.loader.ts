@@ -1,6 +1,8 @@
 import { eq, and, desc, asc, or, ilike, inArray, isNull, sql, count, gte } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { cached } from "@database/cache";
+import { Effect } from "effect";
+import { dbTry, runOrThrow } from "@/lib/effect/run";
 import {
   blogPosts,
   blogPostTranslations,
@@ -815,245 +817,225 @@ export const getBlogTagBySlug = cached(
 
 // ─── Comments ────────────────────────────────────────────────────────────────
 
-export async function getBlogComments(
-  postId: string,
-  opts: { status?: "APPROVED" | "PENDING" | "ALL"; page?: number; limit?: number } = {},
-) {
-  const db = getDrizzle();
-  const status = opts.status ?? "APPROVED";
-  const page = Math.max(1, opts.page ?? 1);
-  const limit = Math.min(100, Math.max(1, opts.limit ?? BLOG_DEFAULTS.commentsPerPage));
-  const offset = (page - 1) * limit;
+/*
+ * Lectures Effect-natives (engagement, liens, statistiques, galeries) : chaque requête
+ * passe par `dbTry` (DbError typé, span `db.blog.<op>`), les requêtes indépendantes sont
+ * composées en parallèle. Les exports Promise historiques sont des adaptateurs `runOrThrow`
+ * (même résultat, cause d'origine relevée) : les appelants existants ne changent pas.
+ */
+type CommentStatusFilter = "APPROVED" | "PENDING" | "ALL";
+const authorColumns = { id: user.id, name: user.name, image: user.image };
 
-  const baseConditions = [eq(blogComments.postId, postId), isNull(blogComments.parentId)];
-  const statusCondition = status !== "ALL" ? eq(blogComments.status, status) : undefined;
+const blogCommentsEffect = (postId: string, opts: { status?: CommentStatusFilter; page?: number; limit?: number } = {}) =>
+  Effect.gen(function* () {
+    const db = getDrizzle();
+    const status = opts.status ?? "APPROVED";
+    const page = Math.max(1, opts.page ?? 1);
+    const limit = Math.min(100, Math.max(1, opts.limit ?? BLOG_DEFAULTS.commentsPerPage));
+    const offset = (page - 1) * limit;
+    const baseConditions = [eq(blogComments.postId, postId), isNull(blogComments.parentId)];
+    const statusCondition = status !== "ALL" ? eq(blogComments.status, status) : undefined;
 
-  const roots = await db
-    .select({
-      comment: blogComments,
-      author: { id: user.id, name: user.name, image: user.image },
-    })
-    .from(blogComments)
-    .innerJoin(blogPosts, eq(blogComments.postId, blogPosts.id))
-    .leftJoin(user, eq(user.id, blogComments.authorId))
-    .where(
-      statusCondition
-        ? and(...baseConditions, statusCondition, publicBlogPostScope(blogPosts))
-        : and(...baseConditions, publicBlogPostScope(blogPosts)),
-    )
-    .orderBy(desc(blogComments.createdAt))
-    .limit(limit)
-    .offset(offset);
-
-  const withReplies = await Promise.all(
-    roots.map(async ({ comment, author }) => {
-      const replyConditions = [eq(blogComments.parentId, comment.id)];
-      if (status !== "ALL") replyConditions.push(eq(blogComments.status, status));
-
-      const replies = await db
-        .select({
-          comment: blogComments,
-          author: { id: user.id, name: user.name, image: user.image },
-        })
+    const roots = yield* dbTry("blog.comments", () =>
+      db
+        .select({ comment: blogComments, author: authorColumns })
         .from(blogComments)
+        .innerJoin(blogPosts, eq(blogComments.postId, blogPosts.id))
         .leftJoin(user, eq(user.id, blogComments.authorId))
-        .where(and(...replyConditions))
-        .orderBy(asc(blogComments.createdAt));
+        .where(
+          statusCondition
+            ? and(...baseConditions, statusCondition, publicBlogPostScope(blogPosts))
+            : and(...baseConditions, publicBlogPostScope(blogPosts)),
+        )
+        .orderBy(desc(blogComments.createdAt))
+        .limit(limit)
+        .offset(offset),
+    );
 
-      return {
-        ...comment,
-        author,
-        replies: replies.map((r) => ({ ...r.comment, author: r.author })),
-      };
+    return yield* Effect.forEach(
+      roots,
+      ({ comment, author }) => {
+        const replyConditions = [eq(blogComments.parentId, comment.id)];
+        if (status !== "ALL") replyConditions.push(eq(blogComments.status, status));
+        return dbTry("blog.commentReplies", () =>
+          db
+            .select({ comment: blogComments, author: authorColumns })
+            .from(blogComments)
+            .leftJoin(user, eq(user.id, blogComments.authorId))
+            .where(and(...replyConditions))
+            .orderBy(asc(blogComments.createdAt)),
+        ).pipe(Effect.map((replies) => ({ ...comment, author, replies: replies.map((r) => ({ ...r.comment, author: r.author })) })));
+      },
+      { concurrency: "unbounded" },
+    );
+  });
+
+const blogReviewsEffect = (postId: string, opts: { status?: CommentStatusFilter; page?: number; limit?: number; userId?: string } = {}) =>
+  Effect.gen(function* () {
+    const db = getDrizzle();
+    const status = opts.status ?? "APPROVED";
+    const page = Math.max(1, opts.page ?? 1);
+    const limit = Math.min(100, Math.max(1, opts.limit ?? BLOG_DEFAULTS.reviewsPerPage));
+    const offset = (page - 1) * limit;
+    const conditions = [eq(blogPostReviews.postId, postId)];
+    if (status !== "ALL") conditions.push(eq(blogPostReviews.status, status));
+
+    const reviews = yield* dbTry("blog.reviews", () =>
+      db
+        .select({ review: blogPostReviews, author: authorColumns })
+        .from(blogPostReviews)
+        .innerJoin(blogPosts, eq(blogPostReviews.postId, blogPosts.id))
+        .leftJoin(user, eq(user.id, blogPostReviews.authorId))
+        .where(and(...conditions, publicBlogPostScope(blogPosts)))
+        .orderBy(desc(blogPostReviews.createdAt))
+        .limit(limit)
+        .offset(offset),
+    );
+
+    const viewerId = opts.userId;
+    return yield* Effect.forEach(
+      reviews,
+      ({ review, author }) =>
+        (viewerId
+          ? dbTry("blog.reviewVote", () =>
+              db
+                .select({ isHelpful: blogPostReviewHelpful.isHelpful })
+                .from(blogPostReviewHelpful)
+                .where(and(eq(blogPostReviewHelpful.reviewId, review.id), eq(blogPostReviewHelpful.userId, viewerId)))
+                .limit(1),
+            ).pipe(Effect.map(([vote]) => vote?.isHelpful ?? null))
+          : Effect.succeed<boolean | null>(null)
+        ).pipe(Effect.map((userVote) => ({ ...review, author, userVote }))),
+      { concurrency: "unbounded" },
+    );
+  });
+
+const blogReviewStatsEffect = (postId: string) =>
+  dbTry("blog.reviewStats", () =>
+    getDrizzle()
+      .select({ rating: blogPostReviews.rating, count: count() })
+      .from(blogPostReviews)
+      .innerJoin(blogPosts, eq(blogPostReviews.postId, blogPosts.id))
+      .where(and(eq(blogPostReviews.postId, postId), eq(blogPostReviews.status, "APPROVED"), publicBlogPostScope(blogPosts)))
+      .groupBy(blogPostReviews.rating),
+  ).pipe(
+    Effect.map((rows) => {
+      const total = rows.reduce((sum, r) => sum + Number(r.count), 0);
+      const average = total > 0 ? rows.reduce((sum, r) => sum + Number(r.count) * r.rating, 0) / total : 0;
+      return { total, average: Math.round(average * 10) / 10, distribution: rows };
     }),
   );
 
-  return withReplies;
-}
-
-// ─── Reviews ─────────────────────────────────────────────────────────────────
-
-export async function getBlogReviews(
-  postId: string,
-  opts: { status?: "APPROVED" | "PENDING" | "ALL"; page?: number; limit?: number; userId?: string } = {},
-) {
-  const db = getDrizzle();
-  const status = opts.status ?? "APPROVED";
-  const page = Math.max(1, opts.page ?? 1);
-  const limit = Math.min(100, Math.max(1, opts.limit ?? BLOG_DEFAULTS.reviewsPerPage));
-  const offset = (page - 1) * limit;
-
-  const conditions = [eq(blogPostReviews.postId, postId)];
-  if (status !== "ALL") conditions.push(eq(blogPostReviews.status, status));
-
-  const reviews = await db
-    .select({
-      review: blogPostReviews,
-      author: { id: user.id, name: user.name, image: user.image },
-    })
-    .from(blogPostReviews)
-    .innerJoin(blogPosts, eq(blogPostReviews.postId, blogPosts.id))
-    .leftJoin(user, eq(user.id, blogPostReviews.authorId))
-    .where(and(...conditions, publicBlogPostScope(blogPosts)))
-    .orderBy(desc(blogPostReviews.createdAt))
-    .limit(limit)
-    .offset(offset);
-
-  return Promise.all(
-    reviews.map(async ({ review, author }) => {
-      let userVote: boolean | null = null;
-      if (opts.userId) {
-        const [vote] = await db
-          .select({ isHelpful: blogPostReviewHelpful.isHelpful })
-          .from(blogPostReviewHelpful)
-          .where(
-            and(
-              eq(blogPostReviewHelpful.reviewId, review.id),
-              eq(blogPostReviewHelpful.userId, opts.userId),
-            ),
-          )
-          .limit(1);
-        userVote = vote?.isHelpful ?? null;
-      }
-      return { ...review, author, userVote };
-    }),
-  );
-}
-
-export async function getBlogReviewStats(postId: string) {
-  const db = getDrizzle();
-  const rows = await db
-    .select({ rating: blogPostReviews.rating, count: count() })
-    .from(blogPostReviews)
-    .innerJoin(blogPosts, eq(blogPostReviews.postId, blogPosts.id))
-    .where(
-      and(
-        eq(blogPostReviews.postId, postId),
-        eq(blogPostReviews.status, "APPROVED"),
-        publicBlogPostScope(blogPosts),
-      ),
-    )
-    .groupBy(blogPostReviews.rating);
-
-  const total = rows.reduce((sum, r) => sum + Number(r.count), 0);
-  const average = total > 0 ? rows.reduce((sum, r) => sum + Number(r.count) * r.rating, 0) / total : 0;
-
-  return { total, average: Math.round(average * 10) / 10, distribution: rows };
-}
-
-// ─── Related / internal links ────────────────────────────────────────────────
-
-export async function getBlogPostLinks(
-  postId: string,
-  linkType?: "RELATED" | "PREVIOUS" | "NEXT" | "REFERENCE",
-) {
-  const db = getDrizzle();
+const blogPostLinksEffect = (postId: string, linkType?: "RELATED" | "PREVIOUS" | "NEXT" | "REFERENCE") => {
   const conditions = [eq(blogPostLinks.sourcePostId, postId)];
   if (linkType) conditions.push(eq(blogPostLinks.linkType, linkType));
+  return dbTry("blog.postLinks", () =>
+    getDrizzle()
+      .select({
+        id: blogPostLinks.id,
+        linkType: blogPostLinks.linkType,
+        sortOrder: blogPostLinks.sortOrder,
+        targetId: blogPosts.id,
+        targetSlug: blogPosts.slug,
+        targetTranslationSlug: blogPostTranslations.slug,
+        targetTranslationTitle: blogPostTranslations.title,
+      })
+      .from(blogPostLinks)
+      .innerJoin(blogPosts, eq(blogPostLinks.targetPostId, blogPosts.id))
+      .leftJoin(blogPostTranslations, and(eq(blogPostTranslations.postId, blogPosts.id), eq(blogPostTranslations.locale, "fr")))
+      .where(and(...conditions, publicBlogPostScope(blogPosts)))
+      .orderBy(asc(blogPostLinks.sortOrder), asc(blogPostLinks.linkType)),
+  ).pipe(
+    Effect.map((rows) =>
+      rows.map((row) => ({
+        id: row.id,
+        linkType: row.linkType,
+        sortOrder: row.sortOrder,
+        target: { id: row.targetId, slug: row.targetTranslationSlug ?? row.targetSlug, title: row.targetTranslationTitle ?? null },
+      })),
+    ),
+  );
+};
 
-  const rows = await db
-    .select({
-      id: blogPostLinks.id,
-      linkType: blogPostLinks.linkType,
-      sortOrder: blogPostLinks.sortOrder,
-      targetId: blogPosts.id,
-      targetSlug: blogPosts.slug,
-      targetTranslationSlug: blogPostTranslations.slug,
-      targetTranslationTitle: blogPostTranslations.title,
-    })
-    .from(blogPostLinks)
-    .innerJoin(blogPosts, eq(blogPostLinks.targetPostId, blogPosts.id))
-    .leftJoin(
-      blogPostTranslations,
-      and(eq(blogPostTranslations.postId, blogPosts.id), eq(blogPostTranslations.locale, "fr")),
-    )
-    .where(and(...conditions, publicBlogPostScope(blogPosts)))
-    .orderBy(asc(blogPostLinks.sortOrder), asc(blogPostLinks.linkType));
-
-  return rows.map((row) => ({
-    id: row.id,
-    linkType: row.linkType,
-    sortOrder: row.sortOrder,
-    target: {
-      id: row.targetId,
-      slug: row.targetTranslationSlug ?? row.targetSlug,
-      title: row.targetTranslationTitle ?? null,
-    },
-  }));
-}
-
-// ─── Stats ───────────────────────────────────────────────────────────────────
-
-export async function getBlogPostStats(postId: string, days = 30) {
+const blogPostStatsEffect = (postId: string, days = 30) => Effect.suspend(() => {
   const db = getDrizzle();
   const since = new Date();
   since.setDate(since.getDate() - days);
   const sinceStr = since.toISOString().split("T")[0];
+  const scope = and(eq(blogPostViewStats.postId, postId), gte(blogPostViewStats.date, sinceStr));
+  // Trois agrégats indépendants : exécutés en parallèle.
+  return Effect.all(
+    {
+      views: dbTry("blog.stats.views", () =>
+        db.select({ date: blogPostViewStats.date, count: count() }).from(blogPostViewStats).where(scope).groupBy(blogPostViewStats.date).orderBy(asc(blogPostViewStats.date)),
+      ),
+      referrers: dbTry("blog.stats.referrers", () =>
+        db.select({ referrer: blogPostViewStats.referrer, count: count() }).from(blogPostViewStats).where(scope).groupBy(blogPostViewStats.referrer).orderBy(desc(count())).limit(10),
+      ),
+      devices: dbTry("blog.stats.devices", () =>
+        db.select({ deviceType: blogPostViewStats.deviceType, count: count() }).from(blogPostViewStats).where(scope).groupBy(blogPostViewStats.deviceType),
+      ),
+    },
+    { concurrency: "unbounded" },
+  );
+});
 
-  const views = await db
-    .select({ date: blogPostViewStats.date, count: count() })
-    .from(blogPostViewStats)
-    .where(and(eq(blogPostViewStats.postId, postId), gte(blogPostViewStats.date, sinceStr)))
-    .groupBy(blogPostViewStats.date)
-    .orderBy(asc(blogPostViewStats.date));
+type GalleryMediaItem = { mediaId: string; altText: string; caption: string | null; sortOrder: number; file: { id: string; url: string } };
 
-  const referrers = await db
-    .select({ referrer: blogPostViewStats.referrer, count: count() })
-    .from(blogPostViewStats)
-    .where(and(eq(blogPostViewStats.postId, postId), gte(blogPostViewStats.date, sinceStr)))
-    .groupBy(blogPostViewStats.referrer)
-    .orderBy(desc(count()))
-    .limit(10);
+/**
+ * Médias de plusieurs galeries en un seul aller-retour (IN) plutôt qu'une requête par
+ * galerie ; Map indexée par galleryId (pas de boucle N+1 côté appelant).
+ */
+const blogGalleriesWithMediaEffect = (galleryIds: string[]) =>
+  galleryIds.length === 0
+    ? Effect.succeed(new Map<string, GalleryMediaItem[]>())
+    : dbTry("blog.galleriesWithMedia", () =>
+        getDrizzle()
+          .select({
+            galleryId: blogPostGalleryMedia.galleryId,
+            mediaId: blogPostGalleryMedia.mediaId,
+            altText: blogPostGalleryMedia.altText,
+            caption: blogPostGalleryMedia.caption,
+            sortOrder: blogPostGalleryMedia.sortOrder,
+            file: { id: mediaFiles.id, url: mediaFiles.url },
+          })
+          .from(blogPostGalleryMedia)
+          .innerJoin(mediaFiles, eq(blogPostGalleryMedia.mediaId, mediaFiles.id))
+          .where(inArray(blogPostGalleryMedia.galleryId, galleryIds))
+          .orderBy(asc(blogPostGalleryMedia.sortOrder)),
+      ).pipe(
+        Effect.map((rows) => {
+          const result = new Map<string, GalleryMediaItem[]>();
+          for (const row of rows) {
+            const list = result.get(row.galleryId) ?? [];
+            list.push({ mediaId: row.mediaId, altText: row.altText, caption: row.caption, sortOrder: row.sortOrder, file: row.file });
+            result.set(row.galleryId, list);
+          }
+          return result;
+        }),
+      );
 
-  const devices = await db
-    .select({ deviceType: blogPostViewStats.deviceType, count: count() })
-    .from(blogPostViewStats)
-    .where(and(eq(blogPostViewStats.postId, postId), gte(blogPostViewStats.date, sinceStr)))
-    .groupBy(blogPostViewStats.deviceType);
+/** Lectures blog Effect-natives (migration en cours : les autres passent encore par `liftLoader`). */
+export const blogLoaderEffects = {
+  getBlogComments: blogCommentsEffect,
+  getBlogReviews: blogReviewsEffect,
+  getBlogReviewStats: blogReviewStatsEffect,
+  getBlogPostLinks: blogPostLinksEffect,
+  getBlogPostStats: blogPostStatsEffect,
+  getBlogGalleriesWithMedia: blogGalleriesWithMediaEffect,
+};
 
-  return { views, referrers, devices };
-}
+// ─── Adaptateurs Promise (contrat historique) ────────────────────────────────
+
+export const getBlogComments = (...args: Parameters<typeof blogCommentsEffect>) => runOrThrow(blogCommentsEffect(...args));
+export const getBlogReviews = (...args: Parameters<typeof blogReviewsEffect>) => runOrThrow(blogReviewsEffect(...args));
+export const getBlogReviewStats = (postId: string) => runOrThrow(blogReviewStatsEffect(postId));
+export const getBlogPostLinks = (...args: Parameters<typeof blogPostLinksEffect>) => runOrThrow(blogPostLinksEffect(...args));
+export const getBlogPostStats = (postId: string, days = 30) => runOrThrow(blogPostStatsEffect(postId, days));
+export const getBlogGalleriesWithMedia = (galleryIds: string[]) => runOrThrow(blogGalleriesWithMediaEffect(galleryIds));
 
 // ─── Admin helpers ───────────────────────────────────────────────────────────
 
-/**
-/**
- * Loads gallery media for many galleries in a single round-trip (IN query)
- * instead of one query per gallery. Returns a Map keyed by galleryId so the
- * caller can attach media to each gallery without an N+1 loop.
- */
-export async function getBlogGalleriesWithMedia(galleryIds: string[]) {
-  const result = new Map<string, Array<{ mediaId: string; altText: string; caption: string | null; sortOrder: number; file: { id: string; url: string } }>>();
-  if (galleryIds.length === 0) return result;
-
-  const db = getDrizzle();
-  const rows = await db
-    .select({
-      galleryId: blogPostGalleryMedia.galleryId,
-      mediaId: blogPostGalleryMedia.mediaId,
-      altText: blogPostGalleryMedia.altText,
-      caption: blogPostGalleryMedia.caption,
-      sortOrder: blogPostGalleryMedia.sortOrder,
-      file: { id: mediaFiles.id, url: mediaFiles.url },
-    })
-    .from(blogPostGalleryMedia)
-    .innerJoin(mediaFiles, eq(blogPostGalleryMedia.mediaId, mediaFiles.id))
-    .where(inArray(blogPostGalleryMedia.galleryId, galleryIds))
-    .orderBy(asc(blogPostGalleryMedia.sortOrder));
-
-  for (const row of rows) {
-    const list = result.get(row.galleryId) ?? [];
-    list.push({
-      mediaId: row.mediaId,
-      altText: row.altText,
-      caption: row.caption,
-      sortOrder: row.sortOrder,
-      file: row.file,
-    });
-    result.set(row.galleryId, list);
-  }
-  return result;
-}
 export async function getBlogPostForAdmin(postId: string) {
   const db = getDrizzle();
   const [post] = await db.select().from(blogPosts).where(eq(blogPosts.id, postId)).limit(1);
