@@ -44,6 +44,8 @@ export interface StorageShape {
   readonly publicUrl: (key: string) => string;
   /** Inverse de `publicUrl` : clé d'une URL servie par ce driver, sinon null. */
   readonly keyFromUrl: (url: string) => string | null;
+  /** Driver local uniquement : chemin disque absolu d'une clé (sous la racine configurée). */
+  readonly localPath?: (key: string) => string;
 }
 
 export class Storage extends Context.Service<Storage, StorageShape>()('polyweb/Storage') {}

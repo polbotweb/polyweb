@@ -57,5 +57,6 @@ export function makeLocalStorage(root = resolve(process.cwd(), 'public', 'upload
       ),
     publicUrl: (key) => `${urlBase}/${key}`,
     keyFromUrl: (url) => (url.startsWith(`${urlBase}/`) ? url.slice(urlBase.length + 1) : null),
+    localPath: (key) => pathFor(key),
   };
 }

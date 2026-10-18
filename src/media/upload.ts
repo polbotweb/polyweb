@@ -109,7 +109,9 @@ export const storeUpload = (p: PreparedUpload) =>
   }).pipe(Effect.withSpan('media.storeUpload'));
 
 function diskPathOrKey(storage: StorageShape, key: string): string {
-  return storage.driver === 'local' ? join(resolve(process.cwd(), 'public', 'uploads'), key) : key;
+  if (storage.driver !== 'local') return key;
+  // Racine réelle du driver (et non `public/uploads` supposé) : un stockage local configuré ailleurs reste exact.
+  return storage.localPath ? storage.localPath(key) : join(resolve(process.cwd(), 'public', 'uploads'), key);
 }
 
 /** Validation complète (type déclaré, taille, magic bytes, SVG assaini, décodage réel). */
