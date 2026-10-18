@@ -96,7 +96,7 @@
     "embla-carousel": "^8.6.0",
     "embla-carousel-autoplay": "^8.6.0",
     "isomorphic-dompurify": "^3.23.0",
-    "motion": "^12.43.0",
+    "motion": "^14.3.0",
     "nodemailer": "^10.0.6",
     "pg": "^8.23.0",
     "resend": "^6.33.0",
