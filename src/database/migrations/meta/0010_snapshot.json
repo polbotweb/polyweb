@@ -2709,6 +2709,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "variants": {
+          "name": "variants",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -2844,12 +2850,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": 0
-        },
-        "variants": {
-          "name": "variants",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
         },
         "created_at": {
           "name": "created_at",
