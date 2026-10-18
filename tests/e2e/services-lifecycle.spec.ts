@@ -74,3 +74,43 @@ test("services admin lifecycle follows the explicit state machine", async ({ bro
     await db.delete(schema.services).where(eq(schema.services.id, serviceId)).catch(() => {});
   }
 });
+
+test("services admin bulk bar: select, publish, then archive with modal confirmation", async ({ browser }) => {
+  const { getDrizzle, schema } = await import("../../src/database/drizzle");
+  const { eq, inArray } = await import("drizzle-orm");
+  const unique = randomUUID().slice(0, 8);
+  const ids = [randomUUID(), randomUUID()];
+  const db = getDrizzle();
+  const [seedUser] = await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, SEED_EMAIL)).limit(1);
+  if (!seedUser) throw new Error("Seed user not found");
+  const titles = ids.map((_, i) => `E2E Bulk Service ${unique} ${i}`);
+  await db.insert(schema.services).values(ids.map((id, i) => ({ id, organizationId: null, providerId: seedUser.id, slug: `e2e-bulk-${unique}-${i}`, status: "DRAFT" as const, updatedBy: seedUser.id })));
+  await db.insert(schema.serviceTranslations).values(ids.map((serviceId, i) => ({ serviceId, locale: "fr" as const, title: titles[i]!, slug: `e2e-bulk-${unique}-${i}`, content: `<p>${titles[i]}</p>`, excerpt: titles[i]!, metaTitle: titles[i]!, metaDescription: titles[i]! })));
+  const statuses = async () => (await db.select({ status: schema.services.status }).from(schema.services).where(inArray(schema.services.id, ids))).map((r) => r.status).sort();
+
+  try {
+    const context = await browser.newContext({ storageState: await authState(browser) });
+    const page = await context.newPage();
+    await page.goto(`/fr/admin/services?search=${encodeURIComponent(`E2E Bulk Service ${unique}`)}`, { waitUntil: "networkidle" });
+    const bar = page.getByRole("region", { name: "Actions groupées" });
+    await expect(bar.getByRole("button", { name: "Publier", exact: true })).toBeDisabled();
+    for (const title of titles) await page.getByRole("checkbox", { name: `Sélectionner « ${title} »` }).check();
+    await expect(bar.locator("[data-bulk-count]")).toHaveText("2 élément(s) sélectionné(s)");
+    await bar.getByRole("button", { name: "Publier", exact: true }).click();
+    await expect.poll(statuses).toEqual(["PUBLISHED", "PUBLISHED"]);
+
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("checkbox", { name: "Sélectionner tous les éléments de la page" }).check();
+    await bar.getByRole("button", { name: "Archiver", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Confirmer l'action groupée" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Annuler" }).click();
+    expect(await statuses()).toEqual(["PUBLISHED", "PUBLISHED"]);
+    await bar.getByRole("button", { name: "Archiver", exact: true }).click();
+    await dialog.getByRole("button", { name: "Confirmer", exact: true }).click();
+    await expect.poll(statuses).toEqual(["ARCHIVED", "ARCHIVED"]);
+    await context.close();
+  } finally {
+    await db.delete(schema.services).where(inArray(schema.services.id, ids));
+  }
+});

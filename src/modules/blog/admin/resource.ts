@@ -21,6 +21,14 @@ const blogPostListDefinition = {
     { id: "viewCount", queryParam: "sortBy", directions: ["asc", "desc"] },
   ],
   defaultSort: "updatedAt",
+  // Actions groupées (moteur core/bulk) : ids alignés sur les opérations de l'action serveur.
+  selection: true,
+  bulkActions: [
+    { id: "publish", permission: "blog:publish" },
+    { id: "archive", permission: "blog:update" },
+    { id: "restore", permission: "blog:update" },
+    { id: "delete", permission: "blog:delete", destructive: true, confirmationKey: "blog.bulk.delete" },
+  ],
 } as const;
 
 assertAdminResourceListDefinition(blogPostListDefinition);
@@ -35,6 +43,7 @@ export const blogPostAdminResource: AdminResourceDefinition = {
     sort: true,
     pagination: true,
     stats: true,
+    selection: true,
   },
   list: blogPostListDefinition,
   actions: {
@@ -47,7 +56,7 @@ export const blogPostAdminResource: AdminResourceDefinition = {
     archive: true,
     restore: true,
     delete: true,
-    bulk: false,
+    bulk: true,
   },
   presentation: {
     card: ["default", "compact"],

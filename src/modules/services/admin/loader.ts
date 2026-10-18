@@ -22,7 +22,7 @@ export async function getServiceAdminData(organizationId: string | null, locale:
   if (filters.featured !== undefined) conditions.push(eq(services.isFeatured, filters.featured));
   if (filters.mobile !== undefined) conditions.push(eq(services.isMobile, filters.mobile));
   const translatedConditions = [eq(serviceTranslations.locale, queryLocale), tenantJoinScope(serviceTranslations.organizationId, organizationId)];
-  const searchCondition = filters.search ? sql`(${serviceTranslations.searchVector} @@ websearch_to_tsquery(locale_to_regconfig(${queryLocale}), ${filters.search}) OR services.slug ILIKE ${`%${filters.search}%`} OR serviceTranslations.slug ILIKE ${`%${filters.search}%`})` : null;
+  const searchCondition = filters.search ? sql`(${serviceTranslations.searchVector} @@ websearch_to_tsquery(locale_to_regconfig(${queryLocale}), ${filters.search}) OR ${services.slug} ILIKE ${`%${filters.search}%`} OR ${serviceTranslations.slug} ILIKE ${`%${filters.search}%`})` : null;
   if (searchCondition) conditions.push(searchCondition);
   const orderColumn = filters.sortBy === "title" ? serviceTranslations.title : filters.sortBy === "priceMinor" ? services.priceMinor : filters.sortBy === "ratingAverage100" ? services.ratingAverage100 : filters.sortBy === "viewCount" ? services.viewCount : filters.sortBy === "publishedAt" ? services.publishedAt : filters.sortBy === "createdAt" ? services.createdAt : services.updatedAt;
   const orderBy = filters.sortOrder === "asc" ? asc(orderColumn) : desc(orderColumn);

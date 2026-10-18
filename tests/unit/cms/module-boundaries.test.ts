@@ -45,6 +45,7 @@ describe("Blog module boundaries", () => {
       sort: true,
       pagination: true,
       stats: true,
+      selection: true,
     });
     expect(blogPostAdminResource.list?.filters?.map((filter) => filter.id)).toEqual([
       "search",
