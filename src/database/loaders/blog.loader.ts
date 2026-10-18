@@ -3,6 +3,7 @@ import { getDrizzle } from "@database/drizzle";
 import { cached } from "@database/cache";
 import { Effect } from "effect";
 import { dbTry, runOrThrow } from "@/lib/effect/run";
+import type { DbError } from "@/lib/effect/errors";
 import {
   blogPosts,
   blogPostTranslations,
@@ -895,17 +896,18 @@ const blogReviewsEffect = (postId: string, opts: { status?: CommentStatusFilter;
     const viewerId = opts.userId;
     return yield* Effect.forEach(
       reviews,
-      ({ review, author }) =>
-        (viewerId
+      ({ review, author }) => {
+        const vote: Effect.Effect<boolean | null, DbError> = viewerId
           ? dbTry("blog.reviewVote", () =>
               db
                 .select({ isHelpful: blogPostReviewHelpful.isHelpful })
                 .from(blogPostReviewHelpful)
                 .where(and(eq(blogPostReviewHelpful.reviewId, review.id), eq(blogPostReviewHelpful.userId, viewerId)))
                 .limit(1),
-            ).pipe(Effect.map(([vote]) => vote?.isHelpful ?? null))
-          : Effect.succeed<boolean | null>(null)
-        ).pipe(Effect.map((userVote) => ({ ...review, author, userVote }))),
+            ).pipe(Effect.map(([row]) => row?.isHelpful ?? null))
+          : Effect.succeed(null);
+        return vote.pipe(Effect.map((userVote) => ({ ...review, author, userVote })));
+      },
       { concurrency: "unbounded" },
     );
   });
