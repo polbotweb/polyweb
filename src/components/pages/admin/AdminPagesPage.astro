@@ -17,9 +17,14 @@ import AdminPagination from '@molecules/AdminPagination/AdminPagination.astro';
 type PageRow = Pick<
   typeof pages.$inferSelect,
   'id' | 'locale' | 'title' | 'slug' | 'template' | 'metaTitle' | 'metaDescription' |
-  'ogImage' | 'isPublished' | 'publishedAt' | 'sortOrder' | 'lockedBy' | 'lockedAt' |
+  'ogImage' | 'isPublished' | 'publishedAt' | 'sortOrder' |
   'createdAt' | 'updatedAt'
-> & { sectionCount: number };
+> & {
+  sectionCount: number;
+  /** Verrou actif lu dans page_locks (src/core/locks) — null si aucun verrou non expiré. */
+  lockedBy: string | null;
+  lockedAt: Date | null;
+};
 
 interface Props {
   t: AuthTranslations;

@@ -75,6 +75,8 @@ describe('commandes db:* Effect (base jetable)', () => {
     const expected = readdirSync('src/database/migrations').filter((f) => f.endsWith('.sql')).length;
     expect(await scratch(async (c) => (await c.query('SELECT count(*)::int AS n FROM __drizzle_migrations')).rows[0].n)).toBe(expected);
     expect(await scratch(async (c) => (await c.query(`SELECT to_regclass('public.pages') AS t`)).rows[0].t)).toBe('pages');
+    // 0020 : anciennes colonnes de verrou des pages supprimées (verrou générique page_locks).
+    expect(await scratch(async (c) => (await c.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'pages' AND column_name IN ('locked_by', 'locked_at')`)).rowCount)).toBe(0);
     expect(cmd('db.migrate.ts')).toContain('Aucune migration en attente');
   }, 120_000);
 

@@ -36,8 +36,6 @@ export const pages = pgTable(
     sortOrder: integer("sort_order").default(0).notNull(),
     deletedAt: timestamp("deleted_at"),
     updatedBy: text("updated_by").references(() => user.id, { onDelete: "set null" }),
-    lockedBy: text("locked_by").references(() => user.id, { onDelete: "set null" }),
-    lockedAt: timestamp("locked_at"),
     // search_vector tsvector column exists in DB but is excluded from Drizzle schema
     // — managed entirely by DB triggers (migration 0018), queried via raw SQL in /api/search
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -100,8 +98,8 @@ export const pageSectionsRelations = relations(pageSections, ({ one }) => ({
 
 // ─── Page locks ──────────────────────────────────────────────────────────────
 // Verrou d'édition générique (src/core/locks) : propriétaire utilisateur + session,
-// expiration explicite. Remplace la logique ad hoc sur `pages.locked_by/locked_at`
-// (colonnes conservées, plus utilisées par le verrou).
+// expiration explicite. Remplace l'ancienne logique ad hoc sur `pages.locked_by/locked_at`
+// (colonnes supprimées par la migration 0020_drop_pages_legacy_lock).
 export const pageLocks = pgTable(
   "page_locks",
   {

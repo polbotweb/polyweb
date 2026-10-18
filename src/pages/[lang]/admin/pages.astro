@@ -67,7 +67,7 @@ const [allPagesRaw, [total]] = await Promise.all([
       isPublished: pages.isPublished,
       publishedAt: pages.publishedAt,
       sortOrder: pages.sortOrder,
-      // Verrou actif (src/core/locks, table page_locks) — les colonnes pages.locked_* ne sont plus écrites.
+      // Verrou actif (src/core/locks, table page_locks) — les anciennes colonnes pages.locked_* ont été supprimées (migration 0020).
       lockedBy: sql<string | null>`(select pl.user_id from page_locks pl where pl.page_id = ${pages.id} and pl.expires_at > now())`,
       lockedAt: sql<Date | null>`(select pl.locked_at from page_locks pl where pl.page_id = ${pages.id} and pl.expires_at > now())`.mapWith(pageLocks.lockedAt),
       createdAt: pages.createdAt,

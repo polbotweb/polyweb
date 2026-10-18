@@ -25,7 +25,7 @@ vi.mock('@database/drizzle', () => ({
 }));
 
 vi.mock('@database/schemas', () => ({
-  pages: { id: 'id', lockedBy: 'lockedBy', lockedAt: 'lockedAt' },
+  pages: { id: 'id' },
   pageLocks: {},
   pageSections: {},
   pageVersions: {},
