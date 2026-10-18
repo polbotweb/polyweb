@@ -1,0 +1,36 @@
+══════════════════════════════════════════════════════════════════════════════════
+  POLYWEB — GLOBAL QA REPORT
+  Generated: 2026-10-18 10:51:19
+  Scope:    offline (check + lint + vitest — e2e/a11y/lighthouse not regenerated)
+══════════════════════════════════════════════════════════════════════════════════
+
+  ✅ Type & Template Check (astro check)
+     0 errors, 0 warnings, 69 hints
+
+  ✅ Lint (ESLint)
+     0 errors, 21 warnings
+
+  ❌ Unit & Integration Tests (Vitest)
+     1502/1503 passed, 1 failed
+
+  • tests/integration/audit.test.ts › Audit — Hooks integration logs USER_BAN when admin bans a user
+    AssertionError: expected 'AnC8LiS7ugCGQeCaDeD2zygBkSfmCo3Q' to be 'kaLQFkOyK9jk8rhrlAotDoGaN3mcedoe' // Object.is equality
+
+══════════════════════════════════════════════════════════════════════════════════
+  GLOBAL STATUS
+══════════════════════════════════════════════════════════════════════════════════
+
+  Reports in scope: 3/6 (check, lint, vitest — offline scope)
+  Overall:           ❌ ISSUES DETECTED
+
+  ┌─────────────────────────────────────────────┬──────────────┬─────────┐
+  │ Report                                      │ Status       │ Result  │
+  ├─────────────────────────────────────────────┼──────────────┼─────────┤
+  │ Astro check                                 │ GREEN        │ 0 error │
+  │ ESLint                                      │ GREEN        │ 0 error │
+  │ Vitest (unit/integration)                   │ RED          │ 1502/15 │
+  └─────────────────────────────────────────────┴──────────────┴─────────┘
+
+══════════════════════════════════════════════════════════════════════════════════
+  END OF GLOBAL REPORT — ACTION REQUIRED
+══════════════════════════════════════════════════════════════════════════════════

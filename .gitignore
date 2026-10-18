@@ -34,8 +34,7 @@ public/uploads/*
 tests-results/
 test-results/
 playwright-report/
-tests/reports/lighthouse/*
-tests/reports/playwright/*
+# tests/reports/** (dont lighthouse/ et playwright/) est versionné : rapports des gates finales.
 tmp*
 
 # coverage reports

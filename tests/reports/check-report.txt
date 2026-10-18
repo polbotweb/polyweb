@@ -1,0 +1,333 @@
+
+> polyweb@0.0.1 check /workspace/polyweb
+> astro check
+
+10:50:10 [@astrojs/node] Enabling sessions with filesystem storage
+10:50:11 [content] Syncing content
+10:50:11 [content] Synced content
+10:50:11 [types] Generated 126ms
+10:50:11 [check] Getting diagnostics for Astro files in /workspace/polyweb...
+[96msrc/actions/services/_helpers.ts[0m:[93m15[0m:[93m10[0m - [93mwarning[0m[90m ts(6133): [0m'and' is declared but its value is never read.
+
+[7m15[0m import { and, eq } from "drizzle-orm";
+[7m  [0m [93m         ~~~[0m
+
+[96msrc/actions/services/engagement.ts[0m:[93m1[0m:[93m22[0m - [93mwarning[0m[90m ts(6133): [0m'desc' is declared but its value is never read.
+
+[7m1[0m import { and, count, desc, eq } from "drizzle-orm";
+[7m [0m [93m                     ~~~~[0m
+
+[96msrc/actions/services/views.ts[0m:[93m15[0m:[93m26[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { normalize?: boolean | undefined; abort?: boolean | undefined; pattern?: RegExp | undefined; hostname?: RegExp | undefined; protocol?: RegExp | undefined; error?: string | ... 1 more ... | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m15[0m     referrer: z.string().url().optional().nullable(),
+[7m  [0m [93m                         ~~~[0m
+
+[96msrc/components/blog/AdminPostForm.astro[0m:[93m19[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'BlogPostFormInput' is declared but its value is never read.
+
+[7m19[0m import type { BlogPostFormInput } from "@/lib/blog/types";
+[7m  [0m [93m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/components/blog/AdminPostForm.astro[0m:[93m18[0m:[93m61[0m - [93mwarning[0m[90m ts(6196): [0m'BlogPostUpdateInput' is declared but never used.
+
+[7m18[0m import type { BlogEditorTaxonomyOption, BlogPostEditorData, BlogPostUpdateInput } from "@/lib/blog/editor-types";
+[7m  [0m [93m                                                            ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/components/blog/AdminPostForm.astro[0m:[93m84[0m:[93m110[0m - [93mwarning[0m[90m ts(6385): [0m'returnValue' is deprecated.
+
+[7m84[0m     window.addEventListener('beforeunload', (event) => { if (!isDirty) return; event.preventDefault(); event.returnValue = ""; });
+[7m  [0m [93m                                                                                                             ~~~~~~~~~~~[0m
+[96msrc/components/blog/AdminPostForm.astro[0m:[93m68[0m:[93m3[0m - [93mwarning[0m[90m ts(6133): [0m'BlogPostUpdateInput' is declared but its value is never read.
+
+[7m68[0m   import type { BlogPostUpdateInput } from "@/lib/blog/editor-types";
+[7m  [0m [93m  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/components/organisms/AdminFormShell.astro[0m:[93m71[0m:[93m19[0m - [93mwarning[0m[90m ts(6385): [0m'returnValue' is deprecated.
+
+[7m71[0m             event.returnValue = "";
+[7m  [0m [93m                  ~~~~~~~~~~~[0m
+
+[96msrc/components/seo/JsonLd.astro[0m:[93m15[0m:[93m30[0m - [93mwarning[0m[90m astro(4000): [0mThis script will be treated as if it has the `is:inline` directive because it contains an attribute. Therefore, features that require processing (e.g. using TypeScript or npm packages in the script) are unavailable.
+
+See docs for more details: https://docs.astro.build/en/guides/client-side-scripts/#script-processing.
+
+Add the `is:inline` directive explicitly to silence this hint.
+
+[7m15[0m {items.map((item) => <script type="application/ld+json" set:html={safeJsonLd(JSON.stringify(item))} />)}
+[7m  [0m [93m                             ~~~~[0m
+
+[96msrc/components/services/AdminServiceForm.astro[0m:[93m12[0m:[93m34[0m - [93mwarning[0m[90m ts(6133): [0m'getServiceErrorMessage' is declared but its value is never read.
+
+[7m12[0m import { getServiceTranslations, getServiceErrorMessage } from "@/modules/services/i18n";
+[7m  [0m [93m                                 ~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/components/services/AdminServiceList.astro[0m:[93m7[0m:[93m34[0m - [93mwarning[0m[90m ts(6133): [0m'getServiceErrorMessage' is declared but its value is never read.
+
+[7m7[0m import { getServiceTranslations, getServiceErrorMessage } from "@/modules/services/i18n";
+[7m [0m [93m                                 ~~~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/components/services/AdminServiceList.astro[0m:[93m6[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'toast' is declared but its value is never read.
+
+[7m6[0m import { toast } from "@atoms/toast";
+[7m [0m [93m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/components/services/ServicesAdminPage.astro[0m:[93m6[0m:[93m34[0m - [93mwarning[0m[90m ts(6133): [0m'getServiceErrorMessage' is declared but its value is never read.
+
+[7m6[0m import { getServiceTranslations, getServiceErrorMessage } from "@/modules/services/i18n";
+[7m [0m [93m                                 ~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/components/wow/ScrollReveal.astro[0m:[93m110[0m:[93m13[0m - [93mwarning[0m[90m ts(6133): [0m'transforms' is declared but its value is never read.
+
+[7m110[0m       const transforms: Record<string, string> = {
+[7m   [0m [93m            ~~~~~~~~~~[0m
+[96msrc/components/wow/ScrollReveal.astro[0m:[93m103[0m:[93m13[0m - [93mwarning[0m[90m ts(6133): [0m'direction' is declared but its value is never read.
+
+[7m103[0m       const direction = el.dataset.revealDirection || "up";
+[7m   [0m [93m            ~~~~~~~~~[0m
+
+[96msrc/core/blocks/registry.ts[0m:[93m116[0m:[93m26[0m - [93mwarning[0m[90m ts(6385): [0m'(): ZodObject<{}, $loose>' is deprecated.
+
+[7m116[0m     schema: z.object({}).passthrough(),
+[7m   [0m [93m                         ~~~~~~~~~~~[0m
+[96msrc/core/blocks/registry.ts[0m:[93m93[0m:[93m40[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { normalize?: boolean | undefined; abort?: boolean | undefined; pattern?: RegExp | undefined; hostname?: RegExp | undefined; protocol?: RegExp | undefined; error?: string | ... 1 more ... | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m93[0m     schema: z.object({ url: z.string().url().refine((u) => toEmbedUrl(u) !== null, "seuls YouTube et Vimeo (https) sont autorisés"), title: z.string().max(200).default("Vidéo") }),
+[7m  [0m [93m                                       ~~~[0m
+[96msrc/core/blocks/registry.ts[0m:[93m50[0m:[93m104[0m - [93mwarning[0m[90m ts(6385): [0m'(): ZodObject<{ type: ZodLiteral<"doc">; content: ZodOptional<ZodArray<ZodAny>>; }, $loose>' is deprecated.
+
+[7m50[0m const tiptapDoc = z.object({ type: z.literal("doc"), content: z.array(z.any()).max(5000).optional() }).passthrough();
+[7m  [0m [93m                                                                                                       ~~~~~~~~~~~[0m
+
+[96msrc/core/content-types/fields.ts[0m:[93m118[0m:[93m29[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m118[0m       const id = z.string().uuid();
+[7m   [0m [93m                            ~~~~[0m
+[96msrc/core/content-types/fields.ts[0m:[93m94[0m:[93m33[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: unknown): ZodCoercedNumber<unknown>' is deprecated.
+
+[7m94[0m       let n = z.coerce.number().finite();
+[7m  [0m [93m                                ~~~~~~[0m
+
+[96msrc/core/crud/engine.ts[0m:[93m65[0m:[93m33[0m - [93mwarning[0m[90m ts(6385): [0m'ZodTypeAny' is deprecated.
+
+[7m65[0m   const shape: Record<string, z.ZodTypeAny> = {};
+[7m  [0m [93m                                ~~~~~~~~~~[0m
+[96msrc/core/crud/engine.ts[0m:[93m53[0m:[93m40[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: unknown): ZodNumber' is deprecated.
+
+[7m53[0m     case "number": schema = z.number().finite(); break;
+[7m  [0m [93m                                       ~~~~~~[0m
+[96msrc/core/crud/engine.ts[0m:[93m51[0m:[93m17[0m - [93mwarning[0m[90m ts(6385): [0m'ZodTypeAny' is deprecated.
+
+[7m51[0m   let schema: z.ZodTypeAny;
+[7m  [0m [93m                ~~~~~~~~~~[0m
+[96msrc/core/crud/engine.ts[0m:[93m50[0m:[93m46[0m - [93mwarning[0m[90m ts(6385): [0m'ZodTypeAny' is deprecated.
+
+[7m50[0m function columnSchema(column: CrudColumn): z.ZodTypeAny {
+[7m  [0m [93m                                             ~~~~~~~~~~[0m
+
+[96msrc/database/schemas/services.schema.ts[0m:[93m1[0m:[93m10[0m - [93mwarning[0m[90m ts(6133): [0m'relations' is declared but its value is never read.
+
+[7m1[0m import { relations, sql } from "drizzle-orm";
+[7m [0m [93m         ~~~~~~~~~[0m
+
+[96msrc/layouts/BaseLayout.astro[0m:[93m123[0m:[93m24[0m - [93mwarning[0m[90m astro(4000): [0mThis script will be treated as if it has the `is:inline` directive because it contains an attribute. Therefore, features that require processing (e.g. using TypeScript or npm packages in the script) are unavailable.
+
+See docs for more details: https://docs.astro.build/en/guides/client-side-scripts/#script-processing.
+
+Add the `is:inline` directive explicitly to silence this hint.
+
+[7m123[0m     {jsonLd && <script type="application/ld+json" set:html={safeJsonLd(jsonLd)} />}
+[7m   [0m [93m                       ~~~~[0m
+
+[96msrc/lib/blog/constants.ts[0m:[93m2[0m:[93m10[0m - [93mwarning[0m[90m ts(6133): [0m'assertTransition' is declared but its value is never read.
+
+[7m2[0m import { assertTransition, canTransition, type WorkflowDefinition } from "@/lib/cms/workflow";
+[7m [0m [93m         ~~~~~~~~~~~~~~~~[0m
+
+[96msrc/lib/blog/validation.ts[0m:[93m62[0m:[93m62[0m - [93mwarning[0m[90m ts(6385): [0m'ZodIssueCode' is deprecated.
+
+[7m62[0m   if (data.publishedAt !== undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["publishedAt"], message: "La date de publication doit être modifiée via une action de lifecycle explicite." });
+[7m  [0m [93m                                                             ~~~~~~~~~~~~[0m
+[96msrc/lib/blog/validation.ts[0m:[93m61[0m:[93m57[0m - [93mwarning[0m[90m ts(6385): [0m'ZodIssueCode' is deprecated.
+
+[7m61[0m   if (data.status !== undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["status"], message: "Le statut doit être modifié via une action de lifecycle explicite." });
+[7m  [0m [93m                                                        ~~~~~~~~~~~~[0m
+
+[96msrc/modules/services/admin/loader.ts[0m:[93m33[0m:[93m24[0m - [93mwarning[0m[90m ts(6133): [0m'tagRows' is declared but its value is never read.
+
+[7m33[0m   const [categoryRows, tagRows, mediaRows] = await Promise.all([
+[7m  [0m [93m                       ~~~~~~~[0m
+
+[96msrc/modules/services/components/single/ServiceDetail.astro[0m:[93m18[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'serviceHref' is declared but its value is never read.
+
+[7m18[0m const serviceHref = buildServiceUrl(locale, organizationSlug, item.translation?.slug ?? item.service.slug, item.categories[0]?.slug ?? null);
+[7m  [0m [93m      ~~~~~~~~~~~[0m
+
+[96msrc/modules/services/validation/index.ts[0m:[93m109[0m:[93m25[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m109[0m   serviceId: z.string().uuid(), dayOfWeek: z.coerce.number().int().min(0).max(6), startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), timezone: z.string().trim().min(1).max(64), maxParticipants: z.coerce.number().int().positive().max(1_000_000).optional().nullable(),
+[7m   [0m [93m                        ~~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m104[0m:[93m320[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m104[0m   organizationId: serviceOrganizationIdSchema, page: z.coerce.number().int().positive().max(10_000).default(1), limit: z.coerce.number().int().min(1).max(100).default(20), search: z.string().trim().max(120).optional(), status: serviceStatusSchema.optional(), categoryId: z.string().uuid().optional(), tagId: z.string().uuid().optional(), providerId: z.string().trim().min(1).max(200).optional(), featured: queryBooleanSchema, mobile: queryBooleanSchema, locale: localeSchema.optional(), sortBy: z.enum(["createdAt", "updatedAt", "publishedAt", "title", "priceMinor", "ratingAverage100", "viewCount"]).default("updatedAt"), sortOrder: z.enum(["asc", "desc"]).default("desc"),
+[7m   [0m [93m                                                                                                                                                                                                                                                                                                                               ~~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m104[0m:[93m283[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m104[0m   organizationId: serviceOrganizationIdSchema, page: z.coerce.number().int().positive().max(10_000).default(1), limit: z.coerce.number().int().min(1).max(100).default(20), search: z.string().trim().max(120).optional(), status: serviceStatusSchema.optional(), categoryId: z.string().uuid().optional(), tagId: z.string().uuid().optional(), providerId: z.string().trim().min(1).max(200).optional(), featured: queryBooleanSchema, mobile: queryBooleanSchema, locale: localeSchema.optional(), sortBy: z.enum(["createdAt", "updatedAt", "publishedAt", "title", "priceMinor", "ratingAverage100", "viewCount"]).default("updatedAt"), sortOrder: z.enum(["asc", "desc"]).default("desc"),
+[7m   [0m [93m                                                                                                                                                                                                                                                                                          ~~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m99[0m:[93m320[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m99[0m   organizationId: serviceOrganizationIdSchema, page: z.coerce.number().int().positive().max(10_000).default(1), limit: z.coerce.number().int().min(1).max(100).default(20), search: z.string().trim().max(120).optional(), status: serviceStatusSchema.optional(), categoryId: z.string().uuid().optional(), tagId: z.string().uuid().optional(), authorId: z.string().trim().min(1).max(200).optional(), providerId: z.string().trim().min(1).max(200).optional(), featured: queryBooleanSchema, mobile: queryBooleanSchema, locale: localeSchema.optional(), sortBy: z.enum(["createdAt", "updatedAt", "publishedAt", "title", "priceMinor", "ratingAverage100", "viewCount"]).default("updatedAt"), sortOrder: z.enum(["asc", "desc"]).default("desc"),
+[7m  [0m [93m                                                                                                                                                                                                                                                                                                                               ~~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m99[0m:[93m283[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m99[0m   organizationId: serviceOrganizationIdSchema, page: z.coerce.number().int().positive().max(10_000).default(1), limit: z.coerce.number().int().min(1).max(100).default(20), search: z.string().trim().max(120).optional(), status: serviceStatusSchema.optional(), categoryId: z.string().uuid().optional(), tagId: z.string().uuid().optional(), authorId: z.string().trim().min(1).max(200).optional(), providerId: z.string().trim().min(1).max(200).optional(), featured: queryBooleanSchema, mobile: queryBooleanSchema, locale: localeSchema.optional(), sortBy: z.enum(["createdAt", "updatedAt", "publishedAt", "title", "priceMinor", "ratingAverage100", "viewCount"]).default("updatedAt"), sortOrder: z.enum(["asc", "desc"]).default("desc"),
+[7m  [0m [93m                                                                                                                                                                                                                                                                                          ~~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m94[0m:[93m65[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m94[0m   commentId: z.string().uuid().optional(), reviewId: z.string().uuid().optional(),
+[7m  [0m [93m                                                                ~~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m94[0m:[93m25[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m94[0m   commentId: z.string().uuid().optional(), reviewId: z.string().uuid().optional(),
+[7m  [0m [93m                        ~~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m93[0m:[93m25[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m93[0m   serviceId: z.string().uuid(), organizationId: serviceOrganizationIdSchema,
+[7m  [0m [93m                        ~~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m86[0m:[93m18[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m86[0m   id: z.string().uuid(),
+[7m  [0m [93m                 ~~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m80[0m:[93m28[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { normalize?: boolean | undefined; abort?: boolean | undefined; pattern?: RegExp | undefined; hostname?: RegExp | undefined; protocol?: RegExp | undefined; error?: string | ... 1 more ... | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m80[0m   canonicalUrl: z.string().url().optional().nullable(),
+[7m  [0m [93m                           ~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m76[0m:[93m30[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m76[0m   tagIds: z.array(z.string().uuid()).max(100).optional(),
+[7m  [0m [93m                             ~~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m75[0m:[93m35[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m75[0m   categoryIds: z.array(z.string().uuid()).max(100).optional(),
+[7m  [0m [93m                                  ~~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m68[0m:[93m25[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m68[0m   ogImageId: z.string().uuid().optional().nullable(),
+[7m  [0m [93m                        ~~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m67[0m:[93m28[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m67[0m   coverImageId: z.string().uuid().optional().nullable(),
+[7m  [0m [93m                           ~~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m54[0m:[93m30[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m54[0m   tagIds: z.array(z.string().uuid()).max(100).default([]),
+[7m  [0m [93m                             ~~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m53[0m:[93m35[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m53[0m   categoryIds: z.array(z.string().uuid()).max(100).default([]),
+[7m  [0m [93m                                  ~~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m40[0m:[93m28[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { normalize?: boolean | undefined; abort?: boolean | undefined; pattern?: RegExp | undefined; hostname?: RegExp | undefined; protocol?: RegExp | undefined; error?: string | ... 1 more ... | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m40[0m   canonicalUrl: z.string().url().optional().nullable(),
+[7m  [0m [93m                           ~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m36[0m:[93m30[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m36[0m   tagIds: z.array(z.string().uuid()).max(100),
+[7m  [0m [93m                             ~~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m35[0m:[93m35[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m35[0m   categoryIds: z.array(z.string().uuid()).max(100),
+[7m  [0m [93m                                  ~~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m28[0m:[93m25[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m28[0m   ogImageId: z.string().uuid().optional().nullable(),
+[7m  [0m [93m                        ~~~~[0m
+[96msrc/modules/services/validation/index.ts[0m:[93m27[0m:[93m28[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m27[0m   coverImageId: z.string().uuid().optional().nullable(),
+[7m  [0m [93m                           ~~~~[0m
+
+[96msrc/pages/[lang]/[organization]/admin/blog/index.astro[0m:[93m3[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'locale' is declared but its value is never read.
+
+[7m3[0m const locale = Astro.params.lang ?? "fr";
+[7m [0m [93m      ~~~~~~[0m
+
+[96msrc/pages/[lang]/[organization]/admin/blog/new.astro[0m:[93m3[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'locale' is declared but its value is never read.
+
+[7m3[0m const locale = Astro.params.lang ?? "fr";
+[7m [0m [93m      ~~~~~~[0m
+
+[96msrc/pages/[lang]/[organization]/admin/blog/[id]/edit.astro[0m:[93m3[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'locale' is declared but its value is never read.
+
+[7m3[0m const locale = Astro.params.lang ?? "fr";
+[7m [0m [93m      ~~~~~~[0m
+
+[96msrc/pages/[lang]/[organization]/admin/services/index.astro[0m:[93m3[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'locale' is declared but its value is never read.
+
+[7m3[0m const locale = Astro.params.lang ?? "fr";
+[7m [0m [93m      ~~~~~~[0m
+
+[96msrc/pages/[lang]/[organization]/admin/services/new.astro[0m:[93m3[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'locale' is declared but its value is never read.
+
+[7m3[0m const locale = Astro.params.lang ?? "fr";
+[7m [0m [93m      ~~~~~~[0m
+
+[96msrc/pages/[lang]/[organization]/admin/services/[id]/edit.astro[0m:[93m3[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'locale' is declared but its value is never read.
+
+[7m3[0m const locale = Astro.params.lang ?? "fr";
+[7m [0m [93m      ~~~~~~[0m
+
+[96msrc/pages/[lang]/admin/platform/api-tokens/index.astro[0m:[93m9[0m:[93m28[0m - [93mwarning[0m[90m ts(6133): [0m'getPlatformAdminUrl' is declared but its value is never read.
+
+[7m9[0m import { getPlatformLabel, getPlatformAdminUrl } from '@/core/localization/platform-labels';
+[7m [0m [93m                           ~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/pages/[lang]/admin/platform/content/[type]/[id]/revisions.astro[0m:[93m28[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'selfUrl' is declared but its value is never read.
+
+[7m28[0m const selfUrl = `${editUrl}/revisions`;
+[7m  [0m [93m      ~~~~~~~[0m
+
+[96msrc/pages/[lang]/admin/platform/plugins/index.astro[0m:[93m17[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'selfUrl' is declared but its value is never read.
+
+[7m17[0m const selfUrl = getPlatformAdminUrl(locale, 'plugins');
+[7m  [0m [93m      ~~~~~~~[0m
+
+[96msrc/pages/[lang]/admin/platform/sites/index.astro[0m:[93m16[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'selfUrl' is declared but its value is never read.
+
+[7m16[0m const selfUrl = getPlatformAdminUrl(locale, 'sites');
+[7m  [0m [93m      ~~~~~~~[0m
+
+[96msrc/pages/[lang]/admin/platform/webhooks/[id].astro[0m:[93m21[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'selfUrl' is declared but its value is never read.
+
+[7m21[0m const selfUrl = getPlatformAdminUrl(locale, 'webhooks', id);
+[7m  [0m [93m      ~~~~~~~[0m
+
+[96msrc/pages/[lang]/admin/services/new.astro[0m:[93m9[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'Locale' is declared but its value is never read.
+
+[7m9[0m import type { Locale } from "@i18n/config";
+[7m [0m [93m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/pages/[lang]/admin/services/[id]/edit.astro[0m:[93m11[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'Locale' is declared but its value is never read.
+
+[7m11[0m import type { Locale } from "@i18n/config";
+[7m  [0m [93m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/pages/[lang]/preview/[token].astro[0m:[93m21[0m:[93m9[0m - [93mwarning[0m[90m ts(6133): [0m'status' is declared but its value is never read.
+
+[7m21[0m   const status = r.error._tag === 'UnauthorizedError' ? 403 : r.error._tag === 'NotFoundError' ? 404 : 500;
+[7m  [0m [93m        ~~~~~~[0m
+
+[96mtests/integration/auth-plugins.test.ts[0m:[93m87[0m:[93m122[0m - [93mwarning[0m[90m ts(6385): [0m'toThrowError' is deprecated.
+
+[7m87[0m     await expect(auth.api.getFullOrganization({ query: { organizationId: org!.id }, headers: outsiderHeaders })).rejects.toThrowError(APIError);
+[7m  [0m [93m                                                                                                                         ~~~~~~~~~~~~[0m
+[96mtests/integration/auth-plugins.test.ts[0m:[93m52[0m:[93m101[0m - [93mwarning[0m[90m ts(6385): [0m'toThrowError' is deprecated.
+
+[7m52[0m     await expect(auth.api.setRole({ body: { userId: target.id, role: 'admin' }, headers })).rejects.toThrowError(APIError);
+[7m  [0m [93m                                                                                                    ~~~~~~~~~~~~[0m
+[96mtests/integration/auth-plugins.test.ts[0m:[93m42[0m:[93m110[0m - [93mwarning[0m[90m ts(6385): [0m'toThrowError' is deprecated.
+
+[7m42[0m     await expect(auth.api.signInEmail({ body: { email: target.email, password: target.password } })).rejects.toThrowError(APIError);
+[7m  [0m [93m                                                                                                             ~~~~~~~~~~~~[0m
+
+Result (1112 files): 
+- 0 errors
+- 0 warnings
+- 69 hints
+

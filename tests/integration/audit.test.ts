@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { eq, desc } from 'drizzle-orm';
+import { and, eq, desc } from 'drizzle-orm';
 import { getTestHelpers, auth } from '../helpers/auth';
 import { logAuditEvent } from '@/lib/audit';
 import { getDrizzle } from '@database/drizzle';
@@ -148,7 +148,19 @@ describe('Audit — Hooks integration', () => {
     const headers = await test.getAuthHeaders({ userId: adminUser.id });
     await auth.api.banUser({ body: { userId: targetUser.id }, headers });
 
-    const entry = await getLatestAudit('USER_BAN');
+    // Filtré sur la cible : d'autres fichiers de tests (auth, auth-plugins) bannissent en parallèle.
+    let entry: Awaited<ReturnType<typeof getLatestAudit>> = null;
+    for (let i = 0; i < 20 && entry?.resourceId !== targetUser.id; i++) {
+      const [row] = await getDrizzle()
+        .select()
+        .from(auditLog)
+        .where(and(eq(auditLog.action, 'USER_BAN'), eq(auditLog.resourceId, targetUser.id)))
+        .orderBy(desc(auditLog.createdAt))
+        .limit(1);
+      entry = row ?? null;
+      if (!entry) await new Promise((r) => setTimeout(r, 100));
+    }
+    if (entry) insertedIds.push(entry.id);
     expect(entry).not.toBeNull();
     expect(entry!.resource).toBe('user');
     expect(entry!.resourceId).toBe(targetUser.id);

@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-10-18 10:51:19",
+  "overall": "red",
+  "reportsAvailable": 3,
+  "sections": [
+    {
+      "key": "check",
+      "title": "Type & Template Check (astro check)",
+      "ok": true,
+      "summary": "0 errors, 0 warnings, 69 hints",
+      "metrics": {
+        "errors": 0,
+        "warnings": 0,
+        "hints": 69
+      }
+    },
+    {
+      "key": "lint",
+      "title": "Lint (ESLint)",
+      "ok": true,
+      "summary": "0 errors, 21 warnings",
+      "metrics": {
+        "errors": 0,
+        "warnings": 21
+      }
+    },
+    {
+      "key": "vitest",
+      "title": "Unit & Integration Tests (Vitest)",
+      "ok": false,
+      "summary": "1502/1503 passed, 1 failed",
+      "metrics": {
+        "total": 1503,
+        "passed": 1502,
+        "failed": 1,
+        "skipped": 0
+      }
+    }
+  ]
+}
