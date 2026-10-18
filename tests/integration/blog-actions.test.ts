@@ -67,15 +67,15 @@ describe('blog actions — integration (real DB)', () => {
     globalPostId = post.id;
     globalPostSlug = post.slug;
 
-    const [realUser] = await db.select({ id: user.id, role: user.role }).from(user).limit(1);
-    if (!realUser) throw new Error('No user seeded — run db:seed');
-    realUserId = realUser.id;
-    originalUserRole = realUser.role;
-    await db.update(user).set({ role: "admin" }).where(eq(user.id, realUserId));
+    // Utilisateur dédié : un utilisateur existant pouvait être modifié en parallèle par d'autres fichiers de test.
+    realUserId = `blog-actions-${crypto.randomUUID()}`;
+    originalUserRole = null;
+    await db.insert(user).values({ id: realUserId, name: 'Blog actions test', email: `${realUserId}@test.local`, role: 'admin' });
   });
 
   afterAll(async () => {
-    await db.update(user).set({ role: originalUserRole }).where(eq(user.id, realUserId));
+    void originalUserRole;
+    await db.delete(user).where(eq(user.id, realUserId));
   });
 
   it('listBlogPostRevisions returns revisions for a seeded post', async () => {
