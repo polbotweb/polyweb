@@ -59,6 +59,8 @@ test("services admin lifecycle follows the explicit state machine", async ({ bro
     await page.waitForLoadState("networkidle");
     await expect.poll(readStatus).toBe("DRAFT");
 
+    // L'archivage demande une confirmation native (window.confirm) : Playwright la refuse par défaut.
+    page.once("dialog", (dialog) => void dialog.accept());
     await page.locator(`tr:has([data-id="${serviceId}"]) [data-action="archive"][data-id="${serviceId}"]`).click();
     await page.waitForLoadState("networkidle");
     await expect.poll(readStatus).toBe("ARCHIVED");
