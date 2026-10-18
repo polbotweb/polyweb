@@ -1,0 +1,25 @@
+---
+import { requireAdmin } from '@/lib/auth-guards';
+import PlatformAdminShell from '@organisms/PlatformAdmin/PlatformAdminShell.astro';
+import { crudResources } from '@/generated/crud';
+import { getPlatformLabel, getPlatformAdminUrl } from '@/core/localization/platform-labels';
+
+export const prerender = false;
+const result = await requireAdmin(Astro);
+if ('redirect' in result) return result.redirect;
+const { locale, authT } = result;
+const resources = Object.values(crudResources).map((r) => r.definition);
+---
+<PlatformAdminShell t={authT} locale={locale} section="crud" title={getPlatformLabel('crud', locale)}>
+  <p class="text-muted-foreground text-sm">Ressources générées par <code>pnpm api:generate &lt;table&gt;</code> (API <code>/api/crud/&lt;id&gt;</code>).</p>
+  {resources.length === 0 ? <p>Aucune ressource générée.</p> : (
+    <ul class="grid gap-3 sm:grid-cols-2">
+      {resources.map((r) => (
+        <li class="rounded-xl border p-4">
+          <a class="font-medium hover:underline" href={getPlatformAdminUrl(locale, 'crud', r.id)}>{r.id}</a>
+          <p class="text-muted-foreground text-xs">table <code>{r.tableName}</code> — {Object.entries(r.access).map(([a, rule]) => `${a}: ${rule}`).join(' · ')}</p>
+        </li>
+      ))}
+    </ul>
+  )}
+</PlatformAdminShell>

@@ -49,7 +49,8 @@
     "qa": "node scripts/qa.mjs full",
     "qa:offline": "node scripts/qa.mjs offline",
     "db:backfill-variants": "npx tsx src/database/commands/db.backfill-variants.ts",
-    "module:new": "tsx scripts/new-module.ts"
+    "module:new": "tsx scripts/new-module.ts",
+    "api:generate": "tsx scripts/api-generator.ts"
   },
   "dependencies": {
     "@astrojs/node": "11.1.5",

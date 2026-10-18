@@ -1,0 +1,82 @@
+---
+/**
+ * Autopage admin générique (idée moda « autopages ») : liste paginée d'une
+ * ressource générée + formulaire de création/édition piloté par la définition.
+ */
+import { requireAdmin } from '@/lib/auth-guards';
+import PlatformAdminShell from '@organisms/PlatformAdmin/PlatformAdminShell.astro';
+import { crudResources } from '@/generated/crud';
+import { handleCrud } from '@/core/crud/engine';
+import { getDrizzle } from '@database/drizzle';
+import Button from '@atoms/button/Button.astro';
+
+export const prerender = false;
+const result = await requireAdmin(Astro);
+if ('redirect' in result) return result.redirect;
+const { locale, authT, user } = result;
+const registration = crudResources[Astro.params.resource ?? ''];
+if (!registration) return new Response('Not Found', { status: 404 });
+const def = registration.definition;
+const listing = await handleCrud(registration, { method: 'GET', searchParams: Astro.url.searchParams, actor: { id: user.id, role: user.role }, hasPermission: async () => true }, getDrizzle());
+const rows = listing.status === 200 ? (listing.body as { data: Record<string, unknown>[]; meta: { page: number; perPage: number; total: number } }) : { data: [], meta: { page: 1, perPage: 20, total: 0 } };
+const visible = def.columns.filter((c) => c.type !== 'json').slice(0, 6);
+const writable = def.columns.filter((c) => c.writable);
+const fmt = (v: unknown) => v === null || v === undefined ? '—' : v instanceof Date ? v.toISOString() : String(v);
+---
+<PlatformAdminShell t={authT} locale={locale} section="crud" title={`CRUD — ${def.id}`}>
+  <p class="text-muted-foreground text-sm">{rows.meta.total} élément(s) · table <code>{def.tableName}</code></p>
+  <div class="overflow-x-auto rounded-xl border">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/50"><tr>{visible.map((c) => <th class="px-3 py-2 text-start">{c.key}</th>)}<th class="px-3 py-2"><span class="sr-only">Actions</span></th></tr></thead>
+      <tbody>
+        {rows.data.map((row) => (
+          <tr class="border-t">
+            {visible.map((c) => <td class="max-w-56 truncate px-3 py-2">{fmt(row[c.key])}</td>)}
+            <td class="px-3 py-2 text-end"><button type="button" class="text-destructive text-xs underline" data-crud-delete={String(row[def.primaryKey])}>Supprimer</button></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  {def.access.create !== 'disabled' && (
+    <form class="grid gap-3 rounded-xl border p-4 sm:grid-cols-2" data-crud-form data-resource={def.id}>
+      <h2 class="font-medium sm:col-span-2">Créer</h2>
+      {writable.map((c) => (
+        <label class="flex flex-col gap-1 text-sm">
+          <span>{c.key}{c.notNull && !c.hasDefault ? ' *' : ''}</span>
+          {c.type === 'boolean' ? <input type="checkbox" name={c.key} data-type="boolean" /> :
+           c.enumValues ? <select name={c.key} class="rounded-md border px-2 py-1">{c.enumValues.map((v) => <option value={v}>{v}</option>)}</select> :
+           <input class="rounded-md border px-2 py-1" name={c.key} data-type={c.type} type={c.type === 'number' ? 'number' : c.type === 'date' ? 'datetime-local' : 'text'} required={c.notNull && !c.hasDefault} />}
+        </label>
+      ))}
+      <div class="sm:col-span-2"><Button type="submit">Enregistrer</Button> <span data-crud-status role="status" class="text-sm"></span></div>
+    </form>
+  )}
+  <div data-crud-root data-resource={def.id} hidden></div>
+</PlatformAdminShell>
+<script>
+  const root = document.querySelector<HTMLElement>('[data-crud-root]');
+  const resource = root?.dataset.resource;
+  const form = document.querySelector<HTMLFormElement>('[data-crud-form]');
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload: Record<string, unknown> = {};
+    for (const el of Array.from(form.elements) as HTMLInputElement[]) {
+      if (!el.name) continue;
+      const type = el.dataset.type;
+      if (type === 'boolean') payload[el.name] = el.checked;
+      else if (el.value === '') continue;
+      else if (type === 'number') payload[el.name] = Number(el.value);
+      else if (type === 'date') payload[el.name] = new Date(el.value).toISOString();
+      else payload[el.name] = el.value;
+    }
+    const status = form.querySelector('[data-crud-status]');
+    const res = await fetch(`/api/crud/${resource}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (res.ok) location.reload(); else if (status) status.textContent = `Erreur ${res.status}`;
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-crud-delete]').forEach((btn) => btn.addEventListener('click', async () => {
+    if (!confirm('Supprimer cet élément ?')) return;
+    const res = await fetch(`/api/crud/${resource}/${encodeURIComponent(btn.dataset.crudDelete!)}`, { method: 'DELETE' });
+    if (res.ok) location.reload(); else alert(`Erreur ${res.status}`);
+  }));
+</script>

@@ -3,6 +3,8 @@ import type { AuthTranslations, Locale } from '@i18n/config';
 import { getAuthUrl, getAdminUrl } from '@i18n/utils';
 import type { AdminSubpage } from '@i18n/utils';
 import { getModuleLabel } from '@/core/localization/module-labels';
+import { PLATFORM_SECTIONS, getPlatformLabel, getPlatformAdminUrl, type PlatformSection } from '@/core/localization/platform-labels';
+import PuzzleIcon from '@tabler/icons/outline/puzzle.svg';
 import ArrowLeftIcon from '@tabler/icons/outline/arrow-left.svg';
 import ChartBarIcon from '@tabler/icons/outline/chart-bar.svg';
 import UsersIcon from '@tabler/icons/outline/users.svg';
@@ -18,8 +20,9 @@ import PaletteIcon from '@tabler/icons/outline/palette.svg';
 import BriefcaseIcon from '@tabler/icons/outline/briefcase.svg';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail, SidebarSeparator } from '@atoms/sidebar';
 
-interface Props { t: AuthTranslations; locale: Locale; activeItem?: AdminSubpage; }
-const { t, locale, activeItem } = Astro.props;
+interface Props { t: AuthTranslations; locale: Locale; activeItem?: AdminSubpage; activePlatform?: PlatformSection; }
+const { t, locale, activeItem, activePlatform } = Astro.props;
+const platformItems = PLATFORM_SECTIONS.filter((id) => id !== 'payments' || process.env.PAYMENTS_ENABLED === 'true').map((id) => ({ id, title: getPlatformLabel(id, locale), url: getPlatformAdminUrl(locale, id) }));
 const dashboardUrl = getAuthUrl(locale, 'dashboard', t);
 const contentGroupLabel = t.admin.contentGroup;
 const navItems: { id: AdminSubpage; title: string; url: string; icon: typeof ChartBarIcon }[] = [
@@ -46,6 +49,7 @@ const cmsItems: { id: AdminSubpage; title: string; url: string; icon: typeof Set
     <SidebarGroup><SidebarGroupContent><SidebarMenu><SidebarMenuItem><SidebarMenuButton href={dashboardUrl} tooltip={t.userMenu.dashboard}><ArrowLeftIcon class="size-4" /><span>{t.userMenu.dashboard}</span></SidebarMenuButton></SidebarMenuItem></SidebarMenu></SidebarGroupContent></SidebarGroup>
     <SidebarGroup><SidebarGroupLabel>{t.admin.title}</SidebarGroupLabel><SidebarGroupContent><SidebarMenu>{navItems.map((item) => <SidebarMenuItem><SidebarMenuButton href={item.url} isActive={activeItem === item.id} tooltip={item.title}><item.icon class="size-4" /><span>{item.title}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu></SidebarGroupContent></SidebarGroup>
     <SidebarGroup><SidebarGroupLabel>{contentGroupLabel}</SidebarGroupLabel><SidebarGroupContent><SidebarMenu>{cmsItems.map((item) => <SidebarMenuItem><SidebarMenuButton href={item.url} isActive={activeItem === item.id} tooltip={item.title}><item.icon class="size-4" /><span>{item.title}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu></SidebarGroupContent></SidebarGroup>
+    <SidebarGroup><SidebarGroupLabel>{getPlatformLabel('group', locale)}</SidebarGroupLabel><SidebarGroupContent><SidebarMenu>{platformItems.map((item) => <SidebarMenuItem><SidebarMenuButton href={item.url} isActive={activePlatform === item.id} tooltip={item.title}><PuzzleIcon class="size-4" /><span>{item.title}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu></SidebarGroupContent></SidebarGroup>
   </SidebarContent>
   <SidebarRail />
 </Sidebar>

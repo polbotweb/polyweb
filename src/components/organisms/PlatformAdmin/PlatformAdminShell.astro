@@ -1,0 +1,27 @@
+---
+/**
+ * Coquille commune des écrans « Plateforme » (types de contenu, formulaires,
+ * jetons d'API, webhooks, plugins, sites…). Réutilise la mise en page admin
+ * d'atomic : BaseLayout + AuthLayout + AdminSidebar.
+ */
+import type { AuthTranslations, Locale } from '@i18n/config';
+import type { PlatformSection } from '@/core/localization/platform-labels';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import AuthLayout from '@organisms/AuthLayout/AuthLayout.astro';
+import AdminSidebar from '@organisms/AdminSidebar/AdminSidebar.astro';
+
+interface Props { t: AuthTranslations; locale: Locale; section: PlatformSection; title: string; description?: string; }
+const { t, locale, section, title, description } = Astro.props;
+---
+<BaseLayout title={`${title} — ${t.admin.title}`} description={description ?? t.meta.admin.description}>
+  <AuthLayout title={title}>
+    <AdminSidebar slot="sidebar" t={t} locale={locale} activePlatform={section} />
+    <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <header class="flex flex-wrap items-center justify-between gap-3">
+        <h1 class="font-heading text-2xl font-semibold">{title}</h1>
+        <div class="flex flex-wrap gap-2"><slot name="actions" /></div>
+      </header>
+      <slot />
+    </div>
+  </AuthLayout>
+</BaseLayout>

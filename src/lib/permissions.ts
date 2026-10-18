@@ -29,6 +29,41 @@ export const statement = {
   serviceTag: ["create", "read", "update", "delete"],
   serviceComment: ["read", "update", "delete", "moderate"],
   serviceReview: ["read", "update", "delete", "moderate"],
+  // ─── Polyweb platform bricks ───
+  contentType: ["create", "read", "update", "delete"],
+  contentEntry: ["create", "read", "update", "delete", "publish"],
+  apiToken: ["create", "read", "revoke"],
+  webhook: ["create", "read", "update", "delete"],
+  form: ["create", "read", "update", "delete"],
+  formSubmission: ["read", "delete", "export"],
+  plugin: ["read", "update"],
+  tenant: ["create", "read", "update", "delete"],
+  payment: ["read", "refund"],
+} as const;
+
+const platformAdmin = {
+  contentType: ["create", "read", "update", "delete"],
+  contentEntry: ["create", "read", "update", "delete", "publish"],
+  apiToken: ["create", "read", "revoke"],
+  webhook: ["create", "read", "update", "delete"],
+  form: ["create", "read", "update", "delete"],
+  formSubmission: ["read", "delete", "export"],
+  plugin: ["read", "update"],
+  tenant: ["create", "read", "update", "delete"],
+  payment: ["read", "refund"],
+} as const;
+
+const platformEditor = {
+  contentType: ["read"],
+  contentEntry: ["create", "read", "update", "delete", "publish"],
+  apiToken: [], webhook: [],
+  form: ["create", "read", "update"],
+  formSubmission: ["read", "export"],
+  plugin: [], tenant: [], payment: [],
+} as const;
+
+const platformReadOnly = {
+  contentType: ["read"], contentEntry: ["read"], apiToken: [], webhook: [], form: ["read"], formSubmission: [], plugin: [], tenant: [], payment: [],
 } as const;
 
 export const ac = createAccessControl(statement);
@@ -72,6 +107,7 @@ export const adminRole = ac.newRole({
   blogComment: ["read", "update", "delete", "moderate"],
   blogReview: ["read", "update", "delete", "moderate"],
   ...cmsAdminServices,
+  ...platformAdmin,
 });
 
 export const editorRole = ac.newRole({
@@ -86,6 +122,7 @@ export const editorRole = ac.newRole({
   blogComment: ["read", "update", "moderate"],
   blogReview: ["read", "update", "moderate"],
   ...cmsEditorServices,
+  ...platformEditor,
 });
 
 export const userRole = ac.newRole({
@@ -93,6 +130,7 @@ export const userRole = ac.newRole({
   page: ["read"], section: ["read"], media: ["read"], site: ["read"], navigation: ["read"], theme: ["read"],
   blog: ["read"], blogCategory: ["read"], blogTag: ["read"], blogComment: ["read"], blogReview: ["read"],
   ...cmsReadOnlyServices,
+  ...platformReadOnly,
 });
 
 export const orgOwnerRole = ac.newRole({
@@ -105,6 +143,7 @@ export const orgOwnerRole = ac.newRole({
   blogCategory: ["create", "read", "update", "delete"], blogTag: ["create", "read", "update", "delete"],
   blogComment: ["read", "update", "delete", "moderate"], blogReview: ["read", "update", "delete", "moderate"],
   ...cmsAdminServices,
+  ...platformEditor,
 });
 
 export const orgAdminRole = ac.newRole({
@@ -117,6 +156,7 @@ export const orgAdminRole = ac.newRole({
   blogCategory: ["create", "read", "update", "delete"], blogTag: ["create", "read", "update", "delete"],
   blogComment: ["read", "update", "delete", "moderate"], blogReview: ["read", "update", "delete", "moderate"],
   ...cmsAdminServices,
+  ...platformEditor,
 });
 
 export const orgMemberRole = ac.newRole({
@@ -124,4 +164,5 @@ export const orgMemberRole = ac.newRole({
   page: ["read"], section: ["read"], media: ["read"], site: ["read"], navigation: ["read"], theme: ["read"],
   blog: ["read"], blogCategory: ["read"], blogTag: ["read"], blogComment: ["read"], blogReview: ["read"],
   ...cmsReadOnlyServices,
+  ...platformReadOnly,
 });
