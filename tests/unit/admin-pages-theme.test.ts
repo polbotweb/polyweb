@@ -40,6 +40,7 @@ vi.mock('@database/drizzle', () => ({
 vi.mock('@database/schemas', () => ({
   pages: { id: 'id', locale: 'locale', slug: 'slug', title: 'title', isActive: 'is_active', sortOrder: 'sortOrder', deletedAt: 'deletedAt' },
   pageSections: { id: 'id', pageId: 'page_id' },
+  pageLocks: { pageId: 'page_id', userId: 'user_id', sessionId: 'session_id', lockedAt: 'locked_at', expiresAt: 'expires_at' },
   themeSettings: { id: 'id', isActive: 'is_active' },
 }));
 
