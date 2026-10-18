@@ -57,11 +57,11 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     // Restrict to the same upload-type directory to prevent cross-type deletion
     const oldUrl = formData.get('oldUrl') as string | null;
     const expectedDir = `/uploads/${UPLOAD_DIRS[type as UploadType]}/`;
-    if (oldUrl?.startsWith(expectedDir)) {
-      // Validate URL contains only safe path characters (no path traversal)
-      if (/^\/uploads\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\.[a-zA-Z0-9]+$/.test(oldUrl)) {
-        try { await deleteUpload(oldUrl); } catch { /* ancien fichier déjà absent */ }
-      }
+    const localOld = !!oldUrl?.startsWith(expectedDir) && /^\/uploads\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\.[a-zA-Z0-9]+$/.test(oldUrl!);
+    // Stockage objet (brique e) : URL publique S3/R2 du même dossier de type.
+    const remoteOld = !!oldUrl && /^https:\/\/[^\s?#]+\/[0-9a-f-]{36}\.[a-z0-9]+$/.test(oldUrl) && oldUrl.includes(`/${UPLOAD_DIRS[type as UploadType]}/`);
+    if (oldUrl && (localOld || remoteOld)) {
+      try { await deleteUpload(oldUrl); } catch { /* ancien fichier déjà absent ou hors stockage */ }
     }
 
     // Audit log

@@ -1,84 +1,43 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { listUploads } from '@/media/list';
+import { describe, it, expect } from 'vitest';
+import { Effect } from 'effect';
+import { listMedia } from '@/media/list';
+import { Storage, type StorageShape, type StoredObject } from '@/lib/storage';
 
-// Mock node:fs/promises
-vi.mock('node:fs/promises', () => ({
-  readdir: vi.fn(),
-  stat: vi.fn(),
-}));
+function fakeStorage(objects: StoredObject[]): StorageShape {
+  return {
+    driver: 's3',
+    put: () => Effect.die('unused'),
+    get: () => Effect.die('unused'),
+    remove: () => Effect.void,
+    list: (prefix) => Effect.succeed(objects.filter((o) => o.key.startsWith(prefix))),
+    publicUrl: (key) => `https://cdn.test/${key}`,
+    keyFromUrl: () => null,
+  };
+}
 
-import { readdir, stat } from 'node:fs/promises';
+const run = (objects: StoredObject[], type?: Parameters<typeof listMedia>[0]) =>
+  Effect.runPromise(listMedia(type).pipe(Effect.provideService(Storage, fakeStorage(objects))));
 
-const mockReaddir = vi.mocked(readdir);
-const mockStat = vi.mocked(stat);
+const obj = (key: string, size = 10, date = '2026-01-01T00:00:00Z'): StoredObject => ({ key, size, lastModified: new Date(date) });
 
-describe('listUploads', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+describe('listMedia (Storage-backed)', () => {
+  it('returns an empty array when nothing is stored', async () => {
+    expect(await run([])).toEqual([]);
   });
 
-  it('returns empty array when directories do not exist', async () => {
-    mockReaddir.mockRejectedValue(new Error('ENOENT'));
-    const result = await listUploads();
-    expect(result).toEqual([]);
+  it('lists files for a specific type with driver URLs, excluding responsive variants', async () => {
+    const files = await run([obj('images/avatars/a.jpg', 1234), obj('images/avatars/a-320.webp'), obj('images/avatars/b.webp', 5), obj('images/logos/l.png')], 'avatar');
+    expect(files.map((f) => f.name).sort()).toEqual(['a.jpg', 'b.webp']);
+    expect(files.find((f) => f.name === 'a.jpg')).toMatchObject({ url: 'https://cdn.test/images/avatars/a.jpg', type: 'avatar', size: 1234, ext: '.jpg' });
   });
 
-  it('lists files from a specific upload type', async () => {
-    mockReaddir.mockResolvedValue(['abc.jpg', 'abc.webp', 'def.png'] as any);
-    mockStat.mockResolvedValue({
-      isFile: () => true,
-      size: 1024,
-      mtime: new Date('2026-03-20T12:00:00Z'),
-    } as any);
-
-    const result = await listUploads('avatar');
-
-    // Should skip .webp companion
-    expect(result).toHaveLength(2);
-    expect(result[0].name).toBe('abc.jpg');
-    expect(result[0].url).toBe('/uploads/images/avatars/abc.jpg');
-    expect(result[0].type).toBe('avatar');
-    expect(result[0].ext).toBe('.jpg');
-    expect(result[0].size).toBe(1024);
+  it('lists all types when none is specified', async () => {
+    const files = await run([obj('images/avatars/a.jpg'), obj('images/logos/l.png'), obj('images/media/m.png')]);
+    expect(files.map((f) => f.type).sort()).toEqual(['avatar', 'logo', 'media']);
   });
 
-  it('lists files from all types when no type specified', async () => {
-    // Each type directory call (avatar, logo, site, media)
-    mockReaddir
-      .mockResolvedValueOnce(['avatar1.jpg'] as any) // avatars
-      .mockResolvedValueOnce(['logo1.png'] as any)    // logos
-      .mockResolvedValueOnce(['site1.svg'] as any)    // site
-      .mockResolvedValueOnce(['media1.jpg'] as any);  // media
-
-    mockStat.mockResolvedValue({
-      isFile: () => true,
-      size: 2048,
-      mtime: new Date('2026-03-20T12:00:00Z'),
-    } as any);
-
-    const result = await listUploads();
-    expect(result).toHaveLength(4);
-    expect(result.map((f) => f.type)).toEqual(
-      expect.arrayContaining(['avatar', 'logo', 'site', 'media']),
-    );
-  });
-
-  it('sorts results by modifiedAt descending', async () => {
-    mockReaddir.mockResolvedValue(['old.jpg', 'new.jpg'] as any);
-    mockStat
-      .mockResolvedValueOnce({
-        isFile: () => true,
-        size: 100,
-        mtime: new Date('2026-01-01T00:00:00Z'),
-      } as any)
-      .mockResolvedValueOnce({
-        isFile: () => true,
-        size: 200,
-        mtime: new Date('2026-03-20T00:00:00Z'),
-      } as any);
-
-    const result = await listUploads('avatar');
-    expect(result[0].name).toBe('new.jpg');
-    expect(result[1].name).toBe('old.jpg');
+  it('sorts by modification date, newest first', async () => {
+    const files = await run([obj('images/media/old.png', 1, '2025-01-01T00:00:00Z'), obj('images/media/new.png', 1, '2026-06-01T00:00:00Z')], 'media');
+    expect(files.map((f) => f.name)).toEqual(['new.png', 'old.png']);
   });
 });

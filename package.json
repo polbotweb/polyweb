@@ -54,6 +54,7 @@
     "db:wait": "npx tsx src/database/commands/db.wait.ts",
     "db:baseline": "npx tsx src/database/commands/db.baseline.ts",
     "admin:create": "npx tsx src/database/commands/db.create-admin.ts",
+    "storage:push": "npx tsx src/database/commands/storage.push.ts",
     "build:vercel": "ASTRO_ADAPTER=vercel astro build",
     "test:a11y": "playwright test tests/e2e/a11y.spec.ts --project=chromium",
     "test:visual": "playwright test tests/e2e/visual-regression.spec.ts --project=chromium"
@@ -117,6 +118,7 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "pa11y-ci": "^4.1.1",
     "pagefind": "^1.5.2",
+    "s3rver": "^3.7.1",
     "tsx": "^4.23.13",
     "vitest": "^4.1.11",
     "wait-on": "^9.1.0"

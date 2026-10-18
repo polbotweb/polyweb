@@ -12,6 +12,19 @@ import vercel from '@astrojs/vercel';
 const useVercel = process.env.ASTRO_ADAPTER === 'vercel' || process.argv.includes('--vercel');
 const adapter = useVercel ? vercel() : node({ mode: 'standalone' });
 
+// Stockage objet (brique e) : les médias servis depuis S3/R2/CDN doivent être
+// autorisés par la CSP (img-src). Origine calculée au build depuis l'env
+// (même règle que src/lib/storage/index.ts → storagePublicOrigin).
+const mediaOrigin = (() => {
+  const driver = (process.env.STORAGE_DRIVER ?? 'local').toLowerCase();
+  if (driver === 'local') return null;
+  const bucket = process.env.S3_BUCKET;
+  const endpoint = process.env.S3_ENDPOINT?.replace(/\/$/, '');
+  const region = process.env.S3_REGION || (driver === 'r2' ? 'auto' : 'us-east-1');
+  const base = process.env.S3_PUBLIC_URL || (endpoint ? `${endpoint}/${bucket}` : `https://${bucket}.s3.${region}.amazonaws.com`);
+  try { return new URL(base).origin; } catch { return null; }
+})();
+
 // https://astro.build/config
 export default defineConfig({
   output: 'server',
@@ -79,7 +92,7 @@ export default defineConfig({
     csp: {
       directives: [
         "default-src 'self'",
-        "img-src 'self' data: blob:",
+        `img-src 'self' data: blob:${mediaOrigin ? ` ${mediaOrigin}` : ''}`,
         "font-src 'self'",
         "connect-src 'self' https://api.iconify.design",
         "frame-src https://www.google.com https://www.youtube.com https://player.vimeo.com",

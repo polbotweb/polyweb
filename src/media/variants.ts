@@ -1,3 +1,4 @@
+import { writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import sharp from 'sharp';
 
@@ -225,14 +226,41 @@ export interface VariantInput {
  * vide est renvoyé — l'appelant retombe alors sur l'original.
  */
 export async function generateResponsiveVariants(input: VariantInput): Promise<ImageVariant[]> {
-  const { buffer, mimeType, url, dir } = input;
+  const rendered = await renderResponsiveVariants(input);
+  const variants: ImageVariant[] = [];
+  try {
+    for (const v of rendered) {
+      await writeFile(join(input.dir, v.filename), v.data, { mode: 0o644 });
+      variants.push(v.variant);
+    }
+  } catch (err) {
+    console.warn(`[variants] Could not write variants for ${input.url}: ${(err as Error).message}`);
+    return [];
+  }
+  return variants;
+}
+
+/** Variante encodée en mémoire, prête à être écrite par un driver de stockage. */
+export interface RenderedVariant {
+  filename: string;
+  data: Buffer;
+  variant: ImageVariant;
+}
+
+/**
+ * Encode les variantes en mémoire (sans écrire) — utilisé par le stockage
+ * objet (brique e) : chaque variante est ensuite envoyée au driver (local, S3, R2).
+ * Mêmes garanties que `generateResponsiveVariants` (jamais d'agrandissement,
+ * ne lève pas).
+ */
+export async function renderResponsiveVariants(input: Omit<VariantInput, 'dir'> & { dir?: string }): Promise<RenderedVariant[]> {
+  const { buffer, mimeType, url } = input;
 
   if (!RASTER_MIME_TYPES.has(mimeType)) return [];
 
   try {
     // Une seule instance sharp, clonée par largeur : sans `clone()`, chaque
-    // appel re-parserait l'en-tête et rouvrirait le décodeur. Sur 5 variantes
-    // d'une photo 3 Mo, c'est 5× le travail pour rien.
+    // appel re-parserait l'en-tête et rouvrirait le décodeur.
     const base = sharp(buffer, { failOn: 'none' });
     const sourceWidth = input.sourceWidth ?? (await base.metadata()).width;
     const sourceHeight = input.sourceHeight ?? (await base.metadata()).height;
@@ -240,47 +268,31 @@ export async function generateResponsiveVariants(input: VariantInput): Promise<I
 
     const stem = safeStem(url);
     const cap = Math.min(sourceWidth, MAX_VARIANT_WIDTH);
-    const targets: number[] = [
-      ...RESPONSIVE_WIDTHS.filter((width) => width < cap),
-      // Le dernier palier arrimé à la source évite de servir un 1920w quand
-      // l'original fait 800 px (étirement inutile), et de servir un original de
-      // 4737 px en WebP (2,8 Mo pour 88 % du poids de l'original, alors que
-      // personne ne l'affiche à cette taille).
-      cap,
-    ]
+    // Le dernier palier est arrimé à la source (jamais d'étirement, jamais
+    // d'original géant ré-encodé en WebP).
+    const targets: number[] = [...RESPONSIVE_WIDTHS.filter((width) => width < cap), cap]
       .filter((width) => width > 0)
       .filter((width, index, all) => all.indexOf(width) === index)
       .sort((a, b) => a - b);
 
-    const variants: ImageVariant[] = [];
-
+    const publicDir = url.slice(0, url.lastIndexOf('/') + 1);
+    const out: RenderedVariant[] = [];
     for (const width of targets) {
       const filename = `${stem}-${width}.webp`;
-      const info = await base
+      const { data, info } = await base
         .clone()
         .resize({ width, withoutEnlargement: true })
         .webp({ quality: WEBP_QUALITY })
-        .toFile(join(dir, filename));
-
-      // On dérive l'URL de l'URL d'origine en ne remplaçant que le nom de
-      // fichier : le dossier (`/uploads/media/trips/bosnia/`) est conservé tel
-      // quel, donc jamais ré-encodé ni réinterprété.
-      const publicDir = url.slice(0, url.lastIndexOf('/') + 1);
-      variants.push({
-        width: info.width,
-        height: info.height,
-        mimeType: 'image/webp',
-        url: `${publicDir}${filename}`,
-        size: info.size,
+        .toBuffer({ resolveWithObject: true });
+      out.push({
+        filename,
+        data,
+        variant: { width: info.width, height: info.height, mimeType: 'image/webp', url: `${publicDir}${filename}`, size: info.size },
       });
     }
-
-    return variants;
+    return out;
   } catch (err) {
-    // libvips remonte des diagnostics multilignes très verbeux
-    // (« Input buffer has corrupt header » suivi de 4 lignes VipsJpeg…).
-    // On ne garde que la première ligne : le contexte utile y est, et le
-    // journal reste lisible quand un媒体 est réellement corrompu.
+    // libvips remonte des diagnostics multilignes : on ne garde que la première ligne.
     const reason = err instanceof Error ? err.message.split('\n')[0] : String(err);
     console.warn(`[variants] No responsive variant for ${url} (${reason}). Serving the original.`);
     return [];

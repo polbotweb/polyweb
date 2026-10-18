@@ -1,10 +1,12 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { Effect } from 'effect';
+import { Storage, IMMUTABLE_CACHE, type StorageShape } from '@/lib/storage';
+import { runApp } from '@/lib/effect/http';
 import DOMPurify from 'isomorphic-dompurify';
 import type { UploadOptions, UploadResult, AllowedMimeType } from './types';
 import { ALLOWED_MIME_TYPES, DEFAULT_MAX_SIZE } from './types';
-import { generateResponsiveVariants, decodeAndValidate, UndecodableImageError, ImageTooLargeError } from './variants';
+import { renderResponsiveVariants, decodeAndValidate, UndecodableImageError, ImageTooLargeError, type ImageVariant } from './variants';
 
 // ─── Magic bytes signatures for allowed image types ────────────────
 const MAGIC_BYTES: Record<string, { offset: number; bytes: number[] }[]> = {
@@ -33,13 +35,65 @@ function detectMimeFromBytes(buffer: Buffer): string | null {
 }
 
 /**
- * Traite un fichier uploadé : valide type/taille, génère un nom unique,
- * écrit sur le disque dans public/uploads/{subDir}/.
+ * Traite un fichier uploadé : valide type/taille/contenu, génère un nom
+ * unique, puis écrit l'original et ses variantes via le service `Storage`
+ * (local `public/uploads/`, S3 ou R2 — brique e).
  */
 export async function processUpload(
   file: File,
   options: UploadOptions,
 ): Promise<UploadResult> {
+  const prepared = await prepareUpload(file, options);
+  try {
+    return await runApp(storeUpload(prepared));
+  } catch (err) {
+    console.error('[upload] storage failure:', err);
+    throw new UploadError("Le fichier n'a pas pu être enregistré (stockage indisponible).", 'STORAGE_ERROR');
+  }
+}
+
+/** Fichier validé, prêt à être stocké. */
+export interface PreparedUpload {
+  key: string;
+  filename: string;
+  mimeType: string;
+  buffer: Buffer;
+  dimensions: { width: number; height: number };
+}
+
+/** Écrit l'original + les variantes WebP via `Storage` (Effect). */
+export const storeUpload = (p: PreparedUpload) =>
+  Effect.gen(function* () {
+    const storage = yield* Storage;
+    const stored = yield* storage.put(p.key, p.buffer, { contentType: p.mimeType, cacheControl: IMMUTABLE_CACHE });
+    const rendered = yield* Effect.promise(() =>
+      renderResponsiveVariants({ buffer: p.buffer, mimeType: p.mimeType, url: stored.url, sourceWidth: p.dimensions.width, sourceHeight: p.dimensions.height }),
+    );
+    const dirKey = p.key.slice(0, p.key.lastIndexOf('/') + 1);
+    const variants: ImageVariant[] = yield* Effect.forEach(
+      rendered,
+      (v) => storage.put(`${dirKey}${v.filename}`, v.data, { contentType: 'image/webp', cacheControl: IMMUTABLE_CACHE }).pipe(Effect.as({ ...v.variant, url: storage.publicUrl(`${dirKey}${v.filename}`) })),
+      { concurrency: 3 },
+    ).pipe(
+      // Une variante en échec ne fait jamais échouer l'upload : l'original reste servi.
+      Effect.catchTag('StorageError', (e) => Effect.logWarning('variant upload failed', e).pipe(Effect.as([] as ImageVariant[]))),
+    );
+    return {
+      filename: p.filename,
+      key: p.key,
+      path: diskPathOrKey(storage, p.key),
+      url: stored.url,
+      dimensions: p.dimensions.width > 0 ? p.dimensions : null,
+      variants,
+    } satisfies UploadResult;
+  }).pipe(Effect.withSpan('media.storeUpload'));
+
+function diskPathOrKey(storage: StorageShape, key: string): string {
+  return storage.driver === 'local' ? join(resolve(process.cwd(), 'public', 'uploads'), key) : key;
+}
+
+/** Validation complète (type déclaré, taille, magic bytes, SVG assaini, décodage réel). */
+export async function prepareUpload(file: File, options: UploadOptions): Promise<PreparedUpload> {
   const { subDir, maxSize = DEFAULT_MAX_SIZE, allowedTypes = ALLOWED_MIME_TYPES } = options;
 
   // ─── Validation MIME (déclarée par le client) ─────────────────────
@@ -71,11 +125,6 @@ export async function processUpload(
     throw new UploadError('Sous-dossier invalide.', 'INVALID_SUBDIR');
   }
 
-  // ─── Écriture sur disque ─────────────────────────────────────────
-  const dir = join(process.cwd(), 'public', 'uploads', subDir);
-  await mkdir(dir, { recursive: true, mode: 0o755 });
-
-  const filePath = join(dir, filename);
   let buffer = Buffer.from(await file.arrayBuffer());
 
   // ─── Validation magic bytes (contenu réel du fichier) ────────────
@@ -135,33 +184,7 @@ export async function processUpload(
     );
   });
 
-  await writeFile(filePath, buffer, { mode: 0o644 });
-
-  // ─── Variantes responsive (WebP redimensionné) ────────────────────────
-  // L'original seul est trop lourd pour le web : une photo de voyage 4737px
-  // en JPEG (3 Mo) était servie telle quelle et mesurée 5,7 Mo/page par
-  // Lighthouse (LCP 4,6 s). On fige ici les variantes — le coût sharp est
-  // payé une fois, à l'upload, et le rendu ne sert plus que du statique.
-  //
-  // Les dimensions validées plus haut sont réutilisées : on ne ré-analyse pas
-  // l'en-tête, et le pipeline sharp est cloné plutôt que reconstruit.
-  const variants = await generateResponsiveVariants({
-    buffer,
-    mimeType: file.type,
-    url: `/uploads/${subDir}/${filename}`,
-    dir,
-    sourceWidth: dimensions.width,
-    sourceHeight: dimensions.height,
-  });
-
-  return {
-    filename,
-    path: filePath,
-    url: `/uploads/${subDir}/${filename}`,
-    // 0×0 = format non rasterisable (SVG) : pas de dimensions à stocker.
-    dimensions: dimensions.width > 0 ? dimensions : null,
-    variants,
-  };
+  return { key: `${subDir}/${filename}`, filename, mimeType: file.type, buffer, dimensions };
 }
 
 /** Déduit l'extension depuis le type MIME */
