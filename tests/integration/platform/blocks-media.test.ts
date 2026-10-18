@@ -76,7 +76,7 @@ describe('brique a — blocs persistés puis rendus', () => {
 describe('brique e — upload via Storage puis ligne media_files', () => {
   it('écrit original + variantes et enregistre le média', async () => {
     const png = await sharp({ create: { width: 700, height: 350, channels: 3, background: '#3366cc' } }).png().toBuffer();
-    const file = new File([png], 'Bannière test.png', { type: 'image/png' });
+    const file = new File([new Uint8Array(png)], 'Bannière test.png', { type: 'image/png' });
 
     const prepared = await prepareUpload(file, { subDir: 'media', maxSize: 5 * 1024 * 1024 });
     const storage = Layer.succeed(Storage, makeLocalStorage(dir, '/uploads'));
