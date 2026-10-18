@@ -163,6 +163,8 @@ resource and components, a module wired to the core Effect abstractions:
 | `schema/index.ts` | content table, `<domain>_revisions`, `<domain>_locks` (lock columns expected by `core/locks`) |
 | `domain/workflow.ts` | `WorkflowDefinition` (`core/workflow`): `DRAFT` / `PUBLISHED` / `ARCHIVED` transitions |
 | `locks.ts` | `defineLockResource` + `drizzleLockStore` (`core/locks`): user + session owner, same-user takeover, TTL, purge |
+| `locks.ts` (`tenantOf`) | owning organization for the generic, audited `forceReleaseLock` admin action (global admins anywhere, org owners/admins in their own organization only); auto-registered via `src/modules/*/locks.ts` |
+| `components/<domain>/admin/<Pascal>AdminList.astro` | `ForceReleaseLockButton` (confirm) when the page passes `canForceReleaseLock` (`canAdministerTenant`) |
 | `permissions/index.ts` | `require<Pascal>Permission`, an Effect guard over `requireActionPermission` (better-auth RBAC) |
 | `services/<entity>.service.ts` | Effect service: `dbTry` writes, lock check, workflow check, revision on each write |
 | `loaders/<entity>.loader.ts` | Effect loader (`dbTry`) + `load<Pascal>` Promise adapter (`runOrThrow`) |

@@ -143,8 +143,15 @@ Abstraction core, indépendante de l'entité, utilisable par tout module :
   autre session échoue d'abord en `LockHeldError { sameUser: true }` (message « Vous éditez déjà ce contenu dans une
   autre session — reprendre ici ? ») ; après confirmation dans l'UI, `takeOver` transfère le verrou de façon
   atomique et renvoie `tookOverFrom` (session évincée), que l'action audite (`SERVICE_LOCK_TAKEOVER`,
-  `BLOG_POST_LOCK_TAKEOVER`). Un autre utilisateur reste bloqué jusqu'à expiration ou `forceReleaseLock`
-  (libération administrative — **aucune action/UI d'administration ne l'expose encore**).
+  `BLOG_POST_LOCK_TAKEOVER`). Un autre utilisateur reste bloqué jusqu'à expiration ou libération administrative.
+- Libération administrative (`adminReleaseLock`, action générique `forceReleaseLock` dans
+  `src/actions/admin/locks.ts`, bouton `ForceReleaseLockButton` avec confirmation) : administrateur global →
+  toute ressource ; owner/admin d'organisation → ressources de **sa** seule organisation (décision
+  `src/core/permissions/tenant.ts`, organisation fournie par le `tenantOf` déclaré dans `defineLockResource`) ;
+  ressources plateforme réservées aux administrateurs globaux. Refus → `LockReleaseForbiddenError` (FORBIDDEN),
+  type/ressource inconnus → `LockResourceNotFoundError` (NOT_FOUND). Audit `LOCK_FORCE_RELEASE` (ressource,
+  organisation, ancien propriétaire). Les verrous de modules (`src/modules/*/locks.ts`) sont enregistrés
+  automatiquement par l'action (`import.meta.glob`).
 - `defineLockResource(type, store, { ttlMs })` : déclaration par module (`src/modules/services/locks.ts`,
   `src/modules/blog/locks.ts`, modules générés par `pnpm module:new`) ; `lockLocaleFrom(headers)` pour l'i18n.
 
