@@ -1,0 +1,85 @@
+---
+/** Multi-site (brique j) : liste, création, choix du site administré. */
+import { requirePermission } from '@/lib/auth-guards';
+import PlatformAdminShell from '@organisms/PlatformAdmin/PlatformAdminShell.astro';
+import { getPlatformLabel, getPlatformAdminUrl } from '@/core/localization/platform-labels';
+import { ADMIN_SITE_COOKIE, getAdminSite, userCan } from '@/lib/platform/admin';
+import { logAuditEvent, extractIp } from '@/lib/audit';
+import { runAppResult } from '@/lib/effect/http';
+import { siteCreate, siteGet, sitesList } from '@/modules/sites/domain/sites.effect';
+import { LOCALES } from '@i18n/config';
+
+export const prerender = false;
+const result = await requirePermission(Astro, { tenant: ['read'] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT, user } = result;
+const selfUrl = getPlatformAdminUrl(locale, 'sites');
+const canCreate = await userCan(user.id, { tenant: ['create'] });
+let error: string | null = null;
+let issues: readonly { path: string; message: string }[] = [];
+
+if (Astro.request.method === 'POST') {
+  const fd = await Astro.request.formData();
+  const intent = String(fd.get('intent') ?? '');
+  if (intent === 'switch') {
+    const r = await runAppResult(siteGet(String(fd.get('id') ?? '')));
+    if (r.ok) {
+      Astro.cookies.set(ADMIN_SITE_COOKIE, r.value.id, { path: '/', httpOnly: true, sameSite: 'lax', secure: import.meta.env.PROD, maxAge: 60 * 60 * 24 * 30 });
+      return Astro.redirect(`${selfUrl}?saved=switched`, 303);
+    }
+    error = r.error.message;
+  } else if (intent === 'create' && canCreate) {
+    const r = await runAppResult(siteCreate({
+      slug: String(fd.get('slug') ?? ''),
+      name: String(fd.get('name') ?? ''),
+      domains: String(fd.get('domains') ?? ''),
+      defaultLocale: String(fd.get('defaultLocale') ?? 'fr') as (typeof LOCALES)[number],
+      locales: fd.getAll('locales').map(String) as (typeof LOCALES)[number][],
+    }));
+    if (r.ok) {
+      void logAuditEvent({ userId: user.id, action: 'SITE_CREATE', resource: 'site', resourceId: r.value.id, metadata: { slug: r.value.slug }, ipAddress: extractIp(Astro.request.headers, Astro.clientAddress), userAgent: Astro.request.headers.get('user-agent') });
+      return Astro.redirect(`${selfUrl}?saved=created`, 303);
+    }
+    error = r.error.message;
+    if (r.error._tag === 'ValidationError') issues = r.error.issues;
+  }
+}
+const [listed, current] = await Promise.all([runAppResult(sitesList), getAdminSite(Astro)]);
+const sites = listed.ok ? listed.value : [];
+const saved = Astro.url.searchParams.get('saved');
+---
+<PlatformAdminShell t={authT} locale={locale} section="sites" title={getPlatformLabel('sites', locale)}>
+  {saved && <output class="block rounded-md border border-success bg-success/10 p-3 text-sm">{saved === 'switched' ? `Site administré : ${current.name}` : saved === 'deleted' ? 'Site supprimé.' : 'Site créé.'}</output>}
+  {error && <div class="rounded-md border border-error bg-error/10 p-3 text-sm" role="alert"><p>{error}</p>{issues.length > 0 && <ul class="list-disc ps-5">{issues.map((i) => <li><code>{i.path}</code> : {i.message}</li>)}</ul>}</div>}
+  <p class="text-muted-foreground text-sm">Chaque site a ses domaines, langues, types de contenu, entrées, formulaires, jetons d’API et webhooks. Le site public est choisi d’après l’en-tête <code>Host</code> (sinon site par défaut). Les écrans « Plateforme » portent sur le site administré. Les modules historiques (blog, services, pages, navigation) restent communs à tous les sites.</p>
+  <table class="w-full text-sm">
+    <thead><tr class="border-b"><th class="py-2 text-start">Nom</th><th class="text-start">Slug</th><th class="text-start">Domaines</th><th class="text-start">Langues</th><th></th></tr></thead>
+    <tbody>
+      {sites.map((s) => (
+        <tr class="border-b" data-site={s.slug}>
+          <td class="py-2 font-medium">{s.name}{s.isDefault && <span class="ms-2 rounded-full bg-muted px-2 py-0.5 text-xs">défaut</span>}{s.id === current.id && <span class="ms-2 rounded-full bg-success/15 px-2 py-0.5 text-xs">administré</span>}</td>
+          <td class="font-mono">{s.slug}</td>
+          <td>{s.domains.join(', ') || '—'}</td>
+          <td>{s.locales.join(', ')} ({s.defaultLocale})</td>
+          <td class="whitespace-nowrap text-end">
+            {s.id !== current.id && (
+              <form method="post" class="inline"><input type="hidden" name="id" value={s.id} /><button name="intent" value="switch" class="hover:underline">Administrer</button></form>
+            )}
+            <a class="ms-3 hover:underline" href={getPlatformAdminUrl(locale, 'sites', s.id)}>Modifier</a>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  {canCreate && (
+    <form method="post" class="grid gap-3 rounded-md border p-4 text-sm sm:grid-cols-2">
+      <h2 class="font-semibold sm:col-span-2">Nouveau site</h2>
+      <label class="grid gap-1">Nom<input name="name" required maxlength="160" class="rounded-md border bg-background px-3 py-2" /></label>
+      <label class="grid gap-1">Slug<input name="slug" required pattern="[a-z0-9][a-z0-9-]{0,62}" class="rounded-md border bg-background px-3 py-2 font-mono" /></label>
+      <label class="grid gap-1 sm:col-span-2">Domaines (séparés par des virgules)<input name="domains" placeholder="exemple.fr, www.exemple.fr" class="rounded-md border bg-background px-3 py-2" /></label>
+      <label class="grid gap-1">Langue par défaut<select name="defaultLocale" class="rounded-md border bg-background px-3 py-2">{LOCALES.map((l) => <option value={l}>{l}</option>)}</select></label>
+      <fieldset class="flex flex-wrap items-center gap-3"><legend class="mb-1">Langues</legend>{LOCALES.map((l) => <label class="flex items-center gap-1"><input type="checkbox" name="locales" value={l} checked /> {l}</label>)}</fieldset>
+      <button name="intent" value="create" class="justify-self-start rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground">Créer le site</button>
+    </form>
+  )}
+</PlatformAdminShell>

@@ -34,3 +34,29 @@ describe('multi-site', () => {
     expect((await resolveSiteForHost('c2.test')).isDefault).toBe(true);
   });
 });
+
+describe('multi-site — façade Effect (brique j)', () => {
+  it('mappe les erreurs en erreurs typées', async () => {
+    const { Effect, Exit } = await import('effect');
+    const { appRuntime } = await import('@/lib/effect/runtime');
+    const { siteCreate, siteGet, siteDelete, siteUpdate, sitesList } = await import('@/modules/sites/domain/sites.effect');
+    const tagOf = (exit: import('effect').Exit.Exit<unknown, unknown>) =>
+      Exit.isFailure(exit) ? (exit.cause.reasons.find((r) => r._tag === 'Fail') as { error: { _tag: string } } | undefined)?.error._tag : 'success';
+    const run = <A, E>(e: import('effect').Effect.Effect<A, E, never>) => appRuntime.runPromiseExit(e);
+    const slug = `fx-${Date.now()}`;
+    const ok = await run(siteCreate({ slug, name: 'Fx', domains: 'fx-site.test' }));
+    expect(Exit.isSuccess(ok)).toBe(true);
+    const site = Exit.isSuccess(ok) ? ok.value : null;
+    created.push(site!.id);
+    expect(tagOf(await run(siteCreate({ slug, name: 'Dup', domains: [] })))).toBe('ConflictError');
+    expect(tagOf(await run(siteCreate({ slug: `${slug}-b`, name: 'Dom', domains: ['fx-site.test'] })))).toBe('ConflictError');
+    expect(tagOf(await run(siteCreate({ slug: 'Bad Slug', name: 'x', domains: [] })))).toBe('ValidationError');
+    expect(tagOf(await run(siteGet('missing')))).toBe('NotFoundError');
+    expect(tagOf(await run(siteUpdate('missing', { slug: 'x', name: 'x', domains: [] })))).toBe('NotFoundError');
+    const def = await ensureDefaultSite();
+    expect(tagOf(await run(siteDelete(def.id)))).toBe('ConflictError');
+    const all = await appRuntime.runPromise(sitesList);
+    expect(all.some((s) => s.slug === slug)).toBe(true);
+    void Effect;
+  });
+});

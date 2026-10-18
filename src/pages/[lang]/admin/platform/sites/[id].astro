@@ -1,0 +1,76 @@
+---
+/** Multi-site (brique j) : édition / suppression d'un site. */
+import { Effect } from 'effect';
+import { requirePermission } from '@/lib/auth-guards';
+import PlatformAdminShell from '@organisms/PlatformAdmin/PlatformAdminShell.astro';
+import { getPlatformLabel, getPlatformAdminUrl } from '@/core/localization/platform-labels';
+import { ADMIN_SITE_COOKIE, userCan } from '@/lib/platform/admin';
+import { logAuditEvent, extractIp } from '@/lib/audit';
+import { runAppResult } from '@/lib/effect/http';
+import { ForbiddenError } from '@/lib/effect/errors';
+import { siteDelete, siteGet, siteUpdate } from '@/modules/sites/domain/sites.effect';
+import { LOCALES } from '@i18n/config';
+
+export const prerender = false;
+const result = await requirePermission(Astro, { tenant: ['read'] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT, user } = result;
+const listUrl = getPlatformAdminUrl(locale, 'sites');
+const loaded = await runAppResult(siteGet(Astro.params.id ?? ''));
+if (!loaded.ok) return Astro.redirect(listUrl);
+const site = loaded.value;
+const [canUpdate, canDelete] = await Promise.all([userCan(user.id, { tenant: ['update'] }), userCan(user.id, { tenant: ['delete'] })]);
+let error: string | null = null;
+let issues: readonly { path: string; message: string }[] = [];
+
+if (Astro.request.method === 'POST') {
+  const fd = await Astro.request.formData();
+  const intent = String(fd.get('intent') ?? 'save');
+  const r = await runAppResult(Effect.gen(function* () {
+    if (intent === 'delete') {
+      if (!canDelete) return yield* new ForbiddenError({ reason: 'Permission refusée' });
+      yield* siteDelete(site.id);
+      return 'deleted' as const;
+    }
+    if (!canUpdate) return yield* new ForbiddenError({ reason: 'Permission refusée' });
+    yield* siteUpdate(site.id, {
+      slug: String(fd.get('slug') ?? ''),
+      name: String(fd.get('name') ?? ''),
+      domains: String(fd.get('domains') ?? ''),
+      defaultLocale: String(fd.get('defaultLocale') ?? 'fr') as (typeof LOCALES)[number],
+      locales: fd.getAll('locales').map(String) as (typeof LOCALES)[number][],
+    });
+    return 'saved' as const;
+  }));
+  if (r.ok) {
+    void logAuditEvent({ userId: user.id, action: r.value === 'deleted' ? 'SITE_DELETE' : 'SITE_UPDATE', resource: 'site', resourceId: site.id, metadata: { slug: site.slug }, ipAddress: extractIp(Astro.request.headers, Astro.clientAddress), userAgent: Astro.request.headers.get('user-agent') });
+    if (r.value === 'deleted') {
+      if (Astro.cookies.get(ADMIN_SITE_COOKIE)?.value === site.id) Astro.cookies.delete(ADMIN_SITE_COOKIE, { path: '/' });
+      return Astro.redirect(`${listUrl}?saved=deleted`, 303);
+    }
+    return Astro.redirect(`${getPlatformAdminUrl(locale, 'sites', site.id)}?saved=1`, 303);
+  }
+  error = r.error.message;
+  if (r.error._tag === 'ValidationError') issues = r.error.issues;
+}
+---
+<PlatformAdminShell t={authT} locale={locale} section="sites" title={`Site : ${site.name}`}>
+  <a slot="actions" class="rounded-md border px-3 py-2 text-sm" href={listUrl}>← {getPlatformLabel('sites', locale)}</a>
+  {Astro.url.searchParams.get('saved') && <output class="block rounded-md border border-success bg-success/10 p-3 text-sm">Enregistré.</output>}
+  {error && <div class="rounded-md border border-error bg-error/10 p-3 text-sm" role="alert"><p>{error}</p>{issues.length > 0 && <ul class="list-disc ps-5">{issues.map((i) => <li><code>{i.path}</code> : {i.message}</li>)}</ul>}</div>}
+  <form method="post" class="grid gap-3 text-sm sm:grid-cols-2">
+    <label class="grid gap-1">Nom<input name="name" required value={site.name} class="rounded-md border bg-background px-3 py-2" /></label>
+    <label class="grid gap-1">Slug<input name="slug" required value={site.slug} pattern="[a-z0-9][a-z0-9-]{0,62}" class="rounded-md border bg-background px-3 py-2 font-mono" /></label>
+    <label class="grid gap-1 sm:col-span-2">Domaines (séparés par des virgules)<input name="domains" value={site.domains.join(', ')} class="rounded-md border bg-background px-3 py-2" /></label>
+    <label class="grid gap-1">Langue par défaut<select name="defaultLocale" class="rounded-md border bg-background px-3 py-2">{LOCALES.map((l) => <option value={l} selected={l === site.defaultLocale}>{l}</option>)}</select></label>
+    <fieldset class="flex flex-wrap items-center gap-3"><legend class="mb-1">Langues</legend>{LOCALES.map((l) => <label class="flex items-center gap-1"><input type="checkbox" name="locales" value={l} checked={site.locales.includes(l)} /> {l}</label>)}</fieldset>
+    <div class="flex gap-2 sm:col-span-2">
+      {canUpdate && <button name="intent" value="save" class="rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground">Enregistrer</button>}
+      {canDelete && !site.isDefault && <button name="intent" value="delete" formnovalidate class="rounded-md border border-error px-4 py-2 text-error" data-confirm="Supprimer ce site et TOUS ses contenus, formulaires, jetons et webhooks ?">Supprimer le site</button>}
+    </div>
+  </form>
+</PlatformAdminShell>
+<script>
+  import { initConfirmButtons } from '@/lib/platform/confirm';
+  initConfirmButtons();
+</script>
