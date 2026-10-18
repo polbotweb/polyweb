@@ -94,11 +94,18 @@ describe('backup → verify (brick m)', () => {
     expect(r.mediaRestored).toBe(2);
     expect(new TextDecoder().decode(storage.files.get('images/a.webp'))).toBe('AAA');
     const count = (url: string, sql: string) => execFileSync('psql', ['-X', '-A', '-t', '-c', sql], { env: { ...process.env, ...pgEnvFromUrl(url) }, encoding: 'utf8' }).trim();
-    for (const sql of ['SELECT count(*) FROM sites', 'SELECT count(*) FROM __drizzle_migrations', "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'"]) {
+    // Schéma et migrations : identiques à la source (stables pendant la suite).
+    for (const sql of ['SELECT count(*) FROM __drizzle_migrations', "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'"]) {
       expect(count(target!, sql)).toBe(count(getDbUrl(), sql));
     }
+    // Données : le nombre de `sites` de la source varie pendant la suite (d'autres fichiers en créent/suppriment
+    // en parallèle) ; on vérifie la présence du site par défaut, jamais supprimé par les tests.
+    const defaultSite = "SELECT id FROM sites WHERE is_default ORDER BY created_at LIMIT 1";
+    expect(count(target!, defaultSite)).toBe(count(getDbUrl(), defaultSite));
+    const restoredSites = count(target!, 'SELECT count(*) FROM sites');
+    expect(Number(restoredSites)).toBeGreaterThan(0);
     // Restauration idempotente (deuxième passage sur une base non vide)
     await run(restoreBackup({ archive, databaseUrl: target!, restoreMedia: false, knownMigrations: knownMigrations() }), storage);
-    expect(count(target!, 'SELECT count(*) FROM sites')).toBe(count(getDbUrl(), 'SELECT count(*) FROM sites'));
+    expect(count(target!, 'SELECT count(*) FROM sites')).toBe(restoredSites);
   }, 180_000);
 });

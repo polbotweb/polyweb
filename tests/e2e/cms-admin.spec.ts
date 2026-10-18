@@ -9,7 +9,21 @@ import { SEED_EMAIL, SEED_PASSWORD } from './global-setup';
  */
 
 /** Sign in as admin seed user — reliable across browsers. */
+// Session admin réutilisée entre les tests du fichier : better-auth limite
+// /sign-in/email à 5 requêtes / 10 s, et un `beforeEach` qui se reconnecte à
+// chaque test finissait par recevoir un 429 (timeout du hook).
+let adminCookies: Awaited<ReturnType<import('@playwright/test').BrowserContext['cookies']>> | null = null;
+
 async function signInAsAdmin(page: import('@playwright/test').Page) {
+  if (adminCookies) {
+    await page.context().addCookies(adminCookies);
+    return;
+  }
+  await signInWithForm(page);
+  adminCookies = await page.context().cookies();
+}
+
+async function signInWithForm(page: import('@playwright/test').Page) {
   for (let attempt = 0; attempt < 2; attempt++) {
     await page.goto('/fr/auth/connexion', { waitUntil: 'networkidle' });
     await page.locator('input[name="email"]').fill(SEED_EMAIL);
@@ -17,7 +31,7 @@ async function signInAsAdmin(page: import('@playwright/test').Page) {
     const submitBtn = page.locator('button[type="submit"], form button').first();
     try {
       await Promise.all([
-        page.waitForURL(/tableau-de-bord|dashboard/, { timeout: 30000 }),
+        page.waitForURL(/tableau-de-bord|dashboard/, { timeout: 12000 }),
         submitBtn.click(),
       ]);
       await page.waitForLoadState('networkidle');

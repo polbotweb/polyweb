@@ -30,10 +30,14 @@ vi.mock('@database/schemas', () => ({
   user: { id: 'id', bio: 'bio', website: 'website', twitter: 'twitter', linkedin: 'linkedin' },
 }));
 
-vi.mock('@/lib/audit', () => ({
-  logAuditEvent: vi.fn(() => Promise.resolve()),
-  extractIp: vi.fn(() => '127.0.0.1'),
-}));
+vi.mock('@/lib/audit', async () => {
+  const { Effect } = await import('effect');
+  return {
+    logAuditEvent: vi.fn(() => Promise.resolve()),
+    logAuditEventEffect: vi.fn(() => Effect.void),
+    extractIp: vi.fn(() => '127.0.0.1'),
+  };
+});
 vi.mock('@/lib/sanitize', () => ({ sanitizeHtml: vi.fn((s: string) => s) }));
 
 import { updateUserProfile } from '@/actions/blog/profile';

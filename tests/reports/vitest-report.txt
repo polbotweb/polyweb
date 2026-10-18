@@ -1,9 +1,9 @@
 ════════════════════════════════════════════════════════════════════════════════
   VITEST UNIT & INTEGRATION TEST REPORT
-  Generated: 2026-10-18 10:51:19
+  Generated: 2026-10-18 11:00:12
 ════════════════════════════════════════════════════════════════════════════════
 
-  ❌ tests/integration/audit.test.ts  (7/8 passed)
+  ✅ tests/integration/audit.test.ts  (8/8 passed)
   ✅ tests/integration/auth-advanced.test.ts  (10/10 passed)
   ✅ tests/integration/auth-extensions.test.ts  (5/5 passed)
   ✅ tests/integration/auth-flow.test.ts  (5/5 passed)
@@ -117,7 +117,6 @@
   ✅ tests/integration/backup/backup.test.ts  (6/6 passed)
   ✅ tests/integration/effect/db.test.ts  (3/3 passed)
   ✅ tests/integration/observability/observability.test.ts  (5/5 passed)
-  ✅ tests/integration/search/search.test.ts  (5/5 passed)
   ✅ tests/integration/platform/api-v1.test.ts  (8/8 passed)
   ✅ tests/integration/platform/blocks-media.test.ts  (2/2 passed)
   ✅ tests/integration/platform/content.test.ts  (5/5 passed)
@@ -127,6 +126,7 @@
   ✅ tests/integration/platform/sites.test.ts  (5/5 passed)
   ✅ tests/integration/platform/webhooks.test.ts  (6/6 passed)
   ✅ tests/integration/storage/s3.test.ts  (4/4 passed)
+  ✅ tests/integration/search/search.test.ts  (5/5 passed)
   ✅ tests/unit/blog/status-transitions.test.ts  (17/17 passed)
   ✅ tests/unit/cms/admin-filter-contract.test.ts  (2/2 passed)
   ✅ tests/unit/cms/admin-module-contract.test.ts  (3/3 passed)
@@ -141,13 +141,13 @@
   ✅ tests/unit/database/seed-manifest.test.ts  (3/3 passed)
   ✅ tests/unit/database/services-data-invariants.test.ts  (5/5 passed)
   ✅ tests/unit/database/services-data-shape.test.ts  (1/1 passed)
-  ✅ tests/unit/effect/foundation.test.ts  (4/4 passed)
-  ✅ tests/unit/payments/providers.test.ts  (5/5 passed)
   ✅ tests/unit/platform/blocks.test.ts  (5/5 passed)
   ✅ tests/unit/platform/fields.test.ts  (5/5 passed)
   ✅ tests/unit/platform/revisions-diff.test.ts  (4/4 passed)
+  ✅ tests/unit/effect/foundation.test.ts  (4/4 passed)
   ✅ tests/unit/routing/content-routes.test.ts  (4/4 passed)
   ✅ tests/unit/scripts/new-module.test.ts  (2/2 passed)
+  ✅ tests/unit/payments/providers.test.ts  (5/5 passed)
   ✅ tests/unit/services/admin-actions.test.ts  (4/4 passed)
   ✅ tests/unit/services/admin-contract.test.ts  (2/2 passed)
   ✅ tests/unit/services/admin-resource.test.ts  (3/3 passed)
@@ -162,23 +162,10 @@
 ════════════════════════════════════════════════════════════════════════════════
 
   Total tests:   1503
-  Passed:        1502  
-  Failed:        1  ❌
-  Duration:      17s
+  Passed:        1503  ✅
+  Failed:        0  
+  Duration:      19s
 
 ════════════════════════════════════════════════════════════════════════════════
-  FAILURES
-════════════════════════════════════════════════════════════════════════════════
-
-  Suite: tests/integration/audit.test.ts
-  Test:  Audit — Hooks integration logs USER_BAN when admin bans a user
-────────────────────────────────────────────────────────────────────────────────
-  AssertionError: expected 'AnC8LiS7ugCGQeCaDeD2zygBkSfmCo3Q' to be 'kaLQFkOyK9jk8rhrlAotDoGaN3mcedoe' // Object.is equality
-    at /workspace/polyweb/tests/integration/audit.test.ts:154:31
-    at processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at file:///workspace/polyweb/node
-
-
-════════════════════════════════════════════════════════════════════════════════
-  END OF REPORT — 1502/1503 passed
+  END OF REPORT — 1503/1503 passed
 ════════════════════════════════════════════════════════════════════════════════
