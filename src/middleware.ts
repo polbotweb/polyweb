@@ -3,8 +3,14 @@ import { LOCALES } from "@/i18n/config";
 import { bootstrapModules } from "@/lib/cms/bootstrap";
 import { resolveSiteForHost } from "@/modules/sites/domain/sites";
 import { defineMiddleware } from "astro:middleware";
+import { isForbiddenCrossOriginRequest } from "@/lib/security/origin-check";
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  // CSRF : contrôle d'Origin (remplace security.checkOrigin, cf. origin-check.ts)
+  if (!context.isPrerendered && isForbiddenCrossOriginRequest(context.request, context.url)) {
+    return new Response(`Cross-site ${context.request.method} form submissions are forbidden`, { status: 403 });
+  }
+
   bootstrapModules();
 
   // ─── Locale guard — reject invalid [lang] segments with 404 ─────

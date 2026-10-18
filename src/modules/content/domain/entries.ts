@@ -22,6 +22,7 @@ export class EntryValidationError extends Error {
   }
 }
 export class EntryConflictError extends Error {}
+export class EntryNotFoundError extends Error {}
 
 export const slugSchema = z.string().trim().toLowerCase().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "slug : minuscules, chiffres et tirets").max(200);
 
@@ -145,7 +146,7 @@ export async function updateEntry(type: ContentType, entryId: string, input: Sav
   try {
     const entry = await db.transaction(async (tx) => {
       const [current] = await tx.select().from(schema.contentEntries).where(and(eq(schema.contentEntries.id, entryId), eq(schema.contentEntries.typeId, type.id))).for("update");
-      if (!current) throw new Error("Entrée introuvable");
+      if (!current) throw new EntryNotFoundError("Entrée introuvable");
       if (opts.expectedVersion !== undefined && opts.expectedVersion !== current.version) {
         throw new EntryConflictError(`Conflit d'édition : version ${current.version} en base, ${opts.expectedVersion} attendue`);
       }
@@ -170,7 +171,7 @@ export async function setEntryStatus(type: ContentType, entryId: string, status:
   const db = getDrizzle();
   const entry = await db.transaction(async (tx) => {
     const [current] = await tx.select().from(schema.contentEntries).where(and(eq(schema.contentEntries.id, entryId), eq(schema.contentEntries.typeId, type.id))).for("update");
-    if (!current) throw new Error("Entrée introuvable");
+    if (!current) throw new EntryNotFoundError("Entrée introuvable");
     const [e] = await tx
       .update(schema.contentEntries)
       .set({ status, version: current.version + 1, publishedAt: status === "published" ? current.publishedAt ?? new Date() : current.publishedAt })

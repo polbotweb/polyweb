@@ -9,7 +9,7 @@ import { diffWords, diffJson } from "diff";
 import { getDrizzle, schema } from "@database/drizzle";
 import { blocksToText } from "@/core/blocks/registry";
 import type { EntrySnapshot } from "@database/schemas/content.schema";
-import { updateEntry, setEntryStatus, type Entry } from "./entries";
+import { updateEntry, setEntryStatus, EntryNotFoundError, type Entry } from "./entries";
 import type { ContentType } from "./content-types";
 
 export type Revision = typeof schema.contentEntryRevisions.$inferSelect;
@@ -67,7 +67,7 @@ export function rawSnapshotDiff(a: EntrySnapshot, b: EntrySnapshot): DiffPart[] 
 /** Restaure une révision : crée une nouvelle version identique à l'instantané (historique conservé). */
 export async function restoreRevision(type: ContentType, entryId: string, version: number, opts: { authorId: string | null; allowedLocales: readonly string[] }): Promise<Entry> {
   const rev = await getRevision(entryId, version);
-  if (!rev) throw new Error("Révision introuvable");
+  if (!rev) throw new EntryNotFoundError("Révision introuvable");
   const s = rev.snapshot;
   // Les traductions absentes de l'instantané sont supprimées pour une restauration fidèle.
   const keep = s.translations.map((t) => t.locale);

@@ -71,11 +71,11 @@ export default defineConfig({
 
   adapter,
 
-  // Astro v5+ enables security.checkOrigin by default — explicit for clarity.
-  // This validates the Origin header on POST/PATCH/DELETE/PUT requests,
-  // providing CSRF protection for all API endpoints and Astro Actions.
+  // CSRF: Astro's checkOrigin is replaced by an identical check in
+  // src/middleware.ts (src/lib/security/origin-check.ts) which additionally
+  // exempts bearer-token calls to /api/v1/* (not forgeable cross-site).
   security: {
-    checkOrigin: true,
+    checkOrigin: false,
     csp: {
       directives: [
         "default-src 'self'",
