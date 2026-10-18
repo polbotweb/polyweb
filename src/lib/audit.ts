@@ -3,6 +3,7 @@ import { auditLog } from "@database/schemas";
 import { appendFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { isIP } from "node:net";
+import { Effect } from "effect";
 
 export type AuditAction =
   | "SIGN_IN" | "SIGN_IN_FAILED" | "SIGN_UP" | "SIGN_UP_FAILED" | "SIGN_OUT"
@@ -38,18 +39,29 @@ export interface AuditEventInput { userId?: string | null; action: AuditAction; 
 const MAX_METADATA_SIZE = 10 * 1024;
 function safeMetadata(metadata: Record<string, unknown> | null | undefined): Record<string, unknown> | null { if (!metadata) return null; const json = JSON.stringify(metadata); return json.length <= MAX_METADATA_SIZE ? metadata : { _truncated: true, _originalSize: json.length, action: metadata.action ?? null }; }
 
-export async function logAuditEvent(input: AuditEventInput): Promise<void> {
-  try {
-    const db = getDrizzle();
-    await db.insert(auditLog).values({ userId: input.userId ?? null, action: input.action, resource: input.resource ?? null, resourceId: input.resourceId ?? null, metadata: safeMetadata(input.metadata), ipAddress: input.ipAddress ?? null, userAgent: input.userAgent ?? null });
-  } catch (err) {
-    console.error("[audit] Failed to log event:", err);
-    const date = new Date().toISOString().slice(0, 10);
+const writeFallback = (input: AuditEventInput) =>
+  Effect.tryPromise(async () => {
     const logsDir = join(process.cwd(), "logs");
-    const fallbackPath = join(logsDir, `audit-fallback-${date}.jsonl`);
-    const record = JSON.stringify({ timestamp: new Date().toISOString(), ...input });
-    mkdir(logsDir, { recursive: true, mode: 0o700 }).then(() => appendFile(fallbackPath, record + "\n", { mode: 0o600 })).catch((fileErr) => console.error("[audit] Fallback file write also failed:", fileErr));
-  }
+    const fallbackPath = join(logsDir, `audit-fallback-${new Date().toISOString().slice(0, 10)}.jsonl`);
+    await mkdir(logsDir, { recursive: true, mode: 0o700 });
+    await appendFile(fallbackPath, JSON.stringify({ timestamp: new Date().toISOString(), ...input }) + "\n", { mode: 0o600 });
+  }).pipe(Effect.catch((fileErr) => Effect.logError("[audit] Fallback file write also failed", fileErr)));
+
+/**
+ * Journalise un événement d'audit. N'échoue jamais : si l'insertion en base
+ * échoue, l'événement est écrit dans `logs/audit-fallback-*.jsonl`.
+ */
+export const logAuditEventEffect = (input: AuditEventInput): Effect.Effect<void> =>
+  Effect.tryPromise(async () => {
+    await getDrizzle().insert(auditLog).values({ userId: input.userId ?? null, action: input.action, resource: input.resource ?? null, resourceId: input.resourceId ?? null, metadata: safeMetadata(input.metadata), ipAddress: input.ipAddress ?? null, userAgent: input.userAgent ?? null });
+  }).pipe(
+    Effect.catch((err) => Effect.logError("[audit] Failed to log event", err).pipe(Effect.andThen(writeFallback(input)))),
+    Effect.withSpan("audit.log", { attributes: { "audit.action": input.action } }),
+  );
+
+/** Adaptateur Promise de `logAuditEventEffect`. */
+export function logAuditEvent(input: AuditEventInput): Promise<void> {
+  return Effect.runPromise(logAuditEventEffect(input));
 }
 
 export function extractIp(headers: Headers, clientAddress?: string | null): string | null {

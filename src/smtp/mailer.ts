@@ -1,10 +1,10 @@
 /**
- * Service `Mailer` (Effect) — enveloppe le pipeline SMTP existant
- * (`sendEmail` : Brevo / Resend / Nodemailer, retries, dead-letter).
+ * Service `Mailer` (Effect) — expose le pipeline `sendEmailEffect`
+ * (Brevo / Resend / Nodemailer, retries, dead-letter).
  * Timeout global par message ; erreurs typées `MailError`.
  */
 import { Context, Data, Duration, Effect, Layer } from 'effect';
-import { sendEmail } from './send';
+import { sendEmailEffect } from './send';
 import type { EmailPayload } from './types';
 
 export class MailError extends Data.TaggedError('MailError')<{ readonly to: string; readonly cause: unknown }> {
@@ -23,9 +23,9 @@ const TIMEOUT = Duration.seconds(30);
 
 export const MailerLive = Layer.succeed(Mailer, {
   send: (payload) =>
-    Effect.tryPromise({ try: () => sendEmail(payload), catch: (cause) => new MailError({ to: payload.to, cause }) }).pipe(
+    sendEmailEffect(payload).pipe(
+      Effect.mapError((error) => new MailError({ to: payload.to, cause: error._tag === 'SmtpProviderError' ? error.cause : error })),
       Effect.timeoutOrElse({ duration: TIMEOUT, orElse: () => Effect.fail(new MailError({ to: payload.to, cause: 'timeout' })) }),
-      Effect.withSpan('mail.send'),
     ),
 });
 

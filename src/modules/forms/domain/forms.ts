@@ -11,7 +11,7 @@ import { Clock, Effect, Schema } from 'effect';
 import { schema } from '@database/drizzle';
 import { FORM_STATUSES, FORM_SUBMISSION_STATUSES, type FormSettings, type FormSubmissionStatus } from '@database/schemas/forms.schema';
 import { buildDataSchema, fieldListSchema, FORM_FIELD_TYPES, labelFor, type FieldDefinition } from '@/core/content-types/fields';
-import { emitEvent } from '@/core/events';
+import { emitEventEffect } from '@/core/events';
 import { query } from '@/lib/effect/db';
 import { AppConfig } from '@/lib/effect/config';
 import { ConflictError, NotFoundError, RateLimitedError, ValidationError } from '@/lib/effect/errors';
@@ -189,7 +189,7 @@ export const submitForm = (siteId: string, slug: string, raw: Record<string, unk
     // Soumission suspecte (envoi trop rapide / sans jeton) : conservée en « spam », sans notification ni événement.
     if (suspicious) return { status: 'discarded', message } satisfies SubmitOutcome as SubmitOutcome;
 
-    yield* Effect.promise(() => emitEvent('form.submitted', { formId: form.id, form: form.slug, submissionId, data, locale: meta.locale }, { siteId }));
+    yield* emitEventEffect('form.submitted', { formId: form.id, form: form.slug, submissionId, data, locale: meta.locale }, { siteId });
     yield* notify(form, data, meta.locale);
     return { status: 'accepted', submissionId, message, redirectPath: form.settings.redirectPath } satisfies SubmitOutcome as SubmitOutcome;
   }).pipe(Effect.withSpan('forms.submit', { attributes: { slug } }));
