@@ -1,18 +1,18 @@
 ════════════════════════════════════════════════════════════════════════════════
   PLAYWRIGHT E2E TEST REPORT
-  Generated: 2026-10-18 10:55:46
+  Generated: 2026-10-18 11:22:47
 ════════════════════════════════════════════════════════════════════════════════
 
   ✅ a11y.spec.ts  (7/7 tests passed)
   ✅ app.spec.ts  (14/14 tests passed)
   ✅ auth.spec.ts  (15/15 tests passed)
   ✅ blog.spec.ts  (14/14 tests passed)
-  ❌ cms-admin.spec.ts  (7/8 tests passed)
+  ✅ cms-admin.spec.ts  (8/8 tests passed)
   ✅ platform-api.spec.ts  (1/1 tests passed)
   ✅ platform-content.spec.ts  (1/1 tests passed)
   ✅ platform-forms.spec.ts  (1/1 tests passed)
   ✅ platform-plugins.spec.ts  (1/1 tests passed)
-  ❌ platform-preview.spec.ts  (0/1 tests passed)
+  ✅ platform-preview.spec.ts  (1/1 tests passed)
   ✅ platform-search.spec.ts  (1/1 tests passed)
   ✅ platform-sites.spec.ts  (1/1 tests passed)
   ✅ platform-webhooks.spec.ts  (1/1 tests passed)
@@ -25,26 +25,10 @@
 ════════════════════════════════════════════════════════════════════════════════
 
   Total tests:   84
-  Passed:        82  
-  Failed:        2  ❌
-  Duration:      265.8s
+  Passed:        84  ✅
+  Failed:        0  
+  Duration:      184.6s
 
 ════════════════════════════════════════════════════════════════════════════════
-  FAILURES
-════════════════════════════════════════════════════════════════════════════════
-
-  Suite: cms-admin.spec.ts > CMS Theme page
-  Test:  theme page loads successfully
-────────────────────────────────────────────────────────────────────────────────
-  [31mTest timeout of 30000ms exceeded while running "beforeEach" hook.[39m
-
-
-  Suite: platform-preview.spec.ts
-  Test:  aperçu signé d’un brouillon (anonyme), lien falsifié refusé, diff des révisions
-────────────────────────────────────────────────────────────────────────────────
-  [31mTest timeout of 30000ms exceeded.[39m
-
-
-════════════════════════════════════════════════════════════════════════════════
-  END OF REPORT — 82/84 passed
+  END OF REPORT — 84/84 passed
 ════════════════════════════════════════════════════════════════════════════════
