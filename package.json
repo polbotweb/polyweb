@@ -99,7 +99,7 @@
     "motion": "^12.43.0",
     "nodemailer": "^10.0.6",
     "pg": "^8.23.0",
-    "resend": "^6.25.0",
+    "resend": "^6.33.0",
     "sharp": "^0.35.5",
     "tailwind-merge": "^3.6.0",
     "tailwind-variants": "^3.3.1",
