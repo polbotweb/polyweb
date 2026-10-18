@@ -55,3 +55,12 @@ coverage/
 email-dead-letter-*.jsonl
 audit-fallback-*.jsonl
 logs/
+
+# deployment adapters output (never commit builds)
+.vercel/
+.netlify/
+
+# backups
+backups/
+*.dump
+*.sql.gz

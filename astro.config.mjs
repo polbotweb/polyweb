@@ -5,6 +5,12 @@ import Icon from "astro-icon";
 import sitemap from '@astrojs/sitemap';
 
 import node from '@astrojs/node';
+import vercel from '@astrojs/vercel';
+
+// Double adapter (repris de concordia) : Node standalone par défaut (Docker,
+// VPS, Caddy), Vercel si ASTRO_ADAPTER=vercel ou `astro build --vercel`.
+const useVercel = process.env.ASTRO_ADAPTER === 'vercel' || process.argv.includes('--vercel');
+const adapter = useVercel ? vercel() : node({ mode: 'standalone' });
 
 // https://astro.build/config
 export default defineConfig({
@@ -63,9 +69,7 @@ export default defineConfig({
     }),
   ],
 
-  adapter: node({
-    mode: 'standalone'
-  }),
+  adapter,
 
   // Astro v5+ enables security.checkOrigin by default — explicit for clarity.
   // This validates the Origin header on POST/PATCH/DELETE/PUT requests,
