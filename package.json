@@ -59,7 +59,9 @@
     "test:a11y": "playwright test tests/e2e/a11y.spec.ts --project=chromium",
     "test:visual": "playwright test tests/e2e/visual-regression.spec.ts --project=chromium",
     "search:reindex": "npx tsx src/database/commands/search.reindex.ts",
-    "search:pagefind": "npx tsx src/database/commands/search.pagefind.ts"
+    "search:pagefind": "npx tsx src/database/commands/search.pagefind.ts",
+    "db:backup": "npx tsx src/database/commands/db.backup.ts",
+    "db:restore": "npx tsx src/database/commands/db.restore.ts"
   },
   "dependencies": {
     "@astrojs/node": "11.1.5",
