@@ -9,7 +9,6 @@ import { DEFAULT_LOCALE, type Locale } from "@i18n/config";
 import { blogTagFormSchema, blogTagUpdateSchema } from "@/lib/blog/validation";
 import {
   resolveBlogTenant,
-  assertTagInTenant,
   auditBlog,
   blogOrganizationIdSchema,
   blogRateLimitEffect,
@@ -126,10 +125,9 @@ export const updateBlogTag = defineAction({
     const tenant = resolveBlogTenant(input);
     const user = yield* requireBlogPermission(context, tenant, { blogTag: ["update"] });
     yield* blogRateLimitEffect(user.id, "tag-update");
-    return yield* actionTry("blog/tag.updateBlogTag", async () => {
-
     const { id, organizationId: _, ...data } = input;
-    await assertTagInTenant(id, tenant);
+    yield* tagInTenant(id, tenant);
+    return yield* actionTry("blog/tag.updateBlogTag", async () => {
 
     const db = getDrizzle();
 

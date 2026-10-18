@@ -19,7 +19,6 @@ import { generateExcerpt, getOgLocale } from "@/lib/blog/utils";
 import { BLOG_DEFAULTS } from "@/lib/blog/constants";
 import {
   resolveBlogTenant,
-  assertPostInTenant,
   assertCategoryInTenant,
   assertTagInTenant,
   assertMediaInTenant,
@@ -156,10 +155,9 @@ export const updateBlogPost = defineAction({
     const tenant = resolveBlogTenant(input);
     const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
     yield* blogRateLimitEffect(user.id, "post-update");
-    return yield* actionTry("blog/post.updateBlogPost", async () => {
-
     const { id, organizationId: _, categoryIds, tagIds, seo, status: _status, publishedAt: _publishedAt, ...data } = input;
-    const existingPost = await assertPostInTenant(id, tenant);
+    const existingPost = yield* postInTenant(id, tenant);
+    return yield* actionTry("blog/post.updateBlogPost", async () => {
 
     await Promise.all([
       ...(categoryIds ?? []).map((categoryId) => assertCategoryInTenant(categoryId, tenant)),
