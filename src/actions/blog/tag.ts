@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { defineAction, ActionError } from "astro:actions";
+import { defineAction } from "astro:actions";
 import { z } from "astro/zod";
 import { eq, and, isNull, or } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
@@ -15,64 +15,52 @@ import {
   requireBlogPermission,
   tagInTenant,
 } from "./_helpers";
-import { actionTry, effectHandler } from "@/lib/effect/action";
+import { actionTry, effectHandler, fail } from "@/lib/effect/action";
 
 function tagTenantScope(organizationId: string | null) {
   return organizationId === null ? isNull(blogTags.organizationId) : eq(blogTags.organizationId, organizationId);
 }
 
-async function assertBaseTagSlugAvailable(
-  organizationId: string | null,
-  slug: string,
-  currentTagId?: string,
-) {
-  const db = getDrizzle();
-  const [existing] = await db
-    .select({ id: blogTags.id })
-    .from(blogTags)
-    .where(and(tagTenantScope(organizationId), eq(blogTags.slug, slug)))
-    .limit(1);
+// Contrôles d'unicité des slugs en Effect natif (lecture via actionTry, CONFLICT via fail).
+const baseTagSlugAvailable = (organizationId: string | null, slug: string, currentTagId?: string) =>
+  Effect.gen(function* () {
+    const [existing] = yield* actionTry("blog/tag.slug.base", () =>
+      getDrizzle()
+        .select({ id: blogTags.id })
+        .from(blogTags)
+        .where(and(tagTenantScope(organizationId), eq(blogTags.slug, slug)))
+        .limit(1),
+    );
+    if (existing && existing.id !== currentTagId) {
+      return yield* fail("CONFLICT", `Un autre tag utilise déjà le slug « ${slug} » comme slug canonique.`);
+    }
+  });
 
-  if (existing && existing.id !== currentTagId) {
-    throw new ActionError({
-      code: "CONFLICT",
-      message: `Un autre tag utilise déjà le slug « ${slug} » comme slug canonique.`,
-    });
-  }
-}
-
-async function assertLocalizedTagSlugAvailable(
-  organizationId: string | null,
-  locale: Locale,
-  slug: string,
-  currentTagId?: string,
-) {
-  const db = getDrizzle();
-  const [existing] = await db
-    .select({ id: blogTags.id })
-    .from(blogTags)
-    .leftJoin(
-      blogTagTranslations,
-      and(eq(blogTagTranslations.tagId, blogTags.id), eq(blogTagTranslations.locale, locale)),
-    )
-    .where(
-      and(
-        tagTenantScope(organizationId),
-        or(
-          eq(blogTagTranslations.slug, slug),
-          and(isNull(blogTagTranslations.id), eq(blogTags.slug, slug)),
-        ),
-      ),
-    )
-    .limit(1);
-
-  if (existing && existing.id !== currentTagId) {
-    throw new ActionError({
-      code: "CONFLICT",
-      message: `Un autre tag utilise déjà le slug « ${slug} » pour la locale « ${locale} ».`,
-    });
-  }
-}
+const localizedTagSlugAvailable = (organizationId: string | null, locale: Locale, slug: string, currentTagId?: string) =>
+  Effect.gen(function* () {
+    const [existing] = yield* actionTry("blog/tag.slug.localized", () =>
+      getDrizzle()
+        .select({ id: blogTags.id })
+        .from(blogTags)
+        .leftJoin(
+          blogTagTranslations,
+          and(eq(blogTagTranslations.tagId, blogTags.id), eq(blogTagTranslations.locale, locale)),
+        )
+        .where(
+          and(
+            tagTenantScope(organizationId),
+            or(
+              eq(blogTagTranslations.slug, slug),
+              and(isNull(blogTagTranslations.id), eq(blogTags.slug, slug)),
+            ),
+          ),
+        )
+        .limit(1),
+    );
+    if (existing && existing.id !== currentTagId) {
+      return yield* fail("CONFLICT", `Un autre tag utilise déjà le slug « ${slug} » pour la locale « ${locale} ».`);
+    }
+  });
 
 export const createBlogTag = defineAction({
   input: blogTagFormSchema.extend({
@@ -82,12 +70,12 @@ export const createBlogTag = defineAction({
     const tenant = resolveBlogTenant(input);
     const user = yield* requireBlogPermission(context, tenant, { blogTag: ["create"] });
     yield* blogRateLimitEffect(user.id, "tag-create");
+    yield* baseTagSlugAvailable(tenant.organizationId, input.slug);
+    yield* localizedTagSlugAvailable(tenant.organizationId, input.locale, input.slug);
     return yield* actionTry("blog/tag.createBlogTag", async () => {
 
     const db = getDrizzle();
 
-    await assertBaseTagSlugAvailable(tenant.organizationId, input.slug);
-    await assertLocalizedTagSlugAvailable(tenant.organizationId, input.locale, input.slug);
 
     const [tag] = await db
       .insert(blogTags)
@@ -127,19 +115,14 @@ export const updateBlogTag = defineAction({
     yield* blogRateLimitEffect(user.id, "tag-update");
     const { id, organizationId: _, ...data } = input;
     yield* tagInTenant(id, tenant);
+    if (data.slug) {
+      if (!data.locale || data.locale === DEFAULT_LOCALE) yield* baseTagSlugAvailable(tenant.organizationId, data.slug, id);
+      if (data.locale) yield* localizedTagSlugAvailable(tenant.organizationId, data.locale, data.slug, id);
+    }
     return yield* actionTry("blog/tag.updateBlogTag", async () => {
 
     const db = getDrizzle();
 
-    if (data.slug) {
-      if (!data.locale || data.locale === DEFAULT_LOCALE) {
-        await assertBaseTagSlugAvailable(tenant.organizationId, data.slug, id);
-      }
-
-      if (data.locale) {
-        await assertLocalizedTagSlugAvailable(tenant.organizationId, data.locale, data.slug, id);
-      }
-    }
 
     await db
       .update(blogTags)

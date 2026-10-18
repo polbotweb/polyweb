@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { defineAction, ActionError } from "astro:actions";
+import { defineAction } from "astro:actions";
 import { z } from "astro/zod";
 import { eq, and, isNull, or } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
@@ -8,39 +8,40 @@ import { invalidateCache } from "@database/cache";
 import { DEFAULT_LOCALE, type Locale } from "@i18n/config";
 import { blogCategoryFormSchema, blogCategoryUpdateSchema } from "@/lib/blog/validation";
 import { assertAcyclicParent } from "@/lib/cms/taxonomy";
-import { resolveBlogTenant, assertCategoryInTenant, auditBlog, blogOrganizationIdSchema, blogRateLimitEffect, categoryInTenant, requireBlogPermission } from "./_helpers";
-import { actionTry, effectHandler } from "@/lib/effect/action";
+import { resolveBlogTenant, auditBlog, blogOrganizationIdSchema, blogRateLimitEffect, categoryInTenant, requireBlogPermission } from "./_helpers";
+import { actionTry, effectHandler, fail } from "@/lib/effect/action";
 
 function categoryTenantScope(organizationId: string | null) {
   return organizationId === null ? isNull(blogCategories.organizationId) : eq(blogCategories.organizationId, organizationId);
 }
 
-async function assertBaseCategorySlugAvailable(organizationId: string | null, slug: string, currentCategoryId?: string) {
-  const db = getDrizzle();
-  const [existing] = await db.select({ id: blogCategories.id }).from(blogCategories).where(and(categoryTenantScope(organizationId), eq(blogCategories.slug, slug))).limit(1);
-  if (existing && existing.id !== currentCategoryId) throw new ActionError({ code: "CONFLICT", message: `Une autre catégorie utilise déjà le slug « ${slug} » comme slug canonique.` });
-}
+// Contrôles de cohérence en Effect natif (lecture via actionTry, échec métier typé via fail).
+const baseCategorySlugAvailable = (organizationId: string | null, slug: string, currentCategoryId?: string) =>
+  Effect.gen(function* () {
+    const [existing] = yield* actionTry("blog/category.slug.base", () => getDrizzle().select({ id: blogCategories.id }).from(blogCategories).where(and(categoryTenantScope(organizationId), eq(blogCategories.slug, slug))).limit(1));
+    if (existing && existing.id !== currentCategoryId) return yield* fail("CONFLICT", `Une autre catégorie utilise déjà le slug « ${slug} » comme slug canonique.`);
+  });
 
-async function assertLocalizedCategorySlugAvailable(organizationId: string | null, locale: Locale, slug: string, currentCategoryId?: string) {
-  const db = getDrizzle();
-  const [existing] = await db.select({ id: blogCategories.id }).from(blogCategories).leftJoin(blogCategoryTranslations, and(eq(blogCategoryTranslations.categoryId, blogCategories.id), eq(blogCategoryTranslations.locale, locale))).where(and(categoryTenantScope(organizationId), or(eq(blogCategoryTranslations.slug, slug), and(isNull(blogCategoryTranslations.id), eq(blogCategories.slug, slug))))).limit(1);
-  if (existing && existing.id !== currentCategoryId) throw new ActionError({ code: "CONFLICT", message: `Une autre catégorie utilise déjà le slug « ${slug} » pour la locale « ${locale} ».` });
-}
+const localizedCategorySlugAvailable = (organizationId: string | null, locale: Locale, slug: string, currentCategoryId?: string) =>
+  Effect.gen(function* () {
+    const [existing] = yield* actionTry("blog/category.slug.localized", () => getDrizzle().select({ id: blogCategories.id }).from(blogCategories).leftJoin(blogCategoryTranslations, and(eq(blogCategoryTranslations.categoryId, blogCategories.id), eq(blogCategoryTranslations.locale, locale))).where(and(categoryTenantScope(organizationId), or(eq(blogCategoryTranslations.slug, slug), and(isNull(blogCategoryTranslations.id), eq(blogCategories.slug, slug))))).limit(1));
+    if (existing && existing.id !== currentCategoryId) return yield* fail("CONFLICT", `Une autre catégorie utilise déjà le slug « ${slug} » pour la locale « ${locale} ».`);
+  });
 
-async function assertCategoryParentIsAcyclic(categoryId: string | null, parentId: string | null, organizationId: string | null) {
-  if (!parentId) return;
-  const db = getDrizzle();
-  const rows = await db
-    .select({ id: blogCategories.id, parentId: blogCategories.parentId })
-    .from(blogCategories)
-    .where(categoryTenantScope(organizationId));
-  try {
-    assertAcyclicParent(rows, categoryId, parentId);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Invalid taxonomy hierarchy.";
-    throw new ActionError({ code: "BAD_REQUEST", message });
-  }
-}
+const categoryParentIsAcyclic = (categoryId: string | null, parentId: string | null, organizationId: string | null) =>
+  Effect.gen(function* () {
+    if (!parentId) return;
+    const rows = yield* actionTry("blog/category.hierarchy", () => getDrizzle().select({ id: blogCategories.id, parentId: blogCategories.parentId }).from(blogCategories).where(categoryTenantScope(organizationId)));
+    const problem = yield* Effect.sync(() => {
+      try {
+        assertAcyclicParent(rows, categoryId, parentId);
+        return null;
+      } catch (error) {
+        return error instanceof Error ? error.message : "Invalid taxonomy hierarchy.";
+      }
+    });
+    if (problem !== null) return yield* fail("BAD_REQUEST", problem);
+  });
 
 export const createBlogCategory = defineAction({
   input: blogCategoryFormSchema.extend({ organizationId: blogOrganizationIdSchema }),
@@ -48,10 +49,10 @@ export const createBlogCategory = defineAction({
     const tenant = resolveBlogTenant(input);
     const user = yield* requireBlogPermission(context, tenant, { blogCategory: ["create"] });
     yield* blogRateLimitEffect(user.id, "category-create");
+    yield* categoryParentIsAcyclic(null, input.parentId ?? null, tenant.organizationId);
+    yield* baseCategorySlugAvailable(tenant.organizationId, input.slug);
+    yield* localizedCategorySlugAvailable(tenant.organizationId, input.locale, input.slug);
     return yield* actionTry("blog/category.createBlogCategory", async () => {
-    await assertCategoryParentIsAcyclic(null, input.parentId ?? null, tenant.organizationId);
-    await assertBaseCategorySlugAvailable(tenant.organizationId, input.slug);
-    await assertLocalizedCategorySlugAvailable(tenant.organizationId, input.locale, input.slug);
     const db = getDrizzle();
     const category = await db.transaction(async (tx) => {
       const [created] = await tx.insert(blogCategories).values({ organizationId: tenant.organizationId, parentId: input.parentId, slug: input.slug, icon: input.icon, color: input.color, sortOrder: input.sortOrder ?? 0 }).returning();
@@ -70,14 +71,14 @@ export const updateBlogCategory = defineAction({
     const tenant = resolveBlogTenant(input);
     const user = yield* requireBlogPermission(context, tenant, { blogCategory: ["update"] });
     yield* blogRateLimitEffect(user.id, "category-update");
-    return yield* actionTry("blog/category.updateBlogCategory", async () => {
     const { id, organizationId: _, ...data } = input;
-    await assertCategoryInTenant(id, tenant);
-    await assertCategoryParentIsAcyclic(id, data.parentId ?? null, tenant.organizationId);
+    yield* categoryInTenant(id, tenant);
+    yield* categoryParentIsAcyclic(id, data.parentId ?? null, tenant.organizationId);
     if (data.slug) {
-      if (!data.locale || data.locale === DEFAULT_LOCALE) await assertBaseCategorySlugAvailable(tenant.organizationId, data.slug, id);
-      if (data.locale) await assertLocalizedCategorySlugAvailable(tenant.organizationId, data.locale, data.slug, id);
+      if (!data.locale || data.locale === DEFAULT_LOCALE) yield* baseCategorySlugAvailable(tenant.organizationId, data.slug, id);
+      if (data.locale) yield* localizedCategorySlugAvailable(tenant.organizationId, data.locale, data.slug, id);
     }
+    return yield* actionTry("blog/category.updateBlogCategory", async () => {
     const db = getDrizzle();
     await db.transaction(async (tx) => {
       await tx.update(blogCategories).set({ parentId: data.parentId, ...((data.slug !== undefined && (!data.locale || data.locale === DEFAULT_LOCALE)) ? { slug: data.slug } : {}), icon: data.icon, color: data.color, sortOrder: data.sortOrder }).where(eq(blogCategories.id, id));
@@ -100,8 +101,8 @@ export const deleteBlogCategory = defineAction({
     const user = yield* requireBlogPermission(context, tenant, { blogCategory: ["delete"] });
     yield* blogRateLimitEffect(user.id, "category-delete");
     yield* categoryInTenant(input.id, tenant);
+    if (input.reassignToId) yield* categoryInTenant(input.reassignToId, tenant);
     return yield* actionTry("blog/category.deleteBlogCategory", async () => {
-    if (input.reassignToId) await assertCategoryInTenant(input.reassignToId, tenant);
     const db = getDrizzle();
     await db.transaction(async (tx) => {
       if (input.reassignToId) {
