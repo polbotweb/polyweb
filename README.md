@@ -1,4 +1,4 @@
-# Polyweb
+# Atomic
 
 [**EN**](./README.md) | [FR](./README.fr.md) | [AR](./README.ar.md) | [ES](./README.es.md)
 
@@ -79,6 +79,13 @@ pnpm dev
 | `SMTP_HOST` | SMTP server hostname (Nodemailer only) |
 | `SMTP_PORT` | SMTP server port, e.g. 587 (Nodemailer only) |
 | `SMTP_SECURE` | Enable TLS/SSL — true | false (Nodemailer only) |
+| `SITE_NAME` | ═════════════════════════ Polyweb — plateforme CMS ═════════════════════════ |
+| `POLYWEB_SIGNING_SECRET` | Obligatoire en production (sinon BETTER_AUTH_SECRET est utilisé). |
+| `CRON_SECRET` | Secret des routes /api/cron/* (en-tête Authorization: Bearer …) |
+| `ASTRO_ADAPTER` | Adaptateur Astro ( node | vercel ) |
+| `STORAGE_DRIVER` | Stockage des médias (brique e) : local | s3 | r2 |
+| `SEARCH_DRIVER` | Recherche (brique k) : postgres | meilisearch | pagefind |
+| `PAYMENTS_ENABLED` | Paiements (module optionnel) |
 
 ### TypeScript Aliases
 
@@ -105,6 +112,8 @@ pnpm dev
 
 ```
 src/components/
+admin/
+  MarkdownEditor.astro
 atoms/
   accordion/
   alert/
@@ -154,6 +163,12 @@ atoms/
   toggle/
   tooltip/
   video/
+auth/
+  SecuritySettings.astro
+  SignInAlternatives.astro
+blocks/
+  BlockEditor.astro
+  BlockRenderer.astro
 blog/
   AdminModerationQueue.astro
   AdminPostForm.astro
@@ -162,13 +177,10 @@ blog/
   ArticleProgressBar.astro
   AuthorCard.astro
   BlogAdminPage.astro
-  cards/
   CategoryFilterBar.astro
   CommentForm.astro
-  comments/
   CommentSection.astro
   CommentThreadItem.astro
-  grids/
   NotificationBell.astro
   PostCard.astro
   PostContent.astro
@@ -177,11 +189,16 @@ blog/
   ReviewForm.astro
   ReviewSection.astro
   ShareBar.astro
-  sidebars/
   TagCloud.astro
+  cards/
+  comments/
+  grids/
+  sidebars/
 content/
   ContentEditor.astro
   RichContent.astro
+forms/
+  PolywebForm.astro
 molecules/
   AdminPagination/
   AdminResourceStats.astro
@@ -198,24 +215,30 @@ organisms/
   Footer/
   Header/
   OrgSidebar/
+  PlatformAdmin/
   Testimonials/
 pages/
   AboutPage/
-  admin/
-  auth/
-  blog/
-  cms/
   CmsPage.astro
   ContactPage/
   HomePage/
   LegalPage.astro
+  admin/
+  auth/
+  blog/
+  cms/
   org/
+platform/
+  EntryView.astro
+  FieldInput.astro
+  FieldsEditor.astro
+seo/
+  JsonLd.astro
+  SEOHead.astro
 services/
   AdminServiceForm.astro
   AdminServiceList.astro
   ServicesAdminPage.astro
-starwind/
-  blog/
 wow/
   AsyncButton.astro
   FallingParticles.astro
@@ -238,7 +261,7 @@ images/
 
 - **atoms/** — 48 components
 - **molecules/** — 3 components
-- **organisms/** — 12 components
+- **organisms/** — 13 components
 - **pages/** — 10 components
 - **wow/** — 9 components
 
@@ -262,6 +285,7 @@ images/
 - `tests/unit/section-content-xss.test.ts`
 - `tests/unit/section-schemas.test.ts`
 - `tests/unit/sections-sanitize.test.ts`
+- `tests/unit/seo-meta.test.ts`
 - `tests/unit/seo.test.ts`
 - `tests/unit/theme-tokens.test.ts`
 
@@ -273,18 +297,29 @@ images/
 src/database/
 cache.ts
 commands/
+  _effect.ts
+  _migration-sql.ts
+  _utils.ts
+  db.backfill-variants.ts
+  db.backup.ts
+  db.baseline.ts
   db.check.ts
   db.clean-media.ts
   db.cleanup-audit.ts
   db.compare.ts
+  db.create-admin.ts
   db.generate.ts
   db.infra.ts
   db.migrate.ts
   db.reset.ts
+  db.restore.ts
   db.seed-media.ts
   db.seed.ts
   db.sync.ts
-  _utils.ts
+  db.wait.ts
+  search.pagefind.ts
+  search.reindex.ts
+  storage.push.ts
 data/
   00-media.data.ts
   00b-media-files.data.ts
@@ -374,9 +409,18 @@ migrations/
   0004_flashy_ezekiel_stane.sql
   0005_hard_joseph.sql
   0006_services_module.sql
-  0007_services_search.sql
   0007_services_search_vector.sql
   0008_services_notification_targets.sql
+  0009_better_auth_account_issuer.sql
+  0010_media_variants.sql
+  0011_payments.sql
+  0012_auth_2fa_passkey.sql
+  0013_content_platform.sql
+  0014_api_tokens.sql
+  0015_webhooks.sql
+  0016_forms.sql
+  0017_plugins.sql
+  0018_search_documents.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -384,33 +428,51 @@ migrations/
     0003_snapshot.json
     0004_snapshot.json
     0005_snapshot.json
+    0010_snapshot.json
+    0011_snapshot.json
+    0012_snapshot.json
+    0013_snapshot.json
+    0014_snapshot.json
+    0015_snapshot.json
+    0016_snapshot.json
+    0017_snapshot.json
+    0018_snapshot.json
     _journal.json
 schemas/
+  api.schema.ts
   audit-log.schema.ts
   auth.schema.ts
   blog.schema.ts
   consent.schema.ts
+  content.schema.ts
+  forms.schema.ts
   media.schema.ts
   navigation.schema.ts
   page-version.schema.ts
   page.schema.ts
+  payments.schema.ts
+  plugins.schema.ts
+  search.schema.ts
   services-engagement.schema.ts
   services.schema.ts
   site.schema.ts
+  webhooks.schema.ts
 schemas.ts
 ```
 
 ### Schemas & Tables
 
 **auth.schema.ts**
-- `user`: `id`, `name`, `email`, `emailVerified`, `image`, `createdAt`, `updatedAt`, `username`, `displayUsername`, `bio`, `website`, `twitter`, `linkedin`, `role`, `banned`, `banReason`, `banExpires` _(sessions: many, accounts: many, members: many, invitations: many)_
+- `user`: `id`, `name`, `email`, `emailVerified`, `image`, `createdAt`, `updatedAt`, `username`, `displayUsername`, `bio`, `website`, `twitter`, `linkedin`, `role`, `banned`, `banReason`, `banExpires`, `twoFactorEnabled` _(sessions: many, accounts: many, members: many, invitations: many)_
 - `session`: `id`, `expiresAt`, `token`, `createdAt`, `updatedAt`, `ipAddress`, `userAgent`, `userId`, `impersonatedBy`, `activeOrganizationId` _(user: one)_
-- `account`: `id`, `accountId`, `providerId`, `userId`, `accessToken`, `refreshToken`, `idToken`, `accessTokenExpiresAt`, `refreshTokenExpiresAt`, `scope`, `password`, `createdAt`, `updatedAt` _(user: one)_
+- `account`: `id`, `issuer`, `accountId`, `providerId`, `userId`, `accessToken`, `refreshToken`, `idToken`, `accessTokenExpiresAt`, `refreshTokenExpiresAt`, `scope`, `password`, `createdAt`, `updatedAt` _(user: one)_
 - `verification`: `id`, `identifier`, `value`, `expiresAt`, `createdAt`, `updatedAt`
 - `organization`: `id`, `name`, `slug`, `logo`, `createdAt`, `updatedAt`, `metadata` _(organizationRoles: many, members: many, invitations: many)_
 - `member`: `id`, `organizationId`, `userId`, `role`, `createdAt` _(organization: one, user: one)_
 - `invitation`: `id`, `organizationId`, `email`, `role`, `status`, `expiresAt`, `createdAt`, `inviterId` _(organization: one, user: one)_
 - `organization_role`: `id`, `organizationId`, `role`, `permission`, `createdAt`, `updatedAt` _(organization: one)_
+- `two_factor`: `id`, `secret`, `backupCodes`, `userId`, `verified`, `failedVerificationCount`, `lockedUntil` _(user: one)_
+- `passkey`: `id`, `name`, `publicKey`, `userId`, `credentialID`, `counter`, `deviceType`, `backedUp`, `transports`, `createdAt`, `aaguid` _(user: one)_
 
 **audit-log.schema.ts**
 - `audit_log`: `id`, `userId`, `action`, `resource`, `resourceId`, `metadata`, `ipAddress`, `userAgent`, `createdAt` _(user: one)_
@@ -435,7 +497,7 @@ schemas.ts
 
 **media.schema.ts**
 - `media_folders`: `id`, `organizationId`, `name`, `parentId`, `sortOrder`, `createdAt`, `updatedAt` _(organization: one, parent: one, children: many, files: many)_
-- `media_files`: `id`, `organizationId`, `folderId`, `filename`, `url`, `mimeType`, `size`, `width`, `height`, `createdAt`, `updatedAt` _(organization: one, folder: one, alts: many)_
+- `media_files`: `id`, `organizationId`, `folderId`, `filename`, `url`, `mimeType`, `size`, `width`, `height`, `variants`, `createdAt`, `updatedAt` _(organization: one, folder: one, alts: many)_
 - `media_file_alts`: `id`, `fileId`, `locale`, `alt`, `title` _(file: one)_
 
 **consent.schema.ts**
@@ -494,6 +556,33 @@ schemas.ts
 - `service_attribute_values`: `serviceId`
 - `service_review_helpful`: `reviewId`, `userId`, `isHelpful`, `createdAt`
 
+**payments.schema.ts**
+- `payments`: `id`, `organizationId`, `reference`, `description`, `provider`, `providerSessionId`, `providerPaymentId`, `status`, `amount`, `currency`, `customerEmail`, `idempotencyKey`, `metadata`, `createdAt`, `updatedAt`, `paidAt`, `failedAt`
+
+**content.schema.ts**
+- `sites`: `id`, `slug`, `name`, `domains`, `defaultLocale`, `locales`, `organizationId`, `isDefault`, `settings`, `createdAt`, `updatedAt`
+- `content_types`: `id`, `siteId`, `slug`, `name`, `description`, `fields`, `settings`, `createdAt`, `updatedAt`
+- `content_entries`: `id`, `siteId`, `typeId`, `slug`, `status`, `sharedData`, `publishedAt`, `authorId`, `version`, `createdAt`, `updatedAt`
+- `content_entry_translations`: `id`, `entryId`, `locale`, `title`, `data`, `blocks`, `seo`, `updatedAt`
+- `content_entry_revisions`: `id`, `entryId`, `version`, `snapshot`, `message`, `authorId`, `createdAt`
+
+**api.schema.ts**
+- `api_tokens`: `id`, `siteId`, `name`, `prefix`, `tokenHash`, `scopes`, `createdBy`, `lastUsedAt`, `expiresAt`, `revokedAt`, `createdAt`
+
+**webhooks.schema.ts**
+- `webhooks`: `id`, `siteId`, `name`, `url`, `secretEncrypted`, `events`, `active`, `consecutiveFailures`, `disabledReason`, `createdBy`, `createdAt`, `updatedAt`
+- `webhook_deliveries`: `id`, `webhookId`, `eventId`, `event`, `payload`, `status`, `attempts`, `nextAttemptAt`, `lockedUntil`, `lastStatusCode`, `lastError`, `responseSnippet`, `durationMs`, `createdAt`, `deliveredAt`
+
+**forms.schema.ts**
+- `forms`: `id`, `siteId`, `slug`, `name`, `description`, `fields`, `settings`, `status`, `createdAt`, `updatedAt`
+- `form_submissions`: `id`, `formId`, `data`, `locale`, `ipHash`, `userAgent`, `status`, `createdAt`
+
+**plugins.schema.ts**
+- `plugin_states`: `pluginId`, `enabled`, `settings`, `lastError`, `updatedBy`, `updatedAt`
+
+**search.schema.ts**
+- `search_documents`: `id`, `siteId`, `kind`, `type`, `entityId`, `locale`, `title`, `excerpt`, `body`, `url`, `publishedAt`, `tsv`, `updatedAt`
+
 ### Migrations
 
 - `0000_plain_old_lace.sql`
@@ -503,9 +592,18 @@ schemas.ts
 - `0004_flashy_ezekiel_stane.sql`
 - `0005_hard_joseph.sql`
 - `0006_services_module.sql`
-- `0007_services_search.sql`
 - `0007_services_search_vector.sql`
 - `0008_services_notification_targets.sql`
+- `0009_better_auth_account_issuer.sql`
+- `0010_media_variants.sql`
+- `0011_payments.sql`
+- `0012_auth_2fa_passkey.sql`
+- `0013_content_platform.sql`
+- `0014_api_tokens.sql`
+- `0015_webhooks.sql`
+- `0016_forms.sql`
+- `0017_plugins.sql`
+- `0018_search_documents.sql`
 
 ### Commands
 
@@ -521,6 +619,11 @@ schemas.ts
 | `pnpm db:seed-media` |
 | `pnpm db:sync` |
 | `pnpm db:cleanup-audit` |
+| `pnpm db:backfill-variants` |
+| `pnpm db:wait` |
+| `pnpm db:baseline` |
+| `pnpm db:backup` |
+| `pnpm db:restore` |
 
 ### Tests
 
@@ -587,12 +690,15 @@ src/middleware.ts
 - `tests/e2e/auth.spec.ts`
 - `tests/integration/audit.test.ts`
 - `tests/integration/auth-advanced.test.ts`
+- `tests/integration/auth-extensions.test.ts`
 - `tests/integration/auth-flow.test.ts`
 - `tests/integration/auth-org.test.ts`
+- `tests/integration/auth-plugins.test.ts`
 - `tests/integration/auth.test.ts`
 - `tests/integration/middleware.test.ts`
 - `tests/unit/audit-fallback.test.ts`
 - `tests/unit/auth-guards.test.ts`
+- `tests/unit/auth-providers.test.ts`
 - `tests/unit/cms-audit.test.ts`
 - `tests/unit/extract-ip.test.ts`
 - `tests/unit/mask-utils.test.ts`
@@ -616,6 +722,10 @@ attributes/
   index.ts
 audit/
   index.ts
+blocks/
+  index.ts
+  registry.ts
+  tiptap-html.ts
 cache/
   index.ts
 capabilities/
@@ -623,12 +733,21 @@ capabilities/
 content/
   index.ts
   text.ts
+content-types/
+  fields.ts
+crud/
+  contract.ts
+  engine.ts
+  introspect.ts
 engagement/
+  index.ts
+events/
   index.ts
 index.ts
 localization/
   index.ts
   module-labels.ts
+  platform-labels.ts
 locks/
   index.ts
 media/
@@ -642,6 +761,9 @@ modules/
   module-registry.ts
 notifications/
   index.ts
+plugins/
+  contract.ts
+  host.ts
 presentation/
   index.ts
 revision/
@@ -658,6 +780,11 @@ taxonomy/
 workflow/
   index.ts
 src/modules/
+api/
+  domain/
+    openapi.ts
+    tokens.ts
+    v1.ts
 blog/
   actions/
     index.ts
@@ -694,6 +821,24 @@ blog/
     index.ts
   validation/
     index.ts
+content/
+  domain/
+    content-types.ts
+    content.effect.ts
+    entries.ts
+    preview.ts
+    revisions.ts
+  module.ts
+forms/
+  domain/
+    forms.ts
+payments/
+  domain/
+    payment-service.ts
+    providers.ts
+    transitions.ts
+  index.ts
+  module.ts
 services/
   actions/
     index.ts
@@ -704,19 +849,20 @@ services/
   capabilities.ts
   components/
     cards/
-      index.ts
       ServiceCard.astro
+      index.ts
     lists/
-      index.ts
       ServiceGrid.astro
-    single/
+      ServicesListingPage.astro
       index.ts
+    single/
       ServiceDetail.astro
       ServiceEngagement.astro
-    ui/
       index.ts
+    ui/
       ServiceLocaleSwitcher.astro
       ServiceMeta.astro
+      index.ts
   domain/
     index.ts
   i18n/
@@ -743,10 +889,67 @@ services/
   validation/
     index.ts
   workflow.ts
+sites/
+  domain/
+    sites.effect.ts
+    sites.ts
+webhooks/
+  domain/
+    dispatcher.ts
+    http.ts
+    signing.ts
+    ssrf.ts
+    webhooks.ts
+  subscribe.ts
 src/pages/
 404.astro
 500.astro
+[lang]/
+  [organization]/
+    admin/
+    blog/
+    services/
+  [slug].astro
+  a-propos.astro
+  admin/
+    audit.astro
+    blog/
+    index.astro
+    media.astro
+    navigation.astro
+    organizations.astro
+    pages.astro
+    platform/
+    roles.astro
+    services/
+    site.astro
+    stats.astro
+    theme.astro
+    users.astro
+  auth/
+    [slug].astro
+  blog/
+    [category]/
+    author/
+    index.astro
+    tag/
+  c/
+    [type]/
+  contact.astro
+  f/
+    [slug].astro
+  index.astro
+  organizations/
+    [slug]/
+  preview/
+    [token].astro
+  services/
+    [slug].astro
+    category/
+    index.astro
 api/
+  admin/
+    forms/
   audit-export.ts
   auth/
     [...all].ts
@@ -757,55 +960,38 @@ api/
   content-import.ts
   cron/
     publish.ts
+    search-reindex.ts
+    webhooks.ts
+  crud/
+    [...path].ts
   export-data.ts
+  forms/
+    [slug].ts
   health.ts
   media.ts
+  payments/
+    webhook.ts
   preview.ts
   search.ts
   upload.ts
+  v1/
+    content/
+    content-types.ts
+    forms/
+    index.ts
+    openapi.json.ts
+    search.ts
 index.astro
 robots.txt.ts
 rss.xml.ts
 sitemap-blog-org.xml.ts
 sitemap-cms.xml.ts
 sitemap-services-org.xml.ts
-[lang]/
-  a-propos.astro
-  admin/
-    audit.astro
-    blog/
-    index.astro
-    media.astro
-    navigation.astro
-    organizations.astro
-    pages.astro
-    roles.astro
-    services/
-    site.astro
-    stats.astro
-    theme.astro
-    users.astro
-  auth/
-    [slug].astro
-  blog/
-    index.astro
-    [...slug].astro
-  contact.astro
-  index.astro
-  organizations/
-    [slug]/
-  services/
-    index.astro
-    tags/
-    [categorySlug]/
-    [categorySlug].astro
-    [slug].astro
-  [slug].astro
 src/layouts/
 BaseLayout.astro
 ```
 
-Polyweb CMS is organized around shared CMS/platform capabilities and first-class domain modules. The foundation covers localised content, shared media, taxonomy, SEO, search, publication workflow, revisions, locks, engagement/moderation boundaries, notifications, audit, cache and the reusable Admin Resource model. Blog is the first complete editorial module; Services is the second validation module. Transactional domains such as booking, enrollment, inventory, payments and orders remain separate cores.
+Atomic CMS is organized around shared CMS/platform capabilities and first-class domain modules. The foundation covers localised content, shared media, taxonomy, SEO, search, publication workflow, revisions, locks, engagement/moderation boundaries, notifications, audit, cache and the reusable Admin Resource model. Blog is the first complete editorial module; Services is the second validation module. Transactional domains such as booking, enrollment, inventory, payments and orders remain separate cores.
 
 ### Tests
 
@@ -872,12 +1058,12 @@ delete.ts
 list.ts
 types.ts
 upload.ts
+variants.ts
 public/
 favicon.ico
 favicon.svg
 uploads/
   images/
-  media/
 ```
 
 ### Upload & Processing
@@ -907,10 +1093,11 @@ uploads/
 ```
 src/smtp/
 commands/
+  _utils.ts
   logs.rotate.ts
   smtp.check.ts
-  _utils.ts
 env.ts
+mailer.ts
 providers/
   brevo.ts
   nodemailer.ts
@@ -924,6 +1111,7 @@ templates/
   layout.ts
   organization-invitation.ts
   reset-password.ts
+  sign-in-otp.ts
   verify-email.ts
 types.ts
 logs/ ← email dead-letter queue (JSONL, one file per day)
@@ -954,6 +1142,7 @@ i18n email templates for: email verification, password reset, organisation invit
 - `tests/unit/send-email.test.ts`
 - `tests/unit/smtp-env.test.ts`
 - `tests/unit/smtp-providers.test.ts`
+- `tests/unit/smtp-send-effect.test.ts`
 
 ## Internationalisation
 
@@ -967,6 +1156,7 @@ ar/
   common.ts
   contact.ts
   home.ts
+auth-extensions.ts
 blog/
   ar.ts
   en.ts
@@ -1027,204 +1217,11 @@ tests/
   integration/
   unit/
 .github/
-agents/
-  akil.agent.md
-  anne.agent.md
-  PolywebFullStackEngineer.agent.md
-  PolywebUIDesigner.agent.md
-  designer.agent.md
-  DevOpsExpert.agent.md
-  elias.agent.md
-  faqir.md
-  fatima.agent.md
-  hawa.agent.md
-  ishaq.agent.md
-  leila.agent.md
-  liwei.agent.md
-  maya.agent.md
-  moonzam.agent.md
-  orchestrator.agent.md
-  ourssoum.agent.md
-  planner.agent.md
-  soren.agent.md
-  vladimir.agent.md
-  yusra.agent.md
 dependabot.yml
-prompts/
-skills/
-  accessibility/
-    references/
-      A11Y-PATTERNS.md
-      WCAG.md
-    SKILL.md
-  astro/
-    SKILL.md
-  best-practices/
-    SKILL.md
-  drizzle/
-    metadata.json
-    references/
-      advanced-schemas.md
-      performance.md
-      query-patterns.md
-      vs-prisma.md
-    SKILL.md
-  emailAndPassword/
-    SKILL.md
-  frontend-design/
-    LICENSE.txt
-    SKILL.md
-  nodejs-backend-patterns/
-    references/
-      advanced-patterns.md
-    SKILL.md
-  nodejs-best-practices/
-    SKILL.md
-  organization/
-    SKILL.md
-  playwright-best-practices/
-    advanced/
-      authentication-flows.md
-      authentication.md
-      clock-mocking.md
-      mobile-testing.md
-      multi-context.md
-      multi-user.md
-      network-advanced.md
-      third-party.md
-    architecture/
-      pom-vs-fixtures.md
-      test-architecture.md
-      when-to-mock.md
-    browser-apis/
-      browser-apis.md
-      iframes.md
-      service-workers.md
-      websockets.md
-    core/
-      annotations.md
-      assertions-waiting.md
-      configuration.md
-      fixtures-hooks.md
-      global-setup.md
-      locators.md
-      page-object-model.md
-      projects-dependencies.md
-      test-data.md
-      test-suite-structure.md
-      test-tags.md
-    debugging/
-      console-errors.md
-      debugging.md
-      error-testing.md
-      flaky-tests.md
-    frameworks/
-      angular.md
-      nextjs.md
-      react.md
-      vue.md
-    infrastructure-ci-cd/
-      ci-cd.md
-      docker.md
-      github-actions.md
-      gitlab.md
-      other-providers.md
-      parallel-sharding.md
-      performance.md
-      reporting.md
-      test-coverage.md
-    LICENSE.md
-    README.md
-    SKILL.md
-    testing-patterns/
-      accessibility.md
-      api-testing.md
-      browser-extensions.md
-      canvas-webgl.md
-      component-testing.md
-      drag-drop.md
-      electron.md
-      file-operations.md
-      file-upload-download.md
-      forms-validation.md
-      graphql-testing.md
-      i18n.md
-      performance-testing.md
-      security-testing.md
-      visual-regression.md
-  seo/
-    SKILL.md
-  shadcn/
-    agents/
-      openai.yml
-    assets/
-      shadcn-small.png
-      shadcn.png
-    cli.md
-    customization.md
-    evals/
-      evals.json
-    mcp.md
-    rules/
-      base-vs-radix.md
-      composition.md
-      forms.md
-      icons.md
-      styling.md
-    SKILL.md
-  tailwind-css-patterns/
-    references/
-      accessibility.md
-      animations.md
-      component-patterns.md
-      configuration.md
-      layout-patterns.md
-      performance.md
-      reference.md
-      responsive-design.md
-    SKILL.md
-  tailwind-v4-shadcn/
-    references/
-      advanced-usage.md
-      common-gotchas.md
-      dark-mode.md
-      migration-guide.md
-      plugins-reference.md
-    SKILL.md
-    templates/
-      components.json
-      index.css
-      theme-provider.tsx
-      tsconfig.app.json
-      utils.ts
-      vite.config.ts
-  twoFactor/
-    SKILL.md
-  typescript-advanced-types/
-    SKILL.md
-  vitest/
-    GENERATION.md
-    references/
-      advanced-environments.md
-      advanced-projects.md
-      advanced-type-testing.md
-      advanced-vi.md
-      core-cli.md
-      core-config.md
-      core-describe.md
-      core-expect.md
-      core-hooks.md
-      core-test-api.md
-      features-concurrency.md
-      features-context.md
-      features-coverage.md
-      features-filtering.md
-      features-mocking.md
-      features-snapshots.md
-    SKILL.md
 workflows/
   ci.yml
   codeql.yml
+  preview.yml
 ```
 
 ### CI/CD Pipeline
@@ -1270,4 +1267,6 @@ GitHub Actions pipeline on every push/PR to `main`:
 | `pnpm a11y:lighthouse-only` |
 | `pnpm qa` |
 | `pnpm qa:offline` |
+| `pnpm test:a11y` |
+| `pnpm test:visual` |
 
