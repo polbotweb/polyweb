@@ -78,6 +78,13 @@
       "when": 1792308481878,
       "tag": "0010_media_variants",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792308716946,
+      "tag": "0011_payments",
+      "breakpoints": true
     }
   ]
 }
