@@ -397,6 +397,7 @@ loaders/
   blog-admin.loader.ts
   blog.loader.ts
   consent.loader.ts
+  effect.ts
   media.loader.ts
   navigation.loader.ts
   page.loader.ts
@@ -633,6 +634,7 @@ schemas.ts
 - `tests/unit/cms-schemas.test.ts`
 - `tests/unit/cms-seeds.test.ts`
 - `tests/unit/db-env.test.ts`
+- `tests/unit/loaders-effect.test.ts`
 - `tests/unit/loaders.test.ts`
 - `tests/unit/navigation-loader.test.ts`
 - `tests/unit/schema-validation.test.ts`
