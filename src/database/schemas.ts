@@ -17,3 +17,4 @@ export * from "./schemas/content.schema";
 export * from "./schemas/api.schema";
 export * from "./schemas/webhooks.schema";
 export * from "./schemas/forms.schema";
+export * from "./schemas/plugins.schema";

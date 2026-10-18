@@ -1,6 +1,8 @@
 import { auth } from "@/lib/auth";
 import { LOCALES } from "@/i18n/config";
 import { bootstrapModules } from "@/lib/cms/bootstrap";
+import { ensurePluginsSynced } from "@/core/plugins/host";
+import "@/plugins";
 import { resolveSiteForHost } from "@/modules/sites/domain/sites";
 import { defineMiddleware } from "astro:middleware";
 import { isForbiddenCrossOriginRequest } from "@/lib/security/origin-check";
@@ -12,6 +14,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   bootstrapModules();
+  if (!context.isPrerendered) await ensurePluginsSynced();
 
   // ─── Locale guard — reject invalid [lang] segments with 404 ─────
   const pathSegments = new URL(context.request.url).pathname.split('/').filter(Boolean);
