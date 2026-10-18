@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-10-18 10:51:19",
+  "generatedAt": "2026-10-18 11:06:46",
   "overall": "red",
-  "reportsAvailable": 3,
+  "reportsAvailable": 5,
   "sections": [
     {
       "key": "check",
@@ -27,13 +27,37 @@
     {
       "key": "vitest",
       "title": "Unit & Integration Tests (Vitest)",
-      "ok": false,
-      "summary": "1502/1503 passed, 1 failed",
+      "ok": true,
+      "summary": "1503/1503 passed",
       "metrics": {
         "total": 1503,
-        "passed": 1502,
-        "failed": 1,
+        "passed": 1503,
+        "failed": 0,
         "skipped": 0
+      }
+    },
+    {
+      "key": "playwright",
+      "title": "End-to-End Tests (Playwright)",
+      "ok": false,
+      "summary": "82/84 passed, 2 failed",
+      "metrics": {
+        "total": 84,
+        "passed": 82,
+        "failed": 2,
+        "skipped": 0
+      }
+    },
+    {
+      "key": "pa11y",
+      "title": "Accessibility Audit (Pa11y — WCAG 2.1 AAA)",
+      "ok": true,
+      "summary": "60/60 URLs clean",
+      "metrics": {
+        "urls": 60,
+        "passes": 60,
+        "errors": 0,
+        "rules": 0
       }
     }
   ]

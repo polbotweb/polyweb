@@ -48,6 +48,7 @@ coverage/
 # a11y audit artifacts
 .a11y-cookies.json
 .lighthouseci/
+.lighthouseci-authed.json
 .playwright-mcp/
 
 # operational logs / dead letters

@@ -1,7 +1,6 @@
 ══════════════════════════════════════════════════════════════════════════════════
   POLYWEB — GLOBAL QA REPORT
-  Generated: 2026-10-18 10:51:19
-  Scope:    offline (check + lint + vitest — e2e/a11y/lighthouse not regenerated)
+  Generated: 2026-10-18 11:06:46
 ══════════════════════════════════════════════════════════════════════════════════
 
   ✅ Type & Template Check (astro check)
@@ -10,17 +9,25 @@
   ✅ Lint (ESLint)
      0 errors, 21 warnings
 
-  ❌ Unit & Integration Tests (Vitest)
-     1502/1503 passed, 1 failed
+  ✅ Unit & Integration Tests (Vitest)
+     1503/1503 passed
 
-  • tests/integration/audit.test.ts › Audit — Hooks integration logs USER_BAN when admin bans a user
-    AssertionError: expected 'AnC8LiS7ugCGQeCaDeD2zygBkSfmCo3Q' to be 'kaLQFkOyK9jk8rhrlAotDoGaN3mcedoe' // Object.is equality
+  ❌ End-to-End Tests (Playwright)
+     82/84 passed, 2 failed
+
+  • cms-admin.spec.ts > CMS Theme page › theme page loads successfully
+    [31mTest timeout of 30000ms exceeded while running "beforeEach" hook.[39m
+  • platform-preview.spec.ts › aperçu signé d’un brouillon (anonyme), lien falsifié refusé, diff des révisions
+    [31mTest timeout of 30000ms exceeded.[39m
+
+  ✅ Accessibility Audit (Pa11y — WCAG 2.1 AAA)
+     60/60 URLs clean
 
 ══════════════════════════════════════════════════════════════════════════════════
   GLOBAL STATUS
 ══════════════════════════════════════════════════════════════════════════════════
 
-  Reports in scope: 3/6 (check, lint, vitest — offline scope)
+  Reports in scope: 6/6 (check, lint, vitest, playwright, pa11y, lighthouse)
   Overall:           ❌ ISSUES DETECTED
 
   ┌─────────────────────────────────────────────┬──────────────┬─────────┐
@@ -28,7 +35,10 @@
   ├─────────────────────────────────────────────┼──────────────┼─────────┤
   │ Astro check                                 │ GREEN        │ 0 error │
   │ ESLint                                      │ GREEN        │ 0 error │
-  │ Vitest (unit/integration)                   │ RED          │ 1502/15 │
+  │ Vitest (unit/integration)                   │ GREEN        │ 1503/15 │
+  │ Playwright (e2e)                            │ RED          │ 82/84 p │
+  │ Pa11y (a11y)                                │ GREEN        │ 60/60 U │
+  │ Lighthouse (perf)                           │ MISSING      │ not gen │
   └─────────────────────────────────────────────┴──────────────┴─────────┘
 
 ══════════════════════════════════════════════════════════════════════════════════
