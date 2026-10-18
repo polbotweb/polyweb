@@ -7,6 +7,9 @@ import { hasServicePermission, resolveServiceTenant } from "@/modules/services/p
 import { getServiceAdminData, getServiceAdminStats, getServiceAdminTaxonomy, getServiceModerationQueue } from "@/modules/services/admin";
 import { getServiceCategories, getServiceProviders, getServiceTags } from "@/modules/services/loaders";
 import ServicesAdminPage from "@/components/services/ServicesAdminPage.astro";
+import { Effect } from "effect";
+import { getServiceAdminFacets } from "@/modules/services/admin/loader";
+import { loadSavedViews } from "@/lib/admin/saved-views";
 import { getServiceTranslations } from "@/modules/services/i18n";
 import { LOCALES } from "@i18n/config";
 export const prerender = false;
@@ -23,6 +26,8 @@ const sortBy: "createdAt" | "updatedAt" | "publishedAt" | "title" | "priceMinor"
 const sortOrder: "asc" | "desc" | undefined = p.get("sortOrder") === "asc" ? "asc" : p.get("sortOrder") === "desc" ? "desc" : undefined;
 const filterInput = { page, limit: 20, search: p.get("search") || undefined, status, categoryId: p.get("categoryId") || undefined, tagId: p.get("tagId") || undefined, providerId: p.get("providerId") || undefined, featured, mobile, locale: p.get("locale") || undefined, sortBy, sortOrder };
 const [data, stats, categoryOptions, tagOptions, providerOptions, taxonomy, moderation] = await Promise.all([getServiceAdminData(null, locale, filterInput), getServiceAdminStats(null), getServiceCategories(locale, null), getServiceTags(locale, null), getServiceProviders(null), getServiceAdminTaxonomy(null, locale), getServiceModerationQueue(null)]);
+// core/filters : facettes (chacune sans son propre filtre) + vues enregistrées de l'utilisateur.
+const [facets, savedViews] = await Promise.all([Effect.runPromise(getServiceAdminFacets(null, locale, filterInput)).catch(() => ({})), Astro.locals.user ? loadSavedViews(Astro.locals.user.id, "service", null) : Promise.resolve([])]);
 const tenant = resolveServiceTenant({});
 const [canCreate, canUpdate, canPublish, canDelete, canModerate, canCategoryCreate, canCategoryUpdate, canCategoryDelete, canTagCreate, canTagUpdate, canTagDelete] = await Promise.all([
   hasServicePermission(Astro, tenant, { service: ["create"] }),
@@ -39,4 +44,4 @@ const [canCreate, canUpdate, canPublish, canDelete, canModerate, canCategoryCrea
 ]);
 const canManageTaxonomy = canCategoryCreate && canCategoryUpdate && canCategoryDelete && canTagCreate && canTagUpdate && canTagDelete;
 ---
-<BaseLayout title={t.admin.title} description={t.meta.description}><AuthLayout title={t.admin.title}><AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="services" /><main class="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8"><ServicesAdminPage locale={locale} title={t.admin.title} items={data.items} meta={{ page: data.page, totalPages: data.totalPages }} stats={stats} filters={filterInput} baseAdminUrl={`/${locale}/admin/services`} organizationId={null} canCreate={canCreate} canUpdate={canUpdate} canPublish={canPublish} canDelete={canDelete} canModerate={canModerate} canManageTaxonomy={canManageTaxonomy} categoryOptions={categoryOptions} tagOptions={tagOptions} providerOptions={providerOptions} localeOptions={LOCALES} taxonomy={taxonomy} moderation={moderation} /></main></AuthLayout></BaseLayout>
+<BaseLayout title={t.admin.title} description={t.meta.description}><AuthLayout title={t.admin.title}><AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="services" /><main class="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8"><ServicesAdminPage facets={facets} savedViews={savedViews} locale={locale} title={t.admin.title} items={data.items} meta={{ page: data.page, totalPages: data.totalPages }} stats={stats} filters={filterInput} baseAdminUrl={`/${locale}/admin/services`} organizationId={null} canCreate={canCreate} canUpdate={canUpdate} canPublish={canPublish} canDelete={canDelete} canModerate={canModerate} canManageTaxonomy={canManageTaxonomy} categoryOptions={categoryOptions} tagOptions={tagOptions} providerOptions={providerOptions} localeOptions={LOCALES} taxonomy={taxonomy} moderation={moderation} /></main></AuthLayout></BaseLayout>

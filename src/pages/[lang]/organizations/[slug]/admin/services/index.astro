@@ -9,6 +9,9 @@ import { getServiceAdminData, getServiceAdminStats, getServiceAdminTaxonomy, get
 import { getServiceCategories, getServiceProviders, getServiceTags } from "@/modules/services/loaders";
 import { getServiceTranslations } from "@/modules/services/i18n";
 import ServicesAdminPage from "@/components/services/ServicesAdminPage.astro";
+import { Effect } from "effect";
+import { getServiceAdminFacets } from "@/modules/services/admin/loader";
+import { loadSavedViews } from "@/lib/admin/saved-views";
 import { LOCALES } from "@i18n/config";
 export const prerender = false;
 const result = await requireAuth(Astro);
@@ -33,6 +36,8 @@ const sortBy: "createdAt" | "updatedAt" | "publishedAt" | "title" | "priceMinor"
 const sortOrder: "asc" | "desc" | undefined = p.get("sortOrder") === "asc" ? "asc" : p.get("sortOrder") === "desc" ? "desc" : undefined;
 const filterInput = { page, limit: 20, search: p.get("search") || undefined, status, categoryId: p.get("categoryId") || undefined, tagId: p.get("tagId") || undefined, providerId: p.get("providerId") || undefined, featured, mobile, locale: p.get("locale") || undefined, sortBy, sortOrder };
 const [data, stats, categoryOptions, tagOptions, providerOptions, taxonomy, moderation] = await Promise.all([getServiceAdminData(org.id, locale, filterInput), getServiceAdminStats(org.id), getServiceCategories(locale, org.id), getServiceTags(locale, org.id), getServiceProviders(org.id), getServiceAdminTaxonomy(org.id, locale), getServiceModerationQueue(org.id)]);
+// core/filters : facettes (chacune sans son propre filtre) + vues enregistrées de l'utilisateur.
+const [facets, savedViews] = await Promise.all([Effect.runPromise(getServiceAdminFacets(org.id, locale, filterInput)).catch(() => ({})), Astro.locals.user ? loadSavedViews(Astro.locals.user.id, "service", org.id) : Promise.resolve([])]);
 const [canCreate, canUpdate, canDelete, canPublish, canModerate, canCategoryCreate, canCategoryUpdate, canCategoryDelete, canTagCreate, canTagUpdate, canTagDelete] = await Promise.all([
   hasServicePermission(Astro, tenant, { service: ["create"] }), hasServicePermission(Astro, tenant, { service: ["update"] }), hasServicePermission(Astro, tenant, { service: ["delete"] }), hasServicePermission(Astro, tenant, { service: ["publish"] }), hasServicePermission(Astro, tenant, { service: ["moderate"] }), hasServicePermission(Astro, tenant, { serviceCategory: ["create"] }), hasServicePermission(Astro, tenant, { serviceCategory: ["update"] }), hasServicePermission(Astro, tenant, { serviceCategory: ["delete"] }), hasServicePermission(Astro, tenant, { serviceTag: ["create"] }), hasServicePermission(Astro, tenant, { serviceTag: ["update"] }), hasServicePermission(Astro, tenant, { serviceTag: ["delete"] }),
 ]);
@@ -42,7 +47,7 @@ const canManageTaxonomy = canCategoryCreate && canCategoryUpdate && canCategoryD
   <AuthLayout title={org.name}>
     <OrgSidebar slot="sidebar" t={authT} locale={locale} org={org} orgRole={orgRole} activeItem="services" />
     <main class="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <ServicesAdminPage locale={locale} title={`${t.admin.title} — ${org.name}`} items={data.items} meta={{ page: data.page, totalPages: data.totalPages }} stats={stats} filters={filterInput} baseAdminUrl={`/${locale}/${org.slug}/admin/services`} organizationId={org.id} canCreate={canCreate} canUpdate={canUpdate} canPublish={canPublish} canDelete={canDelete} canModerate={canModerate} canManageTaxonomy={canManageTaxonomy} categoryOptions={categoryOptions} tagOptions={tagOptions} providerOptions={providerOptions} localeOptions={LOCALES} taxonomy={taxonomy} moderation={moderation} />
+      <ServicesAdminPage facets={facets} savedViews={savedViews} locale={locale} title={`${t.admin.title} — ${org.name}`} items={data.items} meta={{ page: data.page, totalPages: data.totalPages }} stats={stats} filters={filterInput} baseAdminUrl={`/${locale}/${org.slug}/admin/services`} organizationId={org.id} canCreate={canCreate} canUpdate={canUpdate} canPublish={canPublish} canDelete={canDelete} canModerate={canModerate} canManageTaxonomy={canManageTaxonomy} categoryOptions={categoryOptions} tagOptions={tagOptions} providerOptions={providerOptions} localeOptions={LOCALES} taxonomy={taxonomy} moderation={moderation} />
     </main>
   </AuthLayout>
 </BaseLayout>

@@ -104,3 +104,42 @@ test("pages admin: select visible page rows, bulk publish, then move to trash wi
     await db.delete(schema.pages).where(inArray(schema.pages.id, ids));
   }
 });
+
+test("services admin: facets (links with counts) and saved views (save, open, delete with confirmation)", async ({ browser }) => {
+  const { getDrizzle, schema } = await import("../../src/database/drizzle");
+  const { and, eq } = await import("drizzle-orm");
+  const db = getDrizzle();
+  const owner = await seedUserId();
+  const name = `E2E vue ${randomUUID().slice(0, 6)}`;
+  // Au moins un brouillon pour que la facette « Brouillon » existe.
+  const serviceId = randomUUID();
+  await db.insert(schema.services).values({ id: serviceId, providerId: owner, slug: `e2e-facet-${serviceId.slice(0, 8)}`, status: "DRAFT", updatedBy: owner });
+  try {
+    const { context, page } = await authedPage(browser);
+    await page.goto("/fr/admin/services", { waitUntil: "networkidle" });
+    const facets = page.getByRole("navigation", { name: "Affiner" });
+    await expect(facets).toBeVisible();
+    const draft = facets.locator('a[data-facet-value="DRAFT"]');
+    await draft.click();
+    await page.waitForURL(/status=DRAFT/);
+    await expect(page.getByRole("navigation", { name: "Affiner" }).locator('a[data-facet-value="DRAFT"]')).toHaveAttribute("aria-current", "true");
+
+    const views = page.getByRole("region", { name: "Vues enregistrées" });
+    await views.getByLabel("Nom de la vue").fill(name);
+    await views.getByRole("button", { name: "Enregistrer la vue actuelle" }).click();
+    await expect(views.getByRole("link", { name })).toHaveAttribute("aria-current", "page");
+    const [row] = await db.select().from(schema.adminSavedViews).where(and(eq(schema.adminSavedViews.userId, owner), eq(schema.adminSavedViews.name, name)));
+    expect(row?.query).toBe("status=DRAFT");
+
+    await page.goto("/fr/admin/services", { waitUntil: "networkidle" });
+    await page.getByRole("region", { name: "Vues enregistrées" }).getByRole("link", { name }).click();
+    await page.waitForURL(/status=DRAFT/);
+    await page.getByRole("region", { name: "Vues enregistrées" }).getByRole("button", { name: `Supprimer la vue « ${name} »` }).click();
+    await page.getByRole("dialog", { name: "Supprimer la vue" }).getByRole("button", { name: "Supprimer", exact: true }).click();
+    await expect.poll(async () => (await db.select().from(schema.adminSavedViews).where(and(eq(schema.adminSavedViews.userId, owner), eq(schema.adminSavedViews.name, name)))).length).toBe(0);
+    await context.close();
+  } finally {
+    await db.delete(schema.adminSavedViews).where(and(eq(schema.adminSavedViews.userId, owner), eq(schema.adminSavedViews.name, name)));
+    await db.delete(schema.services).where(eq(schema.services.id, serviceId));
+  }
+});

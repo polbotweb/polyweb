@@ -148,6 +148,13 @@
       "when": 1792343099578,
       "tag": "0020_drop_pages_legacy_lock",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792354712395,
+      "tag": "0021_admin_saved_views",
+      "breakpoints": true
     }
   ]
 }
