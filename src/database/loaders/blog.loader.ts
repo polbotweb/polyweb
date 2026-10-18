@@ -656,164 +656,142 @@ function emptyMeta(filters: BlogPostFilters): BlogPaginationMeta {
   };
 }
 
-// ─── Categories ──────────────────────────────────────────────────────────────
+// ─── Categories & tags ───────────────────────────────────────────────────────
+
+/*
+ * Taxonomie Effect-native : requêtes via `dbTry`, comptes de posts publiés en une requête
+ * groupée (pas de N+1). Les exports Promise restent `cached(...)` autour d'un adaptateur
+ * `runOrThrow` : le cache (clés inchangées) est conservé pour les appelants existants.
+ */
+type CategoryWithCount = BlogCategory & { translation: BlogCategoryTranslation | null; postCount: number };
+type TagWithCount = BlogTag & { translation: BlogTagTranslation | null; postCount: number };
+
+const blogCategoriesEffect = (organizationId: string | null, locale: Locale): Effect.Effect<CategoryWithCount[], DbError> =>
+  isValidLocale(locale)
+    ? Effect.gen(function* () {
+        const categories = yield* dbTry("blog.categories", () =>
+          getDrizzle()
+            .select({ category: blogCategories, translation: blogCategoryTranslations })
+            .from(blogCategories)
+            .leftJoin(
+              blogCategoryTranslations,
+              and(eq(blogCategoryTranslations.categoryId, blogCategories.id), eq(blogCategoryTranslations.locale, locale)),
+            )
+            .where(orgScope(blogCategories, organizationId))
+            .orderBy(asc(blogCategories.sortOrder), asc(blogCategoryTranslations.name)),
+        );
+        const categoryIds = categories.map((c) => c.category.id);
+        const counts = categoryIds.length === 0
+          ? []
+          : yield* dbTry("blog.categoryPostCounts", () =>
+              getDrizzle()
+                .select({ categoryId: blogPostCategories.categoryId, value: count() })
+                .from(blogPostCategories)
+                .innerJoin(blogPosts, eq(blogPostCategories.postId, blogPosts.id))
+                .where(and(inArray(blogPostCategories.categoryId, categoryIds), publicBlogPostScope(blogPosts)))
+                .groupBy(blogPostCategories.categoryId),
+            );
+        const postCounts = new Map(counts.map((r) => [r.categoryId, Number(r.value)]));
+        return categories.map(({ category, translation }) => ({
+          ...category,
+          slug: translation?.slug ?? category.slug,
+          translation,
+          postCount: postCounts.get(category.id) ?? 0,
+        }));
+      })
+    : Effect.succeed([]);
+
+const blogCategoryBySlugEffect = (organizationId: string | null, locale: Locale, slug: string) =>
+  isValidLocale(locale)
+    ? dbTry("blog.categoryBySlug", () =>
+        getDrizzle()
+          .select({ category: blogCategories, translation: blogCategoryTranslations })
+          .from(blogCategories)
+          .leftJoin(
+            blogCategoryTranslations,
+            and(eq(blogCategoryTranslations.categoryId, blogCategories.id), eq(blogCategoryTranslations.locale, locale)),
+          )
+          .where(
+            and(
+              orgScope(blogCategories, organizationId),
+              or(eq(blogCategoryTranslations.slug, slug), and(isNull(blogCategoryTranslations.id), eq(blogCategories.slug, slug))),
+            ),
+          )
+          .limit(1),
+      ).pipe(Effect.map(([row]) => row ?? null))
+    : Effect.succeed(null);
+
+const blogTagsEffect = (organizationId: string | null, locale: Locale): Effect.Effect<TagWithCount[], DbError> =>
+  isValidLocale(locale)
+    ? Effect.gen(function* () {
+        const tags = yield* dbTry("blog.tags", () =>
+          getDrizzle()
+            .select({ tag: blogTags, translation: blogTagTranslations })
+            .from(blogTags)
+            .leftJoin(blogTagTranslations, and(eq(blogTagTranslations.tagId, blogTags.id), eq(blogTagTranslations.locale, locale)))
+            .where(orgScope(blogTags, organizationId))
+            .orderBy(asc(blogTagTranslations.name)),
+        );
+        const tagIds = tags.map((t) => t.tag.id);
+        const counts = tagIds.length === 0
+          ? []
+          : yield* dbTry("blog.tagPostCounts", () =>
+              getDrizzle()
+                .select({ tagId: blogPostTags.tagId, value: count() })
+                .from(blogPostTags)
+                .innerJoin(blogPosts, eq(blogPostTags.postId, blogPosts.id))
+                .where(and(inArray(blogPostTags.tagId, tagIds), publicBlogPostScope(blogPosts)))
+                .groupBy(blogPostTags.tagId),
+            );
+        const postCounts = new Map(counts.map((r) => [r.tagId, Number(r.value)]));
+        return tags.map(({ tag, translation }) => ({
+          ...tag,
+          slug: translation?.slug ?? tag.slug,
+          translation,
+          postCount: postCounts.get(tag.id) ?? 0,
+        }));
+      })
+    : Effect.succeed([]);
+
+const blogTagBySlugEffect = (organizationId: string | null, locale: Locale, slug: string) =>
+  isValidLocale(locale)
+    ? dbTry("blog.tagBySlug", () =>
+        getDrizzle()
+          .select({ tag: blogTags, translation: blogTagTranslations })
+          .from(blogTags)
+          .leftJoin(blogTagTranslations, and(eq(blogTagTranslations.tagId, blogTags.id), eq(blogTagTranslations.locale, locale)))
+          .where(
+            and(
+              orgScope(blogTags, organizationId),
+              or(eq(blogTagTranslations.slug, slug), and(isNull(blogTagTranslations.id), eq(blogTags.slug, slug))),
+            ),
+          )
+          .limit(1),
+      ).pipe(Effect.map(([row]) => row ?? null))
+    : Effect.succeed(null);
 
 export const getBlogCategories = cached(
-  (organizationId: string | null, locale: Locale) =>
-    `blog:categories:${organizationId ?? "global"}:${locale}`,
-  async (
-    organizationId: string | null,
-    locale: Locale,
-  ): Promise<Array<BlogCategory & { translation: BlogCategoryTranslation | null; postCount: number }>> => {
-    if (!isValidLocale(locale)) return [];
-    const db = getDrizzle();
-
-    // Single round-trip: join categories → translations, then resolve published
-    // post counts via one grouped subquery (avoids the previous N+1 of one
-    // COUNT per category).
-    const categories = await db
-      .select({
-        category: blogCategories,
-        translation: blogCategoryTranslations,
-      })
-      .from(blogCategories)
-      .leftJoin(
-        blogCategoryTranslations,
-        and(
-          eq(blogCategoryTranslations.categoryId, blogCategories.id),
-          eq(blogCategoryTranslations.locale, locale),
-        ),
-      )
-      .where(orgScope(blogCategories, organizationId))
-      .orderBy(asc(blogCategories.sortOrder), asc(blogCategoryTranslations.name));
-
-    const categoryIds = categories.map((c) => c.category.id);
-    const postCounts = new Map<string, number>();
-    if (categoryIds.length > 0) {
-      const counts = await db
-        .select({ categoryId: blogPostCategories.categoryId, value: count() })
-        .from(blogPostCategories)
-        .innerJoin(blogPosts, eq(blogPostCategories.postId, blogPosts.id))
-        .where(
-          and(inArray(blogPostCategories.categoryId, categoryIds), publicBlogPostScope(blogPosts)),
-        )
-        .groupBy(blogPostCategories.categoryId);
-      for (const row of counts) postCounts.set(row.categoryId, Number(row.value));
-    }
-
-    return categories.map(({ category, translation }) => ({
-      ...category,
-      slug: translation?.slug ?? category.slug,
-      translation,
-      postCount: postCounts.get(category.id) ?? 0,
-    }));
-  },
+  (organizationId: string | null, locale: Locale) => `blog:categories:${organizationId ?? "global"}:${locale}`,
+  (organizationId: string | null, locale: Locale) => runOrThrow(blogCategoriesEffect(organizationId, locale)),
 );
 
 export const getBlogCategoryBySlug = cached(
   (organizationId: string | null, locale: Locale, slug: string) =>
     `blog:category:${organizationId ?? "global"}:${locale}:${slug}`,
-  async (organizationId: string | null, locale: Locale, slug: string) => {
-    if (!isValidLocale(locale)) return null;
-    const db = getDrizzle();
-
-    const [row] = await db
-      .select({ category: blogCategories, translation: blogCategoryTranslations })
-      .from(blogCategories)
-      .leftJoin(
-        blogCategoryTranslations,
-        and(
-          eq(blogCategoryTranslations.categoryId, blogCategories.id),
-          eq(blogCategoryTranslations.locale, locale),
-        ),
-      )
-      .where(
-        and(
-          orgScope(blogCategories, organizationId),
-          or(
-            eq(blogCategoryTranslations.slug, slug),
-            and(isNull(blogCategoryTranslations.id), eq(blogCategories.slug, slug)),
-          ),
-        ),
-      )
-      .limit(1);
-
-    return row ?? null;
-  },
+  (organizationId: string | null, locale: Locale, slug: string) =>
+    runOrThrow(blogCategoryBySlugEffect(organizationId, locale, slug)),
 );
 
-// ─── Tags ────────────────────────────────────────────────────────────────────
-
 export const getBlogTags = cached(
-  (organizationId: string | null, locale: Locale) =>
-    `blog:tags:${organizationId ?? "global"}:${locale}`,
-  async (
-    organizationId: string | null,
-    locale: Locale,
-  ): Promise<Array<BlogTag & { translation: BlogTagTranslation | null; postCount: number }>> => {
-    if (!isValidLocale(locale)) return [];
-    const db = getDrizzle();
-
-    // Single round-trip: join tags → translations → published post counts via
-    // a grouped subquery (avoids the previous N+1 of one COUNT per tag).
-    const tags = await db
-      .select({ tag: blogTags, translation: blogTagTranslations })
-      .from(blogTags)
-      .leftJoin(
-        blogTagTranslations,
-        and(eq(blogTagTranslations.tagId, blogTags.id), eq(blogTagTranslations.locale, locale)),
-      )
-      .where(orgScope(blogTags, organizationId))
-      .orderBy(asc(blogTagTranslations.name));
-
-    const tagIds = tags.map((t) => t.tag.id);
-    const postCounts = new Map<string, number>();
-    if (tagIds.length > 0) {
-      const counts = await db
-        .select({ tagId: blogPostTags.tagId, value: count() })
-        .from(blogPostTags)
-        .innerJoin(blogPosts, eq(blogPostTags.postId, blogPosts.id))
-        .where(and(inArray(blogPostTags.tagId, tagIds), publicBlogPostScope(blogPosts)))
-        .groupBy(blogPostTags.tagId);
-      for (const row of counts) postCounts.set(row.tagId, Number(row.value));
-    }
-
-    return tags.map(({ tag, translation }) => ({
-      ...tag,
-      slug: translation?.slug ?? tag.slug,
-      translation,
-      postCount: postCounts.get(tag.id) ?? 0,
-    }));
-  },
+  (organizationId: string | null, locale: Locale) => `blog:tags:${organizationId ?? "global"}:${locale}`,
+  (organizationId: string | null, locale: Locale) => runOrThrow(blogTagsEffect(organizationId, locale)),
 );
 
 export const getBlogTagBySlug = cached(
   (organizationId: string | null, locale: Locale, slug: string) =>
     `blog:tag:${organizationId ?? "global"}:${locale}:${slug}`,
-  async (organizationId: string | null, locale: Locale, slug: string) => {
-    if (!isValidLocale(locale)) return null;
-    const db = getDrizzle();
-
-    const [row] = await db
-      .select({ tag: blogTags, translation: blogTagTranslations })
-      .from(blogTags)
-      .leftJoin(
-        blogTagTranslations,
-        and(eq(blogTagTranslations.tagId, blogTags.id), eq(blogTagTranslations.locale, locale)),
-      )
-      .where(
-        and(
-          orgScope(blogTags, organizationId),
-          or(
-            eq(blogTagTranslations.slug, slug),
-            and(isNull(blogTagTranslations.id), eq(blogTags.slug, slug)),
-          ),
-        ),
-      )
-      .limit(1);
-
-    return row ?? null;
-  },
+  (organizationId: string | null, locale: Locale, slug: string) =>
+    runOrThrow(blogTagBySlugEffect(organizationId, locale, slug)),
 );
 
 // ─── Comments ────────────────────────────────────────────────────────────────
@@ -1308,52 +1286,56 @@ export const getBlogNotifications = (...args: Parameters<typeof blogNotification
 export const getUnreadBlogNotificationCount = (userId: string, organizationId?: string | null): Promise<number> =>
   runOrThrow(unreadBlogNotificationCountEffect(userId, organizationId));
 
+/** Slugs des posts publiés d'un tenant + locale (une requête : détection de liens morts sans N+1). */
+const blogPostSlugsEffect = (organizationId: string | null, locale: Locale): Effect.Effect<Set<string>, DbError> =>
+  isValidLocale(locale)
+    ? dbTry("blog.postSlugs", () =>
+        getDrizzle()
+          .select({ slug: blogPostTranslations.slug })
+          .from(blogPostTranslations)
+          .innerJoin(blogPosts, eq(blogPosts.id, blogPostTranslations.postId))
+          .where(and(eq(blogPostTranslations.locale, locale), orgScope(blogPosts, organizationId), publishedScope(blogPosts))),
+      ).pipe(Effect.map((rows) => new Set(rows.map((r) => r.slug))))
+    : Effect.succeed(new Set<string>());
+
 /**
- * Returns the set of published post slugs for a tenant + locale.
- * Used by the content layer to detect dead internal links without N+1 queries
- * (one query returns every valid target for the whole blog).
+ * Cibles de liens internes valides (slugs de posts, catégories et tags) d'un tenant + locale,
+ * utilisées par RichContent pour signaler un lien interne mort. Trois lectures en parallèle.
  */
+const blogValidLinkTargetsEffect = (organizationId: string | null, locale: Locale): Effect.Effect<Set<string>, DbError> =>
+  isValidLocale(locale)
+    ? Effect.all(
+        [blogPostSlugsEffect(organizationId, locale), blogCategoriesEffect(organizationId, locale), blogTagsEffect(organizationId, locale)],
+        { concurrency: "unbounded" },
+      ).pipe(
+        Effect.map(([postSlugs, categories, tags]) => {
+          const targets = new Set<string>(postSlugs);
+          for (const c of categories) targets.add(c.slug);
+          for (const t of tags) targets.add(t.slug);
+          return targets;
+        }),
+      )
+    : Effect.succeed(new Set<string>());
+
 export const getBlogPostSlugs = cached(
-  (organizationId: string | null, locale: Locale) =>
-    `blog:slugs:${organizationId ?? "global"}:${locale}`,
-  async (organizationId: string | null, locale: Locale): Promise<Set<string>> => {
-    if (!isValidLocale(locale)) return new Set();
-    const db = getDrizzle();
-    const rows = await db
-      .select({ slug: blogPostTranslations.slug })
-      .from(blogPostTranslations)
-      .innerJoin(blogPosts, eq(blogPosts.id, blogPostTranslations.postId))
-      .where(
-        and(
-          eq(blogPostTranslations.locale, locale),
-          orgScope(blogPosts, organizationId),
-          publishedScope(blogPosts),
-        ),
-      );
-    return new Set(rows.map((r) => r.slug));
-  },
+  (organizationId: string | null, locale: Locale) => `blog:slugs:${organizationId ?? "global"}:${locale}`,
+  (organizationId: string | null, locale: Locale) => runOrThrow(blogPostSlugsEffect(organizationId, locale)),
+);
+
+export const getBlogValidLinkTargets = cached(
+  (organizationId: string | null, locale: Locale) => `blog:link-targets:${organizationId ?? "global"}:${locale}`,
+  (organizationId: string | null, locale: Locale) => runOrThrow(blogValidLinkTargetsEffect(organizationId, locale)),
 );
 
 /**
- * Set of all valid internal-link targets for a tenant+locale: post slugs,
- * category slugs and tag slugs. Used by RichContent to flag dead links so a
- * broken internal link is shown as a warning instead of silently navigating
- * nowhere. Previously only post slugs were returned, causing valid category/tag
- * links to be falsely flagged as dead.
+ * Lectures taxonomie/liens Effect-natives NON mises en cache. `effect.ts` continue d'exposer
+ * les versions `cached` (via `liftLoader`) pour conserver le cache côté pages.
  */
-export const getBlogValidLinkTargets = cached(
-  (organizationId: string | null, locale: Locale) =>
-    `blog:link-targets:${organizationId ?? "global"}:${locale}`,
-  async (organizationId: string | null, locale: Locale): Promise<Set<string>> => {
-    if (!isValidLocale(locale)) return new Set();
-    const [postSlugs, categories, tags] = await Promise.all([
-      getBlogPostSlugs(organizationId, locale),
-      getBlogCategories(organizationId, locale),
-      getBlogTags(organizationId, locale),
-    ]);
-    const targets = new Set<string>(postSlugs);
-    for (const c of categories) targets.add(c.slug);
-    for (const t of tags) targets.add(t.slug);
-    return targets;
-  },
-);
+export const blogTaxonomyEffects = {
+  getBlogCategories: blogCategoriesEffect,
+  getBlogCategoryBySlug: blogCategoryBySlugEffect,
+  getBlogTags: blogTagsEffect,
+  getBlogTagBySlug: blogTagBySlugEffect,
+  getBlogPostSlugs: blogPostSlugsEffect,
+  getBlogValidLinkTargets: blogValidLinkTargetsEffect,
+};

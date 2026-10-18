@@ -7,7 +7,10 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Effect } from 'effect';
 import { inArray } from 'drizzle-orm';
 import { getDrizzle } from '@database/drizzle';
-import { blogComments, blogPostReviewHelpful, blogPostReviews, blogPosts, user } from '@database/schemas';
+import {
+  blogCategories, blogComments, blogPostCategories, blogPostReviewHelpful, blogPostReviews, blogPosts,
+  blogPostTags, blogPostTranslations, blogTags, user,
+} from '@database/schemas';
 import * as blog from '@database/loaders/blog.loader';
 
 const t = `blgeff-${crypto.randomUUID().slice(0, 8)}`;
@@ -89,6 +92,48 @@ describe('blog.loader Effect-natif', () => {
 
     expect(await blog.getBlogNotifications(reader)).toEqual([]);
     expect(await blog.getUnreadBlogNotificationCount(reader)).toBe(0);
+  });
+
+  it('taxonomie et cibles de liens : comptes publiés, slug traduit ou de repli, locale invalide', async () => {
+    const db = getDrizzle();
+    const cat = crypto.randomUUID();
+    const tag = crypto.randomUUID();
+    await db.insert(blogCategories).values({ id: cat, slug: `${t}-cat` } as never);
+    await db.insert(blogTags).values({ id: tag, slug: `${t}-tag` } as never);
+    await db.insert(blogPostTranslations).values([
+      { postId: post, locale: 'fr', title: 'Publié', slug: `${t}-fr`, content: 'x' },
+      { postId: draft, locale: 'fr', title: 'Brouillon', slug: `${t}-draft-fr`, content: 'x' },
+    ] as never);
+    await db.insert(blogPostCategories).values([{ postId: post, categoryId: cat }, { postId: draft, categoryId: cat }]);
+    await db.insert(blogPostTags).values([{ postId: post, tagId: tag }, { postId: draft, tagId: tag }]);
+    try {
+      const fx = blog.blogTaxonomyEffects;
+      const cats = await Effect.runPromise(fx.getBlogCategories(null, 'fr'));
+      expect(cats.find((c) => c.id === cat)).toMatchObject({ slug: `${t}-cat`, translation: null, postCount: 1 });
+      const tags = await Effect.runPromise(fx.getBlogTags(null, 'fr'));
+      expect(tags.find((x) => x.id === tag)).toMatchObject({ slug: `${t}-tag`, translation: null, postCount: 1 });
+      expect((await Effect.runPromise(fx.getBlogCategoryBySlug(null, 'fr', `${t}-cat`)))?.category.id).toBe(cat);
+      expect((await Effect.runPromise(fx.getBlogTagBySlug(null, 'fr', `${t}-tag`)))?.tag.id).toBe(tag);
+      expect(await Effect.runPromise(fx.getBlogTagBySlug(null, 'fr', `${t}-absent`))).toBeNull();
+
+      const slugs = await Effect.runPromise(fx.getBlogPostSlugs(null, 'fr'));
+      expect(slugs.has(`${t}-fr`)).toBe(true);
+      expect(slugs.has(`${t}-draft-fr`)).toBe(false);
+      const targets = await Effect.runPromise(fx.getBlogValidLinkTargets(null, 'fr'));
+      for (const s of [`${t}-fr`, `${t}-cat`, `${t}-tag`]) expect(targets.has(s)).toBe(true);
+
+      // Adaptateurs Promise (mis en cache) : mêmes résultats.
+      expect(await blog.getBlogCategoryBySlug(null, 'fr', `${t}-cat`)).toEqual(await Effect.runPromise(fx.getBlogCategoryBySlug(null, 'fr', `${t}-cat`)));
+
+      const bad = 'xx' as never;
+      expect(await Effect.runPromise(fx.getBlogCategories(null, bad))).toEqual([]);
+      expect(await Effect.runPromise(fx.getBlogTagBySlug(null, bad, `${t}-tag`))).toBeNull();
+      expect((await Effect.runPromise(fx.getBlogValidLinkTargets(null, bad))).size).toBe(0);
+    } finally {
+      await db.delete(blogPostTranslations).where(inArray(blogPostTranslations.postId, [post, draft]));
+      await db.delete(blogCategories).where(inArray(blogCategories.id, [cat]));
+      await db.delete(blogTags).where(inArray(blogTags.id, [tag]));
+    }
   });
 });
 
