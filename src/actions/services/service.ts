@@ -6,10 +6,10 @@ import { services, serviceTranslations, serviceCategoryLinks, serviceTagLinks, s
 import { sanitizeHtml } from "@lib/sanitize";
 import { generateExcerpt } from "@/core/content/text";
 import { serviceFormSchema, serviceUpdateSchema, calculateServiceSeoScore } from "@/modules/services/validation";
-import { resolveServiceTenant, assertServiceLockOwner, assertServiceCategoryInTenant, assertServiceTagInTenant, assertServiceMediaInTenant } from "@/modules/services/permissions";
+import { resolveServiceTenant } from "@/modules/services/permissions";
 import { auditService, invalidateServicesCache } from "./_helpers";
 import { actionTry, effectHandler } from "@/lib/effect/action";
-import { requireServicePermission, serviceInTenant, serviceRateLimitEffect } from "@/modules/services/permissions";
+import { requireServicePermission, serviceCategoryInTenant, serviceInTenant, serviceLockOwner, serviceMediaInTenant, serviceRateLimitEffect, serviceTagInTenant } from "@/modules/services/permissions";
 
 export const createService = defineAction({
   input: serviceFormSchema,
@@ -17,14 +17,15 @@ export const createService = defineAction({
     const tenant = resolveServiceTenant(input);
     const user = yield* requireServicePermission(context, tenant, { service: ["create"] });
     yield* serviceRateLimitEffect(user.id, "create");
+    // Références tenant vérifiées en Effect avant toute écriture (mêmes contrôles, en parallèle).
+    yield* Effect.all(input.categoryIds.map((id) => serviceCategoryInTenant(id, tenant)), { concurrency: "unbounded" });
+    yield* Effect.all(input.tagIds.map((id) => serviceTagInTenant(id, tenant)), { concurrency: "unbounded" });
+    if (input.coverImageId) yield* serviceMediaInTenant(input.coverImageId, tenant);
+    if (input.ogImageId) yield* serviceMediaInTenant(input.ogImageId, tenant);
     return yield* actionTry("services/service.createService", async () => {
     const content = sanitizeHtml(input.content);
     const excerpt = input.excerpt?.trim() || generateExcerpt(content);
     const seoScore = calculateServiceSeoScore({ title: input.title, metaTitle: input.metaTitle ?? undefined, metaDescription: input.metaDescription ?? undefined, focusKeyword: input.focusKeyword ?? undefined });
-    await Promise.all(input.categoryIds.map((id) => assertServiceCategoryInTenant(id, tenant)));
-    await Promise.all(input.tagIds.map((id) => assertServiceTagInTenant(id, tenant)));
-    if (input.coverImageId) await assertServiceMediaInTenant(input.coverImageId, tenant);
-    if (input.ogImageId) await assertServiceMediaInTenant(input.ogImageId, tenant);
 
     const db = getDrizzle();
     let createdId = "";
@@ -57,13 +58,12 @@ export const updateService = defineAction({
     const user = yield* requireServicePermission(context, tenant, { service: ["update"] });
     yield* serviceRateLimitEffect(user.id, "update");
     const existing = yield* serviceInTenant(input.id, tenant);
+    yield* serviceLockOwner(input.id, user.id, context.locals.session?.id);
+    if (input.categoryIds) yield* Effect.all(input.categoryIds.map((id) => serviceCategoryInTenant(id, tenant)), { concurrency: "unbounded" });
+    if (input.tagIds) yield* Effect.all(input.tagIds.map((id) => serviceTagInTenant(id, tenant)), { concurrency: "unbounded" });
+    if (input.coverImageId) yield* serviceMediaInTenant(input.coverImageId, tenant);
+    if (input.ogImageId) yield* serviceMediaInTenant(input.ogImageId, tenant);
     return yield* actionTry("services/service.updateService", async () => {
-    await assertServiceLockOwner(input.id, user.id, context.locals.session?.id);
-
-    if (input.categoryIds) await Promise.all(input.categoryIds.map((id) => assertServiceCategoryInTenant(id, tenant)));
-    if (input.tagIds) await Promise.all(input.tagIds.map((id) => assertServiceTagInTenant(id, tenant)));
-    if (input.coverImageId) await assertServiceMediaInTenant(input.coverImageId, tenant);
-    if (input.ogImageId) await assertServiceMediaInTenant(input.ogImageId, tenant);
 
     const db = getDrizzle();
     const locale = input.locale;

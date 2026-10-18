@@ -5,7 +5,7 @@ import { z } from "astro/zod";
 import { getDrizzle } from "@database/drizzle";
 import { services, serviceTranslations, serviceRevisions, serviceCategoryLinks, serviceTagLinks, serviceMedia, serviceAvailability, serviceSeo, serviceLocks, serviceAttributeValues } from "@database/schemas";
 import { LOCALES, type Locale } from "@i18n/config";
-import { resolveServiceTenant, serviceOrganizationIdSchema, assertServiceLockOwner } from "@/modules/services/permissions";
+import { resolveServiceTenant, serviceOrganizationIdSchema, serviceLockOwner } from "@/modules/services/permissions";
 import { assertServiceRevisionRestore, assertValidServiceTransition } from "@/modules/services/workflow";
 import type { ServiceStatus } from "@/modules/services/domain";
 import { auditService, invalidateServicesCache } from "./_helpers";
@@ -32,9 +32,9 @@ const transitionService = (id: string, organizationId: string | null | undefined
   const tenant = resolveServiceTenant({ organizationId });
   const user = yield* requireServicePermission(context, tenant, { service: [permission] });
   const current = yield* serviceInTenant(id, tenant);
+  yield* actionTry(`services/lifecycle.${auditAction}.validate`, async () => assertValidServiceTransition(current.status as ServiceStatus, to));
+  yield* serviceLockOwner(id, user.id, context.locals.session?.id);
   return yield* actionTry(`services/lifecycle.${auditAction}`, async () => {
-  assertValidServiceTransition(current.status as ServiceStatus, to);
-  await assertServiceLockOwner(id, user.id, context.locals.session?.id);
   await getDrizzle().transaction(async (tx) => { await tx.update(services).set({ status: to, publishedAt: to === "PUBLISHED" ? new Date() : null, updatedBy: user.id }).where(eq(services.id, id)); });
   if (to === "PUBLISHED") { const locale = requestLocale(context.request.headers); const t = getServiceNotificationTranslations(locale); await createServiceNotification({ recipientId: current.providerId, serviceId: id, actorId: user.id, type: "SERVICE_PUBLISHED", title: t.publishedTitle, message: t.publishedMessage, locale }); }
   auditService(context, user.id, auditAction, { resource: "services", resourceId: id, metadata: { organizationId: tenant.organizationId, from: current.status, to } });
@@ -50,7 +50,7 @@ export const restoreService = defineAction({ input: lifecycleInput, handler: eff
 export const deleteService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => transitionService(input.id, input.organizationId, "DELETED", context, "delete", "SERVICE_DELETE")) });
 
 export const duplicateService = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => Effect.gen(function* () {
-  const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["create"] }); const source = yield* serviceInTenant(input.id, tenant); return yield* actionTry("services/lifecycle.duplicateService", async () => { await assertServiceLockOwner(input.id, user.id, context.locals.session?.id); const db = getDrizzle();
+  const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["create"] }); const source = yield* serviceInTenant(input.id, tenant); yield* serviceLockOwner(input.id, user.id, context.locals.session?.id); return yield* actionTry("services/lifecycle.duplicateService", async () => { const db = getDrizzle();
   const [translations, categories, tags, media, availability, seo, attributes] = await Promise.all([
     db.select().from(serviceTranslations).where(eq(serviceTranslations.serviceId, source.id)).orderBy(asc(serviceTranslations.locale)),
     db.select().from(serviceCategoryLinks).where(eq(serviceCategoryLinks.serviceId, source.id)), db.select().from(serviceTagLinks).where(eq(serviceTagLinks.serviceId, source.id)), db.select().from(serviceMedia).where(eq(serviceMedia.serviceId, source.id)), db.select().from(serviceAvailability).where(eq(serviceAvailability.serviceId, source.id)), db.select().from(serviceSeo).where(eq(serviceSeo.serviceId, source.id)), db.select().from(serviceAttributeValues).where(eq(serviceAttributeValues.serviceId, source.id)),
@@ -80,7 +80,7 @@ export const listServiceRevisions = defineAction({ input: lifecycleInput, handle
 export const restoreServiceRevision = defineAction({ input: z.object({ revisionId: z.uuid(), serviceId: z.uuid(), organizationId: serviceOrganizationIdSchema }), handler: effectHandler((input, context) => Effect.gen(function* () {
   const tenant = resolveServiceTenant(input); const current = yield* serviceInTenant(input.serviceId, tenant); const db = getDrizzle(); const [revision] = yield* actionTry("services/lifecycle.restoreServiceRevision.load", () => db.select().from(serviceRevisions).where(and(eq(serviceRevisions.id, input.revisionId), eq(serviceRevisions.serviceId, input.serviceId))).limit(1)); const locale = requestLocale(context.request.headers);
   if (!revision) return yield* fail("NOT_FOUND", getServiceTranslations(locale).admin.errors.notFound); const user = yield* requireServicePermission(context, tenant, { service: [revision.status === "PUBLISHED" ? "publish" : "update"] });
-  return yield* actionTry("services/lifecycle.restoreServiceRevision", async () => { await assertServiceLockOwner(input.serviceId, user.id, context.locals.session?.id); assertServiceRevisionRestore(current.status as ServiceStatus, revision.status as ServiceStatus);
+  yield* serviceLockOwner(input.serviceId, user.id, context.locals.session?.id); return yield* actionTry("services/lifecycle.restoreServiceRevision", async () => { assertServiceRevisionRestore(current.status as ServiceStatus, revision.status as ServiceStatus);
   await db.transaction(async (tx) => { await tx.update(services).set({ status: revision.status, publishedAt: revision.status === "PUBLISHED" ? (current.status === "PUBLISHED" ? current.publishedAt : new Date()) : null, updatedBy: user.id }).where(eq(services.id, input.serviceId)); await tx.insert(serviceTranslations).values({ serviceId: input.serviceId, organizationId: tenant.organizationId, locale: revision.locale, title: revision.title, slug: revision.slug, content: revision.content, excerpt: revision.excerpt, metaTitle: revision.title }).onConflictDoUpdate({ target: [serviceTranslations.serviceId, serviceTranslations.locale], set: { title: revision.title, slug: revision.slug, content: revision.content, excerpt: revision.excerpt, metaTitle: revision.title, organizationId: tenant.organizationId } }); await tx.insert(serviceRevisions).values({ serviceId: input.serviceId, authorId: user.id, locale: revision.locale, title: revision.title, slug: revision.slug, content: revision.content, excerpt: revision.excerpt, status: revision.status, revisionNote: "Revision restore" }); });
   if (revision.status === "PUBLISHED") { const t = getServiceNotificationTranslations(locale); await createServiceNotification({ recipientId: current.providerId, serviceId: input.serviceId, actorId: user.id, type: "SERVICE_PUBLISHED", title: t.publishedTitle, message: t.publishedMessage, locale }); }
   auditService(context, user.id, "SERVICE_REVISION_RESTORE", { resource: "services", resourceId: input.serviceId, metadata: { organizationId: tenant.organizationId, restoredRevisionId: input.revisionId } }); invalidateServicesCache(); return { success: true };

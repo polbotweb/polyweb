@@ -4,7 +4,7 @@ import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { getDrizzle } from "@database/drizzle";
 import { serviceAttributeDefinitions, serviceAttributeValues } from "@database/schemas";
-import { assertServiceLockOwner, resolveServiceTenant, serviceOrganizationIdSchema } from "./_helpers";
+import { resolveServiceTenant, serviceOrganizationIdSchema, requireServiceLockOwner } from "./_helpers";
 import { auditService, invalidateServicesCache } from "./_helpers";
 import { actionTry, effectHandler } from "@/lib/effect/action";
 import { requireServicePermission, serviceInTenant } from "@/modules/services/permissions";
@@ -33,7 +33,7 @@ export const createServiceAttributeDefinition = defineAction({
 export const setServiceAttributeValue = defineAction({
   input: z.object({ serviceId: z.uuid(), organizationId: serviceOrganizationIdSchema, definitionId: z.uuid(), stringValue: z.string().max(5000).optional().nullable(), numberValue: z.coerce.number().int().optional().nullable(), booleanValue: z.boolean().optional().nullable(), selectedValue: z.string().max(5000).optional().nullable() }),
   handler: effectHandler((input, context) => Effect.gen(function* () {
-    const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["update"] }); yield* serviceInTenant(input.serviceId, tenant); return yield* actionTry("services/attributes.setServiceAttributeValue", async () => { await assertServiceLockOwner(input.serviceId, user.id, context.locals.session?.id); const definition = await assertAttributeDefinitionInTenant(input.definitionId, tenant);
+    const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["update"] }); yield* serviceInTenant(input.serviceId, tenant); yield* requireServiceLockOwner(input.serviceId, user.id, context.locals.session?.id); return yield* actionTry("services/attributes.setServiceAttributeValue", async () => { const definition = await assertAttributeDefinitionInTenant(input.definitionId, tenant);
     const supplied = [input.stringValue != null, input.numberValue != null, input.booleanValue != null, input.selectedValue != null].filter(Boolean).length;
     if (supplied !== 1) throw new ActionError({ code: "BAD_REQUEST", message: "Une seule valeur non nulle doit être fournie." });
     if (definition.type === "STRING" && input.stringValue == null) throw new ActionError({ code: "BAD_REQUEST", message: "Une valeur texte est requise." });
