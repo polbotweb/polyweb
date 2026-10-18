@@ -1,25 +1,34 @@
 /** Helpers des écrans d'administration « Plateforme ». */
 import type { AstroGlobal } from "astro";
 import { auth } from "@/lib/auth";
-import { ensureDefaultSite, getSiteById, type Site } from "@/modules/sites/domain/sites";
+import { Effect } from "effect";
+import { DbError } from "@/lib/effect/errors";
+import { ensureDefaultSiteEffect, getSiteByIdEffect, type Site } from "@/modules/sites/domain/sites";
 import type { FieldDefinition } from "@/core/content-types/fields";
 
 export const ADMIN_SITE_COOKIE = "pw_admin_site";
 
 /** Site administré : cookie de sélection (écran Sites) sinon site résolu par Host, sinon défaut. */
-export async function getAdminSite(Astro: Pick<AstroGlobal, "cookies" | "locals">): Promise<Site> {
-  const chosen = Astro.cookies.get(ADMIN_SITE_COOKIE)?.value;
-  if (chosen) {
-    const s = await getSiteById(chosen).catch(() => undefined);
-    if (s) return s;
-  }
-  return Astro.locals.site ?? (await ensureDefaultSite());
-}
+export const getAdminSiteEffect = (Astro: Pick<AstroGlobal, "cookies" | "locals">): Effect.Effect<Site, DbError> =>
+  Effect.gen(function* () {
+    const chosen = Astro.cookies.get(ADMIN_SITE_COOKIE)?.value;
+    if (chosen) {
+      // Cookie obsolète ou base indisponible : on retombe sur le site résolu.
+      const s = yield* getSiteByIdEffect(chosen).pipe(Effect.orElseSucceed(() => undefined));
+      if (s) return s;
+    }
+    return Astro.locals.site ?? (yield* ensureDefaultSiteEffect);
+  });
 
-export async function userCan(userId: string, permissions: Record<string, string[]>): Promise<boolean> {
-  const r = await auth.api.userHasPermission({ body: { userId, permissions } });
-  return !!r.success;
-}
+export const getAdminSite = (Astro: Pick<AstroGlobal, "cookies" | "locals">): Promise<Site> => Effect.runPromise(getAdminSiteEffect(Astro));
+
+/** RBAC better-auth ; un échec de l'appel devient `DbError` (opération `auth.userCan`). */
+export const userCanEffect = (userId: string, permissions: Record<string, string[]>) =>
+  Effect.tryPromise({ try: () => auth.api.userHasPermission({ body: { userId, permissions } }), catch: (cause) => new DbError({ operation: "auth.userCan", cause }) }).pipe(
+    Effect.map((r) => !!r.success),
+  );
+
+export const userCan = (userId: string, permissions: Record<string, string[]>): Promise<boolean> => Effect.runPromise(userCanEffect(userId, permissions));
 
 /** Lit les valeurs d'un FormData pour une liste de champs, préfixe `${prefix}__`. */
 export function readFieldValues(form: FormData, fields: readonly FieldDefinition[], prefix: string): Record<string, unknown> {

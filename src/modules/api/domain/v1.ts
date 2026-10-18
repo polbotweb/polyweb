@@ -11,11 +11,10 @@ import { AppConfig } from '@/lib/effect/config';
 import * as Content from '@/modules/content/domain/content.effect';
 import { pickTranslation, type FullEntry } from '@/modules/content/domain/entries';
 import type { ContentType } from '@/modules/content/domain/content-types';
-import { getSiteById } from '@/modules/sites/domain/sites';
+import { getSiteByIdEffect } from '@/modules/sites/domain/sites';
 import { DEFAULT_SITE_ID } from '@database/schemas/content.schema';
 import { authenticate, hasScope, rateLimit, requireScope, type ApiPrincipal } from './tokens';
 import { buildOpenApiDocument } from './openapi';
-import { DbError } from '@/lib/effect/errors';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -50,10 +49,7 @@ export const apiRequest = (ctx: APIContext) =>
     const fallbackSite = ctx.locals.site?.id ?? DEFAULT_SITE_ID;
     const principal = yield* authenticate(ctx.request.headers.get('authorization'), fallbackSite);
     const limit = yield* rateLimit(principal, clientIp(ctx));
-    const site = yield* Effect.tryPromise({
-      try: () => getSiteById(principal.siteId),
-      catch: (cause) => new DbError({ operation: 'sites.get', cause }),
-    });
+    const site = yield* getSiteByIdEffect(principal.siteId);
     if (!site) return yield* new NotFoundError({ entity: 'Site', id: principal.siteId });
     return { principal, site, limit };
   });

@@ -21,7 +21,7 @@ import {
   type ListOptions,
   type SaveEntryInput,
 } from './entries';
-import { getContentType, listContentTypes, type ContentType } from './content-types';
+import { getContentTypeEffect, listContentTypesEffect, type ContentType } from './content-types';
 import type { ContentStatus } from '@database/schemas/content.schema';
 
 export type { ContentError };
@@ -31,13 +31,10 @@ const orNotFound =
   <A, E>(effect: Effect.Effect<A | undefined, E>): Effect.Effect<A, E | NotFoundError> =>
     Effect.flatMap(effect, (value) => (value === undefined ? Effect.fail(new NotFoundError({ entity, id })) : Effect.succeed(value)));
 
-export const listTypes = (siteId: string): Effect.Effect<ContentType[], DbError> =>
-  Effect.tryPromise({ try: () => listContentTypes(siteId), catch: (cause) => new DbError({ operation: 'content.listTypes', cause }) });
+export const listTypes = (siteId: string): Effect.Effect<ContentType[], DbError> => listContentTypesEffect(siteId);
 
 export const findType = (siteId: string, slugOrId: string): Effect.Effect<ContentType, NotFoundError | DbError> =>
-  Effect.tryPromise({ try: () => getContentType(siteId, slugOrId), catch: (cause) => new DbError({ operation: 'content.findType', cause }) }).pipe(
-    orNotFound('ContentType', slugOrId),
-  );
+  getContentTypeEffect(siteId, slugOrId).pipe(orNotFound('ContentType', slugOrId));
 
 export const list = (type: ContentType, opts: ListOptions) => listEntriesEffect(type, opts);
 
