@@ -20,7 +20,7 @@ jobs:
     env:
       SITE_URL: ${{ vars.SITE_URL }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v5
         with:
@@ -45,7 +45,7 @@ jobs:
     name: Security Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v5
         with:
@@ -89,7 +89,7 @@ jobs:
       SMTP_FROM_EMAIL: ci@test.local
       SMTP_HOST: localhost
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v5
         with:
@@ -162,7 +162,7 @@ jobs:
       SMTP_FROM_EMAIL: ci@test.local
       SMTP_HOST: localhost
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v5
         with:
@@ -234,7 +234,7 @@ jobs:
       SMTP_FROM_EMAIL: ci@test.local
       SMTP_HOST: localhost
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v5
         with:
@@ -323,7 +323,7 @@ jobs:
       BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
       BETTER_AUTH_URL: ${{ vars.BETTER_AUTH_URL }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v5
         with:
