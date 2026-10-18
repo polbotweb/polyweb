@@ -12,7 +12,8 @@
  * les versions Promise. Voir docs/effect.md (« État de la migration »).
  */
 import { Effect } from 'effect';
-import { DbError } from '@/lib/effect/errors';
+import type { DbError } from '@/lib/effect/errors';
+import { dbTry } from '@/lib/effect/run';
 
 import * as blogadmineditorLoader from './blog-admin-editor.loader';
 import * as blogadminmoderationLoader from './blog-admin-moderation.loader';
@@ -27,13 +28,11 @@ import * as servicesLoader from '@/modules/services/loaders';
 import * as servicesAdminLoader from '@/modules/services/admin/loader';
 import * as authData from '@/lib/auth-data';
 
-/** Élève un loader Promise en Effect typé (`DbError` avec la cause d'origine). */
+/** Élève un loader Promise en Effect typé (`DbError` avec la cause d'origine) — via `dbTry`. */
 export const liftLoader =
   <Args extends unknown[], R>(operation: string, loader: (...args: Args) => Promise<R>) =>
   (...args: Args): Effect.Effect<R, DbError> =>
-    Effect.tryPromise({ try: () => loader(...args), catch: (cause) => new DbError({ operation, cause }) }).pipe(
-      Effect.withSpan(`loader ${operation}`),
-    );
+    dbTry(operation, () => loader(...args), `loader ${operation}`);
 
 export const BlogAdminEditorLoaderEffect = {
   getBlogPostEditorData: liftLoader('blog-admin-editor.getBlogPostEditorData', blogadmineditorLoader.getBlogPostEditorData),

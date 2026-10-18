@@ -7,9 +7,13 @@
 import { Effect, Exit } from 'effect';
 import { DbError, OperationError } from './errors';
 
-/** Requête Promise (Drizzle, cache…) en Effect, échec typé `DbError`. */
-export const dbTry = <A>(operation: string, f: () => Promise<A>): Effect.Effect<A, DbError> =>
-  Effect.tryPromise({ try: f, catch: (cause) => new DbError({ operation, cause }) }).pipe(Effect.withSpan(`db.${operation}`));
+/**
+ * Helper unique d'accès base en Effect (core) : requête Promise (Drizzle, cache…)
+ * → `Effect<A, DbError>` avec la cause d'origine et un span (`db.<op>` par défaut).
+ * `liftLoader` (src/database/loaders/effect.ts) et `core/locks` reposent dessus.
+ */
+export const dbTry = <A>(operation: string, f: () => Promise<A>, span = `db.${operation}`): Effect.Effect<A, DbError> =>
+  Effect.tryPromise({ try: f, catch: (cause) => new DbError({ operation, cause }) }).pipe(Effect.withSpan(span));
 
 /** Exécute l'Effect ; en échec, relève la cause d'origine (ou l'erreur typée) / le défaut. */
 export async function runOrThrow<A, E>(effect: Effect.Effect<A, E>): Promise<A> {
