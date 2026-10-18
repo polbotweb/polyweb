@@ -152,3 +152,28 @@ Domain-specific behavior stays in the module. Transactional capabilities such as
 ## Reference modules
 
 `Blog` is the first complete editorial module. `Services` is the second module and serves as the architectural reuse proof for a non-blog resource. Future modules should be accepted only when they can reuse these same boundaries with minimal new infrastructure.
+
+## Scaffolding (`pnpm module:new`) and core abstractions
+
+`pnpm module:new <domain> [--entity=<entity>]` generates, in addition to the module contract, loaders, admin
+resource and components, a module wired to the core Effect abstractions:
+
+| File | Core abstraction |
+| --- | --- |
+| `schema/index.ts` | content table, `<domain>_revisions`, `<domain>_locks` (lock columns expected by `core/locks`) |
+| `domain/workflow.ts` | `WorkflowDefinition` (`core/workflow`): `DRAFT` / `PUBLISHED` / `ARCHIVED` transitions |
+| `locks.ts` | `defineLockResource` + `drizzleLockStore` (`core/locks`): user + session owner, same-user takeover, TTL, purge |
+| `permissions/index.ts` | `require<Pascal>Permission`, an Effect guard over `requireActionPermission` (better-auth RBAC) |
+| `services/<entity>.service.ts` | Effect service: `dbTry` writes, lock check, workflow check, revision on each write |
+| `loaders/<entity>.loader.ts` | Effect loader (`dbTry`) + `load<Pascal>` Promise adapter (`runOrThrow`) |
+| `actions/index.ts` | Astro actions with an Effect prologue (`effectHandler`, permission guard, lock owner from session) |
+
+The module declares `publication`, `revisions` and `locks` capabilities with their providers. Not generated on
+purpose (manual steps printed by the generator): the migration (export the schema from
+`src/database/schemas/index.ts`, then `pnpm db:generate`), the `<domain>` namespace in the access-control
+statements, the re-export of the actions from `src/actions/index.ts`, and the page route.
+
+`tests/unit/scripts/new-module.test.ts` generates a module inside the repository (ignored `tmp*` folder), runs
+`tsc --noEmit` on every generated TypeScript file against the real core code, and imports `module.ts` so the
+capability contract is checked at load time.
+

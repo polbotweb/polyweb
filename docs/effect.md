@@ -139,8 +139,20 @@ Abstraction core, indépendante de l'entité, utilisable par tout module :
 - Erreurs `LockHeldError` / `LockExpiredError` (messages fr/en/es/ar), traduites en `CONFLICT` par `toActionError`.
 - `src/core/locks/service.ts` accède à la base : il s'importe explicitement (hors barrel `@/core`).
 
-État : abstraction livrée et testée (`tests/unit/core-locks.test.ts`) ; **migration des appels services/blog
-vers ce service : à faire** (les implémentations par module restent en place d'ici là).
+- Reprise par soi (`acquireLock(…, { takeOver: true })`) : un verrou détenu par le **même utilisateur** dans une
+  autre session échoue d'abord en `LockHeldError { sameUser: true }` (message « Vous éditez déjà ce contenu dans une
+  autre session — reprendre ici ? ») ; après confirmation dans l'UI, `takeOver` transfère le verrou de façon
+  atomique et renvoie `tookOverFrom` (session évincée), que l'action audite (`SERVICE_LOCK_TAKEOVER`,
+  `BLOG_POST_LOCK_TAKEOVER`). Un autre utilisateur reste bloqué jusqu'à expiration ou `forceReleaseLock`
+  (libération administrative — **aucune action/UI d'administration ne l'expose encore**).
+- `defineLockResource(type, store, { ttlMs })` : déclaration par module (`src/modules/services/locks.ts`,
+  `src/modules/blog/locks.ts`, modules générés par `pnpm module:new`) ; `lockLocaleFrom(headers)` pour l'i18n.
+
+État : services et blog migrés (actions, mise à jour/restauration/actions groupées, UI de confirmation) ; les deux
+anciennes implémentations sont supprimées. Le blog passe de « propriétaire = utilisateur » à « utilisateur +
+session » (même politique partout). Tests : `tests/unit/core-locks.test.ts` (politique, expiration, propriétaire,
+concurrence en mémoire) et `tests/integration/locks/core-locks-pg.test.ts` (Postgres réel : 8 acquisitions
+concurrentes → un seul gagnant, expiration, reprise, libération administrative).
 
 ## Helper unique d'accès base
 
