@@ -3,6 +3,7 @@
  * code de sortie, libération du pool Drizzle et du runtime partagé.
  */
 import { Cause, Data, Effect, Exit } from 'effect';
+import type { PoolClient, QueryResultRow } from 'pg';
 import { c } from './_utils';
 
 export class ScriptError extends Data.TaggedError('ScriptError')<{ readonly step: string; readonly cause?: unknown }> {
@@ -29,3 +30,26 @@ export function runScript<E>(name: string, program: Effect.Effect<void, E>, opti
     process.exit(1);
   });
 }
+
+// ─── Briques communes des commandes (connexion, requêtes, transaction) ──────
+
+
+/** Client pg emprunté au pool pour la durée de `use`, toujours rendu (succès, échec, interruption). */
+export const withPgClient = <A, E>(
+  acquire: () => Promise<PoolClient>,
+  use: (client: PoolClient) => Effect.Effect<A, E>,
+): Effect.Effect<A, E | ScriptError> =>
+  Effect.acquireUseRelease(step('connexion', acquire), use, (client) => Effect.sync(() => client.release()));
+
+/** Requête SQL nommée : un échec devient `ScriptError` (étape = libellé). */
+export const sqlStep = <R extends QueryResultRow = QueryResultRow>(client: PoolClient, label: string, text: string, params?: unknown[]) =>
+  step(label, () => client.query<R>(text, params));
+
+/** BEGIN … COMMIT ; ROLLBACK (best effort) si le corps échoue. */
+export const inTransaction = <A, E>(client: PoolClient, body: Effect.Effect<A, E>): Effect.Effect<A, E | ScriptError> =>
+  Effect.gen(function* () {
+    yield* sqlStep(client, 'BEGIN', 'BEGIN');
+    const result = yield* body.pipe(Effect.onError(() => Effect.ignore(sqlStep(client, 'ROLLBACK', 'ROLLBACK'))));
+    yield* sqlStep(client, 'COMMIT', 'COMMIT');
+    return result;
+  });
