@@ -18,9 +18,11 @@ interface Props {
   ogImage?: string;
   ogType?: string;
   jsonLd?: string;
+  /** URL canonique explicite (relative ou absolue) ; défaut : chemin courant. */
+  canonical?: string;
 }
 
-const { title: titleOverride, description: descriptionOverride, alternateUrls, ogImage: ogImageOverride, ogType, jsonLd } = Astro.props;
+const { title: titleOverride, description: descriptionOverride, alternateUrls, ogImage: ogImageOverride, ogType, jsonLd, canonical: canonicalOverride } = Astro.props;
 const locale = toLocale(Astro.currentLocale) as Locale;
 const direction = getDirection(locale);
 const t = await getCommonTranslations(locale);
@@ -92,7 +94,9 @@ const legalHeading = footerLegalMeta?.showHeading !== false
   ? (siteData?.footerLegalHeading || footerLegalMeta?.displayLabel || t.footer.legalHeading)
   : undefined;
 
-const canonicalUrl = Astro.url.pathname;
+// URLs absolues (exigées pour canonical/hreflang/og:url) sur l'origine de la requête (multi-site).
+const absoluteUrl = (href: string) => new URL(href, Astro.url.origin).href;
+const canonicalUrl = absoluteUrl(canonicalOverride ?? Astro.url.pathname);
 ---
 
 <html lang={locale} dir={direction}>
@@ -105,9 +109,9 @@ const canonicalUrl = Astro.url.pathname;
     <meta name="description" content={metaDesc} />
     <link rel="canonical" href={canonicalUrl} />
     {alternateUrls && Object.entries(alternateUrls).map(([lang, url]) => (
-      <link rel="alternate" hreflang={lang} href={url} />
+      <link rel="alternate" hreflang={lang} href={absoluteUrl(url)} />
     ))}
-    {alternateUrls && <link rel="alternate" hreflang="x-default" href={alternateUrls['fr'] ?? canonicalUrl} />}
+    {alternateUrls && <link rel="alternate" hreflang="x-default" href={alternateUrls['fr'] ? absoluteUrl(alternateUrls['fr']) : canonicalUrl} />}
     <meta property="og:title" content={metaTitle} />
     <meta property="og:description" content={metaDesc} />
     <meta property="og:type" content={ogType ?? "website"} />
