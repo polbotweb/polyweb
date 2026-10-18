@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { resolveBlogTenant, auditBlog, blogOrganizationIdSchema, blogRateLimit, invalidateBlogCache, requireBlogPermission } from "./_helpers";
+import { resolveBlogTenant, auditBlog, blogOrganizationIdSchema, blogRateLimitEffect, invalidateBlogCache, requireBlogPermission } from "./_helpers";
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { eq, and, count, isNull } from "drizzle-orm";
@@ -13,13 +13,10 @@ import { actionTry, effectHandler, requireUser } from "@/lib/effect/action";
 
 export const createBlogReview = defineAction({
   input: blogReviewFormSchema,
-  handler: effectHandler((input, context) => actionTry("blog/review.createBlogReview", async () => {
-    const user = context.locals.user;
-    if (!user) {
-      throw new ActionError({ code: "UNAUTHORIZED", message: "Vous devez être connecté pour laisser un avis." });
-    }
-    blogRateLimit(context, user.id, "review-create", { window: 3600, max: 10 });
-
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireUser(context, "Vous devez être connecté pour laisser un avis.");
+    yield* blogRateLimitEffect(user.id, "review-create", { window: 3600, max: 10 });
+    return yield* actionTry("blog/review.createBlogReview", async () => {
     const content = sanitizeHtml(input.content);
     const db = getDrizzle();
     const review = await db.transaction(async (tx) => {
@@ -70,6 +67,7 @@ export const createBlogReview = defineAction({
 
     invalidateBlogCache();
     return { id: review.id, status: review.status };
+    });
   })),
 });
 
