@@ -54,7 +54,9 @@
     "db:wait": "npx tsx src/database/commands/db.wait.ts",
     "db:baseline": "npx tsx src/database/commands/db.baseline.ts",
     "admin:create": "npx tsx src/database/commands/db.create-admin.ts",
-    "build:vercel": "ASTRO_ADAPTER=vercel astro build"
+    "build:vercel": "ASTRO_ADAPTER=vercel astro build",
+    "test:a11y": "playwright test tests/e2e/a11y.spec.ts --project=chromium",
+    "test:visual": "playwright test tests/e2e/visual-regression.spec.ts --project=chromium"
   },
   "dependencies": {
     "@astrojs/node": "11.1.5",
