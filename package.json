@@ -61,7 +61,8 @@
     "search:reindex": "npx tsx src/database/commands/search.reindex.ts",
     "search:pagefind": "npx tsx src/database/commands/search.pagefind.ts",
     "db:backup": "npx tsx src/database/commands/db.backup.ts",
-    "db:restore": "npx tsx src/database/commands/db.restore.ts"
+    "db:restore": "npx tsx src/database/commands/db.restore.ts",
+    "cli:build": "tsc -p packages/create-polyweb/tsconfig.json"
   },
   "dependencies": {
     "@astrojs/node": "11.1.5",
@@ -112,6 +113,7 @@
     "@axe-core/playwright": "^4.14.0",
     "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.62.1",
+    "@types/node": "^22.20.5",
     "@types/nodemailer": "^7.0.12",
     "@types/pg": "^8.23.1",
     "@typescript-eslint/parser": "^8.68.0",
@@ -124,6 +126,7 @@
     "pagefind": "^1.5.2",
     "s3rver": "^3.7.1",
     "tsx": "^4.23.13",
+    "typescript": "5.9.3",
     "vitest": "^4.1.11",
     "wait-on": "^9.1.0"
   },

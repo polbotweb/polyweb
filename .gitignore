@@ -66,3 +66,4 @@ logs/
 backups/
 *.dump
 *.sql.gz
+packages/create-polyweb/dist/

@@ -14,7 +14,7 @@ const out = mkdtempSync(join(tmpdir(), 'pw-backups-'));
 afterAll(() => rmSync(out, { recursive: true, force: true }));
 
 function memoryStorage(initial: Record<string, string> = {}): StorageShape & { files: Map<string, Uint8Array> } {
-  const files = new Map(Object.entries(initial).map(([k, v]) => [k, new TextEncoder().encode(v)]));
+  const files = new Map<string, Uint8Array>(Object.entries(initial).map(([k, v]) => [k, new TextEncoder().encode(v)]));
   return {
     files,
     driver: 'local',

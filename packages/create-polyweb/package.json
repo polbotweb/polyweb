@@ -1,0 +1,25 @@
+{
+  "name": "create-polyweb",
+  "version": "0.1.0",
+  "description": "Crée un nouveau projet Polyweb (Astro + Drizzle + Better Auth) : npm create polyweb@latest mon-site",
+  "type": "module",
+  "bin": {
+    "create-polyweb": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "effect": "4.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "^5"
+  }
+}
