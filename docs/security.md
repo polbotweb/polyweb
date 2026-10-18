@@ -329,6 +329,7 @@ Toutes les actions admin utilisent des schemas Zod stricts :
 | `SMTP_FROM_NAME` | Nom expéditeur | Non |
 | `BREVO_API_KEY` / `RESEND_API_KEY` | API keys SMTP | ✅ |
 | `SMTP_HOST/PORT/USER/PASS` | Credentials Nodemailer | ✅ |
+| `ALLOWED_HOSTS` | Hôtes supplémentaires (virgules) ajoutés à `security.allowedDomains`, lus au build ; voir §12 | Non |
 
 > **Règle** : jamais de secret dans le code source. Toutes les variables sensibles sont lues depuis `.env` (non versionné).
 
@@ -359,3 +360,22 @@ figeait esbuild 0.18.20). Résultat : `pnpm audit --prod` → aucune vulnérabil
   configuré. L'avis ne déclarant pas 4.3.0 comme correctif, ce point est à re-vérifier : si l'avis est
   élargi à 4.3.x sans correctif, l'ignorer explicitement (`pnpm.auditConfig.ignoreGhsas`) avec la
   justification d'exposition ci-dessus, et le retirer dès qu'un correctif est publié.
+
+---
+
+## 12. Hôtes autorisés (`security.allowedDomains`, `ALLOWED_HOSTS`)
+
+Depuis `@astrojs/node` 11.1.8, l'en-tête `Host` (et `X-Forwarded-Host`) n'alimente `Astro.url` que
+s'il correspond à `security.allowedDomains` ; sinon Astro replie sur `localhost:<port>` (protection
+contre l'injection d'en-tête Host). `astro.config.mjs` construit la liste au build :
+
+- l'hôte de `SITE_URL` ;
+- `localhost` et `127.0.0.1` si `SITE_URL` est une adresse de boucle locale (dev, preview, E2E) ;
+- les hôtes de `ALLOWED_HOSTS` (séparés par des virgules), à renseigner pour chaque domaine
+  multi-site servi par l'instance.
+
+Le contrôle CSRF par Origin (`src/lib/security/origin-check.ts`) accepte une requête si son Origin
+égale l'origine d'`Astro.url` **ou** si l'hôte de l'Origin égale l'en-tête `Host` reçu : un formulaire
+servi sur un hôte non listé reste utilisable, et une requête forgée depuis un autre site (Origin de
+l'attaquant, Host de la cible) reste refusée. Lister les domaines dans `ALLOWED_HOSTS` reste
+recommandé pour que `Astro.url` reflète le domaine réellement servi.

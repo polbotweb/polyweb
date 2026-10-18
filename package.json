@@ -114,7 +114,6 @@
     "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.62.1",
     "@types/node": "^22.20.5",
-    "@types/nodemailer": "^7.0.12",
     "@types/pg": "^8.23.1",
     "@typescript-eslint/parser": "^8.68.0",
     "@vitest/coverage-v8": "^4.1.11",
