@@ -6,6 +6,7 @@ import 'dotenv/config';
 import { Effect } from 'effect';
 import { getDbUrl } from '../env';
 import { logTarget } from './_utils';
+import { runScript, step } from './_effect';
 import { appRuntime } from '@/lib/effect/runtime';
 import { createBackup } from '@/lib/backup/backup';
 
@@ -25,12 +26,5 @@ const program = Effect.gen(function* () {
   );
 });
 
-appRuntime
-  .runPromise(program)
-  .then(() => appRuntime.dispose())
-  .then(() => process.exit(0))
-  .catch(async (e) => {
-    console.error('[db:backup] échec :', e instanceof Error ? e.message : e);
-    await appRuntime.dispose();
-    process.exit(1);
-  });
+// Le programme requiert les services de l'AppLayer (Storage) : exécuté sur le runtime partagé.
+runScript('db:backup', step('sauvegarde', () => appRuntime.runPromise(program)), { dispose: () => appRuntime.dispose() });
