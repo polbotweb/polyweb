@@ -1,0 +1,89 @@
+---
+/** Soumissions d'un formulaire (brique g) : liste, statut (lu / spam), suppression, export CSV. */
+import { Effect } from 'effect';
+import { requirePermission } from '@/lib/auth-guards';
+import PlatformAdminShell from '@organisms/PlatformAdmin/PlatformAdminShell.astro';
+import { getPlatformAdminUrl } from '@/core/localization/platform-labels';
+import { getAdminSite, userCan, formatDate } from '@/lib/platform/admin';
+import { logAuditEvent, extractIp } from '@/lib/audit';
+import { runAppResult } from '@/lib/effect/http';
+import { ForbiddenError } from '@/lib/effect/errors';
+import { getForm, listSubmissions, setSubmissionStatus, deleteSubmission } from '@/modules/forms/domain/forms';
+import { labelFor } from '@/core/content-types/fields';
+import type { FormSubmissionStatus } from '@database/schemas/forms.schema';
+
+export const prerender = false;
+const result = await requirePermission(Astro, { formSubmission: ['read'] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT, user } = result;
+const site = await getAdminSite(Astro);
+const loaded = await runAppResult(getForm(site.id, Astro.params.id!));
+if (!loaded.ok) return Astro.redirect(getPlatformAdminUrl(locale, 'forms'));
+const form = loaded.value;
+const selfUrl = `${getPlatformAdminUrl(locale, 'forms', form.id)}/submissions`;
+const [canDelete, canExport] = await Promise.all([userCan(user.id, { formSubmission: ['delete'] }), userCan(user.id, { formSubmission: ['export'] })]);
+let error: string | null = null;
+
+if (Astro.request.method === 'POST') {
+  const fd = await Astro.request.formData();
+  const intent = String(fd.get('intent') ?? '');
+  const id = String(fd.get('id') ?? '');
+  const r = await runAppResult(Effect.gen(function* () {
+    if (intent === 'delete') {
+      if (!canDelete) return yield* new ForbiddenError({ reason: 'Permission refusée' });
+      return yield* deleteSubmission(form.id, id);
+    }
+    return yield* setSubmissionStatus(form.id, id, intent as FormSubmissionStatus);
+  }));
+  if (r.ok) {
+    if (intent === 'delete') void logAuditEvent({ userId: user.id, action: 'FORM_SUBMISSION_DELETE', resource: 'form_submission', resourceId: id, metadata: { form: form.slug }, ipAddress: extractIp(Astro.request.headers, Astro.clientAddress), userAgent: Astro.request.headers.get('user-agent') });
+    return Astro.redirect(`${selfUrl}${Astro.url.search}`, 303);
+  }
+  error = r.error.message;
+}
+
+const status = (['new', 'read', 'spam'] as const).find((s) => s === Astro.url.searchParams.get('status'));
+const page = Math.max(Number(Astro.url.searchParams.get('page')) || 1, 1);
+const listed = await runAppResult(listSubmissions(form.id, { limit: 50, offset: (page - 1) * 50, status }));
+const { items, total } = listed.ok ? listed.value : { items: [], total: 0 };
+const statusLabel = { new: 'nouveau', read: 'lu', spam: 'spam' } as const;
+---
+<PlatformAdminShell t={authT} locale={locale} section="forms" title={`Soumissions — ${form.name}`}>
+  <a slot="actions" class="rounded-md border px-3 py-2 text-sm" href={getPlatformAdminUrl(locale, 'forms', form.id)}>← Formulaire</a>
+  {error && <p class="rounded-md border border-error bg-error/10 p-3 text-sm" role="alert">{error}</p>}
+  <div class="flex flex-wrap items-center gap-3 text-sm">
+    <span>{total} soumission(s)</span>
+    <a class:list={['hover:underline', !status && 'font-semibold']} href={selfUrl}>Toutes</a>
+    {(['new', 'read', 'spam'] as const).map((s) => <a class:list={['hover:underline', status === s && 'font-semibold']} href={`${selfUrl}?status=${s}`}>{statusLabel[s]}</a>)}
+    {canExport && <a class="ms-auto rounded-md border px-3 py-1.5" href={`/api/admin/forms/${form.id}/export.csv?locale=${locale}`}>Exporter en CSV</a>}
+  </div>
+  {items.length === 0 ? <p class="text-sm">Aucune soumission.</p> : (
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm" data-testid="submissions">
+        <thead><tr class="border-b"><th class="py-2 text-start">Date</th><th class="text-start">État</th>{form.fields.map((f) => <th class="text-start">{labelFor(f.label, locale)}</th>)}<th></th></tr></thead>
+        <tbody>
+          {items.map((s) => (
+            <tr class="border-b align-top">
+              <td class="py-2 whitespace-nowrap">{formatDate(s.createdAt, locale)}</td>
+              <td>{statusLabel[s.status]}</td>
+              {form.fields.map((f) => { const v = s.data[f.name]; return <td class="max-w-xs whitespace-pre-wrap break-words">{Array.isArray(v) ? v.join(', ') : v === undefined ? '' : String(v)}</td>; })}
+              <td class="whitespace-nowrap text-end">
+                <form method="post" class="inline-flex gap-2">
+                  <input type="hidden" name="id" value={s.id} />
+                  {s.status !== 'read' && <button name="intent" value="read" class="hover:underline">Marquer lu</button>}
+                  {s.status !== 'spam' && <button name="intent" value="spam" class="hover:underline">Spam</button>}
+                  {canDelete && <button name="intent" value="delete" class="text-error hover:underline" data-confirm="Supprimer cette soumission ?">Supprimer</button>}
+                </form>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+  {total > page * 50 && <a class="text-sm underline" href={`${selfUrl}?page=${page + 1}${status ? `&status=${status}` : ''}`}>Page suivante →</a>}
+</PlatformAdminShell>
+<script>
+  import { initConfirmButtons } from '@/lib/platform/confirm';
+  initConfirmButtons();
+</script>
