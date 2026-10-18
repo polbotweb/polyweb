@@ -15,7 +15,8 @@ import { z } from 'astro/zod';
 import { auth } from '@/lib/auth';
 import { getDrizzle, shutdownDb, schema } from '../drizzle';
 import { c, logTarget, confirmProd } from './_utils';
-import { runScript, step } from './_effect';
+import { Effect } from 'effect';
+import { runScript, ScriptError, step } from './_effect';
 
 const MIN = 12;
 /** Better Auth 1.7 : issuer des comptes credential (createLocalAccountIssuer('credential')). */
@@ -33,24 +34,17 @@ async function resolvePassword(): Promise<string | undefined> {
   return process.env.ADMIN_PASSWORD;
 }
 
-async function main() {
-  logTarget();
-  const emailR = adminEmailSchema.safeParse(arg('email') ?? process.env.ADMIN_EMAIL ?? '');
-  if (!emailR.success) throw new Error(emailR.error.issues[0]?.message ?? 'ADMIN_EMAIL invalide');
-  const pw = await resolvePassword();
-  if (!pw) throw new Error('ADMIN_PASSWORD (ou ADMIN_PASSWORD_FILE) est requis');
-  const pwR = adminPasswordSchema.safeParse(pw);
-  if (!pwR.success) throw new Error(pwR.error.issues[0]?.message ?? 'ADMIN_PASSWORD invalide');
-  await confirmProd('création administrateur');
+/** Validation zod → ScriptError (message de la première erreur). */
+const parseOrFail = <T>(label: string, schema: z.ZodType<T>, value: unknown) =>
+  Effect.suspend(() => {
+    const r = schema.safeParse(value);
+    return r.success ? Effect.succeed(r.data) : Effect.fail(new ScriptError({ step: label, cause: r.error.issues[0]?.message ?? `${label} invalide` }));
+  });
 
-  const db = getDrizzle();
-  const email = emailR.data;
-  const name = arg('name') ?? process.env.ADMIN_NAME ?? 'Administrateur';
-  // Utilise le hasher configuré dans l'instance Better Auth (même format que sign-up).
-  const hashed = await (await auth.$context).password.hash(pwR.data);
-
-  const [existing] = await db.select().from(schema.user).where(eq(schema.user.email, email));
-  if (existing) {
+/** Compte existant : rôle admin forcé, mot de passe réinitialisé (compte credential créé s'il manque). */
+const updateExisting = (existing: { id: string }, email: string, hashed: string) =>
+  step('mise à jour de l’administrateur', async () => {
+    const db = getDrizzle();
     await db.update(schema.user).set({ role: 'admin', emailVerified: true, updatedAt: new Date() }).where(eq(schema.user.id, existing.id));
     const updated = await db.update(schema.account).set({ password: hashed, issuer: CREDENTIAL_ISSUER, accountId: existing.id, updatedAt: new Date() })
       .where(and(eq(schema.account.userId, existing.id), eq(schema.account.providerId, 'credential'))).returning({ id: schema.account.id });
@@ -58,18 +52,33 @@ async function main() {
       await db.insert(schema.account).values({ id: randomUUID(), accountId: existing.id, issuer: CREDENTIAL_ISSUER, providerId: 'credential', userId: existing.id, password: hashed, createdAt: new Date(), updatedAt: new Date() });
     }
     console.log(c.green(`✅ Administrateur existant mis à jour : ${email} (rôle admin, mot de passe réinitialisé)`));
-    return;
-  }
-
-  const id = randomUUID();
-  const now = new Date();
-  await db.transaction(async (tx) => {
-    await tx.insert(schema.user).values({ id, name, email, emailVerified: true, role: 'admin', createdAt: now, updatedAt: now });
-    await tx.insert(schema.account).values({ id: randomUUID(), accountId: id, issuer: CREDENTIAL_ISSUER, providerId: 'credential', userId: id, password: hashed, createdAt: now, updatedAt: now });
   });
-  console.log(c.green(`✅ Administrateur créé : ${email}`));
-}
 
+const createAdmin = (email: string, name: string, hashed: string) =>
+  step('création de l’administrateur', async () => {
+    const id = randomUUID();
+    const now = new Date();
+    await getDrizzle().transaction(async (tx) => {
+      await tx.insert(schema.user).values({ id, name, email, emailVerified: true, role: 'admin', createdAt: now, updatedAt: now });
+      await tx.insert(schema.account).values({ id: randomUUID(), accountId: id, issuer: CREDENTIAL_ISSUER, providerId: 'credential', userId: id, password: hashed, createdAt: now, updatedAt: now });
+    });
+    console.log(c.green(`✅ Administrateur créé : ${email}`));
+  });
+
+const program = Effect.gen(function* () {
+  logTarget();
+  const email = yield* parseOrFail('ADMIN_EMAIL', adminEmailSchema, arg('email') ?? process.env.ADMIN_EMAIL ?? '');
+  const pw = yield* step('lecture du mot de passe', resolvePassword);
+  if (!pw) return yield* Effect.fail(new ScriptError({ step: 'ADMIN_PASSWORD', cause: 'ADMIN_PASSWORD (ou ADMIN_PASSWORD_FILE) est requis' }));
+  const password = yield* parseOrFail('ADMIN_PASSWORD', adminPasswordSchema, pw);
+  yield* step('confirmation PROD', () => confirmProd('création administrateur'));
+
+  const name = arg('name') ?? process.env.ADMIN_NAME ?? 'Administrateur';
+  // Utilise le hasher configuré dans l'instance Better Auth (même format que sign-up).
+  const hashed = yield* step('hachage du mot de passe', async () => (await auth.$context).password.hash(password));
+  const [existing] = yield* step('recherche du compte', () => getDrizzle().select().from(schema.user).where(eq(schema.user.email, email)));
+  yield* existing ? updateExisting(existing, email, hashed) : createAdmin(email, name, hashed);
+});
 
 // Entrée Effect : erreurs typées (ScriptError), code de sortie ; pool fermé dans tous les cas.
-runScript('admin:create', step('admin:create', main), { dispose: shutdownDb });
+runScript('admin:create', program, { dispose: shutdownDb });
