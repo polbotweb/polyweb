@@ -12,6 +12,7 @@ export * from "@/core/audit";
 export * from "@/core/cache";
 export * from "@/core/revision";
 export * from "@/core/locks";
+export * from "@/core/bulk";
 export * from "@/core/engagement";
 export * from "@/core/moderation";
 export * from "@/core/notifications";

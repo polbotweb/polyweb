@@ -127,7 +127,7 @@
     "tsx": "^4.23.13",
     "typescript": "5.9.3",
     "vitest": "^4.1.11",
-    "wait-on": "^9.1.0"
+    "wait-on": "^9.5.1"
   },
   "pnpm": {
     "overrides": {
