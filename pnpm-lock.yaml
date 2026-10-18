@@ -210,19 +210,6 @@ importers:
         specifier: ^5
         version: 5.9.3
 
-  packages/create-polyweb:
-    dependencies:
-      effect:
-        specifier: 4.0.5
-        version: 4.0.5
-    devDependencies:
-      '@types/node':
-        specifier: ^22
-        version: 22.20.5
-      typescript:
-        specifier: ^5
-        version: 5.9.3
-
 packages:
 
   '@antfu/install-pkg@1.1.0':
@@ -4345,8 +4332,8 @@ packages:
     resolution: {integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==}
     hasBin: true
 
-  joi@18.2.9:
-    resolution: {integrity: sha512-2mD929bUVKUhOLQQEVhlf6EZ0Mlo0DeRb5MO7cViR9AXLtBauuccEtB1py9Ocxpo/P7ucnh442iY/iOwrh3IQw==}
+  joi@18.3.0:
+    resolution: {integrity: sha512-/RwAK4BAfzcdbdFg073tzq4/xhY6Q7lMd5AmjqTL6pu0QFJdEmtswgm8BvgwXvOKuPNYQ8XrdQrrW/gF65LiNw==}
     engines: {node: '>= 20'}
 
   jose@5.10.0:
@@ -10990,7 +10977,7 @@ snapshots:
 
   jiti@2.7.0: {}
 
-  joi@18.2.9:
+  joi@18.3.0:
     dependencies:
       '@hapi/address': 5.1.1
       '@hapi/formula': 3.0.2
@@ -13184,7 +13171,7 @@ snapshots:
   wait-on@9.5.1:
     dependencies:
       axios: 1.20.0
-      joi: 18.2.9
+      joi: 18.3.0
       lodash: 4.18.1
       rxjs: 7.8.2
     transitivePeerDependencies:
