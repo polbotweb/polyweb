@@ -38,6 +38,9 @@ const EXCLUDED_PATHS = ['tests/reports', 'packages/create-polyweb', 'public/uplo
 export function shouldCopy(rel: string): boolean {
   const parts = rel.split(sep).join('/').split('/');
   if (parts.some((p) => EXCLUDED.has(p) || /^\.env\.(?!example$)/.test(p))) return false;
+  // Dossiers de travail `tmp*` à la racine (ignorés par .gitignore) : jamais copiés — ils peuvent
+  // apparaître/disparaître pendant la copie (ex. tests parallèles) et n'appartiennent pas au modèle.
+  if (parts.length > 0 && /^tmp/.test(parts[0]!)) return false;
   const norm = parts.join('/');
   return !EXCLUDED_PATHS.some((p) => norm === p || norm.startsWith(`${p}/`));
 }
