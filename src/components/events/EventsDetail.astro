@@ -1,0 +1,27 @@
+---
+/**
+ * Page de détail du domaine events.
+ *
+ * La DTO arrive par props : la page a fait appel au loader. Ce composant se
+ * contente de composer les atomes de `molecules/`.
+ */
+import type { EventsDTO } from "@/modules/events/loaders/event.loader";
+import EventsCard from "@/components/events/EventsCard.astro";
+
+interface Props {
+  item: EventsDTO;
+}
+
+const { item } = Astro.props as Props;
+---
+
+<section class="flex flex-col gap-6">
+  <EventsCard id={item.id} title={item.id} href="#" />
+</section>
+
+<script>
+  import { initEvents } from "@/modules/events/client/init";
+
+  initEvents();
+  document.addEventListener("astro:after-swap", initEvents);
+</script>
