@@ -13,7 +13,10 @@ test.describe('CSP stricte', () => {
       await page.addInitScript(() => {
         (window as unknown as { __csp: string[] }).__csp = [];
         document.addEventListener('securitypolicyviolation', (e) => {
-          (window as unknown as { __csp: string[] }).__csp.push(`${e.violatedDirective} ${e.blockedURI} ${e.sample}`);
+          const t = e.target instanceof Element ? e.target.outerHTML.slice(0, 160) : String(e.target);
+          (window as unknown as { __csp: string[] }).__csp.push(
+            `${e.violatedDirective} ${e.blockedURI} ${e.sample} @${e.sourceFile}:${e.lineNumber}:${e.columnNumber} on ${t}`,
+          );
         });
       });
       const res = await page.goto(path, { waitUntil: 'load' });
