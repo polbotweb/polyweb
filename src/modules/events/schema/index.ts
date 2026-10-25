@@ -1,23 +1,68 @@
 /**
  * Tables du domaine events : contenu, révisions et verrous d'édition.
  *
- * À exporter depuis `src/database/schemas/index.ts` puis `pnpm db:generate`
+ * Exporté depuis `src/database/schemas.ts` puis `pnpm db:generate`
  * pour produire la migration (le générateur n'écrit aucune migration).
  */
-import { index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
-import { user } from "@database/schemas/auth.schema";
+import { sql } from "drizzle-orm";
+import { check, index, integer, pgTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import { organization, user } from "@database/schemas/auth.schema";
+import { mediaFiles } from "@database/schemas/media.schema";
+import { LOCALES } from "@i18n/config";
 import { EVENTS_STATUSES } from "../domain/workflow";
 
+/**
+ * Événement (catalogue éditorial). L'inscription / la réservation restent HORS
+ * du CMS Core (TODO §19.4) : `capacity` et `priceMinor` sont informatifs, aucune
+ * table d'inscription ici.
+ */
 export const events = pgTable("events", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  organizationId: text("organization_id"),
+  organizationId: text("organization_id").references(() => organization.id, { onDelete: "cascade" }),
   slug: text("slug").notNull(),
   title: text("title").notNull(),
   status: text("status", { enum: EVENTS_STATUSES }).default("DRAFT").notNull(),
+  startsAt: timestamp("starts_at", { withTimezone: true }),
+  endsAt: timestamp("ends_at", { withTimezone: true }),
+  timezone: text("timezone"),
+  capacity: integer("capacity"),
+  priceMinor: integer("price_minor"),
+  currency: varchar("currency", { length: 3 }),
+  coverImageId: text("cover_image_id").references(() => mediaFiles.id, { onDelete: "set null" }),
+  publishedAt: timestamp("published_at"),
   createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
-}, (table) => [uniqueIndex("events_org_slug_uidx").on(table.organizationId, table.slug)]);
+}, (table) => [
+  uniqueIndex("events_org_slug_uidx").on(table.organizationId, table.slug),
+  index("events_org_idx").on(table.organizationId),
+  index("events_status_starts_idx").on(table.status, table.startsAt),
+  check("events_dates_order", sql`${table.endsAt} IS NULL OR ${table.startsAt} IS NULL OR ${table.endsAt} >= ${table.startsAt}`),
+  check("events_capacity_positive", sql`${table.capacity} IS NULL OR ${table.capacity} > 0`),
+  check("events_price_non_negative", sql`${table.priceMinor} IS NULL OR ${table.priceMinor} >= 0`),
+]);
+
+/** Localisation relationnelle (pas de JSONB) : une ligne par locale. */
+export const eventTranslations = pgTable("event_translations", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  eventId: text("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  organizationId: text("organization_id").references(() => organization.id, { onDelete: "cascade" }),
+  locale: text("locale", { enum: LOCALES }).notNull(),
+  title: text("title").notNull(),
+  slug: text("slug").notNull(),
+  excerpt: text("excerpt"),
+  content: text("content").notNull().default(""),
+  venueName: text("venue_name"),
+  venueAddress: text("venue_address"),
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
+}, (table) => [
+  uniqueIndex("event_translations_event_locale_uidx").on(table.eventId, table.locale),
+  uniqueIndex("event_translations_org_locale_slug_uidx").on(table.organizationId, table.locale, table.slug).where(sql`${table.organizationId} IS NOT NULL`),
+  uniqueIndex("event_translations_global_locale_slug_uidx").on(table.locale, table.slug).where(sql`${table.organizationId} IS NULL`),
+]);
 
 /** Révisions (core/revision) : une ligne par écriture, pour l'historique et la restauration. */
 export const eventsRevisions = pgTable("events_revisions", {
