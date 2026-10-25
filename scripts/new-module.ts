@@ -352,7 +352,7 @@ assertResourceCompatibility(${camel}Module, ${entityCamel}AdminResource);
   [`${moduleDir}/schema/index.ts`]: `/**
  * Tables du domaine ${name} : contenu, révisions et verrous d'édition.
  *
- * À exporter depuis \`src/database/schemas/index.ts\` puis \`pnpm db:generate\`
+ * À exporter depuis \`src/database/schemas.ts\` puis \`pnpm db:generate\`
  * pour produire la migration (le générateur n'écrit aucune migration).
  */
 import { index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
@@ -793,7 +793,7 @@ console.log(`
 Module « ${name} » généré.
 
 Étapes suivantes :
-  1. exporter le schéma et générer la migration  (src/modules/${name}/schema → src/database/schemas/index.ts, pnpm db:generate)
+  1. exporter le schéma et générer la migration  (src/modules/${name}/schema → src/database/schemas.ts, pnpm db:generate)
      puis déclarer le namespace « ${name} » dans le contrôle d'accès (permissions/index.ts)
      compléter ${camel}Loader / load${pascal}()      (src/modules/${name}/loaders/${entity}.loader.ts)
   2. déclarer les capacités réelles         (capabilities.ts + module.ts)

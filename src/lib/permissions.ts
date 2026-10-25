@@ -39,6 +39,7 @@ export const statement = {
   plugin: ["read", "update"],
   tenant: ["create", "read", "update", "delete"],
   payment: ["read", "refund"],
+  events: ["create", "read", "update", "delete", "publish"],
 } as const;
 
 const platformAdmin = {
@@ -92,6 +93,10 @@ const cmsReadOnlyServices = {
   serviceReview: ["read"],
 } as const;
 
+/** Module events (catalogue éditorial ; inscriptions hors CMS Core). */
+const cmsAdminEvents = { events: ["create", "read", "update", "delete", "publish"] } as const;
+const cmsReadOnlyEvents = { events: ["read"] } as const;
+
 export const adminRole = ac.newRole({
   ...adminAc.statements,
   page: ["create", "read", "update", "delete", "publish"],
@@ -108,6 +113,7 @@ export const adminRole = ac.newRole({
   blogReview: ["read", "update", "delete", "moderate"],
   ...cmsAdminServices,
   ...platformAdmin,
+  ...cmsAdminEvents,
 });
 
 export const editorRole = ac.newRole({
@@ -123,6 +129,7 @@ export const editorRole = ac.newRole({
   blogReview: ["read", "update", "moderate"],
   ...cmsEditorServices,
   ...platformEditor,
+  ...cmsAdminEvents,
 });
 
 export const userRole = ac.newRole({
@@ -131,6 +138,7 @@ export const userRole = ac.newRole({
   blog: ["read"], blogCategory: ["read"], blogTag: ["read"], blogComment: ["read"], blogReview: ["read"],
   ...cmsReadOnlyServices,
   ...platformReadOnly,
+  ...cmsReadOnlyEvents,
 });
 
 export const orgOwnerRole = ac.newRole({
@@ -144,6 +152,7 @@ export const orgOwnerRole = ac.newRole({
   blogComment: ["read", "update", "delete", "moderate"], blogReview: ["read", "update", "delete", "moderate"],
   ...cmsAdminServices,
   ...platformEditor,
+  ...cmsAdminEvents,
 });
 
 export const orgAdminRole = ac.newRole({
@@ -157,6 +166,7 @@ export const orgAdminRole = ac.newRole({
   blogComment: ["read", "update", "delete", "moderate"], blogReview: ["read", "update", "delete", "moderate"],
   ...cmsAdminServices,
   ...platformEditor,
+  ...cmsAdminEvents,
 });
 
 export const orgMemberRole = ac.newRole({
@@ -165,4 +175,5 @@ export const orgMemberRole = ac.newRole({
   blog: ["read"], blogCategory: ["read"], blogTag: ["read"], blogComment: ["read"], blogReview: ["read"],
   ...cmsReadOnlyServices,
   ...platformReadOnly,
+  ...cmsReadOnlyEvents,
 });

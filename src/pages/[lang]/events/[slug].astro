@@ -1,0 +1,25 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import EventsDetail from "@/components/events/EventsDetail.astro";
+import { loadPublishedEventBySlug } from "@/modules/events/loaders";
+import { getEventsTranslations } from "@/modules/events/i18n";
+import { toLocale } from "@i18n/utils";
+
+export const prerender = false;
+const locale = toLocale(Astro.params.lang);
+const slug = Astro.params.slug;
+if (!slug) return Astro.redirect(`/${locale}/events`);
+
+const item = await loadPublishedEventBySlug(locale, slug, null);
+if (!item) return Astro.redirect(`/${locale}/events`);
+
+const t = getEventsTranslations(locale);
+const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: "full", timeStyle: "short", ...(item.timezone ? { timeZone: item.timezone } : {}) });
+const formatPrice = (minor: number, currency: string) => new Intl.NumberFormat(locale, { style: "currency", currency }).format(minor / 100);
+const canonical = new URL(`/${locale}/events/${item.slug}`, Astro.url.origin).href;
+---
+<BaseLayout title={`${item.metaTitle ?? item.title} — ${t.meta.title}`} description={item.metaDescription ?? item.excerpt ?? t.meta.description} canonical={canonical}>
+  <main class="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+    <EventsDetail item={item} t={t} formatDate={(d) => dateFmt.format(d)} formatPrice={formatPrice} backHref={`/${locale}/events`} />
+  </main>
+</BaseLayout>

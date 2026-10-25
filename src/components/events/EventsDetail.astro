@@ -1,0 +1,34 @@
+---
+/**
+ * Page de détail du domaine events.
+ *
+ * La DTO arrive par props : la page a fait appel au loader. Ce composant
+ * n'interroge jamais la base. Aucune inscription ici (hors CMS Core, TODO §19.4).
+ */
+import type { EventPublicDTO } from "@/modules/events/loaders/event.loader";
+import type { EventsTranslations } from "@/modules/events/i18n";
+
+interface Props {
+  item: EventPublicDTO;
+  t: EventsTranslations;
+  formatDate: (d: Date) => string;
+  formatPrice: (minor: number, currency: string) => string;
+  backHref: string;
+}
+
+const { item, t, formatDate, formatPrice, backHref } = Astro.props as Props;
+---
+
+<article class="flex flex-col gap-6" data-slot="event-detail">
+  <a href={backHref} class="text-sm hover:underline">← {t.labels.back}</a>
+  <h1 class="font-heading text-3xl font-bold">{item.title}</h1>
+  <dl class="grid gap-2 sm:grid-cols-2">
+    {item.startsAt && (<div><dt class="text-sm text-muted-foreground">{t.labels.startsAt}</dt><dd><time datetime={item.startsAt.toISOString()}>{formatDate(item.startsAt)}</time></dd></div>)}
+    {item.endsAt && (<div><dt class="text-sm text-muted-foreground">{t.labels.endsAt}</dt><dd><time datetime={item.endsAt.toISOString()}>{formatDate(item.endsAt)}</time></dd></div>)}
+    {(item.venueName || item.venueAddress) && (<div><dt class="text-sm text-muted-foreground">{t.labels.venue}</dt><dd>{[item.venueName, item.venueAddress].filter(Boolean).join(" — ")}</dd></div>)}
+    {item.capacity !== null && (<div><dt class="text-sm text-muted-foreground">{t.labels.capacity}</dt><dd>{item.capacity}</dd></div>)}
+    {item.priceMinor !== null && (<div><dt class="text-sm text-muted-foreground">{t.labels.price}</dt><dd>{item.priceMinor === 0 || !item.currency ? t.labels.free : formatPrice(item.priceMinor, item.currency)}</dd></div>)}
+  </dl>
+  {item.excerpt && <p class="text-lg">{item.excerpt}</p>}
+  <div class="prose max-w-none whitespace-pre-line">{item.content}</div>
+</article>

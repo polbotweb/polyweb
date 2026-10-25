@@ -7,6 +7,7 @@ import type { AdminResourceListDefinition } from "@/core/admin/filter-contract";
 import { serviceAdminResource } from "@/modules/services/admin/resource";
 import { blogPostAdminResource } from "@/modules/blog/admin/resource";
 import { pagesListDefinition } from "@/lib/pages/admin-list";
+import { eventAdminResource } from "@/modules/events/admin/resource";
 
 export interface AdminListEntry {
   readonly definition: AdminResourceListDefinition;
@@ -17,6 +18,7 @@ export const ADMIN_LISTS: Readonly<Record<string, AdminListEntry>> = {
   service: { definition: serviceAdminResource.list!, readPermission: { service: ["read"] } },
   "blog-post": { definition: blogPostAdminResource.list!, readPermission: { blog: ["read"] } },
   pages: { definition: pagesListDefinition, readPermission: { page: ["read"] } },
+  event: { definition: eventAdminResource.list!, readPermission: { events: ["read"] } },
 };
 
 export const ADMIN_LIST_IDS = Object.keys(ADMIN_LISTS) as [string, ...string[]];
