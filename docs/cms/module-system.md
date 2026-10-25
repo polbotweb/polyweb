@@ -176,7 +176,7 @@ purpose (manual steps printed by the generator): the migration (export the schem
 statements, the re-export of the actions from `src/actions/index.ts`, and the page route.
 
 Existing modules keep their table names (no rename): `events`, `formations` and `courses` already match their
-pluralized entity; renaming the Shop tables (`shop` → `products`, with `_revisions` / `_locks`) is only a proposal
+pluralized entity; renaming the Shop tables (`shop_products` / `shop_revisions` / `shop_locks`, Drizzle const `shop`, → `products` / `product_revisions` / `product_locks`) is only a proposal
 (foreign keys, lock store and migrations involved — not trivially safe).
 
 `tests/unit/scripts/new-module.test.ts` generates a module inside the repository (ignored `tmp*` folder), runs
