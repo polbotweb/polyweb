@@ -124,6 +124,14 @@ jobs:
       - name: Generate Astro Types
         run: npx astro sync
 
+      # Serveur S3 local des tests de stockage (SeaweedFS épinglé, scripts/s3-test-server.mjs) :
+      # binaire mis en cache, téléchargé et vérifié (SHA-256) au premier lancement sinon.
+      - name: Cache SeaweedFS (S3 local de test)
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/polyweb/seaweedfs
+          key: seaweedfs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('scripts/s3-test-server.mjs') }}
+
       - name: Vitest
         run: pnpm test -- --coverage
 
