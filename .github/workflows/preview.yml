@@ -44,7 +44,7 @@ jobs:
       - uses: pnpm/action-setup@v6
         with: { version: 10 }
       - uses: actions/setup-node@v7
-        with: { node-version: 22, cache: pnpm }
+        with: { node-version: 22, check-latest: true, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:migrate && pnpm db:infra && pnpm db:seed
       - run: pnpm exec playwright install --with-deps chromium
@@ -76,7 +76,7 @@ jobs:
         with: { version: 10 }
       - uses: actions/setup-node@v7
         if: env.VERCEL_TOKEN != ''
-        with: { node-version: 22, cache: pnpm }
+        with: { node-version: 22, check-latest: true, cache: pnpm }
       - if: env.VERCEL_TOKEN != ''
         run: pnpm install --frozen-lockfile
       - name: Apply migrations on preview database
