@@ -45,6 +45,36 @@ describe('scripts/new-module.ts', () => {
     expect(() => run(['bad-table', '--table=Bad-Name'])).toThrow();
   });
 
+  it('--taxonomy opts the module into the generic core category taxonomy (tables, store, actions, capability, facet)', () => {
+    run(['gizmos', '--entity=gizmo', '--taxonomy']);
+    const read = (file: string) => readFileSync(join(dir, 'modules/gizmos', file), 'utf8');
+    const schema = read('schema/index.ts');
+    expect(schema).toContain('pgTable("gizmo_categories", {');
+    expect(schema).toContain('pgTable("gizmo_category_translations", {');
+    expect(schema).toContain('pgTable("gizmo_category_links", {');
+    expect(schema).toContain('gizmoId: text("gizmo_id").notNull().references(() => gizmos.id, { onDelete: "cascade" })');
+    expect(schema).toContain('primaryKey({ columns: [table.gizmoId, table.categoryId] })');
+    expect(schema).toContain('check("gizmo_categories_no_self_parent"');
+    const taxonomy = read('taxonomy.ts');
+    expect(taxonomy).toContain('export const gizmosCategoryTaxonomy = registerCategoryTaxonomy(defineCategoryTaxonomy({');
+    expect(taxonomy).toContain('linkResourceKey: "gizmoId"');
+    expect(read('module.ts')).toContain('taxonomy: true,');
+    expect(read('capabilities.ts')).toContain('taxonomy: "gizmo_categories (core/taxonomy, gizmosCategoryTaxonomy)"');
+    expect(read('actions/index.ts')).toContain('categories: defineCategoryActions(gizmosCategoryTaxonomy, "gizmos"),');
+    expect(read('admin/resource.ts')).toContain('{ id: "category", kind: "select", queryParam: "categoryId", facet: true }');
+    const loader = read('loaders/gizmo-admin.loader.ts');
+    expect(loader).toContain('categoryId: categoryFilterFromUrl(filters.category)');
+    expect(loader).toContain('gizmosCategoryTaxonomy.filterCondition(organizationId, filters.categoryId)');
+    expect(loader).toContain('gizmosCategoryTaxonomy.facet<GizmosAdminFilters>("categoryId", organizationId,');
+    expect(readFileSync(join(dir, 'components/gizmos/admin/GizmosAdminList.astro'), 'utf8')).toContain('facets.category ?? []');
+    // Sans le drapeau : aucune taxonomie (opt-in).
+    expect(existsSync(join(dir, 'modules/event-tickets/taxonomy.ts'))).toBe(false);
+    expect(readFileSync(join(dir, 'modules/event-tickets/module.ts'), 'utf8')).toContain('taxonomy: false,');
+    expect(readFileSync(join(dir, 'modules/event-tickets/schema/index.ts'), 'utf8')).not.toContain('_categories');
+    // Collision : une table de catégories déjà déclarée bloque la génération.
+    expect(() => run(['gizmos-bis', '--entity=gizmo', '--table=gizmos_bis', '--taxonomy'])).toThrow(/gizmo_categories/);
+  });
+
   it('refuses invalid names and existing modules', () => {
     expect(() => run(['Bad_Name'])).toThrow();
     expect(() => run(['event-tickets'])).toThrow();
@@ -107,13 +137,13 @@ describe('scripts/new-module.ts — module généré compilable', () => {
   const genDir = mkdtempSync(join(repo, 'tmp-new-module-'));
   afterAll(() => rmSync(genDir, { recursive: true, force: true }));
 
-  it('type-checks against core abstractions and passes the capability contract', async () => {
+  it('type-checks against core abstractions (incl. --taxonomy) and passes the capability contract', async () => {
     // Les types Astro (`astro:actions`, `.astro/types.d.ts`) sont générés : en CI (checkout neuf)
     // ils n'existent pas tant que `astro sync` n'a pas tourné — le test les génère lui-même.
     if (!existsSync(join(repo, '.astro/types.d.ts'))) {
       execFileSync(resolve(repo, 'node_modules/.bin/astro'), ['sync'], { cwd: repo, encoding: 'utf8', stdio: 'pipe' });
     }
-    execFileSync(tsx, [script, 'demo-items', '--entity=demo-item', `--root=${join(genDir, 'src')}`], { encoding: 'utf8', stdio: 'pipe' });
+    execFileSync(tsx, [script, 'demo-items', '--entity=demo-item', '--taxonomy', `--root=${join(genDir, 'src')}`], { encoding: 'utf8', stdio: 'pipe' });
     const rootConfig = JSON.parse(readFileSync(join(repo, 'tsconfig.json'), 'utf8')) as { compilerOptions: { paths: Record<string, string[]> } };
     const rel = genDir.slice(repo.length + 1);
     const tsconfig = {
@@ -131,6 +161,6 @@ describe('scripts/new-module.ts — module généré compilable', () => {
     }
     expect(output).toBe('');
     const mod = (await import(join(genDir, 'src/modules/demo-items/module.ts'))) as { demoItemsModule: { capabilities: Record<string, boolean> } };
-    expect(mod.demoItemsModule.capabilities).toMatchObject({ locks: true, revisions: true, publication: true });
+    expect(mod.demoItemsModule.capabilities).toMatchObject({ locks: true, revisions: true, publication: true, taxonomy: true });
   }, 120_000);
 });
