@@ -9,13 +9,19 @@ interface Props {
   id: string;
   title: string;
   href: string;
+  excerpt?: string | null;
+  when?: string | null;
+  venue?: string | null;
 }
 
-const { title, href } = Astro.props as Props;
+const { title, href, excerpt, when, venue } = Astro.props as Props;
 ---
 
-<article class="rounded-2xl border bg-card p-5">
+<article class="rounded-2xl border bg-card p-5" data-slot="event-card">
+  {when && <p class="text-sm text-muted-foreground"><time>{when}</time></p>}
   <h3 class="font-heading font-semibold">
     <a href={href} class="hover:underline">{title}</a>
   </h3>
+  {venue && <p class="text-sm text-muted-foreground">{venue}</p>}
+  {excerpt && <p class="mt-2 text-sm">{excerpt}</p>}
 </article>

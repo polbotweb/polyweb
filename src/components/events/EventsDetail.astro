@@ -2,26 +2,33 @@
 /**
  * Page de détail du domaine events.
  *
- * La DTO arrive par props : la page a fait appel au loader. Ce composant se
- * contente de composer les atomes de `molecules/`.
+ * La DTO arrive par props : la page a fait appel au loader. Ce composant
+ * n'interroge jamais la base. Aucune inscription ici (hors CMS Core, TODO §19.4).
  */
-import type { EventsDTO } from "@/modules/events/loaders/event.loader";
-import EventsCard from "@/components/events/EventsCard.astro";
+import type { EventPublicDTO } from "@/modules/events/loaders/event.loader";
+import type { EventsTranslations } from "@/modules/events/i18n";
 
 interface Props {
-  item: EventsDTO;
+  item: EventPublicDTO;
+  t: EventsTranslations;
+  formatDate: (d: Date) => string;
+  formatPrice: (minor: number, currency: string) => string;
+  backHref: string;
 }
 
-const { item } = Astro.props as Props;
+const { item, t, formatDate, formatPrice, backHref } = Astro.props as Props;
 ---
 
-<section class="flex flex-col gap-6">
-  <EventsCard id={item.id} title={item.id} href="#" />
-</section>
-
-<script>
-  import { initEvents } from "@/modules/events/client/init";
-
-  initEvents();
-  document.addEventListener("astro:after-swap", initEvents);
-</script>
+<article class="flex flex-col gap-6" data-slot="event-detail">
+  <a href={backHref} class="text-sm hover:underline">← {t.labels.back}</a>
+  <h1 class="font-heading text-3xl font-bold">{item.title}</h1>
+  <dl class="grid gap-2 sm:grid-cols-2">
+    {item.startsAt && (<div><dt class="text-sm text-muted-foreground">{t.labels.startsAt}</dt><dd><time datetime={item.startsAt.toISOString()}>{formatDate(item.startsAt)}</time></dd></div>)}
+    {item.endsAt && (<div><dt class="text-sm text-muted-foreground">{t.labels.endsAt}</dt><dd><time datetime={item.endsAt.toISOString()}>{formatDate(item.endsAt)}</time></dd></div>)}
+    {(item.venueName || item.venueAddress) && (<div><dt class="text-sm text-muted-foreground">{t.labels.venue}</dt><dd>{[item.venueName, item.venueAddress].filter(Boolean).join(" — ")}</dd></div>)}
+    {item.capacity !== null && (<div><dt class="text-sm text-muted-foreground">{t.labels.capacity}</dt><dd>{item.capacity}</dd></div>)}
+    {item.priceMinor !== null && (<div><dt class="text-sm text-muted-foreground">{t.labels.price}</dt><dd>{item.priceMinor === 0 || !item.currency ? t.labels.free : formatPrice(item.priceMinor, item.currency)}</dd></div>)}
+  </dl>
+  {item.excerpt && <p class="text-lg">{item.excerpt}</p>}
+  <div class="prose max-w-none whitespace-pre-line">{item.content}</div>
+</article>
