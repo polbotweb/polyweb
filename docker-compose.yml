@@ -25,6 +25,20 @@ services:
       retries: 5
       start_period: 10s
 
+  # S3 local optionnel (SeaweedFS, Apache-2.0) : `docker compose --profile s3 up -d s3`
+  # puis `aws --endpoint-url http://localhost:8333 s3 mb s3://polyweb` et
+  # STORAGE_DRIVER=s3 S3_ENDPOINT=http://localhost:8333 S3_BUCKET=polyweb S3_FORCE_PATH_STYLE=true.
+  # Sans Docker : `pnpm s3:local` (même serveur, binaire épinglé). Les tests le démarrent seuls.
+  s3:
+    image: chrislusf/seaweedfs:4.50
+    profiles: ["s3"]
+    restart: unless-stopped
+    command: server -dir=/data -ip.bind=0.0.0.0 -master.volumeSizeLimitMB=64 -volume.max=64 -s3 -s3.port=8333 -s3.port.iceberg=0 -s3.port.lance=0 -s3.autoCreateBucket=false
+    ports:
+      - "8333:8333"
+    volumes:
+      - s3data:/data
+
   app:
     build:
       context: .
@@ -79,6 +93,7 @@ services:
 
 volumes:
   pgdata:
+  s3data:
   uploads:
   logs:
   caddy_data:

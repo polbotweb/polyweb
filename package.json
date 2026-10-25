@@ -62,7 +62,8 @@
     "search:pagefind": "npx tsx src/database/commands/search.pagefind.ts",
     "db:backup": "npx tsx src/database/commands/db.backup.ts",
     "db:restore": "npx tsx src/database/commands/db.restore.ts",
-    "cli:build": "tsc -p packages/create-polyweb/tsconfig.json"
+    "cli:build": "tsc -p packages/create-polyweb/tsconfig.json",
+    "s3:local": "node scripts/s3-test-server.mjs"
   },
   "dependencies": {
     "@astrojs/node": "11.1.9",
@@ -123,7 +124,6 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "pa11y-ci": "^4.1.1",
     "pagefind": "^1.5.2",
-    "s3rver": "^3.7.1",
     "tsx": "^4.23.13",
     "typescript": "5.9.3",
     "vitest": "^5.0.5",
