@@ -1,0 +1,80 @@
+---
+/**
+ * Liste back-office du domaine shop.
+ *
+ * Les mutations passent par un module client : un `<form method="post">` enverrait
+ * un GET vers l'URL courante, ce qui exposerait les valeurs saisies dans la
+ * chaîne de requête, l'historique et les journaux.
+ *
+ * Actions groupées : barre générique `AdminBulkBar` (core/bulk) — cases par ligne,
+ * case « page », compteur annoncé, confirmation modale. Les opérations affichées sont
+ * celles de la ressource admin, filtrées par la page selon les permissions.
+ *
+ * Facettes et vues enregistrées (core/filters) : passer `baseUrl` (Astro.url), les
+ * comptes de `loadShopAdminFacets` et les vues de `loadSavedViews(userId, "product", organizationId)`.
+ */
+import AdminFacets from "@organisms/AdminFacets.astro";
+import AdminSavedViews from "@organisms/AdminSavedViews.astro";
+import { canonicalListQuery, facetLinks, type FacetBucket } from "@/core/filters";
+import { productAdminResource } from "@/modules/shop/admin/resource";
+import ForceReleaseLockButton from "@/components/admin/ForceReleaseLockButton.astro";
+import AdminBulkBar from "@organisms/AdminBulkBar.astro";
+import type { AdminBulkBarOperation } from "@/core/bulk/ui";
+import { formatBulk, getBulkUiTranslations } from "@/core/bulk/i18n";
+import type { Locale } from "@i18n/config";
+
+interface Props {
+  items: Array<{ id: string; title: string; lockedByOther?: boolean }>;
+  locale: Locale;
+  organizationId?: string | null;
+  /** Opérations groupées autorisées (dérivées de `productAdminResource.list.bulkActions`). */
+  bulkOperations?: AdminBulkBarOperation[];
+  /** Calculé par la page : `canAdministerTenant(Astro.locals.user, organizationId)` (core/permissions/tenant). */
+  canForceReleaseLock?: boolean;
+  /** URL courante (Astro.url) : active facettes et vues enregistrées. */
+  baseUrl?: URL;
+  /** Comptes de facettes (`loadShopAdminFacets`), chacune sans son propre filtre. */
+  facets?: Record<string, readonly FacetBucket[]>;
+  /** Vues enregistrées de l'utilisateur pour la ressource « product ». */
+  savedViews?: readonly { id: string; name: string; query: string }[];
+}
+
+const { items, locale, organizationId = null, bulkOperations = [], canForceReleaseLock = false, baseUrl, facets = {}, savedViews = [] } = Astro.props as Props;
+const bulkT = getBulkUiTranslations(locale);
+const bulkEnabled = bulkOperations.length > 0;
+const listDefinition = productAdminResource.list!;
+const listBaseUrl = baseUrl?.pathname ?? "";
+const currentQuery = baseUrl ? canonicalListQuery(listDefinition, baseUrl.searchParams) : "";
+// Libellés à traduire avec les autres libellés du module (modules/shop/i18n/).
+const facetGroups = baseUrl ? [{ id: "status", label: "Statut", links: facetLinks(listDefinition, currentQuery, "status", facets.status ?? [], listBaseUrl) }] : [];
+const hasFilters = [...new URLSearchParams(currentQuery).keys()].some((key) => key !== "sortBy" && key !== "sortOrder" && key !== "page");
+---
+
+{baseUrl && (
+  <>
+    <AdminFacets locale={locale} groups={facetGroups} clearHref={hasFilters ? listBaseUrl : null} />
+    <AdminSavedViews locale={locale} resource="product" organizationId={organizationId} views={savedViews} baseUrl={listBaseUrl} currentQuery={currentQuery} />
+  </>
+)}
+
+<AdminBulkBar action="shop.bulk" locale={locale} organizationId={organizationId} operations={bulkOperations}>
+  <div class="flex flex-col gap-4">
+    {items.length === 0 ? (
+      <p class="text-sm text-muted-foreground">Aucun élément.</p>
+    ) : (
+      <>
+        {bulkEnabled && <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" class="size-6" data-bulk-page />{bulkT.selectPage}</label>}
+        <ul class="flex flex-col gap-2">
+          {items.map((item) => (
+            <li class="flex items-center justify-between gap-3 border px-4 py-3">
+              {bulkEnabled ? (
+                <label class="flex min-h-11 items-center gap-2"><input type="checkbox" class="size-6" data-bulk-item value={item.id} aria-label={formatBulk(bulkT.selectRow, { title: item.title })} />{item.title}</label>
+              ) : item.title}
+              {canForceReleaseLock && item.lockedByOther && <ForceReleaseLockButton resourceType="shop" resourceId={item.id} locale={locale} />}
+            </li>
+          ))}
+        </ul>
+      </>
+    )}
+  </div>
+</AdminBulkBar>

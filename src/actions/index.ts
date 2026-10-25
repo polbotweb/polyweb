@@ -30,6 +30,7 @@ import { moderateServiceComment, moderateServiceReview, resolveServiceReport } f
 import { addServiceMedia, updateServiceMedia, removeServiceMedia } from "./services/media";
 import { resolveServiceInternalLink } from "./services/internal-link";
 import { eventsActions } from "@/modules/events/actions";
+import { shopActions } from "@/modules/shop/actions";
 import { coursesActions } from "@/modules/courses/actions";
 import { formationsActions } from "@/modules/formations/actions";
 
@@ -47,6 +48,7 @@ export const server = {
   toggleServiceReaction, listServiceNotifications, markServiceNotificationRead, markAllServiceNotificationsRead, recordServiceView, createServiceAttributeDefinition, setServiceAttributeValue,
   createServiceCategory, updateServiceCategory, deleteServiceCategory, createServiceTag, updateServiceTag, deleteServiceTag, moderateServiceComment, moderateServiceReview, resolveServiceReport, addServiceMedia, updateServiceMedia, removeServiceMedia, resolveServiceInternalLink,
   events: eventsActions,
+  shop: shopActions,
   courses: coursesActions,
   formations: formationsActions,
 };

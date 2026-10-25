@@ -176,6 +176,13 @@
       "when": 1792953449640,
       "tag": "0024_courses_module",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792953825222,
+      "tag": "0025_shop_module",
+      "breakpoints": true
     }
   ]
 }

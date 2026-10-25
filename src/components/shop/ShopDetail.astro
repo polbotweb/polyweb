@@ -1,0 +1,49 @@
+---
+/**
+ * Page de détail du domaine shop (catalogue).
+ *
+ * La DTO arrive par props : la page a fait appel au loader. Ce composant
+ * n'interroge jamais la base. Pas de panier ni de stock ici : le transactionnel
+ * reste hors CMS Core (TODO §19.3).
+ */
+import type { ProductOptionDTO, ProductPublicDTO, ProductVariantDTO } from "@/modules/shop/loaders/product.loader";
+import type { ShopTranslations } from "@/modules/shop/i18n";
+
+interface Props {
+  item: ProductPublicDTO;
+  options: ProductOptionDTO[];
+  variants: ProductVariantDTO[];
+  t: ShopTranslations;
+  formatPrice: (minor: number, currency: string) => string;
+  backHref: string;
+}
+
+const { item, options, variants, t, formatPrice, backHref } = Astro.props as Props;
+const labelOf = new Map(options.flatMap((o) => o.values.map((v) => [v.id, v.label] as const)));
+const describe = (v: ProductVariantDTO) => v.valueIds.map((id) => labelOf.get(id)).filter(Boolean).join(" / ") || v.sku;
+---
+
+<article class="flex flex-col gap-6" data-slot="product-detail">
+  <a href={backHref} class="text-sm hover:underline">← {t.labels.back}</a>
+  <h1 class="font-heading text-3xl font-bold">{item.title}</h1>
+  {item.excerpt && <p class="text-lg">{item.excerpt}</p>}
+  {variants.length > 0 && (
+    <section>
+      <h2 class="font-heading text-xl font-semibold">{t.labels.variants}</h2>
+      <table class="mt-2 w-full text-sm">
+        <thead><tr><th class="text-start">{t.labels.product}</th><th class="text-start">{t.labels.sku}</th><th class="text-start">{t.labels.price}</th><th class="text-start"><span class="sr-only">{t.labels.available}</span></th></tr></thead>
+        <tbody>
+          {variants.map((v) => (
+            <tr>
+              <td>{describe(v)}</td>
+              <td>{v.sku}</td>
+              <td>{formatPrice(v.priceMinor, v.currency)}</td>
+              <td>{v.available ? t.labels.available : t.labels.unavailable}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  )}
+  <div class="prose max-w-none whitespace-pre-line">{item.content}</div>
+</article>
