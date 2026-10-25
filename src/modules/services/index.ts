@@ -1,5 +1,6 @@
 export { servicesModule } from "./module";
 export { serviceAdminResource } from "./admin";
+export { servicesCategoryTaxonomy } from "./taxonomy";
 export * from "./domain";
 export * from "./schema";
 export * from "./actions";

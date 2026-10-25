@@ -6,6 +6,8 @@ import { defineAction } from "astro:actions";
 import { z } from "astro/zod";
 import { Effect } from "effect";
 import { effectHandler } from "@/lib/effect/action";
+import { defineCategoryActions } from "@/core/taxonomy/actions";
+import { coursesCategoryTaxonomy } from "../taxonomy";
 import { lockOwnerFrom } from "@/core/locks/service";
 import { lockLocaleFrom } from "@/core/locks/errors";
 import { requireCoursesPermission, requireCoursesResourcePermission } from "../permissions";
@@ -16,6 +18,8 @@ import { bulkCoursesLifecycle } from "./bulk";
 const idInput = z.object({ id: z.uuid() });
 
 export const coursesActions = {
+  // Catégories (core/taxonomy) — voir ../taxonomy.ts.
+  categories: defineCategoryActions(coursesCategoryTaxonomy, "courses"),
   // Actions groupées (core/bulk) — voir ./bulk.ts.
   bulk: bulkCoursesLifecycle,
   create: defineAction({

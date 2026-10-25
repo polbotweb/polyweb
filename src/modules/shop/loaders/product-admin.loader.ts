@@ -8,14 +8,18 @@
 import { and, count, eq, ilike, isNull, type SQL } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { computeFacets, parseListUrlState } from "@/core/filters";
+import { categoryFilterFromUrl } from "@/core/taxonomy";
 import { runOrThrow } from "@/lib/effect/run";
 import { productAdminResource } from "../admin/resource";
 import { SHOP_STATUSES, type ShopStatus } from "../domain/workflow";
 import { shop } from "../schema";
+import { shopCategoryTaxonomy } from "../taxonomy";
 
 export interface ShopAdminFilters {
   readonly search?: string;
   readonly status?: ShopStatus;
+  /** Catégorie (core/taxonomy) — uuid, filtré dans le tenant. */
+  readonly categoryId?: string;
 }
 
 /** URL → filtres typés (valeurs hors définition ignorées par parseListUrlState). */
@@ -24,6 +28,7 @@ export function shopAdminFiltersFromUrl(params: URLSearchParams | string): ShopA
   return {
     search: typeof filters.search === "string" ? filters.search : undefined,
     status: SHOP_STATUSES.find((status) => status === filters.status),
+    categoryId: categoryFilterFromUrl(filters.category),
   };
 }
 
@@ -34,6 +39,7 @@ export function shopAdminConditions(organizationId: string | null, filters: Shop
   const conditions: SQL[] = [organizationId === null ? isNull(shop.organizationId) : eq(shop.organizationId, organizationId)];
   if (filters.search) conditions.push(ilike(shop.title, "%" + escapeLike(filters.search) + "%"));
   if (filters.status) conditions.push(eq(shop.status, filters.status));
+  if (filters.categoryId) conditions.push(shopCategoryTaxonomy.filterCondition(organizationId, filters.categoryId));
   return conditions;
 }
 
@@ -52,6 +58,7 @@ export const shopAdminFacets = (organizationId: string | null, filters: ShopAdmi
         return rows.map((row) => ({ value: String(row.value), count: Number(row.count) }));
       },
     },
+    shopCategoryTaxonomy.facet<ShopAdminFilters>("categoryId", organizationId, (without) => shopAdminConditions(organizationId, without)),
   ]);
 
 /** Adaptateur Promise (pages Astro). */

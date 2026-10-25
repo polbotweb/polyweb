@@ -45,7 +45,8 @@ const facetGroups = [
   { id: "status", label: t.admin.fields.publication, links: facetLinks(listDef, currentQuery, "status", facets.status ?? [], baseUrl, (v) => t.admin.status[v as keyof typeof t.admin.status] ?? v) },
   { id: "featured", label: t.labels.featured, links: facetLinks(listDef, currentQuery, "featured", facets.featured ?? [], baseUrl, yesNo) },
   { id: "mobile", label: t.labels.mobile, links: facetLinks(listDef, currentQuery, "mobile", facets.mobile ?? [], baseUrl, yesNo) },
-];
+  { id: "category", label: t.labels.categories, links: facetLinks(listDef, currentQuery, "category", facets.category ?? [], baseUrl, (id) => { const option = categoryOptions.find((o) => o.category.id === id); return option?.translation?.name ?? option?.category.slug ?? id; }) },
+].filter((group) => group.id !== "category" || group.links.length > 0);
 const hasFilters = currentQuery.length > 0 && Object.keys(Object.fromEntries(new URLSearchParams(currentQuery))).some((k) => k !== "sortBy" && k !== "sortOrder" && k !== "page");
 // Opérations groupées déclarées par la ressource admin, filtrées par les permissions de l'utilisateur.
 const bulkLabels: Record<string, string> = { publish: t.admin.publish, unpublish: t.admin.unpublish, archive: t.admin.archive, restore: t.admin.restore, delete: t.admin.delete };

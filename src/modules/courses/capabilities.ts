@@ -11,6 +11,7 @@ export const coursesCapabilityProviders = {
   content: "courses",
   media: "media_files (courses.cover_image_id)",
   localization: "course_translations",
+  taxonomy: "course_categories (core/taxonomy, coursesCategoryTaxonomy)",
   publication: "coursesWorkflow",
   revisions: "courses_revisions",
   locks: "courses_locks",

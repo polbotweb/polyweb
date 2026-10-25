@@ -8,14 +8,18 @@
 import { and, count, eq, ilike, isNull, type SQL } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { computeFacets, parseListUrlState } from "@/core/filters";
+import { categoryFilterFromUrl } from "@/core/taxonomy";
 import { runOrThrow } from "@/lib/effect/run";
 import { formationAdminResource } from "../admin/resource";
 import { FORMATIONS_STATUSES, type FormationsStatus } from "../domain/workflow";
 import { formations } from "../schema";
+import { formationsCategoryTaxonomy } from "../taxonomy";
 
 export interface FormationsAdminFilters {
   readonly search?: string;
   readonly status?: FormationsStatus;
+  /** Catégorie (core/taxonomy) — uuid, filtré dans le tenant. */
+  readonly categoryId?: string;
 }
 
 /** URL → filtres typés (valeurs hors définition ignorées par parseListUrlState). */
@@ -24,6 +28,7 @@ export function formationsAdminFiltersFromUrl(params: URLSearchParams | string):
   return {
     search: typeof filters.search === "string" ? filters.search : undefined,
     status: FORMATIONS_STATUSES.find((status) => status === filters.status),
+    categoryId: categoryFilterFromUrl(filters.category),
   };
 }
 
@@ -34,6 +39,7 @@ export function formationsAdminConditions(organizationId: string | null, filters
   const conditions: SQL[] = [organizationId === null ? isNull(formations.organizationId) : eq(formations.organizationId, organizationId)];
   if (filters.search) conditions.push(ilike(formations.title, "%" + escapeLike(filters.search) + "%"));
   if (filters.status) conditions.push(eq(formations.status, filters.status));
+  if (filters.categoryId) conditions.push(formationsCategoryTaxonomy.filterCondition(organizationId, filters.categoryId));
   return conditions;
 }
 
@@ -52,6 +58,7 @@ export const formationsAdminFacets = (organizationId: string | null, filters: Fo
         return rows.map((row) => ({ value: String(row.value), count: Number(row.count) }));
       },
     },
+    formationsCategoryTaxonomy.facet<FormationsAdminFilters>("categoryId", organizationId, (without) => formationsAdminConditions(organizationId, without)),
   ]);
 
 /** Adaptateur Promise (pages Astro). */

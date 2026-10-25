@@ -1,5 +1,6 @@
 export { blogModule } from "@/modules/blog/module";
 export { blogPostAdminResource } from "@/modules/blog/admin/resource";
+export { blogCategoryTaxonomy } from "@/modules/blog/taxonomy";
 export * from "@/modules/blog/domain";
 export * from "@/modules/blog/schema";
 export * from "@/modules/blog/actions";

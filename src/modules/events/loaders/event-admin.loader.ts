@@ -8,14 +8,18 @@
 import { and, count, eq, ilike, isNull, type SQL } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { computeFacets, parseListUrlState } from "@/core/filters";
+import { categoryFilterFromUrl } from "@/core/taxonomy";
 import { runOrThrow } from "@/lib/effect/run";
 import { eventAdminResource } from "../admin/resource";
 import { EVENTS_STATUSES, type EventsStatus } from "../domain/workflow";
 import { events } from "../schema";
+import { eventsCategoryTaxonomy } from "../taxonomy";
 
 export interface EventsAdminFilters {
   readonly search?: string;
   readonly status?: EventsStatus;
+  /** Catégorie (core/taxonomy) — uuid, filtré dans le tenant. */
+  readonly categoryId?: string;
 }
 
 /** URL → filtres typés (valeurs hors définition ignorées par parseListUrlState). */
@@ -24,6 +28,7 @@ export function eventsAdminFiltersFromUrl(params: URLSearchParams | string): Eve
   return {
     search: typeof filters.search === "string" ? filters.search : undefined,
     status: EVENTS_STATUSES.find((status) => status === filters.status),
+    categoryId: categoryFilterFromUrl(filters.category),
   };
 }
 
@@ -34,6 +39,7 @@ export function eventsAdminConditions(organizationId: string | null, filters: Ev
   const conditions: SQL[] = [organizationId === null ? isNull(events.organizationId) : eq(events.organizationId, organizationId)];
   if (filters.search) conditions.push(ilike(events.title, "%" + escapeLike(filters.search) + "%"));
   if (filters.status) conditions.push(eq(events.status, filters.status));
+  if (filters.categoryId) conditions.push(eventsCategoryTaxonomy.filterCondition(organizationId, filters.categoryId));
   return conditions;
 }
 
@@ -52,6 +58,7 @@ export const eventsAdminFacets = (organizationId: string | null, filters: Events
         return rows.map((row) => ({ value: String(row.value), count: Number(row.count) }));
       },
     },
+    eventsCategoryTaxonomy.facet<EventsAdminFilters>("categoryId", organizationId, (without) => eventsAdminConditions(organizationId, without)),
   ]);
 
 /** Adaptateur Promise (pages Astro). */

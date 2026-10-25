@@ -27,7 +27,7 @@ export const shopModule: PolywebModuleDefinition = {
     localization: true,
     media: true,
     seo: false,
-    taxonomy: false,
+    taxonomy: true,
     attributes: false,
     search: false,
     publication: true,

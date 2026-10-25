@@ -115,7 +115,7 @@ export async function getServiceModerationQueue(organizationId: string | null) {
 }
 
 /**
- * Comptes de facettes de la liste admin (core/filters) : statut, mis en avant, mobile —
+ * Comptes de facettes de la liste admin (core/filters) : statut, mis en avant, mobile, catégorie —
  * chaque facette compte avec les autres filtres actifs mais sans le sien, dans le tenant.
  */
 export function getServiceAdminFacets(organizationId: string | null, locale: Locale, input: Partial<ServiceAdminFilters> = {}) {
@@ -130,5 +130,19 @@ export function getServiceAdminFacets(organizationId: string | null, locale: Loc
     { id: "status", filterKey: "status", count: grouped(services.status) },
     { id: "featured", filterKey: "featured", count: grouped(services.isFeatured) },
     { id: "mobile", filterKey: "mobile", count: grouped(services.isMobile) },
+    // Catégorie (core/taxonomy, adaptateur servicesCategoryTaxonomy) : liens comptés dans le tenant.
+    {
+      id: "category",
+      filterKey: "categoryId",
+      count: async (f) => {
+        const { conditions, translatedConditions } = serviceAdminConditions(f, organizationId, locale);
+        const rows = await db.select({ value: serviceCategoryLinks.categoryId, count: count() }).from(serviceCategoryLinks)
+          .innerJoin(services, eq(services.id, serviceCategoryLinks.serviceId))
+          .innerJoin(serviceCategories, and(eq(serviceCategories.id, serviceCategoryLinks.categoryId), tenantScope(serviceCategories.organizationId, organizationId)))
+          .leftJoin(serviceTranslations, and(eq(serviceTranslations.serviceId, services.id), ...translatedConditions))
+          .where(and(...conditions)).groupBy(serviceCategoryLinks.categoryId);
+        return rows.map((r) => ({ value: String(r.value), count: Number(r.count) }));
+      },
+    },
   ]);
 }

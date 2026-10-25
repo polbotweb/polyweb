@@ -19,6 +19,7 @@ const eventListDefinition = {
   filters: [
     { id: "search", kind: "search", queryParam: "search" },
     { id: "status", kind: "select", queryParam: "status", options: [...EVENTS_STATUSES], facet: true },
+    { id: "category", kind: "select", queryParam: "categoryId", facet: true },
   ],
   sorts: [{ id: "createdAt", queryParam: "sortBy", directions: ["asc", "desc"] }],
   defaultSort: "createdAt",

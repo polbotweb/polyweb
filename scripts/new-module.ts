@@ -1,7 +1,11 @@
 /**
  * Génère un module conforme à `docs/cms/module-system.md` (repris d'atlaselle).
  *
- *   pnpm module:new <domaine> [--entity=entityName]
+ *   pnpm module:new <domaine> [--entity=entityName] [--table=nom_sql] [--taxonomy]
+ *
+ * `--taxonomy` : adhésion au contrat générique de catégories (core/taxonomy) — tables
+ * `<entite>_categories` / `_category_translations` / `_category_links`, `taxonomy.ts`,
+ * actions `categories.*`, capacité `taxonomy`, filtre + facette « catégorie ».
  *
  * Ne crée QUE ce qui est obligatoire : un dossier vide est une dette. Le socle
  * généré utilise les abstractions core : schéma (contenu, révisions, verrous),
@@ -18,9 +22,10 @@ const args = process.argv.slice(2);
 const name = args.find((a) => !a.startsWith("--"));
 const entityFlag = args.find((a) => a.startsWith("--entity="));
 const rootFlag = args.find((a) => a.startsWith("--root="));
+const withTaxonomy = args.includes("--taxonomy");
 
 if (!name) {
-  console.error("usage: pnpm module:new <domaine> [--entity=entite] [--table=nom_sql]");
+  console.error("usage: pnpm module:new <domaine> [--entity=entite] [--table=nom_sql] [--taxonomy]");
   process.exit(1);
 }
 if (!/^[a-z][a-z0-9-]*$/.test(name)) {
@@ -92,7 +97,10 @@ function tsFiles(dir: string): string[] {
     return e.isDirectory() ? tsFiles(p) : e.name.endsWith(".ts") ? [p] : [];
   });
 }
-const taken = [table, `${table}_revisions`, `${table}_locks`].filter((t) =>
+/** Tables de catégories (core/taxonomy) nommées d'après l'entité : `product_categories`, … */
+const entitySnake = entity.replace(/-/g, "_");
+const categoryTables = [`${entitySnake}_categories`, `${entitySnake}_category_translations`, `${entitySnake}_category_links`];
+const taken = [table, `${table}_revisions`, `${table}_locks`, ...(withTaxonomy ? categoryTables : [])].filter((t) =>
   tsFiles(join(root, "database")).concat(tsFiles(join(root, "modules"))).some((f) => readFileSync(f, "utf8").includes(`pgTable("${t}"`)),
 );
 if (taken.length) {
@@ -823,6 +831,114 @@ const hasFilters = [...new URLSearchParams(currentQuery).keys()].some((key) => k
 `,
 };
 
+// ── Taxonomie opt-in (`--taxonomy`, core/taxonomy) ─────────────────────────
+// Tables propres au module (pas de table polymorphe), stockage + actions génériques.
+if (withTaxonomy) {
+  const edit = (file: string, from: string, to: string) => {
+    const content = files[file];
+    if (!content?.includes(from)) throw new Error(`module:new --taxonomy : gabarit inattendu (${file})`);
+    files[file] = content.replace(from, to);
+  };
+  const cats = `${entityCamel}Categories`;
+  const catTr = `${entityCamel}CategoryTranslations`;
+  const catLinks = `${entityCamel}CategoryLinks`;
+  const taxo = `${camel}CategoryTaxonomy`;
+  const schemaFile = `${moduleDir}/schema/index.ts`;
+  edit(schemaFile, `import { index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { user } from "@database/schemas/auth.schema";
+`, `import { sql } from "drizzle-orm";
+import { type AnyPgColumn, check, index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { organization, user } from "@database/schemas/auth.schema";
+import { LOCALES } from "@i18n/config";
+`);
+  files[schemaFile] += `
+// ── Catégories (core/taxonomy) : tables propres au module, forme commune ──
+export const ${cats} = pgTable("${categoryTables[0]}", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: text("organization_id").references(() => organization.id, { onDelete: "cascade" }),
+  parentId: text("parent_id").references((): AnyPgColumn => ${cats}.id, { onDelete: "set null" }),
+  slug: text("slug").notNull(),
+  icon: text("icon"),
+  color: text("color"),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
+}, (table) => [
+  uniqueIndex("${categoryTables[0]}_org_slug_uidx").on(table.organizationId, table.slug).where(sql\`\${table.organizationId} IS NOT NULL\`),
+  uniqueIndex("${categoryTables[0]}_global_slug_uidx").on(table.slug).where(sql\`\${table.organizationId} IS NULL\`),
+  index("${categoryTables[0]}_org_idx").on(table.organizationId),
+  index("${categoryTables[0]}_parent_idx").on(table.parentId),
+  check("${categoryTables[0]}_no_self_parent", sql\`\${table.parentId} IS NULL OR \${table.parentId} != \${table.id}\`),
+]);
+
+/** Traductions des catégories (une par locale, sans repli). */
+export const ${catTr} = pgTable("${categoryTables[1]}", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  categoryId: text("category_id").notNull().references(() => ${cats}.id, { onDelete: "cascade" }),
+  organizationId: text("organization_id").references(() => organization.id, { onDelete: "cascade" }),
+  locale: text("locale", { enum: LOCALES }).notNull(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
+}, (table) => [
+  uniqueIndex("${categoryTables[1]}_category_locale_uidx").on(table.categoryId, table.locale),
+  uniqueIndex("${categoryTables[1]}_org_locale_slug_uidx").on(table.organizationId, table.locale, table.slug).where(sql\`\${table.organizationId} IS NOT NULL\`),
+  uniqueIndex("${categoryTables[1]}_global_locale_slug_uidx").on(table.locale, table.slug).where(sql\`\${table.organizationId} IS NULL\`),
+]);
+
+/** Liaison explicite ${entity} ↔ catégorie. */
+export const ${catLinks} = pgTable("${categoryTables[2]}", {
+  ${entityCamel}Id: text("${entitySnake}_id").notNull().references(() => ${camel}.id, { onDelete: "cascade" }),
+  categoryId: text("category_id").notNull().references(() => ${cats}.id, { onDelete: "cascade" }),
+}, (table) => [
+  primaryKey({ columns: [table.${entityCamel}Id, table.categoryId] }),
+  index("${categoryTables[2]}_category_idx").on(table.categoryId),
+]);
+`;
+  files[`${moduleDir}/taxonomy.ts`] = `/**
+ * Catégories du domaine ${name} : adhésion au contrat générique \`core/taxonomy\`
+ * (tables propres ${categoryTables.map((t) => `\`${t}\``).join(", ")}).
+ * Actions : \`${camel}.categories.*\` (gardes tenant-aware, permission \`${name}:update\`).
+ */
+import { defineCategoryTaxonomy, registerCategoryTaxonomy } from "@/core/taxonomy/categories";
+import { ${camel}, ${cats}, ${catLinks}, ${catTr} } from "./schema";
+
+export const ${taxo} = registerCategoryTaxonomy(defineCategoryTaxonomy({
+  resourceType: "${name}",
+  categories: ${cats},
+  translations: ${catTr},
+  links: ${catLinks},
+  linkResourceKey: "${entityCamel}Id",
+  linkCategoryKey: "categoryId",
+  content: ${camel},
+}));
+`;
+  edit(`${moduleDir}/module.ts`, "    taxonomy: false,\n", "    taxonomy: true,\n");
+  edit(`${moduleDir}/capabilities.ts`, `  locks: "${table}_locks",\n`, `  locks: "${table}_locks",\n  taxonomy: "${categoryTables[0]} (core/taxonomy, ${taxo})",\n`);
+  const actionsFile = `${moduleDir}/actions/index.ts`;
+  edit(actionsFile, `import { bulk${pascal}Lifecycle } from "./bulk";\n`, `import { bulk${pascal}Lifecycle } from "./bulk";\nimport { defineCategoryActions } from "@/core/taxonomy/actions";\nimport { ${taxo} } from "../taxonomy";\n`);
+  edit(actionsFile, `  bulk: bulk${pascal}Lifecycle,\n`, `  bulk: bulk${pascal}Lifecycle,\n  // Catégories (core/taxonomy) — voir ../taxonomy.ts.\n  categories: defineCategoryActions(${taxo}, "${name}"),\n`);
+  edit(`${moduleDir}/admin/resource.ts`, `options: [...${upper}_STATUSES], facet: true },\n`, `options: [...${upper}_STATUSES], facet: true },\n    { id: "category", kind: "select", queryParam: "categoryId", facet: true },\n`);
+  const adminLoader = `${moduleDir}/loaders/${entity}-admin.loader.ts`;
+  edit(adminLoader, `import { runOrThrow } from "@/lib/effect/run";\n`, `import { categoryFilterFromUrl } from "@/core/taxonomy";\nimport { runOrThrow } from "@/lib/effect/run";\n`);
+  edit(adminLoader, `import { ${camel} } from "../schema";\n`, `import { ${camel} } from "../schema";\nimport { ${taxo} } from "../taxonomy";\n`);
+  edit(adminLoader, `  readonly status?: ${pascal}Status;\n`, `  readonly status?: ${pascal}Status;\n  /** Catégorie (core/taxonomy) — uuid, filtré dans le tenant. */\n  readonly categoryId?: string;\n`);
+  edit(adminLoader, `filters.status),\n  };`, `filters.status),\n    categoryId: categoryFilterFromUrl(filters.category),\n  };`);
+  edit(adminLoader, `  if (filters.status) conditions.push(eq(${camel}.status, filters.status));\n`, `  if (filters.status) conditions.push(eq(${camel}.status, filters.status));\n  if (filters.categoryId) conditions.push(${taxo}.filterCondition(organizationId, filters.categoryId));\n`);
+  edit(adminLoader, `    },\n  ]);\n`, `    },\n    ${taxo}.facet<${pascal}AdminFilters>("categoryId", organizationId, (without) => ${camel}AdminConditions(organizationId, without)),\n  ]);\n`);
+  const list = `${compDir}/admin/${pascal}AdminList.astro`;
+  edit(list, `  facets?: Record<string, readonly FacetBucket[]>;\n`, `  facets?: Record<string, readonly FacetBucket[]>;\n  /** Libellés des catégories (id → nom localisé, \`${taxo}.list\`) ; à défaut l'id est affiché. */\n  categoryLabels?: Readonly<Record<string, string>>;\n`);
+  edit(list, "facets = {}, savedViews = [] } = Astro.props", "facets = {}, categoryLabels = {}, savedViews = [] } = Astro.props");
+  edit(list, `const facetGroups = baseUrl ? [{ id: "status", label: "Statut", links: facetLinks(listDefinition, currentQuery, "status", facets.status ?? [], listBaseUrl) }] : [];`, `const facetGroups = baseUrl
+  ? [
+      { id: "status", label: "Statut", links: facetLinks(listDefinition, currentQuery, "status", facets.status ?? [], listBaseUrl) },
+      { id: "category", label: "Catégorie", links: facetLinks(listDefinition, currentQuery, "category", facets.category ?? [], listBaseUrl, (id) => categoryLabels[id] ?? id) },
+    ].filter((group) => group.id === "status" || group.links.length > 0)
+  : [];`);
+}
+
 const optionalDirs = [
   "actions",
   "engagement",
@@ -858,3 +974,8 @@ Module « ${name} » généré.
 
 Dossiers optionnels, à créer SEULEMENT si utilisés : ${optionalDirs.join(", ")}
 `);
+if (withTaxonomy) {
+  console.log(`Taxonomie (core/taxonomy) : tables ${categoryTables.join(", ")} incluses dans le schéma (migration via pnpm db:generate),
+  actions ${camel}.categories.* ; passer categoryLabels (${camel}CategoryTaxonomy.list) à ${pascal}AdminList.
+`);
+}

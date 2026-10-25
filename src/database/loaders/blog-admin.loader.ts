@@ -174,7 +174,7 @@ const blogAdminTagsEffect = (organizationId: string | null, locale: Locale) =>
 
 /** Lectures admin blog Effect-natives (non mises en cache, comme les exports Promise). */
 /**
- * Comptes de facettes de la liste admin (core/filters) : statut, à la une, épinglé — chaque
+ * Comptes de facettes de la liste admin (core/filters) : statut, à la une, épinglé, catégorie — chaque
  * facette compte avec les autres filtres actifs mais sans le sien, dans le tenant et la langue.
  */
 const blogAdminFacetsEffect = (organizationId: string | null, locale: Locale, filters: BlogAdminPostFilters = {}) => {
@@ -189,6 +189,19 @@ const blogAdminFacetsEffect = (organizationId: string | null, locale: Locale, fi
     { id: "status", filterKey: "status", count: grouped(blogPosts.status) },
     { id: "featured", filterKey: "featured", count: grouped(blogPosts.isFeatured) },
     { id: "sticky", filterKey: "sticky", count: grouped(blogPosts.isSticky) },
+    // Catégorie (core/taxonomy, adaptateur blogCategoryTaxonomy) : liens comptés dans le tenant.
+    {
+      id: "category",
+      filterKey: "categoryId",
+      count: async (f) => {
+        const rows = await getDrizzle().select({ value: blogPostCategories.categoryId, count: count() }).from(blogPostCategories)
+          .innerJoin(blogPosts, eq(blogPosts.id, blogPostCategories.postId))
+          .innerJoin(blogCategories, and(eq(blogCategories.id, blogPostCategories.categoryId), categoryTenantScope(organizationId)))
+          .innerJoin(blogPostTranslations, and(eq(blogPostTranslations.postId, blogPosts.id), eq(blogPostTranslations.locale, displayLocale), translationTenantScope(organizationId)))
+          .where(and(...blogAdminConditions(organizationId, displayLocale, f))).groupBy(blogPostCategories.categoryId);
+        return rows.map((r) => ({ value: String(r.value), count: Number(r.count) }));
+      },
+    },
   ]);
 };
 
