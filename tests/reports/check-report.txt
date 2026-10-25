@@ -1,12 +1,17 @@
 
-> polyweb@0.0.1 check /workspace/polyweb-wt
+> polyweb@0.0.1 check /workspace/mod-shop
 > astro check
 
-15:35:14 [@astrojs/node] Enabling sessions with filesystem storage
-15:35:14 [content] Syncing content
-15:35:14 [content] Synced content
-15:35:14 [types] Generated 125ms
-15:35:14 [check] Getting diagnostics for Astro files in /workspace/polyweb-wt...
+20:22:58 [@astrojs/node] Enabling sessions with filesystem storage
+20:22:59 [content] Syncing content
+20:22:59 [content] Synced content
+20:22:59 [types] Generated 128ms
+20:22:59 [check] Getting diagnostics for Astro files in /workspace/mod-shop...
+[96msrc/actions/admin/pages.ts[0m:[93m4[0m:[93m38[0m - [93mwarning[0m[90m ts(6133): [0m'isNotNull' is declared but its value is never read.
+
+[7m4[0m import { eq, and, asc, desc, isNull, isNotNull, inArray, max } from "drizzle-orm";
+[7m [0m [93m                                     ~~~~~~~~~[0m
+
 [96msrc/actions/services/engagement.ts[0m:[93m2[0m:[93m22[0m - [93mwarning[0m[90m ts(6133): [0m'desc' is declared but its value is never read.
 
 [7m2[0m import { and, count, desc, eq } from "drizzle-orm";
@@ -16,6 +21,11 @@
 
 [7m16[0m     referrer: z.string().url().optional().nullable(),
 [7m  [0m [93m                         ~~~[0m
+
+[96msrc/components/atoms/container/Container.astro[0m:[93m196[0m:[93m3[0m - [93mwarning[0m[90m ts(6385): [0m'centered' is deprecated.
+
+[7m196[0m   centered,
+[7m   [0m [93m  ~~~~~~~~[0m
 
 [96msrc/components/blog/AdminPostForm.astro[0m:[93m20[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'BlogPostFormInput' is declared but its value is never read.
 
@@ -39,28 +49,19 @@
 [7m71[0m             event.returnValue = "";
 [7m  [0m [93m                  ~~~~~~~~~~~[0m
 
-[96msrc/components/seo/JsonLd.astro[0m:[93m15[0m:[93m30[0m - [93mwarning[0m[90m astro(4000): [0mThis script will be treated as if it has the `is:inline` directive because it contains an attribute. Therefore, features that require processing (e.g. using TypeScript or npm packages in the script) are unavailable.
-
-See docs for more details: https://docs.astro.build/en/guides/client-side-scripts/#script-processing.
-
-Add the `is:inline` directive explicitly to silence this hint.
-
-[7m15[0m {items.map((item) => <script type="application/ld+json" set:html={safeJsonLd(JSON.stringify(item))} />)}
-[7m  [0m [93m                             ~~~~[0m
-
 [96msrc/components/services/AdminServiceForm.astro[0m:[93m13[0m:[93m34[0m - [93mwarning[0m[90m ts(6133): [0m'getServiceErrorMessage' is declared but its value is never read.
 
 [7m13[0m import { getServiceTranslations, getServiceErrorMessage } from "@/modules/services/i18n";
 [7m  [0m [93m                                 ~~~~~~~~~~~~~~~~~~~~~~[0m
 
-[96msrc/components/services/AdminServiceList.astro[0m:[93m7[0m:[93m34[0m - [93mwarning[0m[90m ts(6133): [0m'getServiceErrorMessage' is declared but its value is never read.
+[96msrc/components/services/AdminServiceList.astro[0m:[93m15[0m:[93m34[0m - [93mwarning[0m[90m ts(6133): [0m'getServiceErrorMessage' is declared but its value is never read.
 
-[7m7[0m import { getServiceTranslations, getServiceErrorMessage } from "@/modules/services/i18n";
-[7m [0m [93m                                 ~~~~~~~~~~~~~~~~~~~~~~[0m
-[96msrc/components/services/AdminServiceList.astro[0m:[93m6[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'toast' is declared but its value is never read.
+[7m15[0m import { getServiceTranslations, getServiceErrorMessage } from "@/modules/services/i18n";
+[7m  [0m [93m                                 ~~~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/components/services/AdminServiceList.astro[0m:[93m14[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'toast' is declared but its value is never read.
 
-[7m6[0m import { toast } from "@atoms/toast";
-[7m [0m [93m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m14[0m import { toast } from "@atoms/toast";
+[7m  [0m [93m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
 
 [96msrc/components/services/ServicesAdminPage.astro[0m:[93m6[0m:[93m34[0m - [93mwarning[0m[90m ts(6133): [0m'getServiceErrorMessage' is declared but its value is never read.
 
@@ -120,15 +121,6 @@ Add the `is:inline` directive explicitly to silence this hint.
 [7m1[0m import { relations, sql } from "drizzle-orm";
 [7m [0m [93m         ~~~~~~~~~[0m
 
-[96msrc/layouts/BaseLayout.astro[0m:[93m132[0m:[93m24[0m - [93mwarning[0m[90m astro(4000): [0mThis script will be treated as if it has the `is:inline` directive because it contains an attribute. Therefore, features that require processing (e.g. using TypeScript or npm packages in the script) are unavailable.
-
-See docs for more details: https://docs.astro.build/en/guides/client-side-scripts/#script-processing.
-
-Add the `is:inline` directive explicitly to silence this hint.
-
-[7m132[0m     {jsonLd && <script type="application/ld+json" set:html={safeJsonLd(jsonLd)} />}
-[7m   [0m [93m                       ~~~~[0m
-
 [96msrc/lib/blog/constants.ts[0m:[93m2[0m:[93m10[0m - [93mwarning[0m[90m ts(6133): [0m'assertTransition' is declared but its value is never read.
 
 [7m2[0m import { assertTransition, canTransition, type WorkflowDefinition } from "@/lib/cms/workflow";
@@ -143,9 +135,9 @@ Add the `is:inline` directive explicitly to silence this hint.
 [7m61[0m   if (data.status !== undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["status"], message: "Le statut doit être modifié via une action de lifecycle explicite." });
 [7m  [0m [93m                                                        ~~~~~~~~~~~~[0m
 
-[96msrc/modules/services/admin/loader.ts[0m:[93m33[0m:[93m24[0m - [93mwarning[0m[90m ts(6133): [0m'tagRows' is declared but its value is never read.
+[96msrc/modules/services/admin/loader.ts[0m:[93m42[0m:[93m24[0m - [93mwarning[0m[90m ts(6133): [0m'tagRows' is declared but its value is never read.
 
-[7m33[0m   const [categoryRows, tagRows, mediaRows] = await Promise.all([
+[7m42[0m   const [categoryRows, tagRows, mediaRows] = await Promise.all([
 [7m  [0m [93m                       ~~~~~~~[0m
 
 [96msrc/modules/services/components/single/ServiceDetail.astro[0m:[93m18[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'serviceHref' is declared but its value is never read.
@@ -238,61 +230,6 @@ Add the `is:inline` directive explicitly to silence this hint.
 [7m27[0m   coverImageId: z.string().uuid().optional().nullable(),
 [7m  [0m [93m                           ~~~~[0m
 
-[96msrc/pages/[lang]/[organization]/admin/blog/index.astro[0m:[93m3[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'locale' is declared but its value is never read.
-
-[7m3[0m const locale = Astro.params.lang ?? "fr";
-[7m [0m [93m      ~~~~~~[0m
-
-[96msrc/pages/[lang]/[organization]/admin/blog/new.astro[0m:[93m3[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'locale' is declared but its value is never read.
-
-[7m3[0m const locale = Astro.params.lang ?? "fr";
-[7m [0m [93m      ~~~~~~[0m
-
-[96msrc/pages/[lang]/[organization]/admin/blog/[id]/edit.astro[0m:[93m3[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'locale' is declared but its value is never read.
-
-[7m3[0m const locale = Astro.params.lang ?? "fr";
-[7m [0m [93m      ~~~~~~[0m
-
-[96msrc/pages/[lang]/[organization]/admin/services/index.astro[0m:[93m3[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'locale' is declared but its value is never read.
-
-[7m3[0m const locale = Astro.params.lang ?? "fr";
-[7m [0m [93m      ~~~~~~[0m
-
-[96msrc/pages/[lang]/[organization]/admin/services/new.astro[0m:[93m3[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'locale' is declared but its value is never read.
-
-[7m3[0m const locale = Astro.params.lang ?? "fr";
-[7m [0m [93m      ~~~~~~[0m
-
-[96msrc/pages/[lang]/[organization]/admin/services/[id]/edit.astro[0m:[93m3[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'locale' is declared but its value is never read.
-
-[7m3[0m const locale = Astro.params.lang ?? "fr";
-[7m [0m [93m      ~~~~~~[0m
-
-[96msrc/pages/[lang]/admin/platform/api-tokens/index.astro[0m:[93m9[0m:[93m28[0m - [93mwarning[0m[90m ts(6133): [0m'getPlatformAdminUrl' is declared but its value is never read.
-
-[7m9[0m import { getPlatformLabel, getPlatformAdminUrl } from '@/core/localization/platform-labels';
-[7m [0m [93m                           ~~~~~~~~~~~~~~~~~~~[0m
-
-[96msrc/pages/[lang]/admin/platform/content/[type]/[id]/revisions.astro[0m:[93m28[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'selfUrl' is declared but its value is never read.
-
-[7m28[0m const selfUrl = `${editUrl}/revisions`;
-[7m  [0m [93m      ~~~~~~~[0m
-
-[96msrc/pages/[lang]/admin/platform/plugins/index.astro[0m:[93m17[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'selfUrl' is declared but its value is never read.
-
-[7m17[0m const selfUrl = getPlatformAdminUrl(locale, 'plugins');
-[7m  [0m [93m      ~~~~~~~[0m
-
-[96msrc/pages/[lang]/admin/platform/sites/index.astro[0m:[93m16[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'selfUrl' is declared but its value is never read.
-
-[7m16[0m const selfUrl = getPlatformAdminUrl(locale, 'sites');
-[7m  [0m [93m      ~~~~~~~[0m
-
-[96msrc/pages/[lang]/admin/platform/webhooks/[id].astro[0m:[93m21[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'selfUrl' is declared but its value is never read.
-
-[7m21[0m const selfUrl = getPlatformAdminUrl(locale, 'webhooks', id);
-[7m  [0m [93m      ~~~~~~~[0m
-
 [96msrc/pages/[lang]/admin/services/new.astro[0m:[93m9[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'Locale' is declared but its value is never read.
 
 [7m9[0m import type { Locale } from "@i18n/config";
@@ -302,11 +239,6 @@ Add the `is:inline` directive explicitly to silence this hint.
 
 [7m13[0m import type { Locale } from "@i18n/config";
 [7m  [0m [93m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
-
-[96msrc/pages/[lang]/preview/[token].astro[0m:[93m21[0m:[93m9[0m - [93mwarning[0m[90m ts(6133): [0m'status' is declared but its value is never read.
-
-[7m21[0m   const status = r.error._tag === 'UnauthorizedError' ? 403 : r.error._tag === 'NotFoundError' ? 404 : 500;
-[7m  [0m [93m        ~~~~~~[0m
 
 [96mtests/integration/auth-plugins.test.ts[0m:[93m87[0m:[93m122[0m - [93mwarning[0m[90m ts(6385): [0m'toThrowError' is deprecated.
 
@@ -321,8 +253,8 @@ Add the `is:inline` directive explicitly to silence this hint.
 [7m42[0m     await expect(auth.api.signInEmail({ body: { email: target.email, password: target.password } })).rejects.toThrowError(APIError);
 [7m  [0m [93m                                                                                                             ~~~~~~~~~~~~[0m
 
-Result (1145 files): 
+Result (1268 files): 
 - 0 errors
 - 0 warnings
-- 68 hints
+- 56 hints
 

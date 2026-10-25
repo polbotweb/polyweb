@@ -199,6 +199,18 @@ blog/
 content/
   ContentEditor.astro
   RichContent.astro
+courses/
+  CoursesCard.astro
+  CoursesDetail.astro
+  admin/
+events/
+  EventsCard.astro
+  EventsDetail.astro
+  admin/
+formations/
+  FormationsCard.astro
+  FormationsDetail.astro
+  admin/
 forms/
   PolywebForm.astro
 molecules/
@@ -244,6 +256,10 @@ services/
   AdminServiceForm.astro
   AdminServiceList.astro
   ServicesAdminPage.astro
+shop/
+  ShopCard.astro
+  ShopDetail.astro
+  admin/
 wow/
   AsyncButton.astro
   FallingParticles.astro
@@ -431,6 +447,10 @@ migrations/
   0019_page_locks.sql
   0020_drop_pages_legacy_lock.sql
   0021_admin_saved_views.sql
+  0022_events_module.sql
+  0023_formations_module.sql
+  0024_courses_module.sql
+  0025_shop_module.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -450,6 +470,10 @@ migrations/
     0019_snapshot.json
     0020_snapshot.json
     0021_snapshot.json
+    0022_snapshot.json
+    0023_snapshot.json
+    0024_snapshot.json
+    0025_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -625,6 +649,10 @@ schemas.ts
 - `0019_page_locks.sql`
 - `0020_drop_pages_legacy_lock.sql`
 - `0021_admin_saved_views.sql`
+- `0022_events_module.sql`
+- `0023_formations_module.sql`
+- `0024_courses_module.sql`
+- `0025_shop_module.sql`
 
 ### Comandos
 
@@ -870,6 +898,81 @@ content/
     preview.ts
     revisions.ts
   module.ts
+courses/
+  actions/
+    bulk.ts
+    index.ts
+  admin/
+    resource.ts
+  capabilities.ts
+  client/
+    init.ts
+  domain/
+    workflow.ts
+  i18n/
+    index.ts
+  loaders/
+    course-admin.loader.ts
+    course.loader.ts
+    index.ts
+  locks.ts
+  module.ts
+  permissions/
+    index.ts
+  schema/
+    index.ts
+  services/
+    course.service.ts
+events/
+  actions/
+    bulk.ts
+    index.ts
+  admin/
+    resource.ts
+  capabilities.ts
+  client/
+    init.ts
+  domain/
+    workflow.ts
+  i18n/
+    index.ts
+  loaders/
+    event-admin.loader.ts
+    event.loader.ts
+    index.ts
+  locks.ts
+  module.ts
+  permissions/
+    index.ts
+  schema/
+    index.ts
+  services/
+    event.service.ts
+formations/
+  actions/
+    bulk.ts
+    index.ts
+  admin/
+    resource.ts
+  capabilities.ts
+  client/
+    init.ts
+  domain/
+    workflow.ts
+  i18n/
+    index.ts
+  loaders/
+    formation-admin.loader.ts
+    formation.loader.ts
+    index.ts
+  locks.ts
+  module.ts
+  permissions/
+    index.ts
+  schema/
+    index.ts
+  services/
+    formation.service.ts
 forms/
   domain/
     forms.ts
@@ -931,6 +1034,31 @@ services/
   validation/
     index.ts
   workflow.ts
+shop/
+  actions/
+    bulk.ts
+    index.ts
+  admin/
+    resource.ts
+  capabilities.ts
+  client/
+    init.ts
+  domain/
+    workflow.ts
+  i18n/
+    index.ts
+  loaders/
+    index.ts
+    product-admin.loader.ts
+    product.loader.ts
+  locks.ts
+  module.ts
+  permissions/
+    index.ts
+  schema/
+    index.ts
+  services/
+    product.service.ts
 sites/
   domain/
     sites.effect.ts
@@ -978,8 +1106,17 @@ src/pages/
   c/
     [type]/
   contact.astro
+  courses/
+    [slug].astro
+    index.astro
+  events/
+    [slug].astro
+    index.astro
   f/
     [slug].astro
+  formations/
+    [slug].astro
+    index.astro
   index.astro
   organizations/
     [slug]/
@@ -989,6 +1126,9 @@ src/pages/
   services/
     [slug].astro
     category/
+    index.astro
+  shop/
+    [slug].astro
     index.astro
 api/
   admin/
@@ -1112,6 +1252,7 @@ public/
 favicon.ico
 favicon.svg
 uploads/
+  images/
 ```
 
 ### Carga y procesamiento

@@ -1067,3 +1067,12 @@ Section additive : uniquement des faits vérifiés (commande exécutée ou run C
 - **Régression visuelle** : polices système figées dans le spec (Liberation Sans / DejaVu Sans) — références home issues du runner CI ; écart local ↔ CI < 1 %.
 - **Dépendances** : astro 7.4.0, @astrojs/node 11.1.8 (`security.allowedDomains` + `ALLOWED_HOSTS`), nodemailer ≥ 10.0.6, sharp 0.35.5 ; Node ≥ 22.22 requis.
 - **Corrigés au passage** : `db:sync` (TRUNCATE CASCADE par table qui vidait les tables déjà copiées ; tableaux JS dans colonnes json/jsonb) ; bruit FK `audit_log` dans `create-admin.test`.
+
+## Mise à jour vérifiée (2026-10-25)
+
+Ajout additif : faits vérifiés le 2026-10-25 (commande exécutée ou run CI consulté).
+
+- **Modules métier §19–21 livrés via `pnpm module:new`** (une PR chacun, CI verte avant merge) : Events #30 (c12567e, migration `0022`), Formations #31 (2b14289, `0023`), Courses #32 (c6523d3, `0024` — plan de leçons, liaison typée `formation_courses`), Shop #33 (036a0ba, `0025` — catalogue seul : options/valeurs/variantes en tables typées, `price_minor` + `currency` obligatoires, `available` éditorial, pas de stock). Localisation relationnelle, portée tenant explicite, aucun repli silencieux de locale/tenant, aucun contrat `any`/`Record<string, unknown>`. Transactionnel (inscription, progression, panier, commande, paiement, stock) hors core.
+- **Dépendances** : PR Dependabot #4 et #8 mergées ; faux positif WebKit `style-src-attr` (échantillon vide sur `<select>`) filtré de façon ciblée dans `tests/e2e/csp.spec.ts`.
+- **`pnpm qa` complet** (036a0ba, base migrée + seedée) : astro check 0 erreur ; ESLint 0 erreur ; Vitest 1656/1657 (1 skip) ; Playwright 270/300 (30 skip, chromium/firefox/webkit) ; Pa11y 60/60 URLs ; Lighthouse public + authentifié 52 pages ≥ 90 ; scan cookies/jetons des rapports : 0 en clair (40 `[REDACTED]`).
+- **READMEs** régénérés via `pnpm readme:generate` (inventaire : composants et migrations des 4 modules).
