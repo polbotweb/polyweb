@@ -256,15 +256,42 @@ describe('deletePage', () => {
 // ─── publishPage ────────────────────────────────────────────────────
 
 describe('publishPage', () => {
-  it('publishes a page', async () => {
-    const updated = { id: 'p1', isPublished: true };
+  it('publishes a page and snapshots it in the same transaction', async () => {
+    const updated = { id: 'p1', isPublished: true, createdAt: new Date(), updatedAt: new Date() };
     mockUpdate.mockReturnValue(updateChain([updated]));
+    mockSelect
+      .mockReturnValueOnce(orderedSelectChain([{ id: 's1', pageId: 'p1', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() }]))
+      .mockReturnValueOnce(orderedSelectChain([{ versionNumber: 3 }]));
+    const values = vi.fn().mockResolvedValue(undefined);
+    mockInsert.mockReturnValue({ values });
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const result = await publishPage.handler(
       { id: 'p1', isPublished: true },
       adminCtx(),
     );
     expect(result).toEqual(updated);
+    expect(values).toHaveBeenCalledTimes(1);
+    const version = values.mock.calls[0][0];
+    expect(version).toMatchObject({ pageId: 'p1', versionNumber: 4, createdBy: 'admin-1', note: 'Auto-snapshot à la publication (v4)' });
+    expect(version.snapshot.page).not.toHaveProperty('createdAt');
+    expect(version.snapshot.sections).toEqual([{ id: 's1', pageId: 'p1', sortOrder: 0 }]);
+    expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
+  });
+
+  it('fails the publication when the snapshot cannot be written (no silent publish)', async () => {
+    mockUpdate.mockReturnValue(updateChain([{ id: 'p1', isPublished: true }]));
+    mockSelect.mockImplementation(() => orderedSelectChain([]));
+    mockInsert.mockReturnValue({ values: vi.fn().mockRejectedValue(new Error('db down')) });
+
+    await expect(publishPage.handler({ id: 'p1', isPublished: true }, adminCtx())).rejects.toThrow();
+  });
+
+  it('does not snapshot when unpublishing', async () => {
+    mockUpdate.mockReturnValue(updateChain([{ id: 'p1', isPublished: false }]));
+    await publishPage.handler({ id: 'p1', isPublished: false }, adminCtx());
+    expect(mockInsert).not.toHaveBeenCalled();
   });
 
   it('unpublishes a page', async () => {

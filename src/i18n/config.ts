@@ -554,6 +554,9 @@ export interface AuthTranslations {
       pages: {
         title: string;
         description: string;
+        /** Lien vers la vue corbeille (?view=trash) de la liste des pages. */
+        trashView: string;
+        backToPages: string;
         createPage: string;
         editPage: string;
         versionHistoryTitle: string;
