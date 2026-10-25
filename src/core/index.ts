@@ -18,3 +18,4 @@ export * from "@/core/moderation";
 export * from "@/core/notifications";
 export * from "@/core/attributes";
 export * from "@/core/presentation";
+export * from "@/core/filters";

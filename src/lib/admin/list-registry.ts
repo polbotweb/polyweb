@@ -1,0 +1,22 @@
+/**
+ * Registre applicatif des listes admin à vues enregistrées : id de ressource → définition
+ * de liste (canonicalisation des requêtes) + permission de lecture (contexte global).
+ * Un module généré par `pnpm module:new` s'ajoute ici (étape indiquée par le générateur).
+ */
+import type { AdminResourceListDefinition } from "@/core/admin/filter-contract";
+import { serviceAdminResource } from "@/modules/services/admin/resource";
+import { blogPostAdminResource } from "@/modules/blog/admin/resource";
+import { pagesListDefinition } from "@/lib/pages/admin-list";
+
+export interface AdminListEntry {
+  readonly definition: AdminResourceListDefinition;
+  readonly readPermission: Record<string, string[]>;
+}
+
+export const ADMIN_LISTS: Readonly<Record<string, AdminListEntry>> = {
+  service: { definition: serviceAdminResource.list!, readPermission: { service: ["read"] } },
+  "blog-post": { definition: blogPostAdminResource.list!, readPermission: { blog: ["read"] } },
+  pages: { definition: pagesListDefinition, readPermission: { page: ["read"] } },
+};
+
+export const ADMIN_LIST_IDS = Object.keys(ADMIN_LISTS) as [string, ...string[]];

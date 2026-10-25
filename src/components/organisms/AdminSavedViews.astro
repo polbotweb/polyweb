@@ -1,0 +1,68 @@
+---
+/**
+ * Vues enregistrées d'une liste admin (core/filters). Liens SSR vers la requête canonique
+ * (vue active : aria-current), formulaire libellé pour enregistrer la vue courante,
+ * suppression confirmée par dialogue modal. Le serveur canonicalise et vérifie la propriété.
+ */
+import type { Locale } from "@i18n/config";
+import { getFilterUiTranslations } from "@/core/filters/i18n";
+
+interface SavedView { id: string; name: string; query: string }
+interface Props { locale: Locale; resource: string; organizationId?: string | null; views: readonly SavedView[]; baseUrl: string; currentQuery: string }
+const { locale, resource, organizationId = null, views, baseUrl, currentQuery } = Astro.props;
+const t = getFilterUiTranslations(locale);
+const inputId = `saved-view-name-${resource}`;
+---
+<section aria-labelledby={`saved-views-title-${resource}`} class="space-y-3 rounded-lg border p-3" data-saved-views data-resource={resource} data-organization-id={organizationId ?? ""} data-query={currentQuery} data-t={JSON.stringify(t)}>
+  <h2 id={`saved-views-title-${resource}`} class="text-sm font-semibold">{t.savedViews}</h2>
+  {views.length === 0 ? <p class="text-sm text-muted-foreground">{t.noSavedViews}</p> : (
+    <ul class="flex flex-wrap gap-2">
+      {views.map((view) => (
+        <li class="inline-flex items-center gap-1">
+          <a href={view.query ? `${baseUrl}?${view.query}` : baseUrl} aria-current={view.query === currentQuery ? "page" : undefined}
+            class:list={["inline-flex min-h-11 items-center rounded-md border px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2", { "bg-muted font-semibold": view.query === currentQuery }]}>{view.name}</a>
+          <button type="button" data-delete-view={view.id} data-name={view.name} aria-label={t.deleteView.replace("{name}", view.name)}
+            class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"><span aria-hidden="true">×</span></button>
+        </li>
+      ))}
+    </ul>
+  )}
+  <form class="flex flex-wrap items-end gap-2" data-save-view>
+    <div class="flex flex-col gap-1">
+      <label for={inputId} class="text-xs font-medium">{t.viewName}</label>
+      <input id={inputId} name="name" required maxlength="80" class="h-11 rounded-md border bg-background px-3 text-sm" />
+    </div>
+    <button type="submit" class="min-h-11 rounded-md border px-3 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">{t.saveView}</button>
+  </form>
+</section>
+<script>
+  import { actions } from "astro:actions";
+  import { toast } from "@atoms/toast";
+  import { confirmAdminAction } from "@/core/admin/confirmation";
+  import type { FilterUiTranslations } from "@/core/filters/i18n";
+
+  for (const root of document.querySelectorAll<HTMLElement>("[data-saved-views]")) {
+    const t = JSON.parse(root.dataset.t ?? "{}") as FilterUiTranslations;
+    const resource = root.dataset.resource ?? "";
+    const organizationId = root.dataset.organizationId || null;
+    root.querySelector<HTMLFormElement>("[data-save-view]")?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget as HTMLFormElement;
+      const name = String(new FormData(form).get("name") ?? "").trim();
+      if (!name) return;
+      const { error } = await actions.createSavedView({ resource, organizationId, name, query: root.dataset.query ?? "" });
+      if (error) { toast.error(error.message || t.error); return; }
+      toast.success(t.saved);
+      window.location.reload();
+    });
+    for (const button of root.querySelectorAll<HTMLButtonElement>("[data-delete-view]")) button.addEventListener("click", async () => {
+      const name = button.dataset.name ?? "";
+      const ok = await confirmAdminAction({ title: t.confirmDeleteTitle, message: t.confirmDelete.replace("{name}", name), confirmLabel: t.confirm, cancelLabel: t.cancel });
+      if (!ok) { button.focus(); return; }
+      const { error } = await actions.deleteSavedView({ id: button.dataset.deleteView ?? "" });
+      if (error) { toast.error(error.message || t.error); return; }
+      toast.success(t.deleted);
+      window.location.reload();
+    });
+  }
+</script>
