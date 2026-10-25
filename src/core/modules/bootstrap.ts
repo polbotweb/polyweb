@@ -4,6 +4,7 @@ import { servicesModule } from "@/modules/services/module";
 import { paymentsModule } from "@/modules/payments/module";
 import { contentModule } from "@/modules/content/module";
 import { eventsModule } from "@/modules/events/module";
+import { coursesModule } from "@/modules/courses/module";
 import { formationsModule } from "@/modules/formations/module";
 import { registerInternalLinkResolver } from "@/lib/content/internal-link-resolver";
 import { blogInternalLinkResolver } from "@/lib/blog/blog-internal-link";
@@ -20,6 +21,7 @@ export function bootstrapModules(): void {
   registerModule(servicesModule);
   registerModule(contentModule);
   registerModule(eventsModule);
+  registerModule(coursesModule);
   registerModule(formationsModule);
   // Modules optionnels, activés par variable d'environnement
   if (process.env.PAYMENTS_ENABLED === "true") registerModule(paymentsModule);

@@ -8,6 +8,7 @@ import { serviceAdminResource } from "@/modules/services/admin/resource";
 import { blogPostAdminResource } from "@/modules/blog/admin/resource";
 import { pagesListDefinition } from "@/lib/pages/admin-list";
 import { eventAdminResource } from "@/modules/events/admin/resource";
+import { courseAdminResource } from "@/modules/courses/admin/resource";
 import { formationAdminResource } from "@/modules/formations/admin/resource";
 
 export interface AdminListEntry {
@@ -20,6 +21,7 @@ export const ADMIN_LISTS: Readonly<Record<string, AdminListEntry>> = {
   "blog-post": { definition: blogPostAdminResource.list!, readPermission: { blog: ["read"] } },
   pages: { definition: pagesListDefinition, readPermission: { page: ["read"] } },
   event: { definition: eventAdminResource.list!, readPermission: { events: ["read"] } },
+  course: { definition: courseAdminResource.list!, readPermission: { courses: ["read"] } },
   formation: { definition: formationAdminResource.list!, readPermission: { formations: ["read"] } },
 };
 

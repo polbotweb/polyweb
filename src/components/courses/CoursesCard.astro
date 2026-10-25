@@ -1,0 +1,25 @@
+---
+/**
+ * Carte de liste du domaine courses.
+ *
+ * Présentational : les données viennent des props, jamais d'une requête. Le
+ * script, s'il y en a un, passe par `modules/courses/client/`.
+ */
+interface Props {
+  id: string;
+  title: string;
+  href: string;
+  excerpt?: string | null;
+  meta?: string | null;
+}
+
+const { title, href, excerpt, meta } = Astro.props as Props;
+---
+
+<article class="rounded-2xl border bg-card p-5" data-slot="course-card">
+  {meta && <p class="text-sm text-muted-foreground">{meta}</p>}
+  <h3 class="font-heading font-semibold">
+    <a href={href} class="hover:underline">{title}</a>
+  </h3>
+  {excerpt && <p class="mt-2 text-sm">{excerpt}</p>}
+</article>

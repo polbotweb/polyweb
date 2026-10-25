@@ -39,6 +39,7 @@ export const statement = {
   plugin: ["read", "update"],
   tenant: ["create", "read", "update", "delete"],
   payment: ["read", "refund"],
+  courses: ["create", "read", "update", "delete", "publish"],
   formations: ["create", "read", "update", "delete", "publish"],
   events: ["create", "read", "update", "delete", "publish"],
 } as const;
@@ -102,6 +103,10 @@ const cmsReadOnlyEvents = { events: ["read"] } as const;
 const cmsAdminFormations = { formations: ["create", "read", "update", "delete", "publish"] } as const;
 const cmsReadOnlyFormations = { formations: ["read"] } as const;
 
+/** Module courses (catalogue éditorial ; transactions hors CMS Core). */
+const cmsAdminCourses = { courses: ["create", "read", "update", "delete", "publish"] } as const;
+const cmsReadOnlyCourses = { courses: ["read"] } as const;
+
 export const adminRole = ac.newRole({
   ...adminAc.statements,
   page: ["create", "read", "update", "delete", "publish"],
@@ -120,6 +125,7 @@ export const adminRole = ac.newRole({
   ...platformAdmin,
   ...cmsAdminEvents,
   ...cmsAdminFormations,
+  ...cmsAdminCourses,
 });
 
 export const editorRole = ac.newRole({
@@ -137,6 +143,7 @@ export const editorRole = ac.newRole({
   ...platformEditor,
   ...cmsAdminEvents,
   ...cmsAdminFormations,
+  ...cmsAdminCourses,
 });
 
 export const userRole = ac.newRole({
@@ -147,6 +154,7 @@ export const userRole = ac.newRole({
   ...platformReadOnly,
   ...cmsReadOnlyEvents,
   ...cmsReadOnlyFormations,
+  ...cmsReadOnlyCourses,
 });
 
 export const orgOwnerRole = ac.newRole({
@@ -162,6 +170,7 @@ export const orgOwnerRole = ac.newRole({
   ...platformEditor,
   ...cmsAdminEvents,
   ...cmsAdminFormations,
+  ...cmsAdminCourses,
 });
 
 export const orgAdminRole = ac.newRole({
@@ -177,6 +186,7 @@ export const orgAdminRole = ac.newRole({
   ...platformEditor,
   ...cmsAdminEvents,
   ...cmsAdminFormations,
+  ...cmsAdminCourses,
 });
 
 export const orgMemberRole = ac.newRole({
@@ -187,4 +197,5 @@ export const orgMemberRole = ac.newRole({
   ...platformReadOnly,
   ...cmsReadOnlyEvents,
   ...cmsReadOnlyFormations,
+  ...cmsReadOnlyCourses,
 });

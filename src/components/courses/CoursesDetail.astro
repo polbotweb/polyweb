@@ -1,0 +1,48 @@
+---
+/**
+ * Page de détail du domaine courses.
+ *
+ * La DTO arrive par props : la page a fait appel au loader. Ce composant
+ * n'interroge jamais la base. Aucune inscription ni progression ici (hors CMS
+ * Core, TODO §19.2).
+ */
+import type { CourseLessonDTO, CoursePublicDTO } from "@/modules/courses/loaders/course.loader";
+import type { CoursesTranslations } from "@/modules/courses/i18n";
+
+interface Props {
+  item: CoursePublicDTO;
+  lessons: CourseLessonDTO[];
+  t: CoursesTranslations;
+  formatPrice: (minor: number, currency: string) => string;
+  backHref: string;
+}
+
+const { item, lessons, t, formatPrice, backHref } = Astro.props as Props;
+---
+
+<article class="flex flex-col gap-6" data-slot="course-detail">
+  <a href={backHref} class="text-sm hover:underline">← {t.labels.back}</a>
+  <h1 class="font-heading text-3xl font-bold">{item.title}</h1>
+  <dl class="grid gap-2 sm:grid-cols-2">
+    {item.level && (<div><dt class="text-sm text-muted-foreground">{t.labels.level}</dt><dd>{t.levels[item.level]}</dd></div>)}
+    {item.durationMinutes !== null && (<div><dt class="text-sm text-muted-foreground">{t.labels.duration}</dt><dd>{item.durationMinutes} {t.labels.minutes}</dd></div>)}
+    {item.priceMinor !== null && (<div><dt class="text-sm text-muted-foreground">{t.labels.price}</dt><dd>{item.priceMinor === 0 || !item.currency ? t.labels.free : formatPrice(item.priceMinor, item.currency)}</dd></div>)}
+  </dl>
+  {item.excerpt && <p class="text-lg">{item.excerpt}</p>}
+  {item.prerequisites && (<section><h2 class="font-heading text-xl font-semibold">{t.labels.prerequisites}</h2><p class="whitespace-pre-line">{item.prerequisites}</p></section>)}
+  <div class="prose max-w-none whitespace-pre-line">{item.content}</div>
+  {lessons.length > 0 && (
+    <section>
+      <h2 class="font-heading text-xl font-semibold">{t.labels.lessons}</h2>
+      <ol class="mt-2 list-decimal ps-6">
+        {lessons.map((l) => (
+          <li>
+            <span class="font-medium">{l.title}</span>
+            {l.durationMinutes !== null && <span class="text-sm text-muted-foreground"> · {l.durationMinutes} {t.labels.minutes}</span>}
+            {l.summary && <p class="text-sm">{l.summary}</p>}
+          </li>
+        ))}
+      </ol>
+    </section>
+  )}
+</article>
