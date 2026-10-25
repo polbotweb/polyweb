@@ -165,7 +165,7 @@ resource and components, a module wired to the core Effect abstractions:
 | `locks.ts` | `defineLockResource` + `drizzleLockStore` (`core/locks`): user + session owner, same-user takeover, TTL, purge |
 | `locks.ts` (`tenantOf`) | owning organization for the generic, audited `forceReleaseLock` admin action (global admins anywhere, org owners/admins in their own organization only); auto-registered via `src/modules/*/locks.ts` |
 | `components/<domain>/admin/<Pascal>AdminList.astro` | `ForceReleaseLockButton` (confirm) when the page passes `canForceReleaseLock` (`canAdministerTenant`) |
-| `permissions/index.ts` | `require<Pascal>Permission`, an Effect guard over `requireActionPermission` (better-auth RBAC) |
+| `permissions/index.ts` | tenant-aware Effect guards over `requireTenantPermission` / `requireTenantResourcePermission` (`src/lib/effect/action.ts`, `core/permissions/tenant`): `require<Pascal>Permission(context, perms, organizationId)` for create / bulk, `require<Pascal>ResourcePermission(context, perms, id)` for update / transition / lock / unlock (organization read from the row). Global admins: everything; org owners/admins: their own organization only; platform content (`organizationId = null`): global RBAC (`userHasPermission`) |
 | `services/<entity>.service.ts` | Effect service: `dbTry` writes, lock check, workflow check, revision on each write |
 | `loaders/<entity>.loader.ts` | Effect loader (`dbTry`) + `load<Pascal>` Promise adapter (`runOrThrow`) |
 | `actions/index.ts` | Astro actions with an Effect prologue (`effectHandler`, permission guard, lock owner from session) |
