@@ -2,7 +2,10 @@
 import { requirePermission } from '@/lib/auth-guards';
 import { getDrizzle } from '@database/drizzle';
 import { pageLocks, pages, pageSections } from '@database/schemas';
-import { asc, eq, count, sql } from 'drizzle-orm';
+import { and, asc, eq, count, sql } from 'drizzle-orm';
+import { Effect } from 'effect';
+import { pagesAdminConditions, pagesAdminFiltersFromUrl, getPagesAdminFacets, countPagesAdmin } from '@database/loaders/pages-admin.loader';
+import { loadSavedViews } from '@/lib/admin/saved-views';
 import { getSiteSettings, getContactInfo } from '@database/loaders/site.loader';
 import BaseLayout from '@layouts/BaseLayout.astro';
 import AuthLayout from '@organisms/AuthLayout/AuthLayout.astro';
@@ -53,7 +56,9 @@ const MAX_OFFSET = 10_000;
 const page = Math.max(1, Math.min(Number(Astro.url.searchParams.get('page')) || 1, MAX_PAGE));
 const offset = Math.min((page - 1) * PER_PAGE, MAX_OFFSET);
 
-const [allPagesRaw, [total]] = await Promise.all([
+// core/filters : filtres d'URL canoniques (pagesListDefinition), facettes et vues enregistrées.
+const listFilters = pagesAdminFiltersFromUrl(Astro.url.searchParams);
+const [allPagesRaw, totalCount, facets, savedViews] = await Promise.all([
   db
     .select({
       id: pages.id,
@@ -76,14 +81,17 @@ const [allPagesRaw, [total]] = await Promise.all([
     })
     .from(pages)
     .leftJoin(pageSections, eq(pages.id, pageSections.pageId))
+    .where(and(...pagesAdminConditions(listFilters)))
     .groupBy(pages.id)
     .orderBy(asc(pages.locale), asc(pages.sortOrder))
     .limit(PER_PAGE)
     .offset(offset),
-  db.select({ value: count() }).from(pages),
+  Effect.runPromise(countPagesAdmin(listFilters)),
+  editId ? Promise.resolve({}) : Effect.runPromise(getPagesAdminFacets(listFilters)).catch(() => ({})),
+  !editId && Astro.locals.user ? loadSavedViews(Astro.locals.user.id, 'pages', null) : Promise.resolve([]),
 ]);
 const allPages = allPagesRaw;
-const totalPages = Math.max(1, Math.ceil((total?.value ?? 0) / PER_PAGE));
+const totalPages = Math.max(1, Math.ceil(totalCount / PER_PAGE));
 
 // Clamp page to actual totalPages
 if (page > totalPages && totalPages > 0) {
@@ -108,6 +116,8 @@ if (page > totalPages && totalPages > 0) {
         currentPage={page}
         totalPages={totalPages}
         baseUrl={Astro.url}
+        facets={facets}
+        savedViews={savedViews}
       />
     )}
   </AuthLayout>
