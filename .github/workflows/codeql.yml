@@ -15,6 +15,7 @@ concurrency:
 jobs:
   analyze:
     name: Analyze (JavaScript/TypeScript)
+    timeout-minutes: 45
     runs-on: ubuntu-latest
     permissions:
       security-events: write
