@@ -14,12 +14,16 @@ import { formatBulk, getBulkOperationLabels, getBulkUiTranslations } from "@/cor
 import { bulkBarOperations } from "@/core/bulk/ui";
 import { blogPostAdminResource } from "@/modules/blog/admin/resource";
 import AdminSavedViews from "@organisms/AdminSavedViews.astro";
-import { canonicalListQuery } from "@/core/filters";
+import AdminFacets from "@organisms/AdminFacets.astro";
+import { getFilterUiTranslations } from "@/core/filters/i18n";
+import { canonicalListQuery, facetLinks } from "@/core/filters";
 
 interface AdminPostRow { post: { id: string; status: BlogPostStatus; viewCount: number; seoScore: number | null; isFeatured: boolean; isSticky: boolean; publishedAt: Date | null; createdAt: Date; updatedAt: Date }; translation: { title: string; slug: string } | null; author: { id: string; name: string | null } | null; categories: { id: string; slug: string; name: string | null }[] }
 interface FilterOptions { categories: { id: string; name: string }[]; tags: { id: string; name: string }[]; authors: { id: string; name: string | null }[] }
 interface Props {
   savedViews?: readonly { id: string; name: string; query: string }[];
+  /** Comptes de facettes (core/filters), chacune sans son propre filtre. */
+  facets?: Record<string, readonly { value: string; count: number }[]>;
   locale: Locale;
   blogT: BlogTranslations;
   rows: AdminPostRow[];
@@ -33,9 +37,19 @@ interface Props {
   organizationId?: string | null;
   filterOptions: FilterOptions;
 }
-const { savedViews = [], blogT, rows, meta, baseAdminUrl, basePublicUrl, canCreate, canUpdate, canPublish, canDelete, organizationId, filterOptions, locale } = Astro.props;
+const { facets = {}, savedViews = [], blogT, rows, meta, baseAdminUrl, basePublicUrl, canCreate, canUpdate, canPublish, canDelete, organizationId, filterOptions, locale } = Astro.props;
 const bulkT = getBulkUiTranslations(locale);
 const currentQuery = canonicalListQuery(blogPostAdminResource.list!, Astro.url.searchParams);
+// Facettes (core/filters) : liens SSR vers l'URL canonique qui bascule chaque valeur.
+const filterT = getFilterUiTranslations(locale);
+const yesNo = (v: string) => (v === "true" ? filterT.yes : filterT.no);
+const listDef = blogPostAdminResource.list!;
+const facetGroups = [
+  { id: "status", label: blogT.admin.status, links: facetLinks(listDef, currentQuery, "status", facets.status ?? [], baseAdminUrl, (v) => blogT.statuses[v as BlogPostStatus] ?? v) },
+  { id: "featured", label: blogT.labels.featured, links: facetLinks(listDef, currentQuery, "featured", facets.featured ?? [], baseAdminUrl, yesNo) },
+  { id: "sticky", label: blogT.labels.sticky, links: facetLinks(listDef, currentQuery, "sticky", facets.sticky ?? [], baseAdminUrl, yesNo) },
+];
+const hasFilters = [...new URLSearchParams(currentQuery).keys()].some((k) => k !== "sortBy" && k !== "sortOrder" && k !== "page");
 const bulkOps = getBulkOperationLabels(locale);
 // Actions groupées (core/bulk) : opérations de la ressource admin filtrées par permission ; le serveur revérifie.
 const bulkOperations = blogPostAdminResource.actions.bulk
@@ -52,6 +66,7 @@ for (let i = 1; i <= meta.totalPages; i += 1) { if (i === 1 || i === meta.totalP
 ---
 <div class="space-y-4">
   <div class="flex items-center justify-between gap-3 flex-wrap"><h2 class="font-heading text-lg font-semibold">{blogT.admin.posts}</h2>{canCreate && <Button size="sm" href={`${baseAdminUrl}/new`}><Icon name="mdi:plus" class="size-4" />{blogT.admin.newPost}</Button>}</div>
+  <AdminFacets locale={locale} groups={facetGroups} clearHref={hasFilters ? baseAdminUrl : null} />
   <AdminSavedViews locale={locale} resource="blog-post" organizationId={organizationId ?? null} views={savedViews} baseUrl={baseAdminUrl} currentQuery={currentQuery} />
   <AdminBulkBar action="bulkBlogPostLifecycle" locale={locale} organizationId={organizationId ?? null} operations={bulkOperations}>
   <DataView showModeSelector={false}>

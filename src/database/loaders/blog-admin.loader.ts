@@ -15,6 +15,7 @@ import {
 import type { Locale } from "@i18n/config";
 import type { BlogPostStatus } from "@/lib/blog/constants";
 import { dbTry, runOrThrow } from "@/lib/effect/run";
+import { computeFacets } from "@/core/filters/facets";
 
 export interface BlogAdminPostFilters {
   page?: number;
@@ -55,17 +56,9 @@ function tagTenantScope(organizationId: string | null) {
   return organizationId === null ? isNull(blogTags.organizationId) : eq(blogTags.organizationId, organizationId);
 }
 
-/**
- * Liste admin paginée + statistiques du tenant : page, total et agrégats en parallèle, puis
- * catégories de la page en une requête groupée.
- */
-const blogAdminPostDataEffect = (organizationId: string | null, locale: Locale, filters: BlogAdminPostFilters = {}) =>
-  Effect.suspend(() => {
+/** Conditions SQL de la liste admin (partagées par la liste et les comptes de facettes). */
+function blogAdminConditions(organizationId: string | null, displayLocale: Locale, filters: BlogAdminPostFilters) {
   const db = getDrizzle();
-  const displayLocale = filters.translationLocale ?? locale;
-  const page = Math.max(1, filters.page ?? 1);
-  const limit = Math.min(100, Math.max(1, filters.limit ?? 20));
-  const offset = (page - 1) * limit;
   const conditions = [tenantScope(organizationId), eq(blogPostTranslations.locale, displayLocale), translationTenantScope(organizationId)];
 
   if (filters.status) conditions.push(eq(blogPosts.status, filters.status));
@@ -82,6 +75,21 @@ const blogAdminPostDataEffect = (organizationId: string | null, locale: Locale, 
   if (filters.tagId) {
     conditions.push(inArray(blogPosts.id, db.select({ postId: blogPostTags.postId }).from(blogPostTags).innerJoin(blogTags, eq(blogTags.id, blogPostTags.tagId)).where(and(eq(blogPostTags.tagId, filters.tagId), tagTenantScope(organizationId)))));
   }
+  return conditions;
+}
+
+/**
+ * Liste admin paginée + statistiques du tenant : page, total et agrégats en parallèle, puis
+ * catégories de la page en une requête groupée.
+ */
+const blogAdminPostDataEffect = (organizationId: string | null, locale: Locale, filters: BlogAdminPostFilters = {}) =>
+  Effect.suspend(() => {
+  const db = getDrizzle();
+  const displayLocale = filters.translationLocale ?? locale;
+  const page = Math.max(1, filters.page ?? 1);
+  const limit = Math.min(100, Math.max(1, filters.limit ?? 20));
+  const offset = (page - 1) * limit;
+  const conditions = blogAdminConditions(organizationId, displayLocale, filters);
 
   const orderDirection = filters.sortOrder === "asc" ? asc : desc;
   const orderBy = (() => {
@@ -165,7 +173,27 @@ const blogAdminTagsEffect = (organizationId: string | null, locale: Locale) =>
   );
 
 /** Lectures admin blog Effect-natives (non mises en cache, comme les exports Promise). */
+/**
+ * Comptes de facettes de la liste admin (core/filters) : statut, à la une, épinglé — chaque
+ * facette compte avec les autres filtres actifs mais sans le sien, dans le tenant et la langue.
+ */
+const blogAdminFacetsEffect = (organizationId: string | null, locale: Locale, filters: BlogAdminPostFilters = {}) => {
+  const displayLocale = filters.translationLocale ?? locale;
+  const grouped = (column: typeof blogPosts.status | typeof blogPosts.isFeatured | typeof blogPosts.isSticky) => async (f: BlogAdminPostFilters) => {
+    const rows = await getDrizzle().select({ value: column, count: count() }).from(blogPosts)
+      .innerJoin(blogPostTranslations, and(eq(blogPostTranslations.postId, blogPosts.id), eq(blogPostTranslations.locale, displayLocale), translationTenantScope(organizationId)))
+      .where(and(...blogAdminConditions(organizationId, displayLocale, f))).groupBy(column);
+    return rows.map((r) => ({ value: String(r.value), count: Number(r.count) }));
+  };
+  return computeFacets(filters, [
+    { id: "status", filterKey: "status", count: grouped(blogPosts.status) },
+    { id: "featured", filterKey: "featured", count: grouped(blogPosts.isFeatured) },
+    { id: "sticky", filterKey: "sticky", count: grouped(blogPosts.isSticky) },
+  ]);
+};
+
 export const blogAdminLoaderEffects = {
+  getBlogAdminFacets: blogAdminFacetsEffect,
   getBlogAdminPostData: blogAdminPostDataEffect,
   getBlogAdminAuthors: blogAdminAuthorsEffect,
   getBlogAdminTags: blogAdminTagsEffect,
@@ -175,3 +203,4 @@ export const getBlogAdminPostData = (organizationId: string | null, locale: Loca
   runOrThrow(blogAdminPostDataEffect(organizationId, locale, filters));
 export const getBlogAdminAuthors = (organizationId: string | null) => runOrThrow(blogAdminAuthorsEffect(organizationId));
 export const getBlogAdminTags = (organizationId: string | null, locale: Locale) => runOrThrow(blogAdminTagsEffect(organizationId, locale));
+export const getBlogAdminFacets = blogAdminFacetsEffect;

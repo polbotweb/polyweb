@@ -15,8 +15,8 @@ const base = { name: 'mon-site', from: root, adapter: 'node', storage: 'local', 
 
 describe('create-polyweb helpers (brick n)', () => {
   it('excludes secrets, builds and dependencies', () => {
-    for (const p of ['.env', '.env.local', 'node_modules/x', 'dist/a', 'logs/x.log', 'test-results/a', 'tests/reports/r.json', 'packages/create-polyweb/src/index.ts', 'public/uploads/a.png', 'src/.astro/x', 'backups/b.tar.gz']) expect(shouldCopy(p), p).toBe(false);
-    for (const p of ['.env.example', 'src/pages/index.astro', 'tests/unit/a.test.ts', 'packages/other/x']) expect(shouldCopy(p), p).toBe(true);
+    for (const p of ['.env', '.env.local', 'node_modules/x', 'dist/a', 'logs/x.log', 'test-results/a', 'tests/reports/r.json', 'packages/create-polyweb/src/index.ts', 'public/uploads/a.png', 'src/.astro/x', 'backups/b.tar.gz', 'tmp-new-module-abc/src/x.ts', 'tmp']) expect(shouldCopy(p), p).toBe(false);
+    for (const p of ['.env.example', 'src/pages/index.astro', 'tests/unit/a.test.ts', 'packages/other/x', 'src/tmp/x.ts']) expect(shouldCopy(p), p).toBe(true);
   });
   it('parses templates, args and env lines', () => {
     expect(parseTemplate('github:polbotweb/polyweb#v1.2')).toEqual({ kind: 'github', owner: 'polbotweb', repo: 'polyweb', ref: 'v1.2' });
