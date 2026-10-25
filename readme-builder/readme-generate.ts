@@ -10,7 +10,7 @@ import { generateEmail }     from './generateEmail';
 import { generateI18n }      from './generateI18n';
 import { generateQuality }   from './generateQuality';
 import { generateEnv, generateTsconfigAliases } from './generateDeps';
-import { getLangLinks, githubSlug } from './helpers';
+import { formatNodeRequirement, getLangLinks, githubSlug } from './helpers';
 import { LANGS, i18n } from './i18n';
 import type { Lang } from './i18n';
 
@@ -43,7 +43,8 @@ async function generateReadmeForLang(lang: Lang): Promise<void> {
   // 2 ─ Getting Started
   body += `## ${s.gettingStarted[lang]}\n\n`;
   body += `### ${sub.prerequisites[lang]}\n\n`;
-  body += '- **Node.js** >= 22.12.0\n- **pnpm** >= 10\n- **PostgreSQL** >= 16\n\n';
+  const pkg = JSON.parse(await fs.readFile(path.resolve(__dirname, '..', 'package.json'), 'utf8')) as { engines?: { node?: unknown } };
+  body += `- **Node.js** ${formatNodeRequirement(pkg.engines?.node)}\n- **pnpm** >= 10\n- **PostgreSQL** >= 16\n\n`;
   body += `### ${sub.installation[lang]}\n\n`;
   body += '```bash\npnpm install\ncp .env.example .env\npnpm db:migrate\npnpm dev\n```\n\n';
   body += `### ${sub.envVars[lang]}\n\n`;

@@ -1,4 +1,6 @@
+import { createHash } from 'node:crypto';
 import path from 'path';
+import { getTableColumns, type Table } from 'drizzle-orm';
 import { pathToFileURL } from 'url';
 import { getPgClient, getDrizzle, shutdownDb } from '../drizzle';
 import * as allSchemas from '../schemas';
@@ -27,7 +29,7 @@ async function seedEntry(tx: SeedTx, entry: (typeof seedManifest)[number]): Prom
       console.log(c.yellow(`[SKIP] Dataset vide ou introuvable : ${entry.dataFile}`));
       return;
     }
-    const rows = dataset.map(normalizeRow);
+    const rows = withStableIds(schemaTable, entry.dataFile, dataset.map(normalizeRow));
     const inserter = tx.insert(schemaTable).values(rows);
     if (typeof inserter.onConflictDoNothing === 'function') await inserter.onConflictDoNothing();
     else await inserter;
@@ -71,6 +73,22 @@ const program = Effect.gen(function* () {
 
   console.log(c.green(c.bold('\n✔️  Seed terminé.')));
 });
+
+/**
+ * Idempotence : une ligne sans `id` recevrait un UUID aléatoire ($defaultFn) à chaque seed et serait
+ * dupliquée (menus, coordonnées…). On lui attribue un id déterministe (fichier + rang, format UUID)
+ * pour que `onConflictDoNothing` la reconnaisse au seed suivant. Les ids explicites sont conservés.
+ */
+export function withStableIds(table: unknown, dataFile: string, rows: Record<string, unknown>[]): Record<string, unknown>[] {
+  const idColumn = (getTableColumns(table as Table) as Record<string, { primary?: boolean } | undefined>).id;
+  if (!idColumn?.primary) return rows;
+  return rows.map((row, index) => (row.id == null ? { ...row, id: stableSeedId(dataFile, index) } : row));
+}
+
+export function stableSeedId(dataFile: string, index: number): string {
+  const h = createHash('sha1').update(`polyweb-seed:${dataFile}:${index}`).digest('hex');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-${((parseInt(h[16]!, 16) & 0x3) | 0x8).toString(16)}${h.slice(17, 20)}-${h.slice(20, 32)}`;
+}
 
 function normalizeRow(row: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};

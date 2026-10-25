@@ -57,6 +57,15 @@ describe('scripts/new-module.ts', () => {
     const list = readFileSync(join(dir, 'components/event-tickets/admin/EventTicketsAdminList.astro'), 'utf8');
     expect(list).toContain('<AdminBulkBar action="eventTickets.bulk"');
     expect(list).toContain('data-bulk-item value={item.id}');
+    // Facettes + vues enregistrées (core/filters) : filtre statut facetté, loader Effect, liste branchée.
+    expect(resource).toContain('{ id: "status", kind: "select", queryParam: "status", options: [...EVENT_TICKETS_STATUSES], facet: true }');
+    expect(resource).toMatch(/facets: true,\s*savedViews: true,/);
+    const adminLoader = read('loaders/ticket-admin.loader.ts');
+    expect(adminLoader).toContain('computeFacets(filters, [');
+    expect(adminLoader).toContain('parseListUrlState(ticketAdminResource.list!, params)');
+    expect(read('loaders/index.ts')).toContain('export * from "./ticket-admin.loader";');
+    expect(list).toContain('<AdminFacets locale={locale} groups={facetGroups}');
+    expect(list).toContain('<AdminSavedViews locale={locale} resource="ticket"');
   });
 });
 
