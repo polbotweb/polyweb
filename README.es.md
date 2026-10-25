@@ -1039,6 +1039,7 @@ Atomic CMS se organiza en capacidades compartidas de plataforma/CMS y módulos d
 - `tests/e2e/services.spec.ts`
 - `tests/integration/blog-actions.test.ts`
 - `tests/integration/blog-bulk-core.test.ts`
+- `tests/integration/blog-facets.test.ts`
 - `tests/integration/blog-internal-link.test.ts`
 - `tests/integration/cms-admin.test.ts`
 - `tests/integration/consent-cms.test.ts`
