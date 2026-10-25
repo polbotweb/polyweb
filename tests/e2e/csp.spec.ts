@@ -13,7 +13,14 @@ test.describe('CSP stricte', () => {
       await page.addInitScript(() => {
         (window as unknown as { __csp: string[] }).__csp = [];
         document.addEventListener('securitypolicyviolation', (e) => {
-          (window as unknown as { __csp: string[] }).__csp.push(`${e.violatedDirective} ${e.blockedURI} ${e.sample}`);
+          // WebKit ≥ 27 (Playwright 1.6x) : tout <select> (statique ou créé en JS) déclenche
+          // un faux positif `style-src-attr` (sample vide) venant de son shadow DOM interne.
+          // Reproduit hors projet avec une page minimale ; aucun attribut style= côté code.
+          if (e.violatedDirective === 'style-src-attr' && !e.sample && e.target instanceof HTMLSelectElement) return;
+          const t = e.target instanceof Element ? e.target.outerHTML.slice(0, 160) : String(e.target);
+          (window as unknown as { __csp: string[] }).__csp.push(
+            `${e.violatedDirective} ${e.blockedURI} ${e.sample} @${e.sourceFile}:${e.lineNumber}:${e.columnNumber} on ${t}`,
+          );
         });
       });
       const res = await page.goto(path, { waitUntil: 'load' });
