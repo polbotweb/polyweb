@@ -19,6 +19,7 @@ concurrency:
 jobs:
   a11y-visual:
     name: Accessibility & visual regression
+    timeout-minutes: 45
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -47,7 +48,25 @@ jobs:
         with: { node-version: 22, check-latest: true, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:migrate && pnpm db:infra && pnpm db:seed
-      - run: pnpm exec playwright install --with-deps chromium
+      # Robustesse (2026-10-25) : cache des navigateurs Playwright par version + délai borné
+      # et nouvelles tentatives (une installation figée a déjà bloqué un job 45 min).
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
+      - name: Install Playwright Browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 15
+        run: for i in 1 2 3; do timeout 300 pnpm exec playwright install --with-deps chromium && exit 0; echo "tentative $i échouée"; done; exit 1
+      - name: Install Playwright system deps (browsers from cache)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        timeout-minutes: 10
+        run: for i in 1 2 3; do timeout 240 pnpm exec playwright install-deps chromium && exit 0; echo "tentative $i échouée"; done; exit 1
       - name: axe-core audit
         run: pnpm test:a11y
       - name: Visual regression
@@ -62,6 +81,7 @@ jobs:
 
   deploy-preview:
     name: Deploy Vercel preview
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     needs: a11y-visual
     env:

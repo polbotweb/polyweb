@@ -333,6 +333,8 @@ export default {
       pages: {
         title: 'الصفحات',
         description: 'إنشاء وإدارة صفحات الموقع.',
+        trashView: 'سلة المهملات',
+        backToPages: 'العودة إلى الصفحات',
         createPage: 'صفحة جديدة',
         editPage: 'تعديل الصفحة',
         versionHistoryTitle: 'سجل الإصدارات',
