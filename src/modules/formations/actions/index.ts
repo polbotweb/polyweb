@@ -8,7 +8,7 @@ import { Effect } from "effect";
 import { effectHandler } from "@/lib/effect/action";
 import { lockOwnerFrom } from "@/core/locks/service";
 import { lockLocaleFrom } from "@/core/locks/errors";
-import { requireFormationsPermission } from "../permissions";
+import { requireFormationsPermission, requireFormationsResourcePermission } from "../permissions";
 import { formationsService } from "../services/formation.service";
 import { FORMATIONS_STATUSES } from "../domain/workflow";
 import { bulkFormationsLifecycle } from "./bulk";
@@ -21,28 +21,28 @@ export const formationsActions = {
   create: defineAction({
     input: z.object({ title: z.string().min(1).max(200), slug: z.string().min(1).max(200), organizationId: z.string().nullable().default(null) }),
     handler: effectHandler((input, context) => Effect.gen(function* () {
-      const user = yield* requireFormationsPermission(context, ["create"]);
+      const user = yield* requireFormationsPermission(context, ["create"], input.organizationId);
       return yield* formationsService.create(input, user.id);
     })),
   }),
   update: defineAction({
     input: idInput.extend({ title: z.string().min(1).max(200).optional(), slug: z.string().min(1).max(200).optional() }),
     handler: effectHandler(({ id, ...patch }, context) => Effect.gen(function* () {
-      const user = yield* requireFormationsPermission(context, ["update"]);
+      const user = yield* requireFormationsResourcePermission(context, ["update"], id);
       return yield* formationsService.update(id, patch, lockOwnerFrom(user.id, context.locals.session?.id), lockLocaleFrom(context.request.headers));
     })),
   }),
   transition: defineAction({
     input: idInput.extend({ to: z.enum(FORMATIONS_STATUSES) }),
     handler: effectHandler((input, context) => Effect.gen(function* () {
-      const user = yield* requireFormationsPermission(context, input.to === "PUBLISHED" ? ["publish"] : ["update"]);
+      const user = yield* requireFormationsResourcePermission(context, input.to === "PUBLISHED" ? ["publish"] : ["update"], input.id);
       return yield* formationsService.transition(input.id, input.to, lockOwnerFrom(user.id, context.locals.session?.id), lockLocaleFrom(context.request.headers));
     })),
   }),
   lock: defineAction({
     input: idInput.extend({ takeOver: z.boolean().optional() }),
     handler: effectHandler((input, context) => Effect.gen(function* () {
-      const user = yield* requireFormationsPermission(context, ["update"]);
+      const user = yield* requireFormationsResourcePermission(context, ["update"], input.id);
       // Même utilisateur dans une autre session → LockHeldError { sameUser } : confirmer côté UI puis renvoyer takeOver.
       return yield* formationsService.lock(input.id, lockOwnerFrom(user.id, context.locals.session?.id), { takeOver: input.takeOver, locale: lockLocaleFrom(context.request.headers) });
     })),
@@ -50,7 +50,7 @@ export const formationsActions = {
   unlock: defineAction({
     input: idInput,
     handler: effectHandler((input, context) => Effect.gen(function* () {
-      const user = yield* requireFormationsPermission(context, ["update"]);
+      const user = yield* requireFormationsResourcePermission(context, ["update"], input.id);
       yield* formationsService.unlock(input.id, lockOwnerFrom(user.id, context.locals.session?.id));
       return { success: true };
     })),

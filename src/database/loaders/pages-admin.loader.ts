@@ -3,7 +3,7 @@
  * (`pagesListDefinition`) et comptes de facettes statut / modèle / langue — chaque facette
  * est comptée avec les autres filtres actifs mais sans le sien (computeFacets, Effect).
  */
-import { and, count, eq, ilike, or, type SQL } from "drizzle-orm";
+import { and, count, eq, ilike, isNotNull, isNull, or, type SQL } from "drizzle-orm";
 import { Effect } from "effect";
 import { getDrizzle } from "@database/drizzle";
 import { pages } from "@database/schemas";
@@ -16,6 +16,8 @@ export interface PagesAdminFilters {
   readonly status?: "published" | "draft";
   readonly template?: string;
   readonly locale?: string;
+  /** Vue corbeille : uniquement les pages supprimées ; sinon elles sont exclues. */
+  readonly trash?: boolean;
 }
 
 /** URL → filtres typés (valeurs hors définition ignorées par parseListUrlState). */
@@ -28,6 +30,7 @@ export function pagesAdminFiltersFromUrl(params: URLSearchParams | string): Page
     status: status === "published" || status === "draft" ? status : undefined,
     template: str(filters.template),
     locale: str(filters.locale),
+    trash: filters.view === "trash" ? true : undefined,
   };
 }
 
@@ -35,7 +38,7 @@ const escapeLike = (v: string) => v.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 /** Conditions SQL partagées par la liste, le total et les comptes de facettes. */
 export function pagesAdminConditions(filters: PagesAdminFilters): SQL[] {
-  const conditions: SQL[] = [];
+  const conditions: SQL[] = [filters.trash ? isNotNull(pages.deletedAt) : isNull(pages.deletedAt)];
   if (filters.q) {
     const term = `%${escapeLike(filters.q)}%`;
     conditions.push(or(ilike(pages.title, term), ilike(pages.slug, term))!);
