@@ -13,10 +13,13 @@ import AdminBulkBar from "@organisms/AdminBulkBar.astro";
 import { formatBulk, getBulkOperationLabels, getBulkUiTranslations } from "@/core/bulk/i18n";
 import { bulkBarOperations } from "@/core/bulk/ui";
 import { blogPostAdminResource } from "@/modules/blog/admin/resource";
+import AdminSavedViews from "@organisms/AdminSavedViews.astro";
+import { canonicalListQuery } from "@/core/filters";
 
 interface AdminPostRow { post: { id: string; status: BlogPostStatus; viewCount: number; seoScore: number | null; isFeatured: boolean; isSticky: boolean; publishedAt: Date | null; createdAt: Date; updatedAt: Date }; translation: { title: string; slug: string } | null; author: { id: string; name: string | null } | null; categories: { id: string; slug: string; name: string | null }[] }
 interface FilterOptions { categories: { id: string; name: string }[]; tags: { id: string; name: string }[]; authors: { id: string; name: string | null }[] }
 interface Props {
+  savedViews?: readonly { id: string; name: string; query: string }[];
   locale: Locale;
   blogT: BlogTranslations;
   rows: AdminPostRow[];
@@ -30,8 +33,9 @@ interface Props {
   organizationId?: string | null;
   filterOptions: FilterOptions;
 }
-const { blogT, rows, meta, baseAdminUrl, basePublicUrl, canCreate, canUpdate, canPublish, canDelete, organizationId, filterOptions, locale } = Astro.props;
+const { savedViews = [], blogT, rows, meta, baseAdminUrl, basePublicUrl, canCreate, canUpdate, canPublish, canDelete, organizationId, filterOptions, locale } = Astro.props;
 const bulkT = getBulkUiTranslations(locale);
+const currentQuery = canonicalListQuery(blogPostAdminResource.list!, Astro.url.searchParams);
 const bulkOps = getBulkOperationLabels(locale);
 // Actions groupées (core/bulk) : opérations de la ressource admin filtrées par permission ; le serveur revérifie.
 const bulkOperations = blogPostAdminResource.actions.bulk
@@ -48,6 +52,7 @@ for (let i = 1; i <= meta.totalPages; i += 1) { if (i === 1 || i === meta.totalP
 ---
 <div class="space-y-4">
   <div class="flex items-center justify-between gap-3 flex-wrap"><h2 class="font-heading text-lg font-semibold">{blogT.admin.posts}</h2>{canCreate && <Button size="sm" href={`${baseAdminUrl}/new`}><Icon name="mdi:plus" class="size-4" />{blogT.admin.newPost}</Button>}</div>
+  <AdminSavedViews locale={locale} resource="blog-post" organizationId={organizationId ?? null} views={savedViews} baseUrl={baseAdminUrl} currentQuery={currentQuery} />
   <AdminBulkBar action="bulkBlogPostLifecycle" locale={locale} organizationId={organizationId ?? null} operations={bulkOperations}>
   <DataView showModeSelector={false}>
     <Fragment slot="toolbar-start">

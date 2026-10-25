@@ -5,15 +5,17 @@ import { mediaFileAlts, mediaFiles, serviceAvailability, serviceCategories, serv
 import type { Locale } from "@i18n/config";
 import type { ServiceDetail, ServiceListItem } from "@/modules/services/domain";
 import { serviceAdminFiltersSchema, type ServiceAdminFilters } from "@/modules/services/validation";
+import { computeFacets } from "@/core/filters/facets";
 export type { ServiceAdminFilters } from "@/modules/services/validation";
 
 function tenantScope(column: AnyPgColumn<{ data: string | null }>, organizationId: string | null) { return organizationId === null ? isNull(column) : eq(column, organizationId); }
 function tenantJoinScope(column: AnyPgColumn<{ data: string | null }>, organizationId: string | null) { return organizationId === null ? isNull(column) : eq(column, organizationId); }
 
-export async function getServiceAdminData(organizationId: string | null, locale: Locale, input: Partial<ServiceAdminFilters> = {}): Promise<{ items: ServiceListItem[]; page: number; limit: number; total: number; totalPages: number }> {
-  const filters = serviceAdminFiltersSchema.parse({ ...input, organizationId, locale: input.locale ?? locale });
-  const queryLocale = filters.locale ?? locale;
+/** Conditions SQL de la liste admin (partagées par la liste et les comptes de facettes). */
+type ParsedServiceAdminFilters = ReturnType<typeof serviceAdminFiltersSchema.parse>;
+function serviceAdminConditions(filters: ParsedServiceAdminFilters, organizationId: string | null, locale: Locale) {
   const db = getDrizzle();
+  const queryLocale = filters.locale ?? locale;
   const conditions = [tenantScope(services.organizationId, organizationId)];
   if (filters.status) conditions.push(eq(services.status, filters.status));
   if (filters.providerId || filters.authorId) conditions.push(eq(services.providerId, filters.providerId ?? filters.authorId!));
@@ -24,6 +26,13 @@ export async function getServiceAdminData(organizationId: string | null, locale:
   const translatedConditions = [eq(serviceTranslations.locale, queryLocale), tenantJoinScope(serviceTranslations.organizationId, organizationId)];
   const searchCondition = filters.search ? sql`(${serviceTranslations.searchVector} @@ websearch_to_tsquery(locale_to_regconfig(${queryLocale}), ${filters.search}) OR ${services.slug} ILIKE ${`%${filters.search}%`} OR ${serviceTranslations.slug} ILIKE ${`%${filters.search}%`})` : null;
   if (searchCondition) conditions.push(searchCondition);
+  return { conditions, translatedConditions, queryLocale };
+}
+
+export async function getServiceAdminData(organizationId: string | null, locale: Locale, input: Partial<ServiceAdminFilters> = {}): Promise<{ items: ServiceListItem[]; page: number; limit: number; total: number; totalPages: number }> {
+  const filters = serviceAdminFiltersSchema.parse({ ...input, organizationId, locale: input.locale ?? locale });
+  const db = getDrizzle();
+  const { conditions, translatedConditions, queryLocale } = serviceAdminConditions(filters, organizationId, locale);
   const orderColumn = filters.sortBy === "title" ? serviceTranslations.title : filters.sortBy === "priceMinor" ? services.priceMinor : filters.sortBy === "ratingAverage100" ? services.ratingAverage100 : filters.sortBy === "viewCount" ? services.viewCount : filters.sortBy === "publishedAt" ? services.publishedAt : filters.sortBy === "createdAt" ? services.createdAt : services.updatedAt;
   const orderBy = filters.sortOrder === "asc" ? asc(orderColumn) : desc(orderColumn);
   const [{ totalRow }] = await db.select({ totalRow: count() }).from(services).leftJoin(serviceTranslations, and(eq(serviceTranslations.serviceId, services.id), ...translatedConditions)).where(and(...conditions));
@@ -103,4 +112,23 @@ export async function getServiceModerationQueue(organizationId: string | null) {
   ]);
   const reports = [...directReports, ...commentReports, ...reviewReports].sort((a, b) => a.report.createdAt.getTime() - b.report.createdAt.getTime()).slice(0, 100);
   return { reviews, comments, reports };
+}
+
+/**
+ * Comptes de facettes de la liste admin (core/filters) : statut, mis en avant, mobile —
+ * chaque facette compte avec les autres filtres actifs mais sans le sien, dans le tenant.
+ */
+export function getServiceAdminFacets(organizationId: string | null, locale: Locale, input: Partial<ServiceAdminFilters> = {}) {
+  const filters = serviceAdminFiltersSchema.parse({ ...input, organizationId, locale: input.locale ?? locale });
+  const db = getDrizzle();
+  const grouped = (column: AnyPgColumn) => async (f: ParsedServiceAdminFilters) => {
+    const { conditions, translatedConditions } = serviceAdminConditions(f, organizationId, locale);
+    const rows = await db.select({ value: column, count: count() }).from(services).leftJoin(serviceTranslations, and(eq(serviceTranslations.serviceId, services.id), ...translatedConditions)).where(and(...conditions)).groupBy(column);
+    return rows.map((r) => ({ value: String(r.value), count: Number(r.count) }));
+  };
+  return computeFacets(filters, [
+    { id: "status", filterKey: "status", count: grouped(services.status) },
+    { id: "featured", filterKey: "featured", count: grouped(services.isFeatured) },
+    { id: "mobile", filterKey: "mobile", count: grouped(services.isMobile) },
+  ]);
 }

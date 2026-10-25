@@ -19,3 +19,4 @@ export * from "./schemas/webhooks.schema";
 export * from "./schemas/forms.schema";
 export * from "./schemas/plugins.schema";
 export * from "./schemas/search.schema";
+export * from "./schemas/saved-views.schema";

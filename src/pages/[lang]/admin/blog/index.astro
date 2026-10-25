@@ -8,6 +8,7 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
 import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
 import BlogAdminPage from "@/components/blog/BlogAdminPage.astro";
+import { loadSavedViews } from "@/lib/admin/saved-views";
 import { hasBlogPermission, resolveBlogTenant } from "@/actions/blog/_helpers";
 import { LOCALES, type Locale } from "@i18n/config";
 
@@ -52,6 +53,7 @@ const [{ rows, meta, stats }, categoryRows, tagRows, moderation, authors, adminT
   getBlogAdminTags(null, locale),
   getBlogAdminModerationCount(null),
 ]);
+const savedViews = Astro.locals.user ? await loadSavedViews(Astro.locals.user.id, "blog-post", null) : [];
 const categories = categoryRows.map((item) => ({ id: item.id, slug: item.slug, name: item.translation?.name ?? item.slug, description: item.translation?.description ?? null, color: item.color, icon: item.icon, parentId: item.parentId, sortOrder: item.sortOrder, postCount: item.postCount }));
 const tags = tagRows.map((item) => ({ id: item.id, slug: item.slug, name: item.translation?.name ?? item.slug, color: item.color, postCount: item.postCount }));
 const filterOptions = { categories: categories.map(({ id, name }) => ({ id, name })), tags: adminTags.map(({ id, name }) => ({ id, name })), authors };
@@ -59,6 +61,6 @@ const filterOptions = { categories: categories.map(({ id, name }) => ({ id, name
 <BaseLayout title={blogT.admin.title} description={blogT.admin.title}>
   <AuthLayout title={blogT.admin.title}>
     <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="blog" />
-    <BlogAdminPage locale={locale} blogT={blogT} title={blogT.admin.title} posts={rows} postsMeta={meta} stats={stats} moderationCount={moderationCount} categories={categories} tags={tags} moderation={moderation} baseAdminUrl={baseAdminUrl} basePublicUrl={basePublicUrl} userId={user.id} canCreate={canCreate} canUpdate={canUpdate} canPublish={canPublish} canDelete={canDelete} filterOptions={filterOptions} />
+    <BlogAdminPage savedViews={savedViews} locale={locale} blogT={blogT} title={blogT.admin.title} posts={rows} postsMeta={meta} stats={stats} moderationCount={moderationCount} categories={categories} tags={tags} moderation={moderation} baseAdminUrl={baseAdminUrl} basePublicUrl={basePublicUrl} userId={user.id} canCreate={canCreate} canUpdate={canUpdate} canPublish={canPublish} canDelete={canDelete} filterOptions={filterOptions} />
   </AuthLayout>
 </BaseLayout>

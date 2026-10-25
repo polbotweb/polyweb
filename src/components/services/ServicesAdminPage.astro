@@ -10,6 +10,9 @@ import type { ServiceListItem } from "@/modules/services/domain";
 import type { ServiceAdminFilters } from "@/modules/services/admin";
 
 interface Props {
+  /** core/filters : comptes de facettes et vues enregistrées de l'utilisateur (optionnels). */
+  facets?: Record<string, readonly { value: string; count: number }[]>;
+  savedViews?: readonly { id: string; name: string; query: string }[];
   locale: Locale;
   title: string;
   items: ServiceListItem[];
@@ -54,7 +57,7 @@ const et = getServiceEngagementTranslations(props.locale);
         </TabsList>
 
         <TabsContent value="services" defaultActive class="pt-4">
-          <AdminServiceList locale={props.locale} items={props.items} total={props.stats.total} published={props.stats.published} draft={props.stats.draft} archived={props.stats.archived} deleted={props.stats.deleted} featured={props.stats.featured} views={props.stats.views} reviews={props.stats.reviews} comments={props.stats.comments} page={props.meta.page} totalPages={props.meta.totalPages} baseUrl={props.baseAdminUrl} organizationId={props.organizationId} canCreate={props.canCreate} canUpdate={props.canUpdate} canPublish={props.canPublish} canDelete={props.canDelete} categoryOptions={props.categoryOptions} tagOptions={props.tagOptions} providerOptions={props.providerOptions} localeOptions={props.localeOptions} />
+          <AdminServiceList facets={props.facets} savedViews={props.savedViews} locale={props.locale} items={props.items} total={props.stats.total} published={props.stats.published} draft={props.stats.draft} archived={props.stats.archived} deleted={props.stats.deleted} featured={props.stats.featured} views={props.stats.views} reviews={props.stats.reviews} comments={props.stats.comments} page={props.meta.page} totalPages={props.meta.totalPages} baseUrl={props.baseAdminUrl} organizationId={props.organizationId} canCreate={props.canCreate} canUpdate={props.canUpdate} canPublish={props.canPublish} canDelete={props.canDelete} categoryOptions={props.categoryOptions} tagOptions={props.tagOptions} providerOptions={props.providerOptions} localeOptions={props.localeOptions} />
         </TabsContent>
 
         <TabsContent value="categories" class="space-y-6 pt-4">

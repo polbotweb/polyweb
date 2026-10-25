@@ -11,7 +11,7 @@ const blogPostListDefinition = {
     { id: "author", kind: "select", queryParam: "authorId" },
     { id: "featured", kind: "boolean", queryParam: "featured" },
     { id: "sticky", kind: "boolean", queryParam: "sticky" },
-    { id: "locale", kind: "select", queryParam: "locale" },
+    { id: "locale", kind: "select", queryParam: "translationLocale" },
   ],
   sorts: [
     { id: "createdAt", queryParam: "sortBy", directions: ["asc", "desc"] },
