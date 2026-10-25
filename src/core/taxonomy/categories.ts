@@ -322,3 +322,8 @@ export function registerCategoryTaxonomy(taxonomy: CategoryTaxonomy): CategoryTa
 /** Taxonomie d'un type de ressource — `undefined` si le module n'adhère pas (aucun repli). */
 export const categoryTaxonomyFor = (resourceType: string): CategoryTaxonomy | undefined => registry.get(resourceType);
 export const registeredCategoryTaxonomies = (): readonly string[] => [...registry.keys()].sort();
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Valeur d'URL → identifiant de catégorie (uuid) ou `undefined` (valeur ignorée, jamais envoyée en SQL). */
+export const categoryFilterFromUrl = (value: unknown): string | undefined =>
+  typeof value === "string" && UUID_RE.test(value) ? value.toLowerCase() : undefined;

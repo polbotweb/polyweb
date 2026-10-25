@@ -35,18 +35,25 @@ interface Props {
   baseUrl?: URL;
   /** Comptes de facettes (`loadCoursesAdminFacets`), chacune sans son propre filtre. */
   facets?: Record<string, readonly FacetBucket[]>;
+  /** Libellés des catégories (id → nom localisé, `coursesCategoryTaxonomy.list`) ; à défaut l'id est affiché. */
+  categoryLabels?: Readonly<Record<string, string>>;
   /** Vues enregistrées de l'utilisateur pour la ressource « course ». */
   savedViews?: readonly { id: string; name: string; query: string }[];
 }
 
-const { items, locale, organizationId = null, bulkOperations = [], canForceReleaseLock = false, baseUrl, facets = {}, savedViews = [] } = Astro.props as Props;
+const { items, locale, organizationId = null, bulkOperations = [], canForceReleaseLock = false, baseUrl, facets = {}, categoryLabels = {}, savedViews = [] } = Astro.props as Props;
 const bulkT = getBulkUiTranslations(locale);
 const bulkEnabled = bulkOperations.length > 0;
 const listDefinition = courseAdminResource.list!;
 const listBaseUrl = baseUrl?.pathname ?? "";
 const currentQuery = baseUrl ? canonicalListQuery(listDefinition, baseUrl.searchParams) : "";
 // Libellés à traduire avec les autres libellés du module (modules/courses/i18n/).
-const facetGroups = baseUrl ? [{ id: "status", label: "Statut", links: facetLinks(listDefinition, currentQuery, "status", facets.status ?? [], listBaseUrl) }] : [];
+const facetGroups = baseUrl
+  ? [
+      { id: "status", label: "Statut", links: facetLinks(listDefinition, currentQuery, "status", facets.status ?? [], listBaseUrl) },
+      { id: "category", label: "Catégorie", links: facetLinks(listDefinition, currentQuery, "category", facets.category ?? [], listBaseUrl, (id) => categoryLabels[id] ?? id) },
+    ].filter((group) => group.id === "status" || group.links.length > 0)
+  : [];
 const hasFilters = [...new URLSearchParams(currentQuery).keys()].some((key) => key !== "sortBy" && key !== "sortOrder" && key !== "page");
 ---
 

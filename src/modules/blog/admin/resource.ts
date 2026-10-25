@@ -6,7 +6,7 @@ const blogPostListDefinition = {
   filters: [
     { id: "search", kind: "search", queryParam: "search" },
     { id: "status", kind: "select", queryParam: "status", options: ["DRAFT", "PUBLISHED", "ARCHIVED", "DELETED"], facet: true },
-    { id: "category", kind: "select", queryParam: "categoryId" },
+    { id: "category", kind: "select", queryParam: "categoryId", facet: true },
     { id: "tag", kind: "select", queryParam: "tagId" },
     { id: "author", kind: "select", queryParam: "authorId" },
     { id: "featured", kind: "boolean", queryParam: "featured", facet: true },

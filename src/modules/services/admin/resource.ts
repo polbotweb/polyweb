@@ -6,7 +6,7 @@ const serviceListDefinition = {
   filters: [
     { id: "search", kind: "search", queryParam: "search" },
     { id: "status", kind: "select", queryParam: "status" },
-    { id: "category", kind: "select", queryParam: "categoryId" },
+    { id: "category", kind: "select", queryParam: "categoryId", facet: true },
     { id: "tag", kind: "select", queryParam: "tagId" },
     { id: "provider", kind: "select", queryParam: "providerId" },
     { id: "featured", kind: "boolean", queryParam: "featured" },
