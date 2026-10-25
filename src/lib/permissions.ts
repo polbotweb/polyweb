@@ -39,6 +39,7 @@ export const statement = {
   plugin: ["read", "update"],
   tenant: ["create", "read", "update", "delete"],
   payment: ["read", "refund"],
+  shop: ["create", "read", "update", "delete", "publish"],
   courses: ["create", "read", "update", "delete", "publish"],
   formations: ["create", "read", "update", "delete", "publish"],
   events: ["create", "read", "update", "delete", "publish"],
@@ -107,6 +108,10 @@ const cmsReadOnlyFormations = { formations: ["read"] } as const;
 const cmsAdminCourses = { courses: ["create", "read", "update", "delete", "publish"] } as const;
 const cmsReadOnlyCourses = { courses: ["read"] } as const;
 
+/** Module shop (catalogue éditorial ; transactions hors CMS Core). */
+const cmsAdminShop = { shop: ["create", "read", "update", "delete", "publish"] } as const;
+const cmsReadOnlyShop = { shop: ["read"] } as const;
+
 export const adminRole = ac.newRole({
   ...adminAc.statements,
   page: ["create", "read", "update", "delete", "publish"],
@@ -126,6 +131,7 @@ export const adminRole = ac.newRole({
   ...cmsAdminEvents,
   ...cmsAdminFormations,
   ...cmsAdminCourses,
+  ...cmsAdminShop,
 });
 
 export const editorRole = ac.newRole({
@@ -144,6 +150,7 @@ export const editorRole = ac.newRole({
   ...cmsAdminEvents,
   ...cmsAdminFormations,
   ...cmsAdminCourses,
+  ...cmsAdminShop,
 });
 
 export const userRole = ac.newRole({
@@ -155,6 +162,7 @@ export const userRole = ac.newRole({
   ...cmsReadOnlyEvents,
   ...cmsReadOnlyFormations,
   ...cmsReadOnlyCourses,
+  ...cmsReadOnlyShop,
 });
 
 export const orgOwnerRole = ac.newRole({
@@ -171,6 +179,7 @@ export const orgOwnerRole = ac.newRole({
   ...cmsAdminEvents,
   ...cmsAdminFormations,
   ...cmsAdminCourses,
+  ...cmsAdminShop,
 });
 
 export const orgAdminRole = ac.newRole({
@@ -187,6 +196,7 @@ export const orgAdminRole = ac.newRole({
   ...cmsAdminEvents,
   ...cmsAdminFormations,
   ...cmsAdminCourses,
+  ...cmsAdminShop,
 });
 
 export const orgMemberRole = ac.newRole({
@@ -198,4 +208,5 @@ export const orgMemberRole = ac.newRole({
   ...cmsReadOnlyEvents,
   ...cmsReadOnlyFormations,
   ...cmsReadOnlyCourses,
+  ...cmsReadOnlyShop,
 });
