@@ -8,6 +8,8 @@ export const pagesListDefinition: AdminResourceListDefinition = {
     { id: "status", kind: "select", queryParam: "status", options: ["published", "draft"], facet: true },
     { id: "template", kind: "select", queryParam: "template", options: ["default", "legal"], facet: true },
     { id: "locale", kind: "select", queryParam: "locale", options: [...LOCALES], facet: true },
+    // Vue corbeille : sans ce filtre, les pages supprimées (deletedAt) sont exclues.
+    { id: "view", kind: "select", queryParam: "view", options: ["trash"] },
   ],
   sorts: [
     { id: "publishedAt", queryParam: "sortBy", directions: ["asc", "desc"] },

@@ -58,14 +58,22 @@ const facetGroups = [
 ];
 const hasFilters = [...new URLSearchParams(currentQuery).keys()].some((k) => k !== 'sortBy' && k !== 'sortOrder' && k !== 'page');
 const LOCK_TTL_MS = 5 * 60 * 1000;
-// Actions groupées (core/bulk → bulkPageLifecycle) : la liste ne montre que les pages hors corbeille.
+// Actions groupées (core/bulk → bulkPageLifecycle) : la liste ne montre que les pages hors corbeille, sauf en vue corbeille.
 const bulkT = getBulkUiTranslations(locale);
 const bulkOps = getBulkOperationLabels(locale);
-const bulkOperations = [
-  { id: 'publish', label: cms.publish, requiresConfirmation: false },
-  { id: 'unpublish', label: cms.unpublish, requiresConfirmation: false },
-  { id: 'archive', label: bulkOps.trash, requiresConfirmation: true, destructive: true },
-];
+// Vue corbeille (?view=trash) : seules les pages supprimées, actions restaurer / supprimer définitivement.
+const isTrashView = baseUrl.searchParams.get('view') === 'trash';
+const trashToggleHref = isTrashView ? listBaseUrl : `${listBaseUrl}?view=trash`;
+const bulkOperations = isTrashView
+  ? [
+      { id: 'restore', label: bulkOps.restore, requiresConfirmation: false },
+      { id: 'delete', label: bulkOps.delete, requiresConfirmation: true, destructive: true },
+    ]
+  : [
+      { id: 'publish', label: cms.publish, requiresConfirmation: false },
+      { id: 'unpublish', label: cms.unpublish, requiresConfirmation: false },
+      { id: 'archive', label: bulkOps.trash, requiresConfirmation: true, destructive: true },
+    ];
 const rowLabel = (page: PageRow) => formatBulk(bulkT.selectRow, { title: page.title });
 
 function isLocked(page: PageRow) {
@@ -98,7 +106,10 @@ function isoDate(d: Date | string | null) {
       <h2 class="text-lg font-semibold">{cms.title}</h2>
       <p class="text-sm text-muted-foreground">{cms.description}</p>
     </div>
-    <Button id="create-page-btn" size="sm">{cms.createPage}</Button>
+    <div class="flex items-center gap-2">
+      <a href={trashToggleHref} data-testid="pages-trash-toggle" class="text-sm underline underline-offset-4 hover:text-foreground text-muted-foreground">{isTrashView ? cms.backToPages : cms.trashView}</a>
+      <Button id="create-page-btn" size="sm">{cms.createPage}</Button>
+    </div>
   </div>
 
   <AdminFacets locale={locale} groups={facetGroups} clearHref={hasFilters ? listBaseUrl : null} />

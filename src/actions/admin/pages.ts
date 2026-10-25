@@ -233,50 +233,24 @@ export const publishPage = defineAction({
     const db = getDrizzle();
     const publishedAt = input.isPublished ? new Date() : null;
 
-    const [updated] = await db
-      .update(pages)
-      .set({ isPublished: input.isPublished, publishedAt, scheduledAt: null, updatedBy: user.id })
-      .where(eq(pages.id, input.id))
-      .returning();
+    // Publication + instantané de version dans UNE transaction : l'instantané n'échoue
+    // plus en silence (avant : try/catch qui journalisait et publiait sans version).
+    const updated = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .update(pages)
+        .set({ isPublished: input.isPublished, publishedAt, scheduledAt: null, updatedBy: user.id })
+        .where(eq(pages.id, input.id))
+        .returning();
 
-    if (!updated) {
-      throw new ActionError({
-        code: "NOT_FOUND",
-        message: "Page introuvable.",
-      });
-    }
-
-    // Auto-snapshot on publish
-    if (input.isPublished) {
-      try {
-        const sections = await db
-          .select()
-          .from(pageSections)
-          .where(eq(pageSections.pageId, input.id))
-          .orderBy(asc(pageSections.sortOrder));
-
-        const [latest] = await db
-          .select({ versionNumber: pageVersions.versionNumber })
-          .from(pageVersions)
-          .where(eq(pageVersions.pageId, input.id))
-          .orderBy(desc(pageVersions.versionNumber))
-          .limit(1);
-
-        const versionNumber = (latest?.versionNumber ?? 0) + 1;
-        const { createdAt: _pc, updatedAt: _pu, ...pageData } = updated;
-        const sectionSnapshots = sections.map(({ createdAt: _sc, updatedAt: _su, ...s }) => s);
-
-        await db.insert(pageVersions).values({
-          pageId: input.id,
-          versionNumber,
-          snapshot: { page: pageData, sections: sectionSnapshots },
-          createdBy: user.id,
-          note: `Auto-snapshot à la publication (v${versionNumber})`,
+      if (!row) {
+        throw new ActionError({
+          code: "NOT_FOUND",
+          message: "Page introuvable.",
         });
-      } catch (err: unknown) {
-        console.error('[pages] Auto-snapshot on publish failed:', err);
       }
-    }
+      if (input.isPublished) await snapshotPage(tx, row, user.id, "Auto-snapshot à la publication");
+      return row;
+    });
 
     auditAdmin(context, user.id, "PAGE_PUBLISH", {
       resource: "pages",
@@ -521,13 +495,13 @@ const bulkToAction = <A, E>(effect: Effect.Effect<A, E | BulkActionError>): Effe
   effect.pipe(Effect.mapError((e) => (e instanceof BulkActionError ? new ActionFailure({ code: e.code, message: e.message }) : e)));
 
 /** Instantané de version d'une page (même contenu que la publication unitaire), dans la transaction. */
-async function snapshotPage(tx: PagesTx, page: PageRow, userId: string) {
+async function snapshotPage(tx: PagesTx, page: PageRow, userId: string, notePrefix = "Auto-snapshot à la publication groupée") {
   const sections = await tx.select().from(pageSections).where(eq(pageSections.pageId, page.id)).orderBy(asc(pageSections.sortOrder));
   const [latest] = await tx.select({ versionNumber: pageVersions.versionNumber }).from(pageVersions).where(eq(pageVersions.pageId, page.id)).orderBy(desc(pageVersions.versionNumber)).limit(1);
   const versionNumber = (latest?.versionNumber ?? 0) + 1;
   const { createdAt: _pc, updatedAt: _pu, ...pageData } = page;
   const sectionSnapshots = sections.map(({ createdAt: _sc, updatedAt: _su, ...section }) => section);
-  await tx.insert(pageVersions).values({ pageId: page.id, versionNumber, snapshot: { page: pageData, sections: sectionSnapshots }, createdBy: userId, note: `Auto-snapshot à la publication groupée (v${versionNumber})` });
+  await tx.insert(pageVersions).values({ pageId: page.id, versionNumber, snapshot: { page: pageData, sections: sectionSnapshots }, createdBy: userId, note: `${notePrefix} (v${versionNumber})` });
 }
 
 const notTrashed = (row: PageRow) => (row.deletedAt ? `La page « ${row.title} » est dans la corbeille.` : null);

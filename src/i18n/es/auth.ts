@@ -333,6 +333,8 @@ export default {
       pages: {
         title: 'Páginas',
         description: 'Cree y gestione las páginas del sitio.',
+        trashView: 'Papelera',
+        backToPages: 'Volver a las páginas',
         createPage: 'Nueva página',
         editPage: 'Editar página',
         versionHistoryTitle: 'Historial de versiones',

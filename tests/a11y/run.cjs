@@ -214,6 +214,12 @@ function copyLighthouseReports() {
 async function waitForServer() {
   const start = Date.now();
   while (Date.now() - start < MAX_WAIT) {
+    // Ne jamais valider un serveur qu'on n'a pas lancé : si notre preview est mort
+    // (ex. EADDRINUSE sur [::1] ou 127.0.0.1), une réponse viendrait d'un autre process.
+    if (serverProcess && serverProcess.exitCode !== null) {
+      logError(`Preview server exited early (code ${serverProcess.exitCode}) — port ${PORT} occupé ?`);
+      return false;
+    }
     try {
       const ok = await new Promise((resolve) => {
         const req = http.get(`http://${HOST}:${PORT}/`, (res) => {

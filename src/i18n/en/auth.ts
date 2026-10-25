@@ -333,6 +333,8 @@ export default {
       pages: {
         title: 'Pages',
         description: 'Create and manage site pages.',
+        trashView: 'Trash',
+        backToPages: 'Back to pages',
         createPage: 'New page',
         editPage: 'Edit page',
         versionHistoryTitle: 'Version history',
