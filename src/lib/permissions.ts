@@ -39,6 +39,7 @@ export const statement = {
   plugin: ["read", "update"],
   tenant: ["create", "read", "update", "delete"],
   payment: ["read", "refund"],
+  formations: ["create", "read", "update", "delete", "publish"],
   events: ["create", "read", "update", "delete", "publish"],
 } as const;
 
@@ -97,6 +98,10 @@ const cmsReadOnlyServices = {
 const cmsAdminEvents = { events: ["create", "read", "update", "delete", "publish"] } as const;
 const cmsReadOnlyEvents = { events: ["read"] } as const;
 
+/** Module formations (catalogue éditorial ; transactions hors CMS Core). */
+const cmsAdminFormations = { formations: ["create", "read", "update", "delete", "publish"] } as const;
+const cmsReadOnlyFormations = { formations: ["read"] } as const;
+
 export const adminRole = ac.newRole({
   ...adminAc.statements,
   page: ["create", "read", "update", "delete", "publish"],
@@ -114,6 +119,7 @@ export const adminRole = ac.newRole({
   ...cmsAdminServices,
   ...platformAdmin,
   ...cmsAdminEvents,
+  ...cmsAdminFormations,
 });
 
 export const editorRole = ac.newRole({
@@ -130,6 +136,7 @@ export const editorRole = ac.newRole({
   ...cmsEditorServices,
   ...platformEditor,
   ...cmsAdminEvents,
+  ...cmsAdminFormations,
 });
 
 export const userRole = ac.newRole({
@@ -139,6 +146,7 @@ export const userRole = ac.newRole({
   ...cmsReadOnlyServices,
   ...platformReadOnly,
   ...cmsReadOnlyEvents,
+  ...cmsReadOnlyFormations,
 });
 
 export const orgOwnerRole = ac.newRole({
@@ -153,6 +161,7 @@ export const orgOwnerRole = ac.newRole({
   ...cmsAdminServices,
   ...platformEditor,
   ...cmsAdminEvents,
+  ...cmsAdminFormations,
 });
 
 export const orgAdminRole = ac.newRole({
@@ -167,6 +176,7 @@ export const orgAdminRole = ac.newRole({
   ...cmsAdminServices,
   ...platformEditor,
   ...cmsAdminEvents,
+  ...cmsAdminFormations,
 });
 
 export const orgMemberRole = ac.newRole({
@@ -176,4 +186,5 @@ export const orgMemberRole = ac.newRole({
   ...cmsReadOnlyServices,
   ...platformReadOnly,
   ...cmsReadOnlyEvents,
+  ...cmsReadOnlyFormations,
 });

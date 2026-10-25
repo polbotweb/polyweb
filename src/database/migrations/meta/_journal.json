@@ -162,6 +162,13 @@
       "when": 1792949760474,
       "tag": "0022_events_module",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792953010808,
+      "tag": "0023_formations_module",
+      "breakpoints": true
     }
   ]
 }
