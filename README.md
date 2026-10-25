@@ -113,6 +113,7 @@ pnpm dev
 ```
 src/components/
 admin/
+  DraftPreviewLinkButton.astro
   ForceReleaseLockButton.astro
   MarkdownEditor.astro
 atoms/
@@ -405,6 +406,7 @@ loaders/
   media.loader.ts
   navigation.loader.ts
   page.loader.ts
+  pages-admin.loader.ts
   site.loader.ts
 migrations/
   0000_plain_old_lace.sql
@@ -801,6 +803,9 @@ plugins/
   host.ts
 presentation/
   index.ts
+preview/
+  draft-preview.ts
+  index.ts
 revision/
   index.ts
 search/
@@ -980,6 +985,7 @@ src/pages/
     [slug]/
   preview/
     [token].astro
+    draft/
   services/
     [slug].astro
     category/
