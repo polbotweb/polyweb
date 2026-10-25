@@ -29,6 +29,7 @@ import { createServiceCategory, updateServiceCategory, deleteServiceCategory, cr
 import { moderateServiceComment, moderateServiceReview, resolveServiceReport } from "./services/moderation";
 import { addServiceMedia, updateServiceMedia, removeServiceMedia } from "./services/media";
 import { resolveServiceInternalLink } from "./services/internal-link";
+import { eventsActions } from "@/modules/events/actions";
 
 export const server = {
   updateSiteSettings, upsertSiteSettings, createSocialLink, updateSocialLink, deleteSocialLink, reorderSocialLinks, updateContactInfo, updateOpeningHours,
@@ -43,4 +44,5 @@ export const server = {
   toggleServiceFavorite, createServiceReview, createServiceComment, createServiceReport, voteServiceReviewHelpful, createServiceAvailability, updateServiceAvailability, deleteServiceAvailability,
   toggleServiceReaction, listServiceNotifications, markServiceNotificationRead, markAllServiceNotificationsRead, recordServiceView, createServiceAttributeDefinition, setServiceAttributeValue,
   createServiceCategory, updateServiceCategory, deleteServiceCategory, createServiceTag, updateServiceTag, deleteServiceTag, moderateServiceComment, moderateServiceReview, resolveServiceReport, addServiceMedia, updateServiceMedia, removeServiceMedia, resolveServiceInternalLink,
+  events: eventsActions,
 };

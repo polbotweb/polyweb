@@ -9,7 +9,8 @@ import type { PolywebModuleCapabilityProviders } from "@/core/modules/module-con
  */
 export const eventsCapabilityProviders = {
   content: "events",
-  localization: "eventsTranslations",
+  media: "media_files (events.cover_image_id)",
+  localization: "event_translations",
   publication: "eventsWorkflow",
   revisions: "events_revisions",
   locks: "events_locks",

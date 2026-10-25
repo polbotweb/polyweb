@@ -25,7 +25,7 @@ export const eventsModule: PolywebModuleDefinition = {
   capabilities: defineModuleCapabilities({
     content: true,
     localization: true,
-    media: false,
+    media: true,
     seo: false,
     taxonomy: false,
     attributes: false,
