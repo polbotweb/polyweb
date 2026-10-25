@@ -12,7 +12,39 @@ import vercel from '@astrojs/vercel';
 const useVercel = process.env.ASTRO_ADAPTER === 'vercel' || process.argv.includes('--vercel');
 const adapter = useVercel ? vercel() : node({ mode: 'standalone' });
 
+// Stockage objet (brique e) : les médias servis depuis S3/R2/CDN doivent être
+// autorisés par la CSP (img-src). Origine calculée au build depuis l'env
+// (même règle que src/lib/storage/index.ts → storagePublicOrigin).
+const mediaOrigin = (() => {
+  const driver = (process.env.STORAGE_DRIVER ?? 'local').toLowerCase();
+  if (driver === 'local') return null;
+  const bucket = process.env.S3_BUCKET;
+  const endpoint = process.env.S3_ENDPOINT?.replace(/\/$/, '');
+  const region = process.env.S3_REGION || (driver === 'r2' ? 'auto' : 'us-east-1');
+  const base = process.env.S3_PUBLIC_URL || (endpoint ? `${endpoint}/${bucket}` : `https://${bucket}.s3.${region}.amazonaws.com`);
+  try { return new URL(base).origin; } catch { return null; }
+})();
+
 // https://astro.build/config
+const isLoopbackSite = (() => {
+  try {
+    return ['localhost', '127.0.0.1', '[::1]'].includes(new URL(process.env.SITE_URL || 'http://localhost:4321').hostname);
+  } catch {
+    return false;
+  }
+})();
+
+// Hôtes autorisés à alimenter Astro.url (@astrojs/node ≥ 11.1.8 ignore sinon l'en-tête Host et
+// replie sur localhost:<port>) : hôte de SITE_URL, boucle locale en dev/preview/e2e, et
+// ALLOWED_HOSTS (liste séparée par des virgules, ex. domaines multi-site).
+const allowedDomains = (() => {
+  const hosts = new Set();
+  try { hosts.add(new URL(process.env.SITE_URL || 'http://localhost:4321').hostname); } catch { /* site invalide : signalé plus bas */ }
+  if (isLoopbackSite) ['localhost', '127.0.0.1'].forEach((h) => hosts.add(h));
+  for (const h of (process.env.ALLOWED_HOSTS ?? '').split(',')) if (h.trim()) hosts.add(h.trim().toLowerCase());
+  return [...hosts].map((hostname) => ({ hostname }));
+})();
+
 export default defineConfig({
   output: 'server',
   vite: {
@@ -71,15 +103,16 @@ export default defineConfig({
 
   adapter,
 
-  // Astro v5+ enables security.checkOrigin by default — explicit for clarity.
-  // This validates the Origin header on POST/PATCH/DELETE/PUT requests,
-  // providing CSRF protection for all API endpoints and Astro Actions.
+  // CSRF: Astro's checkOrigin is replaced by an identical check in
+  // src/middleware.ts (src/lib/security/origin-check.ts) which additionally
+  // exempts bearer-token calls to /api/v1/* (not forgeable cross-site).
   security: {
-    checkOrigin: true,
+    checkOrigin: false,
+    allowedDomains,
     csp: {
       directives: [
         "default-src 'self'",
-        "img-src 'self' data: blob:",
+        `img-src 'self' data: blob:${mediaOrigin ? ` ${mediaOrigin}` : ''}`,
         "font-src 'self'",
         "connect-src 'self' https://api.iconify.design",
         "frame-src https://www.google.com https://www.youtube.com https://player.vimeo.com",
@@ -87,7 +120,9 @@ export default defineConfig({
         "base-uri 'self'",
         "form-action 'self'",
         "object-src 'none'",
-        'upgrade-insecure-requests',
+        // Pas sur une origine de bouclage (dev/preview/e2e) : WebKit l'applique à
+        // http://localhost et passe les soumissions de formulaire en https (échec TLS).
+        ...(isLoopbackSite ? [] : ['upgrade-insecure-requests']),
       ],
     },
   },

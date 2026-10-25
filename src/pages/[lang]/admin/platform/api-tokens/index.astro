@@ -1,0 +1,120 @@
+---
+/**
+ * Jetons d'API (brique c). Logique en Effect (`@/modules/api/domain/tokens`),
+ * exécutée via le runtime partagé (`runAppResult`).
+ */
+import { Effect } from 'effect';
+import { requirePermission } from '@/lib/auth-guards';
+import PlatformAdminShell from '@organisms/PlatformAdmin/PlatformAdminShell.astro';
+import { getPlatformLabel, getPlatformAdminUrl } from '@/core/localization/platform-labels';
+import { getAdminSite, userCan, formatDate } from '@/lib/platform/admin';
+import { logAuditEvent, extractIp } from '@/lib/audit';
+import { runAppResult } from '@/lib/effect/http';
+import { ForbiddenError } from '@/lib/effect/errors';
+import { createToken, listTokens, revokeToken } from '@/modules/api/domain/tokens';
+import { API_SCOPES } from '@database/schemas/api.schema';
+
+export const prerender = false;
+const result = await requirePermission(Astro, { apiToken: ['read'] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT, user } = result;
+const site = await getAdminSite(Astro);
+const [canCreate, canRevoke] = await Promise.all([userCan(user.id, { apiToken: ['create'] }), userCan(user.id, { apiToken: ['revoke'] })]);
+
+let error: string | null = null;
+let createdToken: string | null = null;
+
+if (Astro.request.method === 'POST') {
+  const fd = await Astro.request.formData();
+  const intent = String(fd.get('intent') ?? '');
+  const meta = { ipAddress: extractIp(Astro.request.headers, Astro.clientAddress), userAgent: Astro.request.headers.get('user-agent') };
+  if (intent === 'create') {
+    const expires = String(fd.get('expiresInDays') ?? '').trim();
+    const r = await runAppResult(
+      Effect.gen(function* () {
+        if (!canCreate) return yield* new ForbiddenError({ reason: 'Permission refusée' });
+        return yield* createToken(site.id, { name: String(fd.get('name') ?? ''), scopes: fd.getAll('scopes').map(String), ...(expires ? { expiresInDays: Number(expires) } : {}) }, user.id);
+      }),
+    );
+    if (r.ok) {
+      createdToken = r.value.token;
+      void logAuditEvent({ userId: user.id, action: 'API_TOKEN_CREATE', resource: 'api_token', resourceId: r.value.record.id, metadata: { name: r.value.record.name, scopes: r.value.record.scopes }, ...meta });
+    } else error = r.error.message;
+  } else if (intent === 'revoke') {
+    const id = String(fd.get('id') ?? '');
+    const r = await runAppResult(
+      Effect.gen(function* () {
+        if (!canRevoke) return yield* new ForbiddenError({ reason: 'Permission refusée' });
+        return yield* revokeToken(site.id, id);
+      }),
+    );
+    if (r.ok) {
+      void logAuditEvent({ userId: user.id, action: 'API_TOKEN_REVOKE', resource: 'api_token', resourceId: id, ...meta });
+      return Astro.redirect(`${getPlatformAdminUrl(locale, 'api-tokens')}?saved=revoked`, 303);
+    }
+    error = r.error.message;
+  }
+}
+
+const listed = await runAppResult(listTokens(site.id));
+const tokens = listed.ok ? listed.value : [];
+const saved = Astro.url.searchParams.get('saved');
+const scopeLabels: Record<string, string> = {
+  'content:read': 'Lire tous les contenus (y compris types non publics)',
+  'content:write': 'Créer / modifier / supprimer des contenus, lire les brouillons',
+  'forms:read': 'Lire les soumissions de formulaires',
+  'search:read': 'Interroger la recherche',
+};
+---
+<PlatformAdminShell t={authT} locale={locale} section="api-tokens" title={getPlatformLabel('api-tokens', locale)}>
+  <a slot="actions" class="rounded-md border px-3 py-2 text-sm" href="/api/v1/openapi.json">Spec OpenAPI</a>
+  {saved === 'revoked' && <output class="block rounded-md border border-success bg-success/10 p-3 text-sm">Jeton révoqué.</output>}
+  {error && <p class="rounded-md border border-error bg-error/10 p-3 text-sm" role="alert">{error}</p>}
+  {createdToken && (
+    <div class="rounded-md border border-warning bg-warning/10 p-4 text-sm" aria-live="polite" data-testid="new-token">
+      <p class="font-medium">Jeton créé — copiez-le maintenant, il ne sera plus affiché :</p>
+      <code class="mt-2 block break-all rounded bg-background p-2 font-mono" data-token>{createdToken}</code>
+      <p class="mt-2 text-muted-foreground">Utilisation : <code>Authorization: Bearer &lt;jeton&gt;</code> sur <code>/api/v1/…</code></p>
+    </div>
+  )}
+  <p class="text-muted-foreground text-sm">Site : <strong>{site.name}</strong>. Chaque jeton est limité à ce site. Seule une empreinte SHA-256 est conservée.</p>
+
+  {canCreate && (
+    <form method="post" class="grid gap-3 rounded-md border p-4">
+      <input type="hidden" name="intent" value="create" />
+      <h2 class="font-semibold">Nouveau jeton</h2>
+      <label class="grid gap-1 text-sm">Nom<input name="name" required maxlength="120" class="rounded-md border bg-background px-3 py-2" /></label>
+      <fieldset class="grid gap-1 text-sm">
+        <legend class="mb-1">Portées</legend>
+        {API_SCOPES.map((s) => (
+          <label class="flex items-center gap-2"><input type="checkbox" name="scopes" value={s} checked={s === 'content:read'} /> <code>{s}</code> <span class="text-muted-foreground">— {scopeLabels[s]}</span></label>
+        ))}
+      </fieldset>
+      <label class="grid gap-1 text-sm">Expiration (jours, vide = jamais)<input name="expiresInDays" type="number" min="1" max="3650" class="w-40 rounded-md border bg-background px-3 py-2" /></label>
+      <div><button class="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">Créer le jeton</button></div>
+    </form>
+  )}
+
+  {tokens.length === 0 ? <p>Aucun jeton.</p> : (
+    <table class="w-full text-sm">
+      <thead><tr class="border-b"><th class="py-2 text-start">Nom</th><th class="text-start">Préfixe</th><th class="text-start">Portées</th><th class="text-start">Dernière utilisation</th><th class="text-start">Expire</th><th class="text-start">État</th><th></th></tr></thead>
+      <tbody>
+        {tokens.map((t) => (
+          <tr class="border-b">
+            <td class="py-2 font-medium">{t.name}</td>
+            <td><code>pw_{t.prefix}_…</code></td>
+            <td>{t.scopes.join(', ')}</td>
+            <td>{t.lastUsedAt ? formatDate(t.lastUsedAt, locale) : '—'}</td>
+            <td>{t.expiresAt ? formatDate(t.expiresAt, locale) : '—'}</td>
+            <td>{t.revokedAt ? 'révoqué' : t.expiresAt && t.expiresAt < new Date() ? 'expiré' : 'actif'}</td>
+            <td class="text-end">
+              {canRevoke && !t.revokedAt && (
+                <form method="post"><input type="hidden" name="intent" value="revoke" /><input type="hidden" name="id" value={t.id} /><button class="text-error hover:underline">Révoquer</button></form>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</PlatformAdminShell>

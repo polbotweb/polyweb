@@ -1,14 +1,15 @@
-import type { APIRoute } from 'astro';
+import { Effect } from 'effect';
 import { eq, desc } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { schema, withDbActorContext } from '@database/drizzle';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { apiRoute } from '@/lib/effect/http';
+import { attempt, rateLimit, retryAfterSeconds } from '@/lib/effect/route';
 import { logAuditEvent, extractIp } from '@/lib/audit';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ request, clientAddress }) => {
-  const session = await auth.api.getSession({ headers: request.headers });
+export const GET = apiRoute(({ request, clientAddress }) => Effect.gen(function* () {
+  const session = yield* attempt('auth.session', () => auth.api.getSession({ headers: request.headers }));
   if (!session) {
     return Response.json({ error: 'Non authentifié' }, { status: 401 });
   }
@@ -16,12 +17,12 @@ export const GET: APIRoute = async ({ request, clientAddress }) => {
   const userId = session.user.id;
 
   // Rate limit: 5 exports per 60 seconds per user
-  const rl = checkRateLimit(`export:${userId}`, { window: 60, max: 5 });
+  const rl = yield* rateLimit(`export:${userId}`, { window: 60, max: 5 });
   if (!rl.allowed) {
-    return Response.json({ error: 'Trop de requêtes' }, { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } });
+    return Response.json({ error: 'Trop de requêtes' }, { status: 429, headers: { 'Retry-After': retryAfterSeconds(rl) } });
   }
 
-  const { userResult, accounts, sessions, memberships, invitations, auditLogs } = await withDbActorContext(
+  const { userResult, accounts, sessions, memberships, invitations, auditLogs } = yield* attempt('user.export', () => withDbActorContext(
     { userId, isAdmin: session.user.role === 'admin' },
     async (db) => {
       const [userResult, accounts, sessions, memberships, invitations, auditLogs] = await Promise.all([
@@ -98,7 +99,7 @@ export const GET: APIRoute = async ({ request, clientAddress }) => {
 
       return { userResult, accounts, sessions, memberships, invitations, auditLogs };
     },
-  );
+  ));
 
   const exportData = {
     exportedAt: new Date().toISOString(),
@@ -129,4 +130,4 @@ export const GET: APIRoute = async ({ request, clientAddress }) => {
       'Content-Disposition': 'attachment; filename="polyweb-data-export.json"',
     },
   });
-};
+}));

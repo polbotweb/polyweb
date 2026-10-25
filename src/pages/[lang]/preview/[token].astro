@@ -1,0 +1,38 @@
+---
+/**
+ * Aperçu signé d'une entrée (brique f) : accessible sans compte via un lien
+ * HMAC à durée limitée ; jamais indexé ni mis en cache.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import SEOHead from '@/components/seo/SEOHead.astro';
+import EntryView from '@/components/platform/EntryView.astro';
+import { toLocale } from '@i18n/utils';
+import { runAppResult } from '@/lib/effect/http';
+import { loadPreview } from '@/modules/content/domain/preview';
+
+export const prerender = false;
+const locale = toLocale(Astro.params.lang);
+Astro.response.headers.set('cache-control', 'private, no-store');
+Astro.response.headers.set('x-robots-tag', 'noindex, nofollow');
+Astro.response.headers.set('referrer-policy', 'no-referrer');
+
+const r = await runAppResult(loadPreview(Astro.params.token ?? ''));
+if (!r.ok) {
+  const status = r.error._tag === 'UnauthorizedError' ? 403 : r.error._tag === 'NotFoundError' ? 404 : 500;
+  return new Response(status === 403 ? 'Lien de prévisualisation invalide ou expiré.' : 'Introuvable.', {
+    status,
+    headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex' },
+  });
+}
+const { entry, translation, claims, pinned, version } = r.value;
+const expires = new Date(claims.x * 1000);
+---
+<BaseLayout title={`Aperçu — ${translation.title}`} description={translation.seo.metaDescription || translation.title}>
+  <SEOHead slot="head" locale={locale} noindex={true} />
+  <div class="mx-auto mt-4 max-w-3xl px-4">
+    <p class="rounded-md border border-warning bg-warning/10 p-3 text-sm" aria-live="polite" data-preview-banner>
+      Prévisualisation — {pinned ? `version ${version} (figée)` : `état courant (statut : ${entry.status}, version ${version})`} · lien valable jusqu’au {expires.toLocaleString(locale)}
+    </p>
+  </div>
+  <EntryView entry={entry} translation={translation} locale={locale} />
+</BaseLayout>

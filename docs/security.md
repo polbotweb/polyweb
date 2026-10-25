@@ -94,6 +94,30 @@ Définis dans `src/middleware.ts` et appliqués à **toutes les réponses** :
 | `X-XSS-Protection` | `0` | Désactive filtre XSS legacy (peut causer des bugs) |
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` | Force HTTPS |
 
+### CSP stricte et styles dynamiques (aucun `style=`)
+
+La CSP Astro (`astro.config.mjs`, en-tête de réponse) n'autorise **ni `'unsafe-inline'` ni
+`'unsafe-hashes'`** pour `style-src` ; les hashes ne couvrant pas les attributs, tout
+attribut HTML `style="…"` serait bloqué (Lighthouse « Best Practices »). Règles :
+
+| Cas | Mécanisme | Fichier |
+| :-- | :-- | :-- |
+| Valeur statique (`--stagger: 1`, `--gap`, masque, largeur sidebar, géométrie switch) | classe Tailwind arbitraire (`[--stagger:1]`) ou CSS du composant | composant |
+| Valeur dynamique (particules, index, durée en prop, aperçus du thème) | `styleAttr({...})` / `styleText("a: b")` → `data-style`, appliqué en CSSOM (`style.setProperty`, non soumis à `style-src`) | `src/lib/ui/inline-style.ts`, `src/lib/ui/inline-style-dom.ts`, `src/scripts/inline-styles.ts` |
+| Contenu masqué jusqu'au script (popover, select, menu, onglets de langue admin) | `hiddenUntilScript()` : attribut `hidden` (pas de flash sans JS) + `display:none` en CSSOM, puis `hidden` retiré | idem |
+| Ratio d'aspect courant | classes `aspect-video`, `aspect-[4/3]`… ; ratio arbitraire via `styleAttr` | `AspectRatio.astro` |
+| Accordéon (pas d'animation au chargement) | règle CSS `:not([data-animated])`, attribut posé par le script au premier basculement | `AccordionContent.astro` |
+
+Les valeurs sont filtrées (propriété `--x`/`kebab-case` uniquement ; `;`, `{}`, `<>`, `\`, `/*`
+rejetés). Les scripts de composants qui lisent leur style à l'initialisation appellent
+`applyInlineStyle(el)` (idempotent) : aucun ordre d'exécution des modules n'est supposé.
+HTML injecté côté client (`innerHTML`) : utiliser `data-style`, l'observateur l'applique.
+
+Régressions : `tests/unit/inline-style.test.ts` (filtres + **aucun `style=` dans
+`src/**/*.astro`**) et `tests/e2e/csp.spec.ts` (aucun événement `securitypolicyviolation`
+sur les pages publiques, `data-style` effectivement appliqués). Les gabarits d'e-mail
+(`src/smtp/`) ne sont pas concernés (pas de CSP côté client mail).
+
 ### SVG XSS Prevention
 
 Les fichiers SVG uploadés (`/uploads/*.svg`) sont servis avec :
@@ -305,5 +329,53 @@ Toutes les actions admin utilisent des schemas Zod stricts :
 | `SMTP_FROM_NAME` | Nom expéditeur | Non |
 | `BREVO_API_KEY` / `RESEND_API_KEY` | API keys SMTP | ✅ |
 | `SMTP_HOST/PORT/USER/PASS` | Credentials Nodemailer | ✅ |
+| `ALLOWED_HOSTS` | Hôtes supplémentaires (virgules) ajoutés à `security.allowedDomains`, lus au build ; voir §12 | Non |
 
 > **Règle** : jamais de secret dans le code source. Toutes les variables sensibles sont lues depuis `.env` (non versionné).
+
+---
+
+## 11. Audit des dépendances (`pnpm audit --prod`)
+
+Le job CI `security-audit` (séparé, `pnpm audit --prod --audit-level=moderate`) bloque le déploiement.
+Mises à jour appliquées le 2026-10-18 (validées par l'utilisateur) : `astro` 7.4.0, `@astrojs/node` 11.1.8
+(smol-toml retiré de la chaîne vulnérable), `nodemailer` ^10.0.6 (types fournis par le paquet),
+`sharp` ^0.35.5, correctifs de lockfile (devalue, dompurify ≥ 3.4.16, source-map-js 1.2.2,
+brace-expansion 5.0.12, ip-address 10.7.4) et override pnpm
+`@esbuild-kit/core-utils>esbuild: >=0.25.0` (chaîne drizzle-kit, paquet `@esbuild-kit` abandonné qui
+figeait esbuild 0.18.20). Résultat : `pnpm audit --prod` → aucune vulnérabilité connue.
+
+> `astro` 7.4 exige **Node ≥ 22.22.0** (les environnements de build/exécution doivent suivre).
+
+### http-cache-semantics — GHSA-ch52-4w7c-c8xp
+
+- **Avis** : divulgation possible de réponses en cache entre utilisateurs via `max-stale`
+  (sévérité haute). Plage vulnérable `<= 4.2.0`, **aucune version corrigée déclarée** dans l'avis.
+- **Exposition** : dépendance transitive d'`astro`, utilisée uniquement par
+  `astro/dist/assets/build/remote.js` (cache des images distantes **au build**), pas par le
+  rendu des requêtes à l'exécution. Aucune réponse utilisateur ne transite par ce cache : risque
+  pratique faible pour Polyweb.
+- **État au 2026-10-18** : `astro` 7.4.0 installe `http-cache-semantics` **4.3.0** (publiée le
+  2026-10-04), hors de la plage vulnérable ; l'audit ne la signale plus. Aucun `ignore` n'est donc
+  configuré. L'avis ne déclarant pas 4.3.0 comme correctif, ce point est à re-vérifier : si l'avis est
+  élargi à 4.3.x sans correctif, l'ignorer explicitement (`pnpm.auditConfig.ignoreGhsas`) avec la
+  justification d'exposition ci-dessus, et le retirer dès qu'un correctif est publié.
+
+---
+
+## 12. Hôtes autorisés (`security.allowedDomains`, `ALLOWED_HOSTS`)
+
+Depuis `@astrojs/node` 11.1.8, l'en-tête `Host` (et `X-Forwarded-Host`) n'alimente `Astro.url` que
+s'il correspond à `security.allowedDomains` ; sinon Astro replie sur `localhost:<port>` (protection
+contre l'injection d'en-tête Host). `astro.config.mjs` construit la liste au build :
+
+- l'hôte de `SITE_URL` ;
+- `localhost` et `127.0.0.1` si `SITE_URL` est une adresse de boucle locale (dev, preview, E2E) ;
+- les hôtes de `ALLOWED_HOSTS` (séparés par des virgules), à renseigner pour chaque domaine
+  multi-site servi par l'instance.
+
+Le contrôle CSRF par Origin (`src/lib/security/origin-check.ts`) accepte une requête si son Origin
+égale l'origine d'`Astro.url` **ou** si l'hôte de l'Origin égale l'en-tête `Host` reçu : un formulaire
+servi sur un hôte non listé reste utilisable, et une requête forgée depuis un autre site (Origin de
+l'attaquant, Host de la cible) reste refusée. Lister les domaines dans `ALLOWED_HOSTS` reste
+recommandé pour que `Astro.url` reflète le domaine réellement servi.

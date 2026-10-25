@@ -1,0 +1,21 @@
+---
+/**
+ * Rendu public d'un formulaire du constructeur (brique g).
+ * Champs nommés `f__<nom>` ; pot de miel `_hp` (masqué) ; jeton horodaté `_ts`.
+ */
+import FieldInput from '@/components/platform/FieldInput.astro';
+import type { Form } from '@/modules/forms/domain/forms';
+
+interface Props { form: Form; locale: string; timestamp: string; values?: Record<string, unknown>; errors?: Record<string, string>; action?: string }
+const { form, locale, timestamp, values = {}, errors = {}, action } = Astro.props;
+const submit = form.settings.submitLabel?.[locale] || form.settings.submitLabel?.fr || 'Envoyer';
+---
+<form method="post" action={action} class="grid gap-4" data-polyweb-form={form.slug} novalidate={false}>
+  {form.description && <p class="text-muted-foreground text-sm">{form.description}</p>}
+  {form.fields.map((f) => <FieldInput field={f} prefix="f" idPrefix={`form-${form.slug}`} value={values[f.name]} locale={locale} error={errors[f.name]} />)}
+  <div class="sr-only" aria-hidden="true">
+    <label>Ne pas remplir<input type="text" name="_hp" tabindex="-1" autocomplete="off" /></label>
+  </div>
+  <input type="hidden" name="_ts" value={timestamp} />
+  <div><button type="submit" class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">{submit}</button></div>
+</form>

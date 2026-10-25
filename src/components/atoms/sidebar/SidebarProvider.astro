@@ -1,4 +1,5 @@
 ---
+import { styleAttr } from "@/lib/ui/inline-style";
 import type { HTMLAttributes } from "astro/types";
 import { tv } from "tailwind-variants";
 
@@ -20,6 +21,8 @@ export const sidebarProvider = tv({
     "starwind-sidebar-provider",
     "group/sidebar-wrapper flex min-h-svh w-full",
     "has-data-[variant=inset]:bg-sidebar",
+    // Largeurs par défaut en classes (CSP stricte : pas d'attribut style=).
+    "[--sidebar-width:18rem] [--sidebar-width-icon:3.5rem]",
   ],
 });
 
@@ -31,16 +34,9 @@ const {
   ...rest
 } = Astro.props;
 
-const SIDEBAR_WIDTH = "18rem";
-const SIDEBAR_WIDTH_ICON = "3.5rem";
-
-// Parse style prop to extract CSS variable overrides
+// Surcharges de variables (`style={{ "--sidebar-width": "20rem" }}`) appliquées en
+// CSSOM via `styleAttr` ; un `style` chaîne n'est pas pris en charge (inchangé).
 const styleObj = typeof style === "string" ? {} : ((style as Record<string, string>) ?? {});
-const mergedStyle = {
-  "--sidebar-width": styleObj["--sidebar-width"] ?? SIDEBAR_WIDTH,
-  "--sidebar-width-icon": styleObj["--sidebar-width-icon"] ?? SIDEBAR_WIDTH_ICON,
-  ...styleObj,
-};
 ---
 
 <div
@@ -48,7 +44,7 @@ const mergedStyle = {
   data-state={defaultOpen ? "expanded" : "collapsed"}
   data-mobile-open="false"
   data-keyboard-shortcut={keyboardShortcut}
-  style={mergedStyle}
+  {...styleAttr(styleObj)}
   {...rest}
   data-slot="sidebar-provider"
 >

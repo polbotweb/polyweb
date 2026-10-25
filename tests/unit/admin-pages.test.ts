@@ -23,9 +23,19 @@ vi.mock('@database/drizzle', () => ({
     insert: mockInsert,
     update: mockUpdate,
     delete: mockDelete,
+    // Actions groupées (core/bulk) : la transaction réutilise les mêmes mocks.
+    transaction: (fn: (tx: unknown) => unknown) => fn({ select: mockSelect, insert: mockInsert, update: mockUpdate, delete: mockDelete }),
   })),
 }));
 
+// Verrou des pages (core/locks) : couvert par content-locking.test.ts ; ici toujours libre.
+const { ensureNotLockedByOther, ensureNoneLockedByOther } = vi.hoisted(() => ({ ensureNotLockedByOther: vi.fn(), ensureNoneLockedByOther: vi.fn() }));
+vi.mock('@/lib/pages/locks', async () => {
+  const { Effect } = await import('effect');
+  ensureNotLockedByOther.mockImplementation(() => Effect.void);
+  ensureNoneLockedByOther.mockImplementation(() => Effect.void);
+  return { PAGE_LOCK_TTL_MS: 300000, pageLock: { ensureNotLockedByOther, ensureNoneLockedByOther } };
+});
 vi.mock('@database/schemas', () => ({
   pages: { id: 'id', updatedAt: 'updatedAt', locale: 'locale', sortOrder: 'sortOrder', deletedAt: 'deletedAt' },
   pageSections: { id: 'id', pageId: 'pageId', sortOrder: 'sortOrder' },
@@ -169,8 +179,7 @@ describe('createPage', () => {
 describe('updatePage', () => {
   it('updates a page', async () => {
     const updated = { id: 'p1', title: 'Updated' };
-    // Lock check select
-    mockSelect.mockReturnValueOnce(selectChain([{ lockedBy: null, lockedAt: null }]));
+    // Verrou : core/locks (double ci-dessous), plus de requête ad hoc.
     mockUpdate.mockReturnValue(updateChain([updated]));
 
     const result = await updatePage.handler(
@@ -181,8 +190,7 @@ describe('updatePage', () => {
   });
 
   it('throws NOT_FOUND when page missing', async () => {
-    // Lock check select
-    mockSelect.mockReturnValueOnce(selectChain([]));
+    // Verrou : core/locks (double ci-dessous), plus de requête ad hoc.
     mockUpdate.mockReturnValue(updateChain([]));
     mockSelect.mockReturnValueOnce(selectChain([]));
 
@@ -192,8 +200,7 @@ describe('updatePage', () => {
   });
 
   it('throws CONFLICT on optimistic lock failure', async () => {
-    // Lock check select
-    mockSelect.mockReturnValueOnce(selectChain([{ lockedBy: null, lockedAt: null }]));
+    // Verrou : core/locks (double ci-dessous), plus de requête ad hoc.
     mockUpdate.mockReturnValue(updateChain([]));
     mockSelect.mockReturnValueOnce(selectChain([{ id: 'p1' }]));
 
@@ -208,8 +215,7 @@ describe('updatePage', () => {
   it('throws CONFLICT on duplicate slug during update', async () => {
     const dbError = new Error('dup') as any;
     dbError.code = '23505';
-    // Lock check select
-    mockSelect.mockReturnValueOnce(selectChain([{ lockedBy: null, lockedAt: null }]));
+    // Verrou : core/locks (double ci-dessous), plus de requête ad hoc.
     mockUpdate.mockReturnValue({
       set: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({ returning: vi.fn().mockRejectedValue(dbError) }),
@@ -371,28 +377,50 @@ describe('permanentlyDeletePage', () => {
   });
 });
 
-// ─── bulkPublishPages ───────────────────────────────────────────────
+// ─── bulkPublishPages (moteur core/bulk) ────────────────────────────
+
+/** select().from().where()[.orderBy()[.limit()]] → rows */
+function orderedSelectChain(rows: any[]) {
+  const limit = vi.fn().mockResolvedValue(rows);
+  const ordered: any = Object.assign(Promise.resolve(rows), { limit });
+  const terminal: any = Object.assign(Promise.resolve(rows), { limit, orderBy: vi.fn().mockReturnValue(ordered) });
+  return { from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue(terminal) }) };
+}
+const pageRow = (id: string, extra: Record<string, unknown> = {}) => ({ id, title: id, deletedAt: null, isPublished: false, createdAt: new Date(), updatedAt: new Date(), ...extra });
 
 describe('bulkPublishPages', () => {
-  it('publishes multiple pages', async () => {
-    mockUpdate.mockReturnValue(updateChain([{ id: 'p1' }, { id: 'p2' }]));
+  it('publishes multiple pages in one transaction, with a version snapshot each', async () => {
+    mockSelect.mockImplementation(() => orderedSelectChain([pageRow('p1'), pageRow('p2')]));
+    mockUpdate.mockReturnValue(updateChain([]));
+    mockInsert.mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
 
-    const result = await bulkPublishPages.handler(
-      { ids: ['p1', 'p2'], isPublished: true },
-      adminCtx(),
-    );
+    const result = await bulkPublishPages.handler({ ids: ['p1', 'p2'], isPublished: true }, adminCtx());
     expect(result.success).toBe(true);
     expect(result.count).toBe(2);
+    expect(mockUpdate).toHaveBeenCalledTimes(2);
+    expect(mockInsert).toHaveBeenCalledTimes(2);
+    expect(ensureNoneLockedByOther).toHaveBeenCalled();
   });
 
-  it('unpublishes multiple pages', async () => {
-    mockUpdate.mockReturnValue(updateChain([{ id: 'p1' }]));
+  it('unpublishes multiple pages (no snapshot)', async () => {
+    mockSelect.mockReturnValue(orderedSelectChain([pageRow('p1', { isPublished: true })]));
+    mockUpdate.mockReturnValue(updateChain([]));
 
-    const result = await bulkPublishPages.handler(
-      { ids: ['p1'], isPublished: false },
-      adminCtx(),
-    );
+    const result = await bulkPublishPages.handler({ ids: ['p1'], isPublished: false }, adminCtx());
     expect(result.count).toBe(1);
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it('rejects the whole batch when one page is in the trash (no write)', async () => {
+    mockSelect.mockReturnValue(orderedSelectChain([pageRow('p1'), pageRow('p2', { deletedAt: new Date() })]));
+    await expect(bulkPublishPages.handler({ ids: ['p1', 'p2'], isPublished: true }, adminCtx())).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it('rejects ids that do not exist', async () => {
+    mockSelect.mockReturnValue(orderedSelectChain([pageRow('p1')]));
+    await expect(bulkPublishPages.handler({ ids: ['p1', 'ghost'], isPublished: true }, adminCtx())).rejects.toBeDefined();
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });
 
@@ -400,7 +428,8 @@ describe('bulkPublishPages', () => {
 
 describe('bulkArchivePages', () => {
   it('archives multiple pages', async () => {
-    mockUpdate.mockReturnValue(updateChain([{ id: 'p1' }, { id: 'p2' }]));
+    mockSelect.mockReturnValue(orderedSelectChain([pageRow('p1'), pageRow('p2')]));
+    mockUpdate.mockReturnValue(updateChain([]));
 
     const result = await bulkArchivePages.handler({ ids: ['p1', 'p2'] }, adminCtx());
     expect(result.success).toBe(true);

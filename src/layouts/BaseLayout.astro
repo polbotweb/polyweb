@@ -9,6 +9,7 @@ import { CookieConsent } from "@organisms/CookieConsent";
 import { getSiteSettings, getSocialLinks, getActiveThemeCss } from "@database/loaders/site.loader";
 import { getConsentSettings } from "@database/loaders/consent.loader";
 import { safeJsonLd } from "@/lib/sanitize";
+import { cspSha256 } from "@/lib/security/csp-hash";
 import { getMenu, getMenuMeta, type NavTreeItem } from "@database/loaders/navigation.loader";
 
 interface Props {
@@ -18,9 +19,11 @@ interface Props {
   ogImage?: string;
   ogType?: string;
   jsonLd?: string;
+  /** URL canonique explicite (relative ou absolue) ; défaut : chemin courant. */
+  canonical?: string;
 }
 
-const { title: titleOverride, description: descriptionOverride, alternateUrls, ogImage: ogImageOverride, ogType, jsonLd } = Astro.props;
+const { title: titleOverride, description: descriptionOverride, alternateUrls, ogImage: ogImageOverride, ogType, jsonLd, canonical: canonicalOverride } = Astro.props;
 const locale = toLocale(Astro.currentLocale) as Locale;
 const direction = getDirection(locale);
 const t = await getCommonTranslations(locale);
@@ -44,6 +47,10 @@ const [siteData, dbSocialLinks, headerNav, footerPrimary, footerSecondary, foote
   getMenuMeta("footer_legal"),
   getConsentSettings(locale),
 ]);
+
+// CSS du thème : feuille externe /theme.css (un <style> inline serait bloqué par la CSP en
+// en-tête, cf. src/pages/theme.css.ts) ; `v` = empreinte du contenu pour l'invalidation du cache.
+const themeCssVersion = themeCss ? encodeURIComponent(cspSha256(themeCss).slice(7, 23)) : "";
 
 const siteName = siteData?.siteName ?? "";
 const metaTitle = titleOverride ?? siteData?.metaTitle ?? t.meta.title;
@@ -92,7 +99,9 @@ const legalHeading = footerLegalMeta?.showHeading !== false
   ? (siteData?.footerLegalHeading || footerLegalMeta?.displayLabel || t.footer.legalHeading)
   : undefined;
 
-const canonicalUrl = Astro.url.pathname;
+// URLs absolues (exigées pour canonical/hreflang/og:url) sur l'origine de la requête (multi-site).
+const absoluteUrl = (href: string) => new URL(href, Astro.url.origin).href;
+const canonicalUrl = absoluteUrl(canonicalOverride ?? Astro.url.pathname);
 ---
 
 <html lang={locale} dir={direction}>
@@ -105,9 +114,9 @@ const canonicalUrl = Astro.url.pathname;
     <meta name="description" content={metaDesc} />
     <link rel="canonical" href={canonicalUrl} />
     {alternateUrls && Object.entries(alternateUrls).map(([lang, url]) => (
-      <link rel="alternate" hreflang={lang} href={url} />
+      <link rel="alternate" hreflang={lang} href={absoluteUrl(url)} />
     ))}
-    {alternateUrls && <link rel="alternate" hreflang="x-default" href={alternateUrls['fr'] ?? canonicalUrl} />}
+    {alternateUrls && <link rel="alternate" hreflang="x-default" href={alternateUrls['fr'] ? absoluteUrl(alternateUrls['fr']) : canonicalUrl} />}
     <meta property="og:title" content={metaTitle} />
     <meta property="og:description" content={metaDesc} />
     <meta property="og:type" content={ogType ?? "website"} />
@@ -122,7 +131,7 @@ const canonicalUrl = Astro.url.pathname;
     {/* eslint-disable-next-line astro/no-set-html-directive -- jsonLd is pre-escaped via safeJsonLd() (neutralizes </script> breakout); it is structured data (JSON.stringify output), not arbitrary HTML */}
     {jsonLd && <script type="application/ld+json" set:html={safeJsonLd(jsonLd)} />}
     {/* eslint-disable-next-line astro/no-set-html-directive -- theme CSS is generated server-side from validated OKLCH tokens */}
-    {themeCss && <style set:html={themeCss} />}
+    {themeCss && <link rel="stylesheet" href={`/theme.css?v=${themeCssVersion}`} />}
     <slot name="head" />
 </head>
 
@@ -172,6 +181,10 @@ const canonicalUrl = Astro.url.pathname;
     />
     <Toaster position="bottom-right" />
     {consentData?.isActive && <CookieConsent consent={consentData} />}
+    {/* Styles dynamiques (data-style) appliqués par CSSOM : aucun attribut style= sous CSP stricte. */}
+    <script>
+      import '@/scripts/inline-styles';
+    </script>
     <script>
       import { authClient } from '@/lib/auth-client';
       const btn = document.getElementById('stop-impersonation-btn');

@@ -1,4 +1,5 @@
 ---
+import { styleAttr } from "@/lib/ui/inline-style";
 import CaretUp from "@tabler/icons/filled/caret-up.svg";
 import type { HTMLAttributes } from "astro/types";
 import { tv } from "tailwind-variants";
@@ -71,7 +72,7 @@ const {
   data-side-offset={sideOffset}
   {...avoidCollisions && { "data-avoid-collisions": "" }}
   role="tooltip"
-  style={{ animationDuration: `${animationDuration}ms` }}
+  {...styleAttr({ animationDuration: `${animationDuration}ms` })}
   data-slot="tooltip-content"
 >
   <slot> My tooltip! </slot>

@@ -18,3 +18,8 @@ export function assertEditorialLock(lock: EditorialLock): void {
     throw new Error("Lock expiresAt must be later than lockedAt");
   }
 }
+
+// ─── Verrou d'édition générique (Effect) ──────────────────────────────────────
+export * from './errors';
+export * from './policy';
+// Le service (accès base) s'importe explicitement : `@/core/locks/service` (hors barrel `@/core`, pas de Drizzle côté client).

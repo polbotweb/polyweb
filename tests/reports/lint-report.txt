@@ -1,0 +1,36 @@
+
+> polyweb@0.0.1 lint /workspace/polyweb-wt
+> eslint "src/**/*.{js,ts,astro}"
+
+
+/workspace/polyweb-wt/src/components/blog/PostCard.astro
+  159:3  warning  Unused CSS selector `.post-card`                                      astro/no-unused-css-selector
+  179:3  warning  Unused CSS selector `.post-card__image`                               astro/no-unused-css-selector
+  187:3  warning  Unused CSS selector `.post-card__link:hover .post-card__image`        astro/no-unused-css-selector
+  216:3  warning  Unused CSS selector `.post-card__header`                              astro/no-unused-css-selector
+  233:3  warning  Unused CSS selector `.post-card__title`                               astro/no-unused-css-selector
+  247:3  warning  Unused CSS selector `.post-card__title-link:hover .post-card__title`  astro/no-unused-css-selector
+  251:3  warning  Unused CSS selector `.post-card__content`                             astro/no-unused-css-selector
+  266:3  warning  Unused CSS selector `.post-card__footer`                              astro/no-unused-css-selector
+  300:3  warning  Unused CSS selector `.post-card__author-icon`                         astro/no-unused-css-selector
+  312:3  warning  Unused CSS selector `.post-card__read-more`                           astro/no-unused-css-selector
+  316:3  warning  Unused CSS selector `.post-card__read-more :global(svg)`              astro/no-unused-css-selector
+  322:3  warning  Unused CSS selector `.post-card--retro .post-card__image-wrap`        astro/no-unused-css-selector
+  327:3  warning  Unused CSS selector `.post-card--retro .post-card__badges`            astro/no-unused-css-selector
+  333:3  warning  Unused CSS selector `.post-card--retro .post-card__title`             astro/no-unused-css-selector
+  337:3  warning  Unused CSS selector `.post-card--retro .post-card__date`              astro/no-unused-css-selector
+  341:3  warning  Unused CSS selector `.post-card--compact .post-card__image-wrap`      astro/no-unused-css-selector
+  345:3  warning  Unused CSS selector `.post-card--compact .post-card__excerpt`         astro/no-unused-css-selector
+  349:3  warning  Unused CSS selector `.post-card--modern .post-card__image-wrap`       astro/no-unused-css-selector
+  354:3  warning  Unused CSS selector `.post-card--modern .post-card__badges`           astro/no-unused-css-selector
+
+/workspace/polyweb-wt/src/components/blog/sidebars/NewsletterSidebar.astro
+  146:3  warning  Unused CSS selector `.newsletter-sidebar__input`  astro/no-unused-css-selector
+  167:5  warning  Unused CSS selector `.newsletter-sidebar__input`  astro/no-unused-css-selector
+
+/workspace/polyweb-wt/src/layouts/BaseLayout.astro
+  133:6  warning  Unused eslint-disable directive (no problems were reported from 'astro/no-set-html-directive')
+
+✖ 22 problems (0 errors, 22 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+

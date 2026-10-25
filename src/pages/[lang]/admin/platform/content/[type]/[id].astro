@@ -1,0 +1,205 @@
+---
+import { requirePermission } from '@/lib/auth-guards';
+import PlatformAdminShell from '@organisms/PlatformAdmin/PlatformAdminShell.astro';
+import FieldInput from '@/components/platform/FieldInput.astro';
+import BlockEditor from '@/components/blocks/BlockEditor.astro';
+import MediaPicker from '@atoms/media-picker/MediaPicker.astro';
+import { getPlatformAdminUrl } from '@/core/localization/platform-labels';
+import { getAdminSite, userCan, readFieldValues, formatDate } from '@/lib/platform/admin';
+import { logAuditEvent, extractIp } from '@/lib/audit';
+import { getContentType } from '@/modules/content/domain/content-types';
+import { getEntry, createEntry, updateEntry, setEntryStatus, deleteEntry, EntryValidationError, EntryConflictError, type SaveEntryInput } from '@/modules/content/domain/entries';
+import { listRevisions } from '@/modules/content/domain/revisions';
+import { createPreviewToken, PREVIEW_TTL_CHOICES } from '@/modules/content/domain/preview';
+import { runApp } from '@/lib/effect/http';
+import type { BlocksDocument } from '@/core/blocks';
+import type { EntrySeo } from '@database/schemas/content.schema';
+
+export const prerender = false;
+const result = await requirePermission(Astro, { contentEntry: ['read'] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT, user } = result;
+const site = await getAdminSite(Astro);
+const type = await getContentType(site.id, Astro.params.type!);
+if (!type) return Astro.redirect(getPlatformAdminUrl(locale, 'content'));
+const id = Astro.params.id!;
+const isNew = id === 'new';
+let entry = isNew ? undefined : await getEntry(type, id);
+if (!isNew && !entry) return Astro.redirect(getPlatformAdminUrl(locale, 'content', type.slug));
+
+const locales = site.locales.length ? site.locales : [site.defaultLocale];
+const localizedFields = type.fields.filter((f) => f.localized);
+const sharedFields = type.fields.filter((f) => !f.localized);
+
+let errors: Record<string, string> = {};
+let message: string | null = null;
+let previewLink: { url: string; expires: Date } | null = null;
+let values: { slug: string; shared: Record<string, unknown>; tr: Record<string, { title: string; data: Record<string, unknown>; blocks: BlocksDocument | null; seo: EntrySeo }> } = {
+  slug: entry?.slug ?? '',
+  shared: entry?.sharedData ?? {},
+  tr: Object.fromEntries(locales.map((l) => {
+    const t = entry?.translations.find((x) => x.locale === l);
+    return [l, { title: t?.title ?? '', data: t?.data ?? {}, blocks: t?.blocks ?? null, seo: t?.seo ?? {} }];
+  })),
+};
+
+if (Astro.request.method === 'POST') {
+  const fd = await Astro.request.formData();
+  const intent = String(fd.get('intent') ?? 'save');
+  const meta = { ipAddress: extractIp(Astro.request.headers, Astro.clientAddress), userAgent: Astro.request.headers.get('user-agent') };
+  try {
+    if (intent === 'delete' && entry) {
+      if (!(await userCan(user.id, { contentEntry: ['delete'] }))) throw new Error('Permission refusée');
+      await deleteEntry(type, entry.id);
+      void logAuditEvent({ userId: user.id, action: 'CONTENT_ENTRY_DELETE', resource: 'content_entry', resourceId: entry.id, metadata: { type: type.slug, slug: entry.slug }, ...meta });
+      return Astro.redirect(getPlatformAdminUrl(locale, 'content', type.slug), 303);
+    }
+    if (intent === 'preview-link' && entry) {
+      const ttlKey = String(fd.get('ttl') ?? '24h') as keyof typeof PREVIEW_TTL_CHOICES;
+      const previewLocale = locales.includes(String(fd.get('previewLocale'))) ? String(fd.get('previewLocale')) : site.defaultLocale;
+      const { token, claims } = await runApp(createPreviewToken({ entryId: entry.id, locale: previewLocale, ttlSeconds: PREVIEW_TTL_CHOICES[ttlKey] ?? PREVIEW_TTL_CHOICES['24h'] }));
+      previewLink = { url: new URL(`/${previewLocale}/preview/${token}`, process.env.SITE_URL || Astro.url.origin).toString(), expires: new Date(claims.x * 1000) };
+      void logAuditEvent({ userId: user.id, action: 'CONTENT_PREVIEW_LINK_CREATE', resource: 'content_entry', resourceId: entry.id, metadata: { type: type.slug, locale: previewLocale, ttl: ttlKey }, ...meta });
+    } else if ((intent === 'publish' || intent === 'unpublish' || intent === 'archive') && entry) {
+      if (!(await userCan(user.id, { contentEntry: ['publish'] }))) throw new Error('Permission refusée');
+      const status = intent === 'publish' ? 'published' : intent === 'archive' ? 'archived' : 'draft';
+      await setEntryStatus(type, entry.id, status, user.id);
+      void logAuditEvent({ userId: user.id, action: intent === 'publish' ? 'CONTENT_ENTRY_PUBLISH' : 'CONTENT_ENTRY_UNPUBLISH', resource: 'content_entry', resourceId: entry.id, metadata: { type: type.slug, status }, ...meta });
+      return Astro.redirect(`${getPlatformAdminUrl(locale, 'content', type.slug, entry.id)}?saved=${intent}`, 303);
+    }
+    if (intent !== 'preview-link') {
+    if (!(await userCan(user.id, { contentEntry: [isNew ? 'create' : 'update'] }))) throw new Error('Permission refusée');
+    const translations: SaveEntryInput['translations'] = {};
+    for (const l of locales) {
+      const title = String(fd.get(`${l}__title`) ?? '').trim();
+      const data = readFieldValues(fd, localizedFields, l);
+      const blocksRaw = String(fd.get(`${l}__blocks`) ?? '');
+      const hasBlocks = blocksRaw && JSON.parse(blocksRaw).blocks?.length > 0;
+      const seo: EntrySeo = {
+        metaTitle: String(fd.get(`${l}__seo_metaTitle`) ?? '') || undefined,
+        metaDescription: String(fd.get(`${l}__seo_metaDescription`) ?? '') || undefined,
+        ogImage: String(fd.get(`${l}__seo_ogImage`) ?? '') || undefined,
+        noindex: fd.get(`${l}__seo_noindex`) === 'on' || undefined,
+      };
+      values.tr[l] = { title, data, blocks: hasBlocks ? JSON.parse(blocksRaw) : null, seo };
+      // Une langue sans titre ni contenu n'est pas créée.
+      const empty = !title && !hasBlocks && Object.values(data).every((v) => v === undefined || v === '' || (Array.isArray(v) && !v.length) || v === false);
+      if (!empty) translations[l] = { title, data, blocks: hasBlocks ? blocksRaw : undefined, seo };
+    }
+    values.slug = String(fd.get('slug') ?? '');
+    values.shared = readFieldValues(fd, sharedFields, 'shared');
+    const input: SaveEntryInput = { slug: values.slug || undefined, sharedData: values.shared, translations, message: String(fd.get('message') ?? '') || undefined };
+    const version = Number(fd.get('version'));
+    const saved = isNew
+      ? await createEntry(type, input, { authorId: user.id, allowedLocales: locales })
+      : await updateEntry(type, entry!.id, input, { authorId: user.id, allowedLocales: locales, expectedVersion: Number.isFinite(version) ? version : undefined });
+    void logAuditEvent({ userId: user.id, action: isNew ? 'CONTENT_ENTRY_CREATE' : 'CONTENT_ENTRY_UPDATE', resource: 'content_entry', resourceId: saved.id, metadata: { type: type.slug, version: saved.version }, ...meta });
+    return Astro.redirect(`${getPlatformAdminUrl(locale, 'content', type.slug, saved.id)}?saved=1`, 303);
+    }
+  } catch (e) {
+    if (e instanceof EntryValidationError) { errors = e.errors; message = 'Certains champs sont invalides.'; }
+    else message = e instanceof EntryConflictError ? e.message : (e as Error).message;
+  }
+}
+
+const saved = Astro.url.searchParams.get('saved');
+const revisions = entry ? await listRevisions(entry.id, 10) : [];
+const canPublish = await userCan(user.id, { contentEntry: ['publish'] });
+const statusLabel: Record<string, string> = { draft: 'Brouillon', published: 'Publié', archived: 'Archivé' };
+const title = isNew ? `Nouvelle entrée — ${type.name}` : `${values.tr[site.defaultLocale]?.title || entry!.slug}`;
+const extraTabs = ['blocks', 'seo'];
+void extraTabs;
+---
+<PlatformAdminShell t={authT} locale={locale} section="content" title={title}>
+  <a slot="actions" class="rounded-md border px-3 py-2 text-sm" href={getPlatformAdminUrl(locale, 'content', type.slug)}>← {type.name}</a>
+  {saved && <output class="block rounded-md border border-success bg-success/10 p-3 text-sm">{saved === 'publish' ? 'Publié.' : saved === 'unpublish' ? 'Repassé en brouillon.' : saved === 'archive' ? 'Archivé.' : 'Enregistré.'}</output>}
+  {message && <div class="rounded-md border border-error bg-error/10 p-3 text-sm" role="alert"><p>{message}</p>{Object.keys(errors).length > 0 && <ul class="mt-1 list-disc ps-5">{Object.entries(errors).map(([k, v]) => <li><code>{k}</code> : {v}</li>)}</ul>}</div>}
+  {entry && (
+    <p class="text-muted-foreground text-sm" data-entry-meta>
+      Statut : <strong data-entry-status>{statusLabel[entry.status]}</strong> · version {entry.version}
+      {entry.publishedAt && <> · publié le {formatDate(entry.publishedAt, locale)}</>}
+    </p>
+  )}
+  {previewLink && (
+    <div class="rounded-md border border-warning bg-warning/10 p-3 text-sm" aria-live="polite" data-preview-link>
+      <p class="font-medium">Lien de prévisualisation (valable jusqu’au {formatDate(previewLink.expires, locale)}) :</p>
+      <a class="mt-1 block break-all font-mono underline" href={previewLink.url} target="_blank" rel="noopener noreferrer">{previewLink.url}</a>
+    </div>
+  )}
+  {entry && (
+    <form method="post" class="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm" aria-label="Prévisualisation">
+      <input type="hidden" name="intent" value="preview-link" />
+      <label class="grid gap-1">Langue<select name="previewLocale" class="rounded-md border bg-background px-2 py-1">{locales.map((l) => <option value={l} selected={l === site.defaultLocale}>{l.toUpperCase()}</option>)}</select></label>
+      <label class="grid gap-1">Validité<select name="ttl" class="rounded-md border bg-background px-2 py-1">{Object.keys(PREVIEW_TTL_CHOICES).map((k) => <option value={k} selected={k === '24h'}>{k}</option>)}</select></label>
+      <button class="rounded-md border px-3 py-1.5">Créer un lien de prévisualisation</button>
+      <a class="ms-auto hover:underline" href={`${getPlatformAdminUrl(locale, 'content', type.slug, entry.id)}/revisions`}>Historique et différences →</a>
+    </form>
+  )}
+  <MediaPicker id="pw-media" locale={locale} />
+  <form method="post" class="grid gap-6" id="entry-form">
+    {entry && <input type="hidden" name="version" value={entry.version} />}
+    <div class="grid gap-4 sm:grid-cols-2">
+      <label class="grid gap-1 text-sm font-medium">Slug <span class="text-muted-foreground text-xs font-normal">(vide = généré depuis le titre)</span>
+        <input name="slug" value={values.slug} pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="200" class="rounded-md border bg-background px-3 py-2 font-mono" aria-invalid={errors.slug ? 'true' : undefined} />
+      </label>
+      <label class="grid gap-1 text-sm font-medium">Note de version<input name="message" maxlength="300" class="rounded-md border bg-background px-3 py-2" placeholder="ex. correction du résumé" /></label>
+    </div>
+    {sharedFields.length > 0 && (
+      <fieldset class="grid gap-4 rounded-xl border p-4">
+        <legend class="px-1 font-semibold">Champs communs (toutes langues)</legend>
+        {sharedFields.map((f) => <FieldInput field={f} prefix="shared" value={values.shared[f.name]} locale={locale} error={errors[`shared.${f.name}`]} />)}
+      </fieldset>
+    )}
+    {locales.map((l) => (
+      <details class="rounded-xl border p-4" open={l === site.defaultLocale}>
+        <summary class="cursor-pointer font-semibold">Langue : {l.toUpperCase()} {values.tr[l]?.title ? `— ${values.tr[l]!.title}` : '(non traduite)'}</summary>
+        <div class="mt-4 grid gap-4" dir={l === 'ar' ? 'rtl' : 'ltr'} lang={l}>
+          <label class="grid gap-1 text-sm font-medium">Titre
+            <input name={`${l}__title`} value={values.tr[l]?.title} maxlength="300" class="rounded-md border bg-background px-3 py-2" aria-invalid={errors[`${l}.title`] ? 'true' : undefined} />
+            {errors[`${l}.title`] && <span class="text-error text-xs" role="alert">{errors[`${l}.title`]}</span>}
+          </label>
+          {localizedFields.map((f) => <FieldInput field={f} prefix={l} value={values.tr[l]?.data[f.name]} locale={locale} error={errors[`${l}.${f.name}`]} />)}
+          {type.settings.hasBlocks !== false && (
+            <div class="grid gap-2">
+              <span class="text-sm font-medium">Contenu (blocs)</span>
+              {errors[`${l}.blocks`] && <span class="text-error text-xs" role="alert">{errors[`${l}.blocks`]}</span>}
+              <BlockEditor name={`${l}__blocks`} value={values.tr[l]?.blocks} pickerId="pw-media" />
+            </div>
+          )}
+          <fieldset class="grid gap-3 sm:grid-cols-2">
+            <legend class="text-sm font-medium">SEO</legend>
+            <label class="grid gap-1 text-xs">Meta title<input name={`${l}__seo_metaTitle`} maxlength="160" value={values.tr[l]?.seo.metaTitle} class="rounded-md border bg-background px-2 py-1 text-sm" /></label>
+            <label class="grid gap-1 text-xs">Image OG<input name={`${l}__seo_ogImage`} value={values.tr[l]?.seo.ogImage} class="rounded-md border bg-background px-2 py-1 text-sm" /></label>
+            <label class="grid gap-1 text-xs sm:col-span-2">Meta description<textarea name={`${l}__seo_metaDescription`} maxlength="320" rows="2" class="rounded-md border bg-background px-2 py-1 text-sm">{values.tr[l]?.seo.metaDescription}</textarea></label>
+            <label class="flex items-center gap-2 text-xs"><input type="checkbox" name={`${l}__seo_noindex`} checked={!!values.tr[l]?.seo.noindex} /> noindex</label>
+          </fieldset>
+        </div>
+      </details>
+    ))}
+    <div class="flex flex-wrap gap-2">
+      <button type="submit" name="intent" value="save" class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Enregistrer</button>
+      {entry && canPublish && entry.status !== 'published' && <button type="submit" name="intent" value="publish" formnovalidate class="rounded-md border px-4 py-2 text-sm">Publier</button>}
+      {entry && canPublish && entry.status === 'published' && <button type="submit" name="intent" value="unpublish" formnovalidate class="rounded-md border px-4 py-2 text-sm">Dépublier</button>}
+      {entry && canPublish && entry.status !== 'archived' && <button type="submit" name="intent" value="archive" formnovalidate class="rounded-md border px-4 py-2 text-sm">Archiver</button>}
+      {entry && <button type="submit" name="intent" value="delete" formnovalidate class="rounded-md border border-error px-4 py-2 text-sm text-error" data-confirm="Supprimer définitivement cette entrée ?">Supprimer</button>}
+    </div>
+  </form>
+  {entry && (
+    <section class="grid gap-2" aria-labelledby="rev-h">
+      <h2 id="rev-h" class="font-semibold">Dernières révisions</h2>
+      <ol class="text-sm">
+        {revisions.map((r) => (
+          <li class="flex flex-wrap gap-2 border-b py-1">
+            <span class="font-mono">v{r.version}</span>
+            <time datetime={r.createdAt.toISOString()}>{formatDate(r.createdAt, locale)}</time>
+            <span class="text-muted-foreground">{r.message}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )}
+</PlatformAdminShell>
+<script>
+  import { initConfirmButtons } from '@/lib/platform/confirm';
+  initConfirmButtons();
+</script>

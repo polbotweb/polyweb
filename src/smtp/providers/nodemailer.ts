@@ -1,10 +1,11 @@
 import nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 import type { EmailPayload, EmailFrom } from '../types';
 import { getNodemailerConfig } from '../env';
 
-let transporter: nodemailer.Transporter | null = null;
+let transporter: Transporter | null = null;
 
-function getTransporter(): nodemailer.Transporter {
+function getTransporter(): Transporter {
   if (transporter) return transporter;
   const cfg = getNodemailerConfig();
 

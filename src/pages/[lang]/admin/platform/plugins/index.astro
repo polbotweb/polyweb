@@ -1,0 +1,97 @@
+---
+/** Plugins (brique i) : activation et réglages des plugins installés dans src/plugins/. */
+import { requirePermission } from '@/lib/auth-guards';
+import PlatformAdminShell from '@organisms/PlatformAdmin/PlatformAdminShell.astro';
+import { getPlatformLabel, getPlatformAdminUrl } from '@/core/localization/platform-labels';
+import { userCan } from '@/lib/platform/admin';
+import { logAuditEvent, extractIp } from '@/lib/audit';
+import { runAppResult } from '@/lib/effect/http';
+import { installedPlugins, listPlugins, savePluginSettings, setPluginEnabled, settingsFromForm } from '@/core/plugins/host';
+import '@/plugins';
+
+export const prerender = false;
+const result = await requirePermission(Astro, { plugin: ['read'] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT, user } = result;
+const canUpdate = await userCan(user.id, { plugin: ['update'] });
+const selfUrl = getPlatformAdminUrl(locale, 'plugins');
+let error: string | null = null;
+let issues: readonly { path: string; message: string }[] = [];
+let errorFor: string | null = null;
+
+if (Astro.request.method === 'POST' && canUpdate) {
+  const fd = await Astro.request.formData();
+  const id = String(fd.get('id') ?? '');
+  const intent = String(fd.get('intent') ?? '');
+  const meta = { userId: user.id, resource: 'plugin', resourceId: id, ipAddress: extractIp(Astro.request.headers, Astro.clientAddress), userAgent: Astro.request.headers.get('user-agent') };
+  if (intent === 'enable' || intent === 'disable') {
+    const r = await runAppResult(setPluginEnabled(id, intent === 'enable', user.id));
+    if (r.ok) {
+      void logAuditEvent({ ...meta, action: intent === 'enable' ? 'PLUGIN_ENABLE' : 'PLUGIN_DISABLE' });
+      return Astro.redirect(`${selfUrl}?saved=${intent}${r.value ? '&failed=1' : ''}`, 303);
+    }
+    error = r.error.message;
+    errorFor = id;
+  } else if (intent === 'settings') {
+    const plugin = installedPlugins().find((p) => p.id === id);
+    const r = plugin ? await runAppResult(savePluginSettings(id, settingsFromForm(plugin, fd), user.id)) : null;
+    if (r?.ok) {
+      void logAuditEvent({ ...meta, action: 'PLUGIN_SETTINGS_UPDATE' });
+      return Astro.redirect(`${selfUrl}?saved=settings`, 303);
+    }
+    errorFor = id;
+    if (r && !r.ok) {
+      error = r.error.message;
+      if (r.error._tag === 'ValidationError') issues = r.error.issues;
+    } else error = 'Plugin inconnu';
+  }
+}
+const listed = await runAppResult(listPlugins);
+const plugins = listed.ok ? listed.value : [];
+const saved = Astro.url.searchParams.get('saved');
+const failed = Astro.url.searchParams.get('failed') === '1';
+const savedText = { enable: 'Plugin activé.', disable: 'Plugin désactivé.', settings: 'Réglages enregistrés.' } as Record<string, string>;
+---
+<PlatformAdminShell t={authT} locale={locale} section="plugins" title={getPlatformLabel('plugins', locale)}>
+  {saved && !failed && <output class="block rounded-md border border-success bg-success/10 p-3 text-sm">{savedText[saved] ?? 'Enregistré.'}</output>}
+  {failed && <p class="rounded-md border border-error bg-error/10 p-3 text-sm" role="alert">Le plugin est marqué actif mais son initialisation a échoué (voir l’erreur ci-dessous).</p>}
+  <p class="text-muted-foreground text-sm">Les plugins sont du code installé dans <code>src/plugins/</code> et déclaré dans <code>src/plugins/index.ts</code> (aucun code n’est téléchargé). Ils peuvent ajouter des blocs et réagir aux événements (<code>content.*</code>, <code>form.submitted</code>…). L’activation se propage aux autres instances en 30 s au plus.</p>
+  {plugins.length === 0 ? <p>Aucun plugin installé.</p> : (
+    <ul class="grid gap-4">
+      {plugins.map((p) => (
+        <li class="grid gap-3 rounded-md border p-4" data-plugin={p.id}>
+          <div class="flex flex-wrap items-center gap-3">
+            <h2 class="text-lg font-semibold">{p.name}</h2>
+            <span class="text-muted-foreground font-mono text-xs">{p.id}@{p.version}</span>
+            <span class:list={['rounded-full px-2 py-0.5 text-xs', { 'bg-success/15': p.active, 'bg-muted': !p.active }]}>{p.active ? 'actif' : p.enabled ? 'activé (en erreur)' : 'inactif'}</span>
+            {canUpdate && (
+              <form method="post" class="ms-auto">
+                <input type="hidden" name="id" value={p.id} />
+                <button name="intent" value={p.enabled ? 'disable' : 'enable'} class="rounded-md border px-3 py-1.5 text-sm">{p.enabled ? 'Désactiver' : 'Activer'}</button>
+              </form>
+            )}
+          </div>
+          <p class="text-sm">{p.description}</p>
+          {p.error && <p class="rounded-md border border-error bg-error/10 p-2 text-sm" role="alert">Erreur : {p.error}</p>}
+          {errorFor === p.id && error && (
+            <div class="rounded-md border border-error bg-error/10 p-2 text-sm" role="alert"><p>{error}</p>{issues.length > 0 && <ul class="list-disc ps-5">{issues.map((i) => <li><code>{i.path}</code> : {i.message}</li>)}</ul>}</div>
+          )}
+          {p.fields.length > 0 && (
+            <details open={errorFor === p.id}>
+              <summary class="cursor-pointer text-sm font-medium">Réglages</summary>
+              <form method="post" class="mt-3 grid gap-3 text-sm">
+                <input type="hidden" name="id" value={p.id} />
+                {p.fields.map((f) => (
+                  f.kind === 'boolean' ? <label class="flex items-center gap-2"><input type="checkbox" name={f.name} checked={p.settings[f.name] === true} disabled={!canUpdate} /> {f.label}</label>
+                  : f.kind === 'textarea' ? <label class="grid gap-1">{f.label}<textarea name={f.name} rows="4" disabled={!canUpdate} class="rounded-md border bg-background px-3 py-2">{String(p.settings[f.name] ?? '')}</textarea></label>
+                  : <label class="grid gap-1">{f.label}<input name={f.name} type={f.kind} value={String(p.settings[f.name] ?? '')} disabled={!canUpdate} class="rounded-md border bg-background px-3 py-2" /></label>
+                ))}
+                {canUpdate && <button name="intent" value="settings" class="justify-self-start rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground">Enregistrer les réglages</button>}
+              </form>
+            </details>
+          )}
+        </li>
+      ))}
+    </ul>
+  )}
+</PlatformAdminShell>

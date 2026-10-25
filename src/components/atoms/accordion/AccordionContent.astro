@@ -1,6 +1,7 @@
 ---
 /**
- * NOTE: style="animation: none;" makes it so the close animation doesn't run on page load
+ * NOTE: tant que `data-animated` est absent, la règle CSS ci-dessous coupe l'animation
+ * (pas d'animation de fermeture au chargement) — sans attribut style= (CSP stricte).
  * It is later removed in the Accordion.astro script
  */
 import type { HTMLAttributes } from "astro/types";
@@ -24,7 +25,6 @@ const { class: className, ...rest } = Astro.props;
   class={accordionContent({ class: className })}
   data-state="closed"
   aria-hidden="true"
-  style="animation: none;"
   {...rest}
   data-slot="accordion-content"
 >
@@ -34,6 +34,10 @@ const { class: className, ...rest } = Astro.props;
 </div>
 
 <style>
+  [data-slot="accordion-content"]:not([data-animated]) {
+    animation: none !important;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     [data-slot="accordion-content"] {
       animation-duration: 0ms !important;

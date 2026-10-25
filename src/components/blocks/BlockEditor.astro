@@ -1,0 +1,181 @@
+---
+/**
+ * BlockEditor — éditeur de blocs (brique a). TipTap pour les blocs "richText",
+ * formulaires simples pour les autres types déclarés dans le registre.
+ * La valeur est sérialisée en JSON typé dans un <input type="hidden" name={name}>,
+ * puis validée côté serveur par parseBlocksDocument().
+ */
+import { listBlocks, EMPTY_BLOCKS, type BlocksDocument } from '@/core/blocks';
+
+interface Props { name: string; value?: BlocksDocument | null; id?: string; pickerId?: string }
+const { name, value, id = `blocks-${name}`, pickerId } = Astro.props;
+const types = listBlocks().map((b) => ({ type: b.type, label: b.label, fields: b.editorFields ?? [] }));
+---
+
+<block-editor id={id} data-types={JSON.stringify(types)} data-picker={pickerId} class="block grid gap-3">
+  <input type="hidden" name={name} value={JSON.stringify(value ?? EMPTY_BLOCKS)} data-blocks-input />
+  <ol class="grid gap-3" data-blocks-list aria-label="Blocs"></ol>
+  <div class="flex flex-wrap items-center gap-2 rounded-md border border-dashed p-2">
+    <label class="text-sm" for={`${id}-add`}>Ajouter un bloc</label>
+    <select id={`${id}-add`} class="rounded border bg-background px-2 py-1 text-sm" data-blocks-add-type>
+      {types.map((t) => <option value={t.type}>{t.label}</option>)}
+    </select>
+    <button type="button" class="rounded bg-primary px-3 py-1 text-sm text-primary-foreground" data-blocks-add>+ Ajouter</button>
+  </div>
+</block-editor>
+
+<script>
+  import { Editor } from '@tiptap/core';
+  import StarterKit from '@tiptap/starter-kit';
+  import Link from '@tiptap/extension-link';
+  import { pickMedia } from '@/lib/admin/media-picker-client';
+
+  type FieldSpec = { name: string; label: string; kind: 'text' | 'textarea' | 'select' | 'url' | 'number'; options?: string[] };
+  type TypeSpec = { type: string; label: string; fields: FieldSpec[] };
+  type Block = { id: string; type: string; data: Record<string, unknown> };
+
+  const uid = () => Math.random().toString(36).slice(2, 10);
+  const el = <K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string> = {}, text?: string) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (text) n.textContent = text;
+    return n;
+  };
+
+  class BlockEditorElement extends HTMLElement {
+    private blocks: Block[] = [];
+    private types: TypeSpec[] = [];
+    private editors = new Map<string, Editor>();
+    private input!: HTMLInputElement;
+    private list!: HTMLOListElement;
+
+    connectedCallback() {
+      if (this.dataset.ready) return;
+      this.dataset.ready = '1';
+      this.types = JSON.parse(this.dataset.types || '[]');
+      this.input = this.querySelector('[data-blocks-input]')!;
+      this.list = this.querySelector('[data-blocks-list]')!;
+      try { this.blocks = (JSON.parse(this.input.value || '{}').blocks ?? []) as Block[]; } catch { this.blocks = []; }
+      this.querySelector('[data-blocks-add]')!.addEventListener('click', () => {
+        const type = (this.querySelector('[data-blocks-add-type]') as HTMLSelectElement).value;
+        this.blocks.push({ id: uid(), type, data: type === 'richText' ? { doc: { type: 'doc', content: [{ type: 'paragraph' }] } } : {} });
+        this.render();
+      });
+      this.render();
+    }
+
+    private sync() {
+      this.input.value = JSON.stringify({ version: 1, blocks: this.blocks });
+      this.input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    private move(i: number, delta: number) {
+      const j = i + delta;
+      if (j < 0 || j >= this.blocks.length) return;
+      [this.blocks[i], this.blocks[j]] = [this.blocks[j]!, this.blocks[i]!];
+      this.render();
+    }
+
+    private render() {
+      this.editors.forEach((e) => e.destroy());
+      this.editors.clear();
+      this.list.replaceChildren();
+      this.blocks.forEach((block, i) => {
+        const spec = this.types.find((t) => t.type === block.type);
+        const li = el('li', { class: 'rounded-md border bg-card p-3 grid gap-2', 'data-block-id': block.id });
+        const head = el('div', { class: 'flex items-center justify-between gap-2' });
+        head.append(el('strong', { class: 'text-sm' }, spec?.label ?? block.type));
+        const actions = el('div', { class: 'flex gap-1' });
+        const mk = (label: string, aria: string, fn: () => void) => {
+          const b = el('button', { type: 'button', class: 'rounded border px-2 text-xs', 'aria-label': aria }, label);
+          b.addEventListener('click', fn);
+          actions.append(b);
+        };
+        mk('↑', 'Monter', () => this.move(i, -1));
+        mk('↓', 'Descendre', () => this.move(i, 1));
+        mk('✕', 'Supprimer', () => { this.blocks.splice(i, 1); this.render(); });
+        head.append(actions);
+        li.append(head);
+        if (block.type === 'richText') li.append(this.richText(block));
+        else for (const f of spec?.fields ?? []) li.append(this.field(block, f));
+        this.list.append(li);
+      });
+      this.sync();
+    }
+
+    private field(block: Block, f: FieldSpec): HTMLElement {
+      const wrap = el('label', { class: 'grid gap-1 text-sm' });
+      wrap.append(el('span', {}, f.label));
+      let input: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+      if (f.kind === 'textarea') input = el('textarea', { rows: '4', class: 'rounded border bg-background p-2 font-mono text-sm' });
+      else if (f.kind === 'select') {
+        input = el('select', { class: 'rounded border bg-background p-1' });
+        for (const o of f.options ?? []) input.append(el('option', { value: o }, o));
+      } else input = el('input', { type: f.kind === 'number' ? 'number' : f.kind === 'url' ? 'text' : 'text', class: 'rounded border bg-background p-1' });
+      const current = block.data[f.name];
+      input.value = current === undefined || current === null ? (f.kind === 'select' ? f.options?.[0] ?? '' : '') : String(current);
+      if (f.kind === 'select' && current === undefined) block.data[f.name] = input.value;
+      input.addEventListener('input', () => {
+        block.data[f.name] = f.kind === 'number' ? Number(input.value) : input.value;
+        this.sync();
+      });
+      wrap.append(input);
+      if (block.type === 'image' && f.name === 'url' && this.dataset.picker) {
+        const pick = el('button', { type: 'button', class: 'justify-self-start rounded border px-2 py-0.5 text-xs' }, 'Médiathèque…');
+        pick.addEventListener('click', async () => {
+          const m = await pickMedia(this.dataset.picker!);
+          if (!m) return;
+          block.data.url = m.url;
+          if (!block.data.alt) block.data.alt = m.alt;
+          this.render();
+        });
+        wrap.append(pick);
+      }
+      return wrap;
+    }
+
+    private richText(block: Block): HTMLElement {
+      const box = el('div', { class: 'grid gap-1' });
+      const bar = el('div', { class: 'flex flex-wrap gap-1', role: 'toolbar', 'aria-label': 'Mise en forme' });
+      const area = el('div', { class: 'pw-tiptap prose max-w-none min-h-24 rounded border bg-background p-2' });
+      box.append(bar, area);
+      const editor = new Editor({
+        element: area,
+        extensions: [StarterKit.configure({ heading: { levels: [2, 3, 4] } }), Link.configure({ openOnClick: false, protocols: ['http', 'https', 'mailto', 'tel'] })],
+        content: (block.data.doc as object) ?? { type: 'doc', content: [] },
+        onUpdate: ({ editor: e }) => { block.data = { doc: e.getJSON() }; this.sync(); },
+      });
+      this.editors.set(block.id, editor);
+      const btn = (label: string, title: string, run: () => void) => {
+        const b = el('button', { type: 'button', class: 'rounded border px-2 text-xs', title, 'aria-label': title }, label);
+        b.addEventListener('mousedown', (e) => e.preventDefault()); // garde la sélection de l'éditeur
+        b.addEventListener('click', () => run());
+        bar.append(b);
+      };
+      btn('B', 'Gras', () => editor.chain().focus().toggleBold().run());
+      btn('I', 'Italique', () => editor.chain().focus().toggleItalic().run());
+      btn('S', 'Barré', () => editor.chain().focus().toggleStrike().run());
+      btn('H2', 'Titre 2', () => editor.chain().focus().toggleHeading({ level: 2 }).run());
+      btn('H3', 'Titre 3', () => editor.chain().focus().toggleHeading({ level: 3 }).run());
+      btn('•', 'Liste à puces', () => editor.chain().focus().toggleBulletList().run());
+      btn('1.', 'Liste numérotée', () => editor.chain().focus().toggleOrderedList().run());
+      btn('❝', 'Citation', () => editor.chain().focus().toggleBlockquote().run());
+      btn('</>', 'Code', () => editor.chain().focus().toggleCodeBlock().run());
+      btn('🔗', 'Lien', () => {
+        const href = prompt('URL du lien (https://…, /chemin, mailto:)');
+        if (href === null) return;
+        if (!href) editor.chain().focus().unsetLink().run();
+        else editor.chain().focus().extendMarkRange('link').setLink({ href }).run();
+      });
+      btn('↶', 'Annuler', () => editor.chain().focus().undo().run());
+      return box;
+    }
+  }
+
+  if (!customElements.get('block-editor')) customElements.define('block-editor', BlockEditorElement);
+</script>
+
+<style is:global>
+  .pw-tiptap .ProseMirror { outline: none; min-height: 5rem; }
+  .pw-tiptap .ProseMirror:focus-visible { box-shadow: 0 0 0 2px var(--ring); border-radius: 0.25rem; }
+</style>

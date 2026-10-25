@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { eq, and, isNull } from "drizzle-orm";
@@ -5,16 +6,17 @@ import { getDrizzle } from "@database/drizzle";
 import { blogPosts, blogPostTranslations, blogPostLinks } from "@database/schemas";
 import type { Locale } from "@i18n/config";
 import {
-  assertBlogPermission,
-  assertPostInTenant,
   resolveBlogTenant,
-  blogRateLimit,
   auditBlog,
   blogOrganizationIdSchema,
+  blogRateLimitEffect,
+  postInTenant,
+  requireBlogPermission,
 } from "./_helpers";
 import { detectDeadInternalLinks } from "@/lib/content/editor-helpers";
 import { blogInternalLinkResolver } from "@/lib/blog/blog-internal-link";
 import { publicBlogPostScope } from "@/lib/blog/public-visibility";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 /**
  * Admin action: scans a post for dead internal links.
@@ -29,11 +31,12 @@ export const checkBlogPostLinks = defineAction({
     locale: z.string().min(2).max(5),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    blogRateLimit(context, user.id, "link-check");
-    await assertPostInTenant(input.postId, tenant);
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* blogRateLimitEffect(user.id, "link-check");
+    yield* postInTenant(input.postId, tenant);
+    return yield* actionTry("blog/check-links.checkBlogPostLinks", async () => {
 
     const db = getDrizzle();
     const locale = input.locale as Locale;
@@ -123,5 +126,5 @@ export const checkBlogPostLinks = defineAction({
       deadExplicit: deadExplicit.map((l) => ({ id: l.id, linkType: l.linkType, targetPostId: l.targetPostId })),
       deadInline: deadInline.map((d) => ({ href: d.href, text: d.text, target: d.target, reason: d.reason })),
     };
-  },
+  }); })),
 });

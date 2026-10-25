@@ -1,8 +1,8 @@
 ---
 import { requirePermission } from '@/lib/auth-guards';
 import { getDrizzle } from '@database/drizzle';
-import { pages, pageSections } from '@database/schemas';
-import { asc, eq, count } from 'drizzle-orm';
+import { pageLocks, pages, pageSections } from '@database/schemas';
+import { asc, eq, count, sql } from 'drizzle-orm';
 import { getSiteSettings, getContactInfo } from '@database/loaders/site.loader';
 import BaseLayout from '@layouts/BaseLayout.astro';
 import AuthLayout from '@organisms/AuthLayout/AuthLayout.astro';
@@ -67,8 +67,9 @@ const [allPagesRaw, [total]] = await Promise.all([
       isPublished: pages.isPublished,
       publishedAt: pages.publishedAt,
       sortOrder: pages.sortOrder,
-      lockedBy: pages.lockedBy,
-      lockedAt: pages.lockedAt,
+      // Verrou actif (src/core/locks, table page_locks) — les anciennes colonnes pages.locked_* ont été supprimées (migration 0020).
+      lockedBy: sql<string | null>`(select pl.user_id from page_locks pl where pl.page_id = ${pages.id} and pl.expires_at > now())`,
+      lockedAt: sql<Date | null>`(select pl.locked_at from page_locks pl where pl.page_id = ${pages.id} and pl.expires_at > now())`.mapWith(pageLocks.lockedAt),
       createdAt: pages.createdAt,
       updatedAt: pages.updatedAt,
       sectionCount: count(pageSections.id),

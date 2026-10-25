@@ -1,0 +1,70 @@
+---
+/** Formulaires (brique g) — liste et création. */
+import { Effect } from 'effect';
+import { requirePermission } from '@/lib/auth-guards';
+import PlatformAdminShell from '@organisms/PlatformAdmin/PlatformAdminShell.astro';
+import { getPlatformLabel, getPlatformAdminUrl } from '@/core/localization/platform-labels';
+import { getAdminSite, userCan } from '@/lib/platform/admin';
+import { logAuditEvent, extractIp } from '@/lib/audit';
+import { runAppResult } from '@/lib/effect/http';
+import { ForbiddenError } from '@/lib/effect/errors';
+import { createForm, listForms } from '@/modules/forms/domain/forms';
+
+export const prerender = false;
+const result = await requirePermission(Astro, { form: ['read'] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT, user } = result;
+const site = await getAdminSite(Astro);
+const canCreate = await userCan(user.id, { form: ['create'] });
+let error: string | null = null;
+
+if (Astro.request.method === 'POST') {
+  const fd = await Astro.request.formData();
+  const r = await runAppResult(Effect.gen(function* () {
+    if (!canCreate) return yield* new ForbiddenError({ reason: 'Permission refusée' });
+    return yield* createForm(site.id, {
+      name: String(fd.get('name') ?? ''),
+      slug: String(fd.get('slug') ?? ''),
+      fields: [
+        { name: 'email', label: { fr: 'E-mail', en: 'Email' }, type: 'email', required: true },
+        { name: 'message', label: { fr: 'Message', en: 'Message' }, type: 'textarea', required: true },
+      ],
+    });
+  }));
+  if (r.ok) {
+    void logAuditEvent({ userId: user.id, action: 'FORM_CREATE', resource: 'form', resourceId: r.value.id, metadata: { slug: r.value.slug }, ipAddress: extractIp(Astro.request.headers, Astro.clientAddress), userAgent: Astro.request.headers.get('user-agent') });
+    return Astro.redirect(`${getPlatformAdminUrl(locale, 'forms', r.value.id)}?saved=created`, 303);
+  }
+  error = r.error.message;
+}
+const listed = await runAppResult(listForms(site.id));
+const forms = listed.ok ? listed.value : [];
+---
+<PlatformAdminShell t={authT} locale={locale} section="forms" title={getPlatformLabel('forms', locale)}>
+  {error && <p class="rounded-md border border-error bg-error/10 p-3 text-sm" role="alert">{error}</p>}
+  <p class="text-muted-foreground text-sm">Formulaires publics : page <code>/&lt;langue&gt;/f/&lt;slug&gt;</code>, API JSON <code>POST /api/forms/&lt;slug&gt;</code>, événement <code>form.submitted</code> (webhooks), notifications e-mail, export CSV.</p>
+  {canCreate && (
+    <form method="post" class="flex flex-wrap items-end gap-3 rounded-md border p-4 text-sm">
+      <label class="grid gap-1">Nom<input name="name" required maxlength="160" class="rounded-md border bg-background px-3 py-2" /></label>
+      <label class="grid gap-1">Slug<input name="slug" required pattern="[a-z][a-z0-9-]{0,62}" class="rounded-md border bg-background px-3 py-2 font-mono" /></label>
+      <button class="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground">Créer le formulaire</button>
+    </form>
+  )}
+  {forms.length === 0 ? <p>Aucun formulaire.</p> : (
+    <table class="w-full text-sm">
+      <thead><tr class="border-b"><th class="py-2 text-start">Nom</th><th class="text-start">Slug</th><th class="text-start">Champs</th><th class="text-start">Soumissions</th><th class="text-start">État</th><th></th></tr></thead>
+      <tbody>
+        {forms.map((f) => (
+          <tr class="border-b">
+            <td class="py-2 font-medium">{f.name}</td>
+            <td><a class="font-mono hover:underline" href={`/${locale}/f/${f.slug}`}>{f.slug}</a></td>
+            <td>{f.fields.length}</td>
+            <td><a class="hover:underline" href={`${getPlatformAdminUrl(locale, 'forms', f.id)}/submissions`}>{f.submissions}</a></td>
+            <td>{f.status === 'active' ? 'ouvert' : 'fermé'}</td>
+            <td class="text-end"><a class="hover:underline" href={getPlatformAdminUrl(locale, 'forms', f.id)}>Modifier</a></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</PlatformAdminShell>

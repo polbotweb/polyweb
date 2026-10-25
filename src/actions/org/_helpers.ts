@@ -1,61 +1,41 @@
+import { Effect } from "effect";
+import { actionTry, fail, runGuard } from "@/lib/effect/action";
 import { ActionError } from "astro:actions";
 import type { ActionAPIContext } from "astro:actions";
 import { logAuditEvent, extractIp, type AuditAction } from "@/lib/audit";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
- * Vérifie que l'utilisateur est connecté et est admin/owner de l'organisation donnée.
- * Lance une ActionError si ce n'est pas le cas.
- * Retourne l'utilisateur typé (non-null).
+ * Vérifie que l'utilisateur est connecté et est admin/owner de l'organisation donnée
+ * (admin global toujours autorisé). Échecs `ActionFailure` ; renvoie l'utilisateur non nul.
  */
-export async function assertOrgAdmin(
-  context: ActionAPIContext,
-  organizationId: string,
-) {
-  const user = context.locals.user;
-  if (!user) {
-    throw new ActionError({
-      code: "UNAUTHORIZED",
-      message: "Vous devez être connecté pour effectuer cette action.",
-    });
-  }
-  if (user.banned) {
-    throw new ActionError({
-      code: "FORBIDDEN",
-      message: "Compte suspendu.",
-    });
-  }
-
-  // Global admins can always manage org roles
-  if (user.role === "admin") return user;
-
-  // Check org membership (owner or admin)
-  const { auth } = await import("@/lib/auth");
-  const fullOrg = await auth.api.getFullOrganization({
-    query: { organizationId },
-    headers: context.request.headers,
+export const requireOrgAdmin = (context: Pick<ActionAPIContext, "locals" | "request">, organizationId: string) =>
+  Effect.gen(function* () {
+    const user = context.locals.user;
+    if (!user) return yield* fail("UNAUTHORIZED", "Vous devez être connecté pour effectuer cette action.");
+    if (user.banned) return yield* fail("FORBIDDEN", "Compte suspendu.");
+    if (user.role === "admin") return user;
+    const fullOrg = yield* actionTry("auth.getFullOrganization", () =>
+      import("@/lib/auth").then(({ auth }) => auth.api.getFullOrganization({ query: { organizationId }, headers: context.request.headers })),
+    );
+    if (!fullOrg) return yield* fail("NOT_FOUND", "Organisation introuvable.");
+    const member = (fullOrg.members ?? []).find((m: { userId: string }) => m.userId === user.id);
+    if (!member || (member.role !== "owner" && member.role !== "admin")) {
+      return yield* fail("FORBIDDEN", "Vous devez être propriétaire ou administrateur de cette organisation.");
+    }
+    return user;
   });
 
-  if (!fullOrg) {
-    throw new ActionError({
-      code: "NOT_FOUND",
-      message: "Organisation introuvable.",
-    });
-  }
+/** Adaptateur Promise de `requireOrgAdmin` (relève `ActionError`). */
+export const assertOrgAdmin = (context: ActionAPIContext, organizationId: string) => runGuard(requireOrgAdmin(context, organizationId));
 
-  const member = (fullOrg.members ?? []).find(
-    (m: { userId: string }) => m.userId === user.id,
+/** Rate-limit org en Effect (mêmes clés que `orgRateLimit`). */
+export const orgRateLimitEffect = (userId: string, scope: string, opts = { window: 60, max: 30 }) =>
+  Effect.suspend(() =>
+    checkRateLimit(`org-${scope.replace(/:/g, "_")}:${userId}`, opts).allowed
+      ? Effect.void
+      : fail("TOO_MANY_REQUESTS", "Trop de requêtes. Réessayez dans quelques instants."),
   );
-
-  if (!member || (member.role !== "owner" && member.role !== "admin")) {
-    throw new ActionError({
-      code: "FORBIDDEN",
-      message: "Vous devez être propriétaire ou administrateur de cette organisation.",
-    });
-  }
-
-  return user;
-}
 
 /**
  * Applique un rate-limit par IP (ou userId en fallback).

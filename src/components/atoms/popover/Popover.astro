@@ -46,6 +46,7 @@ const {
 </div>
 
 <script>
+  import { applyInlineStyle } from "@/lib/ui/inline-style-dom";
   import {
     type FloatingAlign,
     type FloatingSide,
@@ -144,6 +145,8 @@ const {
         this.usesGlobalPointerTracking = true;
       }
 
+      // data-style (CSP) appliqué ici aussi : indépendant de l'ordre des scripts.
+      applyInlineStyle(this.content);
       const animationDurationString = this.content.style.animationDuration;
       if (animationDurationString.endsWith("ms")) {
         this.animationDuration = parseFloat(animationDurationString);

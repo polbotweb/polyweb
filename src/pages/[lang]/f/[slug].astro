@@ -1,0 +1,55 @@
+---
+/** Page publique d'un formulaire (brique g) — POST traité ici (fonctionne sans JS). */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import PolywebForm from '@/components/forms/PolywebForm.astro';
+import { toLocale } from '@i18n/utils';
+import { runAppResult, runApp } from '@/lib/effect/http';
+import { extractIp } from '@/lib/audit';
+import { readFieldValues } from '@/lib/platform/admin';
+import { formTimestampToken, getForm, submitForm } from '@/modules/forms/domain/forms';
+import { DEFAULT_SITE_ID } from '@database/schemas/content.schema';
+
+export const prerender = false;
+const locale = toLocale(Astro.params.lang);
+const siteId = Astro.locals.site?.id ?? DEFAULT_SITE_ID;
+const loaded = await runAppResult(getForm(siteId, Astro.params.slug ?? ''));
+if (!loaded.ok) return new Response('Not Found', { status: 404 });
+const form = loaded.value;
+
+let values: Record<string, unknown> = {};
+let errors: Record<string, string> = {};
+let notice: { kind: 'success' | 'error'; text: string } | null = Astro.url.searchParams.get('sent') === '1' ? { kind: 'success', text: form.settings.successMessage?.[locale] || form.settings.successMessage?.fr || 'Merci, votre message a bien été envoyé.' } : null;
+
+if (Astro.request.method === 'POST') {
+  const fd = await Astro.request.formData();
+  values = readFieldValues(fd, form.fields, 'f');
+  const raw = { ...values, _hp: String(fd.get('_hp') ?? ''), _ts: String(fd.get('_ts') ?? '') };
+  const r = await runAppResult(submitForm(siteId, form.slug, raw, { ip: extractIp(Astro.request.headers, Astro.clientAddress), userAgent: Astro.request.headers.get('user-agent'), locale, requireTimestamp: true }));
+  if (r.ok) {
+    if (r.value.status === 'accepted' && r.value.redirectPath) return Astro.redirect(r.value.redirectPath, 303);
+    return Astro.redirect(`/${locale}/f/${form.slug}?sent=1`, 303);
+  }
+  const e = r.error;
+  if (e._tag === 'ValidationError') {
+    errors = Object.fromEntries(e.issues.map((i) => [i.path, i.message]));
+    notice = { kind: 'error', text: 'Certains champs sont invalides.' };
+  } else if (e._tag === 'RateLimitedError') {
+    Astro.response.status = 429;
+    notice = { kind: 'error', text: 'Trop d’envois, réessayez dans une minute.' };
+  } else if (e._tag === 'ConflictError') {
+    notice = { kind: 'error', text: e.reason };
+  } else {
+    Astro.response.status = 500;
+    notice = { kind: 'error', text: 'Une erreur est survenue, réessayez plus tard.' };
+  }
+}
+const timestamp = await runApp(formTimestampToken);
+Astro.response.headers.set('cache-control', 'private, no-store');
+---
+<BaseLayout title={form.name} description={form.description || form.name}>
+  <section class="mx-auto grid max-w-2xl gap-6 px-4 py-12">
+    <h1 class="font-heading text-3xl font-semibold">{form.name}</h1>
+    {notice && <p class:list={['rounded-md border p-3 text-sm', {"border-success bg-success/10": notice.kind === 'success', "border-error bg-error/10": notice.kind !== 'success'}]} role={notice.kind === 'success' ? 'status' : 'alert'}>{notice.text}</p>}
+    {form.status === 'active' ? (notice?.kind !== 'success' && <PolywebForm form={form} locale={locale} timestamp={timestamp} values={values} errors={errors} />) : <p>Ce formulaire est fermé.</p>}
+  </section>
+</BaseLayout>

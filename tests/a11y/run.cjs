@@ -24,6 +24,7 @@ const fs = require('node:fs');
 const http = require('node:http');
 
 const path = require('node:path');
+const { ensurePortFree } = require('../helpers/port-guard.cjs');
 
 const PORT = 4321;
 const HOST = 'localhost';
@@ -228,26 +229,9 @@ async function waitForServer() {
   return false;
 }
 
-/** Kill any process listening on PORT (dev or stale preview) */
+/** Free PORT on every loopback interface (IPv4 + IPv6), or abort — see tests/helpers/port-guard.cjs. */
 function killPortProcess() {
-  try {
-    if (process.platform === 'win32') {
-      // Find PID using netstat, then kill it
-      const out = execSync(`netstat -ano | findstr :${PORT} | findstr LISTENING`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
-      const pids = [...new Set(out.trim().split('\n').map(l => l.trim().split(/\s+/).pop()).filter(Boolean))];
-      for (const pid of pids) {
-        log(`Killing process ${pid} on port ${PORT}...`);
-        try { execSync(`taskkill /PID ${pid} /F`, { stdio: 'ignore' }); } catch { /* already dead */ }
-      }
-    } else {
-      execSync(`lsof -ti:${PORT} | xargs -r kill -9`, { stdio: 'ignore', shell: true });
-    }
-    // Wait a bit for port to be released
-    return new Promise((r) => setTimeout(r, 2000));
-  } catch {
-    // No process found — that's fine
-    return Promise.resolve();
-  }
+  return ensurePortFree(PORT, { log });
 }
 
 // ── Main ─────────────────────────────────────────────────────────────

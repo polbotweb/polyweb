@@ -1,6 +1,6 @@
 ---
+import JsonLd from "@/components/seo/JsonLd.astro";
 import BaseLayout from "@layouts/BaseLayout.astro";
-import { safeJsonLd } from "@/lib/sanitize";
 import { getServiceBySlug } from "@/modules/services/loaders";
 import { ServiceDetail } from "@/modules/services/components/single";
 import { buildServiceJsonLd } from "@/modules/services/seo";
@@ -31,9 +31,8 @@ const jsonLd = buildServiceJsonLd({
   ratingCount: item.service.ratingCount,
 });
 ---
-<BaseLayout title={`${title} — ${t.meta.title}`} description={description}>
-  <link rel="canonical" href={canonicalHref} />
-  <script type="application/ld+json" set:html={safeJsonLd(JSON.stringify(jsonLd))} />
+<BaseLayout title={`${title} — ${t.meta.title}`} description={description} canonical={canonicalHref}>
+  <JsonLd data={jsonLd} />
   <main class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
     <ServiceDetail item={item} locale={locale} />
   </main>

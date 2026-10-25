@@ -1,4 +1,5 @@
-import { assertBlogPermission, resolveBlogTenant, auditBlog, blogOrganizationIdSchema, blogRateLimit, invalidateBlogCache } from "./_helpers";
+import { Effect } from "effect";
+import { resolveBlogTenant, auditBlog, blogOrganizationIdSchema, blogRateLimitEffect, invalidateBlogCache, requireBlogPermission } from "./_helpers";
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { eq, and, count, isNull } from "drizzle-orm";
@@ -8,16 +9,14 @@ import { sanitizeHtml } from "@/lib/sanitize";
 import { blogReviewFormSchema, blogReviewModerationSchema } from "@/lib/blog/validation";
 import { publicBlogPostScope } from "@/lib/blog/public-visibility";
 import { extractIp } from "@/lib/audit";
+import { actionTry, effectHandler, requireUser } from "@/lib/effect/action";
 
 export const createBlogReview = defineAction({
   input: blogReviewFormSchema,
-  handler: async (input, context) => {
-    const user = context.locals.user;
-    if (!user) {
-      throw new ActionError({ code: "UNAUTHORIZED", message: "Vous devez être connecté pour laisser un avis." });
-    }
-    blogRateLimit(context, user.id, "review-create", { window: 3600, max: 10 });
-
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireUser(context, "Vous devez être connecté pour laisser un avis.");
+    yield* blogRateLimitEffect(user.id, "review-create", { window: 3600, max: 10 });
+    return yield* actionTry("blog/review.createBlogReview", async () => {
     const content = sanitizeHtml(input.content);
     const db = getDrizzle();
     const review = await db.transaction(async (tx) => {
@@ -68,16 +67,18 @@ export const createBlogReview = defineAction({
 
     invalidateBlogCache();
     return { id: review.id, status: review.status };
-  },
+    });
+  })),
 });
 
 export const moderateBlogReview = defineAction({
   input: blogReviewModerationSchema.extend({
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blogReview: ["moderate"] });
+    const user = yield* requireBlogPermission(context, tenant, { blogReview: ["moderate"] });
+    return yield* actionTry("blog/review.moderateBlogReview", async () => {
 
     const db = getDrizzle();
     await db.transaction(async (tx) => {
@@ -132,7 +133,7 @@ export const moderateBlogReview = defineAction({
 
     invalidateBlogCache();
     return { success: true };
-  },
+  }); })),
 });
 
 export const voteBlogReviewHelpful = defineAction({
@@ -140,9 +141,9 @@ export const voteBlogReviewHelpful = defineAction({
     reviewId: z.uuid(),
     isHelpful: z.boolean(),
   }),
-  handler: async (input, context) => {
-    const user = context.locals.user;
-    if (!user) throw new ActionError({ code: "UNAUTHORIZED", message: "Connexion requise." });
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireUser(context, "Connexion requise.");
+    return yield* actionTry("blog/review.voteBlogReviewHelpful", async () => {
 
     const db = getDrizzle();
     await db.transaction(async (tx) => {
@@ -182,5 +183,6 @@ export const voteBlogReviewHelpful = defineAction({
 
     invalidateBlogCache();
     return { success: true };
-  },
+    });
+  })),
 });

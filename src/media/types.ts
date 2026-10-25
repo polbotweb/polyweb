@@ -40,8 +40,10 @@ export interface UploadOptions {
 export interface UploadResult {
   /** Nom du fichier généré (UUID + extension) */
   filename: string;
-  /** Chemin absolu sur le disque */
+  /** Chemin absolu sur le disque (driver local) ou clé d'objet (driver S3/R2). */
   path: string;
+  /** Clé de stockage relative (`images/media/<uuid>.jpg`). */
+  key: string;
   /** URL publique accessible depuis le navigateur */
   url: string;
   /**

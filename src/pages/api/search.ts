@@ -1,9 +1,10 @@
-import type { APIRoute } from "astro";
+import { Effect } from "effect";
 import { sql, eq } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { organization } from "@database/schemas";
 import { isValidLocale } from "@i18n/utils";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { apiRoute } from "@/lib/effect/http";
+import { attempt, legacyJson, rateLimit, retryAfterSeconds } from "@/lib/effect/route";
 import { DEFAULT_LOCALE } from "@i18n/config";
 import { buildBlogPostUrl } from "@/lib/blog/utils";
 import { buildServiceUrl } from "@/modules/services/utils";
@@ -14,33 +15,34 @@ export { buildTsQuery, getRegconfig };
 export const prerender = false;
 const ERROR_CODES = { QUERY_TOO_SHORT: "QUERY_TOO_SHORT", INVALID_LOCALE: "INVALID_LOCALE", RATE_LIMITED: "RATE_LIMITED" } as const;
 
-export const GET: APIRoute = async ({ url, clientAddress }) => {
+/** Recherche FTS historique (pages, blog, services). Le moteur unifié est `/api/v1/search`. */
+export const GET = apiRoute(({ url, clientAddress }) => Effect.gen(function* () {
   const q = url.searchParams.get("q")?.trim();
   const locale = url.searchParams.get("locale") ?? DEFAULT_LOCALE;
   const orgSlug = url.searchParams.get("org")?.trim() || null;
   const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "20", 10) || 20, 100);
-  if (!q || q.length < 2) return new Response(JSON.stringify({ error: ERROR_CODES.QUERY_TOO_SHORT }), { status: 400, headers: { "Content-Type": "application/json" } });
-  if (!isValidLocale(locale)) return new Response(JSON.stringify({ error: ERROR_CODES.INVALID_LOCALE }), { status: 400, headers: { "Content-Type": "application/json" } });
-  const rl = checkRateLimit(`search_${clientAddress}`, { window: 60, max: 60 });
-  if (!rl.allowed) return new Response(JSON.stringify({ error: ERROR_CODES.RATE_LIMITED }), { status: 429, headers: { "Content-Type": "application/json", "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } });
+  if (!q || q.length < 2) return legacyJson({ error: ERROR_CODES.QUERY_TOO_SHORT }, 400);
+  if (!isValidLocale(locale)) return legacyJson({ error: ERROR_CODES.INVALID_LOCALE }, 400);
+  const rl = yield* rateLimit(`search_${clientAddress}`, { window: 60, max: 60 });
+  if (!rl.allowed) return legacyJson({ error: ERROR_CODES.RATE_LIMITED }, 429, { "Retry-After": retryAfterSeconds(rl) });
 
   const tsQuery = buildTsQuery(q);
-  if (!tsQuery) return new Response(JSON.stringify({ error: ERROR_CODES.QUERY_TOO_SHORT }), { status: 400, headers: { "Content-Type": "application/json" } });
+  if (!tsQuery) return legacyJson({ error: ERROR_CODES.QUERY_TOO_SHORT }, 400);
 
   const db = getDrizzle();
   const regconfig = getRegconfig(locale);
   let orgId: string | null = null;
   if (orgSlug) {
-    const [orgRow] = await db.select({ id: organization.id }).from(organization).where(eq(organization.slug, orgSlug)).limit(1);
+    const [orgRow] = yield* attempt("search.org", () => db.select({ id: organization.id }).from(organization).where(eq(organization.slug, orgSlug)).limit(1));
     orgId = orgRow?.id ?? null;
-    if (!orgId) return new Response(JSON.stringify({ query: q, locale, count: 0, results: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
+    if (!orgId) return legacyJson({ query: q, locale, count: 0, results: [] }, 200);
   }
 
   const blogOrganizationPredicate = orgId ? sql`bp.organization_id = ${orgId}` : sql`bp.organization_id IS NULL`;
   const serviceOrganizationPredicate = orgId ? sql`s.organization_id = ${orgId}` : sql`s.organization_id IS NULL`;
   const blogPublicationPredicate = publicBlogPostColumnsScope(sql.raw("bp.status"), sql.raw("bp.published_at"));
 
-  const raw = await db.execute<{
+  const raw = yield* attempt("search.query", () => db.execute<{
     type: "page" | "blog_post" | "service";
     id: string;
     slug: string;
@@ -106,10 +108,10 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
     ) combined
     ORDER BY rank DESC
     LIMIT ${limit}
-  `);
+  `));
 
   const rows = raw.rows;
-  return new Response(JSON.stringify({
+  return legacyJson({
     query: q,
     locale,
     count: rows.length,
@@ -128,5 +130,5 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
           ? buildServiceUrl(locale, orgSlug, row.slug, row.category_slug)
           : `/${locale}/${row.slug}`,
     })),
-  }), { status: 200, headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=60" } });
-};
+  }, 200, { "Cache-Control": "public, max-age=60" });
+}));

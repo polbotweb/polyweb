@@ -1,11 +1,13 @@
+import { Effect } from "effect";
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { eq, sql } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { themeSettings } from "@database/schemas";
 import { invalidateCache } from "@database/cache";
-import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
+import { auditAdmin } from "./_helpers";
 import { THEME_TOKEN_KEYS, isValidOklch } from "@/lib/theme-tokens";
+import { actionRateLimit, actionTry, effectHandler, requireActionPermission } from "@/lib/effect/action";
 
 const oklchRegex = /^oklch\(\s*[\d.]+%?\s+[\d.]+\s+[\d.]+(?:\s*\/\s*[\d.]+%?)?\s*\)$/;
 const colorField = (label: string) =>
@@ -50,9 +52,10 @@ export const createTheme = defineAction({
   input: z.object({
     name: z.string().min(1, "Le nom du thème est requis.").max(50),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { theme: ["update"] });
-    adminRateLimit(context, user.id, "theme");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { theme: ["update"] });
+    yield* actionRateLimit(user.id, "theme");
+    return yield* actionTry("admin/theme.createTheme", async () => {
     const db = getDrizzle();
 
     // Auto-activate if no active theme exists yet
@@ -78,7 +81,8 @@ export const createTheme = defineAction({
     invalidateCache("site:theme:css");
     invalidateCache("site:themes");
     return created;
-  },
+    });
+  })),
 });
 
 export const updateTheme = defineAction({
@@ -117,9 +121,10 @@ export const updateTheme = defineAction({
       .nullable()
       .optional(),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { theme: ["update"] });
-    adminRateLimit(context, user.id, "theme");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { theme: ["update"] });
+    yield* actionRateLimit(user.id, "theme");
+    return yield* actionTry("admin/theme.updateTheme", async () => {
 
     const { id, ...data } = input;
     const db = getDrizzle();
@@ -178,16 +183,18 @@ export const updateTheme = defineAction({
     invalidateCache("site:theme:css");
     invalidateCache("site:themes");
     return updated;
-  },
+    });
+  })),
 });
 
 export const deleteTheme = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { theme: ["update"] });
-    adminRateLimit(context, user.id, "theme");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { theme: ["update"] });
+    yield* actionRateLimit(user.id, "theme");
+    return yield* actionTry("admin/theme.deleteTheme", async () => {
     const db = getDrizzle();
 
     const existing = await db.transaction(async (tx) => {
@@ -222,5 +229,6 @@ export const deleteTheme = defineAction({
     invalidateCache("site:theme:css");
     invalidateCache("site:themes");
     return { success: true as const };
-  },
+    });
+  })),
 });

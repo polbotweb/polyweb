@@ -1,6 +1,8 @@
 import { Client } from 'pg';
 import { type DbEnv, getDbUrl, maskUrl } from '../env';
-import { c, confirmDestructive, safeConnect } from './_utils';
+import { c, confirmDestructive } from './_utils';
+import { Effect } from 'effect';
+import { inTransaction, runScript, ScriptError, scopedConnection, sqlStep, step } from './_effect';
 
 // ─── Environnements valides ──────────────────────────────────────────
 const VALID_ENVS: DbEnv[] = ['LOCAL', 'PROD', 'TEST'];
@@ -60,7 +62,14 @@ async function copyTableData(from: Client, to: Client, table: string) {
     if (!SAFE_IDENT.test(col)) throw new Error(`Invalid column name: ${col}`);
   }
   const cols = columns.map(col => `"${col}"`).join(',');
-  await to.query(`TRUNCATE TABLE "${table}" RESTART IDENTITY CASCADE`);
+  // node-pg envoie un tableau JS comme littéral de tableau Postgres ({…}) : invalide pour une
+  // colonne json/jsonb (ex. sites.*). Ces valeurs sont donc resérialisées en JSON.
+  const { rows: jsonCols } = await to.query<{ column_name: string }>(
+    `SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1 AND data_type IN ('json', 'jsonb')`,
+    [table],
+  );
+  const isJson = new Set(jsonCols.map(r => r.column_name));
+  const encode = (col: string, value: unknown) => (isJson.has(col) && value !== null && typeof value === 'object' ? JSON.stringify(value) : value);
 
   const BATCH_SIZE = 100;
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
@@ -72,7 +81,7 @@ async function copyTableData(from: Client, to: Client, table: string) {
     for (const row of batch) {
       const placeholders = columns.map(() => `$${paramIdx++}`);
       valueSets.push(`(${placeholders.join(',')})`);
-      for (const col of columns) params.push(row[col]);
+      for (const col of columns) params.push(encode(col, row[col]));
     }
 
     await to.query(
@@ -83,25 +92,25 @@ async function copyTableData(from: Client, to: Client, table: string) {
   console.log(c.green(`  [OK] ${table} (${rows.length} lignes)`));
 }
 
-async function validateTargetSchema(source: Client, target: Client) {
-  const sourceTables = await getTables(source);
-  const targetTables = await getTables(target);
-  const missingTables = sourceTables.filter(table => !targetTables.includes(table));
-
-  if (missingTables.length > 0) {
+/** Tables de la source absentes de la cible → échec (schéma à aligner avant la copie). */
+const validateTargetSchema = (source: Client, target: Client) =>
+  Effect.gen(function* () {
+    const [sourceTables, targetTables] = yield* Effect.all([
+      step('tables source', () => getTables(source)),
+      step('tables cible', () => getTables(target)),
+    ]);
+    const missingTables = sourceTables.filter(table => !targetTables.includes(table));
+    if (missingTables.length === 0) return sourceTables;
     console.error(c.red(c.bold(`\n❌ Schéma incompatible : la cible ne contient pas toutes les tables de la source.`)));
     console.error(c.yellow(`   Tables manquantes dans la cible :`));
-    for (const table of missingTables) {
-      console.error(c.yellow(`     - ${table}`));
-    }
+    for (const table of missingTables) console.error(c.yellow(`     - ${table}`));
     console.error(c.yellow(`\n   Exécutez ${c.cyan('pnpm db:migrate')} sur la cible ou alignez le schéma cible avant de relancer.`));
-    process.exit(1);
-  }
-}
+    return yield* Effect.fail(new ScriptError({ step: 'schéma cible', cause: `tables manquantes : ${missingTables.join(', ')}` }));
+  });
 
 // ── Main ─────────────────────────────────────────────────────────────
 
-async function sync() {
+const program = Effect.scoped(Effect.gen(function* () {
   const { source, target } = parseArgs();
 
   console.log(c.cyan(c.bold(`\n═══════════════════════════════════════════════════════`)));
@@ -110,60 +119,38 @@ async function sync() {
 
   const urlSource = getDbUrl(source);
   const urlTarget = getDbUrl(target);
-
   console.log(`  Source : ${c.bold(source)} ${c.dim(maskUrl(urlSource))}`);
   console.log(`  Cible  : ${c.bold(target)} ${c.dim(maskUrl(urlTarget))}`);
   console.log();
 
-  await confirmDestructive(`SYNC ${source} → ${target} (ÉCRASER ${target} avec les données de ${source})`);
+  yield* step('confirmation', () => confirmDestructive(`SYNC ${source} → ${target} (ÉCRASER ${target} avec les données de ${source})`));
 
-  const connSource = await safeConnect(source, urlSource);
-  const connTarget = await safeConnect(target, urlTarget);
-
-  const errors: string[] = [];
-  if (!connSource.ok) errors.push(source);
-  if (!connTarget.ok) errors.push(target);
-
-  if (errors.length > 0) {
-    console.error(c.red(c.bold(`\n❌ Connexion impossible : ${errors.join(' + ')}`)));
+  const [from, to] = yield* Effect.all([scopedConnection(source, urlSource), scopedConnection(target, urlTarget)]);
+  const failed = [!from && source, !to && target].filter(Boolean);
+  if (!from || !to) {
+    console.error(c.red(c.bold(`\n❌ Connexion impossible : ${failed.join(' + ')}`)));
     console.error(c.yellow(`   Corrigez les identifiants/URLs ci-dessus dans .env puis relancez.`));
-    if (connSource.ok) await connSource.client.end();
-    if (connTarget.ok) await connTarget.client.end();
-    process.exit(1);
+    return yield* Effect.fail(new ScriptError({ step: 'connexion', cause: failed.join(' + ') }));
   }
 
-  const from = connSource.client!;
-  const to = connTarget.client!;
-
-  try {
-    await validateTargetSchema(from, to);
-
-    const tables = await getTables(from);
-    if (tables.length === 0) {
-      console.log(c.yellow('[INFO] Aucune table trouvée dans la source.'));
-    } else {
-      console.log(`\nSynchronisation de ${c.bold(String(tables.length))} tables…\n`);
-      await to.query('BEGIN');
-      try {
-        await to.query('SET LOCAL session_replication_role = replica;');
-        for (const table of tables) {
-          await copyTableData(from, to, table);
-        }
-        await to.query('COMMIT');
-      } catch (err) {
-        await to.query('ROLLBACK').catch(() => {});
-        throw err;
-      }
-    }
-
-    console.log(c.green(c.bold('\n✔️  Synchronisation terminée.')));
-  } finally {
-    await from.end();
-    await to.end();
+  const tables = yield* validateTargetSchema(from, to);
+  if (tables.length === 0) {
+    console.log(c.yellow('[INFO] Aucune table trouvée dans la source.'));
+  } else {
+    console.log(`\nSynchronisation de ${c.bold(String(tables.length))} tables…\n`);
+    // Une seule transaction côté cible ; contraintes/triggers différés le temps de la copie.
+    yield* inTransaction(to, Effect.gen(function* () {
+      yield* sqlStep(to, 'session_replication_role', 'SET LOCAL session_replication_role = replica;');
+      // Vidage de TOUTES les tables en une instruction, avant toute copie : un TRUNCATE … CASCADE
+      // par table (ancien comportement) vidait les tables déjà copiées qui la référencent
+      // (ex. « user » tronqué en dernier → account, blog_* … vides dans la cible).
+      if (tables.some((t) => !SAFE_IDENT.test(t))) return yield* Effect.fail(new ScriptError({ step: 'tables', cause: 'nom de table invalide' }));
+      yield* sqlStep(to, 'vidage de la cible', `TRUNCATE TABLE ${tables.map((t) => `"${t}"`).join(', ')} RESTART IDENTITY CASCADE`);
+      yield* Effect.forEach(tables, (table) => step(`copie ${table}`, () => copyTableData(from, to, table)), { discard: true });
+    }));
   }
-}
+  console.log(c.green(c.bold('\n✔️  Synchronisation terminée.')));
+}));
 
-sync().catch(e => {
-  console.error(c.red('[sync] Échec inattendu:'), e?.message || e);
-  process.exit(1);
-});
+// Entrée Effect : erreurs typées (ScriptError), code de sortie ; connexions fermées dans tous les cas.
+runScript('db:sync', program);

@@ -1,0 +1,98 @@
+---
+/** Édition d'un formulaire (brique g) : champs (constructeur), réglages, état, suppression. */
+import { Effect } from 'effect';
+import { requirePermission } from '@/lib/auth-guards';
+import PlatformAdminShell from '@organisms/PlatformAdmin/PlatformAdminShell.astro';
+import FieldsEditor from '@/components/platform/FieldsEditor.astro';
+import { getPlatformLabel, getPlatformAdminUrl } from '@/core/localization/platform-labels';
+import { getAdminSite, userCan } from '@/lib/platform/admin';
+import { logAuditEvent, extractIp } from '@/lib/audit';
+import { runAppResult } from '@/lib/effect/http';
+import { ForbiddenError } from '@/lib/effect/errors';
+import { getForm, updateForm, deleteForm } from '@/modules/forms/domain/forms';
+import { FORM_FIELD_TYPES } from '@/core/content-types/fields';
+
+export const prerender = false;
+const result = await requirePermission(Astro, { form: ['read'] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT, user } = result;
+const site = await getAdminSite(Astro);
+const listUrl = getPlatformAdminUrl(locale, 'forms');
+const loaded = await runAppResult(getForm(site.id, Astro.params.id!));
+if (!loaded.ok) return Astro.redirect(listUrl);
+let form = loaded.value;
+const [canUpdate, canDelete] = await Promise.all([userCan(user.id, { form: ['update'] }), userCan(user.id, { form: ['delete'] })]);
+let error: string | null = null;
+let issues: { path: string; message: string }[] = [];
+
+if (Astro.request.method === 'POST') {
+  const fd = await Astro.request.formData();
+  const intent = String(fd.get('intent') ?? 'save');
+  const meta = { ipAddress: extractIp(Astro.request.headers, Astro.clientAddress), userAgent: Astro.request.headers.get('user-agent') };
+  const loc = (key: string) => Object.fromEntries(site.locales.map((l) => [l, String(fd.get(`${key}_${l}`) ?? '').trim()]).filter(([, v]) => v));
+  const r = await runAppResult(Effect.gen(function* () {
+    if (intent === 'delete') {
+      if (!canDelete) return yield* new ForbiddenError({ reason: 'Permission refusée' });
+      yield* deleteForm(site.id, form.id);
+      return 'deleted' as const;
+    }
+    if (!canUpdate) return yield* new ForbiddenError({ reason: 'Permission refusée' });
+    const notify = String(fd.get('notifyEmails') ?? '').split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+    const redirectPath = String(fd.get('redirectPath') ?? '').trim();
+    yield* updateForm(site.id, form.id, {
+      name: String(fd.get('name') ?? ''),
+      slug: String(fd.get('slug') ?? ''),
+      description: String(fd.get('description') ?? '') || null,
+      fields: String(fd.get('fields') ?? '[]'),
+      status: fd.get('active') === 'on' ? 'active' : 'closed',
+      settings: { successMessage: loc('success'), submitLabel: loc('submit'), notifyEmails: notify, storeSubmissions: fd.get('storeSubmissions') === 'on', ...(redirectPath ? { redirectPath } : {}) },
+    });
+    return 'saved' as const;
+  }));
+  if (r.ok) {
+    void logAuditEvent({ userId: user.id, action: r.value === 'deleted' ? 'FORM_DELETE' : 'FORM_UPDATE', resource: 'form', resourceId: form.id, metadata: { slug: form.slug }, ...meta });
+    return Astro.redirect(r.value === 'deleted' ? listUrl : `${getPlatformAdminUrl(locale, 'forms', form.id)}?saved=1`, 303);
+  }
+  error = r.error.message;
+  if (r.error._tag === 'ValidationError') issues = [...r.error.issues];
+}
+const saved = Astro.url.searchParams.get('saved');
+---
+<PlatformAdminShell t={authT} locale={locale} section="forms" title={`Formulaire : ${form.name}`}>
+  <a slot="actions" class="rounded-md border px-3 py-2 text-sm" href={listUrl}>← {getPlatformLabel('forms', locale)}</a>
+  {saved && <output class="block rounded-md border border-success bg-success/10 p-3 text-sm">{saved === 'created' ? 'Formulaire créé (champs e-mail + message par défaut).' : 'Enregistré.'}</output>}
+  {error && <div class="rounded-md border border-error bg-error/10 p-3 text-sm" role="alert"><p>{error}</p>{issues.length > 0 && <ul class="list-disc ps-5">{issues.map((i) => <li><code>{i.path}</code> : {i.message}</li>)}</ul>}</div>}
+  <p class="text-sm"><a class="underline" href={`/${locale}/f/${form.slug}`}>Voir la page publique</a> · <a class="underline" href={`${getPlatformAdminUrl(locale, 'forms', form.id)}/submissions`}>Soumissions</a></p>
+  <form method="post" class="grid gap-4">
+    <div class="grid gap-3 sm:grid-cols-2">
+      <label class="grid gap-1 text-sm">Nom<input name="name" required value={form.name} class="rounded-md border bg-background px-3 py-2" /></label>
+      <label class="grid gap-1 text-sm">Slug<input name="slug" required value={form.slug} pattern="[a-z][a-z0-9-]{0,62}" class="rounded-md border bg-background px-3 py-2 font-mono" /></label>
+      <label class="grid gap-1 text-sm sm:col-span-2">Description<textarea name="description" rows="2" class="rounded-md border bg-background px-3 py-2">{form.description}</textarea></label>
+    </div>
+    <fieldset class="grid gap-2 rounded-md border p-4">
+      <legend class="px-1 font-semibold">Champs</legend>
+      <FieldsEditor name="fields" value={form.fields} allowedTypes={FORM_FIELD_TYPES} />
+    </fieldset>
+    <fieldset class="grid gap-3 rounded-md border p-4 text-sm">
+      <legend class="px-1 font-semibold">Réglages</legend>
+      <label class="flex items-center gap-2"><input type="checkbox" name="active" checked={form.status === 'active'} /> Formulaire ouvert</label>
+      <label class="flex items-center gap-2"><input type="checkbox" name="storeSubmissions" checked={form.settings.storeSubmissions !== false} /> Conserver les soumissions en base</label>
+      <label class="grid gap-1">Notifier par e-mail (séparés par des virgules)<input name="notifyEmails" value={(form.settings.notifyEmails ?? []).join(', ')} class="rounded-md border bg-background px-3 py-2" /></label>
+      <label class="grid gap-1">Redirection après envoi (chemin relatif, optionnel)<input name="redirectPath" value={form.settings.redirectPath ?? ''} placeholder="/fr/merci" class="rounded-md border bg-background px-3 py-2" /></label>
+      {site.locales.map((l) => (
+        <div class="grid gap-2 sm:grid-cols-2">
+          <label class="grid gap-1">Message de succès ({l})<input name={`success_${l}`} value={form.settings.successMessage?.[l] ?? ''} class="rounded-md border bg-background px-3 py-2" /></label>
+          <label class="grid gap-1">Bouton d’envoi ({l})<input name={`submit_${l}`} value={form.settings.submitLabel?.[l] ?? ''} class="rounded-md border bg-background px-3 py-2" /></label>
+        </div>
+      ))}
+    </fieldset>
+    <div class="flex gap-2">
+      {canUpdate && <button name="intent" value="save" class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Enregistrer</button>}
+      {canDelete && <button name="intent" value="delete" formnovalidate class="rounded-md border border-error px-4 py-2 text-sm text-error" data-confirm="Supprimer ce formulaire et toutes ses soumissions ?">Supprimer</button>}
+    </div>
+  </form>
+</PlatformAdminShell>
+<script>
+  import { initConfirmButtons } from '@/lib/platform/confirm';
+  initConfirmButtons();
+</script>

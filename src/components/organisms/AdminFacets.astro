@@ -1,0 +1,43 @@
+---
+/**
+ * Facettes avec comptes (core/filters) — sans JavaScript : chaque valeur est un lien vers
+ * l'URL canonique qui la bascule. Accessibilité : un groupe nommé par facette (fieldset +
+ * legend visuelle), état actif annoncé (aria-current + texte masqué), compte dans le nom.
+ */
+import type { Locale } from "@i18n/config";
+import type { FacetLink } from "@/core/filters/facets";
+import { getFilterUiTranslations } from "@/core/filters/i18n";
+
+interface FacetGroup { id: string; label: string; links: readonly FacetLink[] }
+interface Props { locale: Locale; groups: readonly FacetGroup[]; clearHref?: string | null }
+const { locale, groups, clearHref = null } = Astro.props;
+const t = getFilterUiTranslations(locale);
+const visible = groups.filter((g) => g.links.length > 0);
+---
+{visible.length > 0 && (
+  <nav aria-label={t.facets} class="space-y-3 rounded-lg border p-3" data-admin-facets>
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 class="text-sm font-semibold">{t.facets}</h2>
+      {clearHref && <a href={clearHref} class="inline-flex min-h-11 items-center text-sm underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">{t.clearAll}</a>}
+    </div>
+    <div class="flex flex-wrap gap-4">
+      {visible.map((group) => (
+        <fieldset class="min-w-0">
+          <legend class="mb-1 text-xs font-medium text-muted-foreground">{group.label}</legend>
+          <ul class="flex flex-wrap gap-2">
+            {group.links.map((link) => (
+              <li>
+                <a href={link.href} aria-current={link.active ? "true" : undefined} data-facet-value={link.value}
+                  class:list={["inline-flex min-h-11 items-center gap-1 rounded-full border px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2", { "bg-primary text-primary-foreground border-primary": link.active }]}>
+                  <span>{link.label}</span>
+                  <span aria-hidden="true">({link.count})</span>
+                  <span class="sr-only">{`, ${link.count}${link.active ? `, ${t.active}` : ""}`}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </fieldset>
+      ))}
+    </div>
+  </nav>
+)}

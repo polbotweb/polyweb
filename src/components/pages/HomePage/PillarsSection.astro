@@ -23,13 +23,13 @@ const row2 = [...t.items].reverse();
 <section class={sectionStyles()}>
   <!-- Centered header -->
   <div class="mx-auto mb-14 max-w-3xl text-center">
-    <div class="pillars-header-stagger" style="--stagger: 0">
+    <div class="pillars-header-stagger [--stagger:0]">
       <Badge variant="outline">{t.badge}</Badge>
     </div>
-    <h2 class="pillars-header-stagger font-heading mt-5 text-3xl font-semibold tracking-tight text-pretty @xl:text-4xl @3xl:text-5xl" style="--stagger: 1">
+    <h2 class="pillars-header-stagger font-heading mt-5 text-3xl font-semibold tracking-tight text-pretty @xl:text-4xl @3xl:text-5xl [--stagger:1]">
       {t.title}
     </h2>
-    <p class="pillars-header-stagger text-muted-foreground mt-4 text-pretty @xl:text-lg" style="--stagger: 2">
+    <p class="pillars-header-stagger text-muted-foreground mt-4 text-pretty @xl:text-lg [--stagger:2]">
       {t.description}
     </p>
   </div>
@@ -37,13 +37,7 @@ const row2 = [...t.items].reverse();
   <!-- Marquee container -->
   <div
     id="pillars-marquee"
-    class="relative flex flex-col gap-(--gap) overflow-x-clip"
-    style={{
-      "--gap": "1.25rem",
-      "--marquee-duration": "40s",
-      "mask-image": "linear-gradient(to right, transparent, black 6rem, black calc(100% - 6rem), transparent)",
-      "-webkit-mask-image": "linear-gradient(to right, transparent, black 6rem, black calc(100% - 6rem), transparent)",
-    }}
+    class="relative flex flex-col gap-(--gap) overflow-x-clip [--gap:1.25rem] [--marquee-duration:40s] [mask-image:linear-gradient(to_right,transparent,black_6rem,black_calc(100%_-_6rem),transparent)]"
   >
 
     <!-- Row 1: Normal direction -->
@@ -70,7 +64,7 @@ const row2 = [...t.items].reverse();
     </div>
 
     <!-- Row 2: Reverse direction -->
-    <div class="pillars-row flex gap-(--gap)" style={{ "--direction": "reverse" }}>
+    <div class="pillars-row flex gap-(--gap) [--direction:reverse]">
       {
         [0, 1].map(() => (
           <div class="pillars-animate flex min-w-full shrink-0 gap-(--gap)">

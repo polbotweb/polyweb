@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { eq } from "drizzle-orm";
@@ -5,26 +6,28 @@ import { getDrizzle } from "@database/drizzle";
 import { blogPostLinks } from "@database/schemas";
 import { blogLinkFormSchema, blogLinkUpdateSchema } from "@/lib/blog/validation";
 import {
-  assertBlogPermission,
   resolveBlogTenant,
-  assertPostInTenant,
-  blogRateLimit,
   auditBlog,
   invalidateBlogCache,
   blogOrganizationIdSchema,
+  blogRateLimitEffect,
+  postInTenant,
+  requireBlogPermission,
 } from "./_helpers";
+import { actionTry, effectHandler, fail } from "@/lib/effect/action";
 
 export const createBlogLink = defineAction({
   input: blogLinkFormSchema.extend({
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    blogRateLimit(context, user.id, "link-create");
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* blogRateLimitEffect(user.id, "link-create");
 
-    await assertPostInTenant(input.sourcePostId, tenant);
-    await assertPostInTenant(input.targetPostId, tenant);
+    yield* postInTenant(input.sourcePostId, tenant);
+    yield* postInTenant(input.targetPostId, tenant);
+    return yield* actionTry("blog/link.createBlogLink", async () => {
     if (input.sourcePostId === input.targetPostId) {
       throw new ActionError({
         code: "BAD_REQUEST",
@@ -52,27 +55,31 @@ export const createBlogLink = defineAction({
 
     invalidateBlogCache();
     return { id: link.id };
-  },
+  }); })),
 });
+
+/** Lien existant dont l'article source appartient au tenant (Effect : NOT_FOUND / FORBIDDEN typés). */
+const linkInTenant = (linkId: string, tenant: ReturnType<typeof resolveBlogTenant>) =>
+  Effect.gen(function* () {
+    const [link] = yield* actionTry("blog/link.load", () =>
+      getDrizzle().select().from(blogPostLinks).where(eq(blogPostLinks.id, linkId)).limit(1),
+    );
+    if (!link) return yield* fail("NOT_FOUND", "Lien introuvable.");
+    yield* postInTenant(link.sourcePostId, tenant);
+    return link;
+  });
 
 export const updateBlogLink = defineAction({
   input: blogLinkUpdateSchema.extend({
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    blogRateLimit(context, user.id, "link-update");
-
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* blogRateLimitEffect(user.id, "link-update");
+    yield* linkInTenant(input.id, tenant);
+    return yield* actionTry("blog/link.updateBlogLink", async () => {
     const db = getDrizzle();
-    const [link] = await db
-      .select()
-      .from(blogPostLinks)
-      .where(eq(blogPostLinks.id, input.id))
-      .limit(1);
-    if (!link) throw new ActionError({ code: "NOT_FOUND", message: "Lien introuvable." });
-
-    await assertPostInTenant(link.sourcePostId, tenant);
 
     await db
       .update(blogPostLinks)
@@ -90,7 +97,7 @@ export const updateBlogLink = defineAction({
 
     invalidateBlogCache();
     return { success: true };
-  },
+  }); })),
 });
 
 export const deleteBlogLink = defineAction({
@@ -98,20 +105,13 @@ export const deleteBlogLink = defineAction({
     id: z.uuid(),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    blogRateLimit(context, user.id, "link-delete");
-
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* blogRateLimitEffect(user.id, "link-delete");
+    const link = yield* linkInTenant(input.id, tenant);
+    return yield* actionTry("blog/link.deleteBlogLink", async () => {
     const db = getDrizzle();
-    const [link] = await db
-      .select()
-      .from(blogPostLinks)
-      .where(eq(blogPostLinks.id, input.id))
-      .limit(1);
-    if (!link) throw new ActionError({ code: "NOT_FOUND", message: "Lien introuvable." });
-
-    await assertPostInTenant(link.sourcePostId, tenant);
 
     await db.delete(blogPostLinks).where(eq(blogPostLinks.id, input.id));
 
@@ -123,5 +123,5 @@ export const deleteBlogLink = defineAction({
 
     invalidateBlogCache();
     return { success: true };
-  },
+  }); })),
 });

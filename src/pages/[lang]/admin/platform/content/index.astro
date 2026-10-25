@@ -1,0 +1,28 @@
+---
+import { requirePermission } from '@/lib/auth-guards';
+import PlatformAdminShell from '@organisms/PlatformAdmin/PlatformAdminShell.astro';
+import { getPlatformLabel, getPlatformAdminUrl } from '@/core/localization/platform-labels';
+import { getAdminSite } from '@/lib/platform/admin';
+import { listContentTypes, countEntriesByType } from '@/modules/content/domain/content-types';
+
+export const prerender = false;
+const result = await requirePermission(Astro, { contentEntry: ['read'] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT } = result;
+const site = await getAdminSite(Astro);
+const [types, counts] = await Promise.all([listContentTypes(site.id), countEntriesByType(site.id)]);
+---
+<PlatformAdminShell t={authT} locale={locale} section="content" title={getPlatformLabel('content', locale)}>
+  {types.length === 0 ? (
+    <p>Aucun type de contenu. <a class="underline" href={getPlatformAdminUrl(locale, 'content-types', 'new')}>Créer un type</a>.</p>
+  ) : (
+    <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {types.map((t) => (
+        <li class="rounded-xl border p-4">
+          <a class="font-medium hover:underline" href={getPlatformAdminUrl(locale, 'content', t.slug)}>{t.name}</a>
+          <p class="text-muted-foreground text-sm">{counts[t.id] ?? 0} entrée(s) · <code>{t.slug}</code></p>
+        </li>
+      ))}
+    </ul>
+  )}
+</PlatformAdminShell>

@@ -2,7 +2,7 @@ import { describe, it, expect, afterAll } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { eq } from 'drizzle-orm';
 import { getDrizzle, schema } from '@database/drizzle';
-import { signInCookie } from '../helpers/auth-users';
+import { signInCookie, waitForAuditEvents } from '../helpers/auth-users';
 
 const email = `cli-admin-${Date.now()}@test.polyweb.local`;
 const run = (password: string) =>
@@ -12,7 +12,12 @@ const run = (password: string) =>
   });
 
 describe('admin:create (repris de les-rochers-blancs)', () => {
-  afterAll(async () => { await getDrizzle().delete(schema.user).where(eq(schema.user.email, email)); });
+  afterAll(async () => {
+    const [u] = await getDrizzle().select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, email));
+    // 2 connexions réussies (une par test) : leur audit, écrit en arrière-plan, doit être en base avant la suppression.
+    if (u) await waitForAuditEvents(u.id, 'SIGN_IN', 2);
+    await getDrizzle().delete(schema.user).where(eq(schema.user.email, email));
+  });
 
   it('crée un admin vérifié dont le mot de passe fonctionne avec Better Auth', async () => {
     run('FirstPassw0rd-123');

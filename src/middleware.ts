@@ -1,10 +1,22 @@
 import { auth } from "@/lib/auth";
 import { LOCALES } from "@/i18n/config";
 import { bootstrapModules } from "@/lib/cms/bootstrap";
+import { ensurePluginsSynced } from "@/core/plugins/host";
+import { observeRequest } from "@/lib/observability/request";
+import "@/plugins";
+import { Effect } from "effect";
+import { requestHost, resolveSession, resolveSite, serviceUnavailable } from "@/lib/http/request-context";
 import { defineMiddleware } from "astro:middleware";
+import { isForbiddenCrossOriginRequest } from "@/lib/security/origin-check";
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  // CSRF : contrôle d'Origin (remplace security.checkOrigin, cf. origin-check.ts)
+  if (!context.isPrerendered && isForbiddenCrossOriginRequest(context.request, context.url)) {
+    return new Response(`Cross-site ${context.request.method} form submissions are forbidden`, { status: 403 });
+  }
+
   bootstrapModules();
+  if (!context.isPrerendered) await ensurePluginsSynced();
 
   // ─── Locale guard — reject invalid [lang] segments with 404 ─────
   const pathSegments = new URL(context.request.url).pathname.split('/').filter(Boolean);
@@ -13,45 +25,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return new Response('Not Found', { status: 404 });
   }
 
-  let timedOut = false;
-  let isAuthed: Awaited<ReturnType<typeof auth.api.getSession>> | null = null;
-  const sessionPromise = auth.api.getSession({ headers: context.request.headers });
+  // Session (timeout 5 s → 503) et site courant : programme Effect (src/lib/http/request-context.ts).
+  const session = await Effect.runPromise(resolveSession(() => auth.api.getSession({ headers: context.request.headers })));
+  if (session._tag === 'TimedOut') return serviceUnavailable();
+  context.locals.user = session.session?.user ?? null;
+  context.locals.session = session.session?.session ?? null;
 
-  try {
-    isAuthed = await Promise.race([
-      sessionPromise,
-      new Promise<null>((resolve) => setTimeout(() => { timedOut = true; resolve(null); }, 5000)),
-    ]);
-  } catch (err) {
-    console.error('[middleware] Session check failed:', err);
-    isAuthed = null;
-  }
+  // ─── Multi-site : site courant d'après le Host (cache 30 s) ─────
+  context.locals.site = await Effect.runPromise(resolveSite(requestHost(context.request.headers, process.env.TRUST_PROXY === "true")));
 
-  // Prevent unhandled rejection from the orphaned getSession promise.
-  // The pool-level statement_timeout (30s) bounds how long the leaked query can run.
-  // NOTE: When better-auth supports AbortController signal, use it to cancel the
-  // orphaned promise instead of letting it run in the background.
-  sessionPromise.catch((err) => {
-    if (timedOut) console.warn('[middleware] Orphaned session check failed after timeout:', err);
-  });
-
-  if (timedOut) {
-    console.warn('[middleware] Session check timed out (5s) — returning 503');
-    return new Response(JSON.stringify({ error: 'Service temporarily unavailable' }), {
-      status: 503,
-      headers: { 'Retry-After': '5', 'Content-Type': 'application/json' },
-    });
-  }
-
-  if (isAuthed) {
-    context.locals.user = isAuthed.user;
-    context.locals.session = isAuthed.session;
-  } else {
-    context.locals.user = null;
-    context.locals.session = null;
-  }
-
-  const response = await next();
+  const response = await observeRequest(context, next);
   const url = new URL(context.request.url);
   const lowerPath = url.pathname.toLowerCase();
   if (lowerPath.startsWith('/uploads/') && (lowerPath.endsWith('.svg') || lowerPath.endsWith('.svgz'))) {
@@ -70,6 +53,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
     'Cross-Origin-Resource-Policy': 'same-origin',
     'Cross-Origin-Embedder-Policy': 'credentialless',
   };
+
+  // HSTS jamais sur une origine de bouclage : WebKit l'applique à http://localhost et force
+  // ensuite https sur le port de dev/preview (échec TLS). Inchangé pour tout autre hôte.
+  if (['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) delete securityHeaders['Strict-Transport-Security'];
+
+  // API publique (brique c) : consommable cross-origin (lecture sans cookies).
+  if (lowerPath.startsWith('/api/v1/')) securityHeaders['Cross-Origin-Resource-Policy'] = 'cross-origin';
 
   for (const [key, value] of Object.entries(securityHeaders)) response.headers.set(key, value);
   return response;

@@ -1,0 +1,57 @@
+---
+/**
+ * Bouton « Libérer le verrou » (administration) — action `forceReleaseLock` (core/locks).
+ * À n'afficher que si la page a vérifié `canAdministerTenant` ; le serveur revérifie
+ * (administrateur global, ou administrateur de l'organisation propriétaire) et audite.
+ */
+import Button from "@atoms/button/Button.astro";
+
+interface Props {
+  resourceType: string;
+  resourceId: string;
+  locale: string;
+}
+
+const { resourceType, resourceId, locale } = Astro.props as Props;
+const labels = {
+  fr: { action: "Libérer le verrou (admin)", confirm: "Libérer le verrou d’un autre éditeur ? Ses modifications non enregistrées pourront être écrasées. Cette action est journalisée.", done: "Verrou libéré.", none: "Aucun verrou actif." },
+  en: { action: "Release lock (admin)", confirm: "Release another editor’s lock? Their unsaved changes may be overwritten. This action is logged.", done: "Lock released.", none: "No active lock." },
+  es: { action: "Liberar el bloqueo (admin)", confirm: "¿Liberar el bloqueo de otro editor? Sus cambios no guardados podrían sobrescribirse. Esta acción queda registrada.", done: "Bloqueo liberado.", none: "No hay bloqueo activo." },
+  ar: { action: "تحرير القفل (مسؤول)", confirm: "هل تريد تحرير قفل محرر آخر؟ قد تُستبدل تعديلاته غير المحفوظة. يتم تسجيل هذا الإجراء.", done: "تم تحرير القفل.", none: "لا يوجد قفل نشط." },
+} as const;
+const t = labels[(locale in labels ? locale : "fr") as keyof typeof labels];
+---
+
+<Button
+  type="button"
+  variant="outline"
+  class="min-h-11"
+  data-force-release-lock
+  data-resource-type={resourceType}
+  data-resource-id={resourceId}
+  data-confirm={t.confirm}
+  data-done={t.done}
+  data-none={t.none}
+>{t.action}</Button>
+
+<script>
+  import { actions } from "astro:actions";
+  import { toast } from "@atoms/toast";
+
+  const bind = () => {
+    document.querySelectorAll<HTMLButtonElement>("[data-force-release-lock]:not([data-bound])").forEach((button) => {
+      button.dataset.bound = "true";
+      button.addEventListener("click", async () => {
+        const { resourceType = "", resourceId = "", confirm: question = "", done = "", none = "" } = button.dataset;
+        if (!window.confirm(question)) return;
+        button.disabled = true;
+        const { data, error } = await actions.forceReleaseLock({ resourceType, resourceId });
+        button.disabled = false;
+        if (error) { toast.error(error.message); return; }
+        toast.success(data?.released ? done : none);
+      });
+    });
+  };
+  bind();
+  document.addEventListener("astro:page-load", bind);
+</script>

@@ -34,8 +34,7 @@ public/uploads/*
 tests-results/
 test-results/
 playwright-report/
-tests/reports/lighthouse/*
-tests/reports/playwright/*
+# tests/reports/** (dont lighthouse/ et playwright/) est versionné : rapports des gates finales.
 tmp*
 
 # coverage reports
@@ -49,6 +48,7 @@ coverage/
 # a11y audit artifacts
 .a11y-cookies.json
 .lighthouseci/
+.lighthouseci-authed.json
 .playwright-mcp/
 
 # operational logs / dead letters
@@ -64,3 +64,4 @@ logs/
 backups/
 *.dump
 *.sql.gz
+packages/create-polyweb/dist/

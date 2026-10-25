@@ -33,6 +33,7 @@ const { class: className, name, defaultValue, required, ...rest } = Astro.props;
 </div>
 
 <script>
+  import { applyInlineStyle } from "@/lib/ui/inline-style-dom";
   import type { SelectChangeEvent, SelectEvent } from "./SelectTypes";
 
   class SelectHandler {
@@ -62,6 +63,8 @@ const { class: className, name, defaultValue, required, ...rest } = Astro.props;
       this.required = this.select.getAttribute("data-required") === "true";
 
       // animationDuration is set with inline styles through passed prop to SelectContent
+      // data-style (CSP) appliqué ici aussi : indépendant de l'ordre des scripts.
+      applyInlineStyle(this.content);
       const animationDurationString = this.content.style.animationDuration;
       if (animationDurationString.endsWith("ms")) {
         this.animationDuration = parseFloat(animationDurationString);

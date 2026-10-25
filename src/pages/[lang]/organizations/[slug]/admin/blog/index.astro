@@ -9,6 +9,7 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
 import OrgSidebar from "@organisms/OrgSidebar/OrgSidebar.astro";
 import BlogAdminPage from "@/components/blog/BlogAdminPage.astro";
+import { loadSavedViews } from "@/lib/admin/saved-views";
 import { hasBlogPermission, resolveBlogTenant } from "@/actions/blog/_helpers";
 import { LOCALES, type Locale } from "@i18n/config";
 
@@ -61,6 +62,7 @@ const [{ rows, meta, stats }, categoryRows, tagRows, moderation, authors, adminT
   getBlogAdminTags(org.id, locale),
   getBlogAdminModerationCount(org.id),
 ]);
+const savedViews = Astro.locals.user ? await loadSavedViews(Astro.locals.user.id, "blog-post", org.id) : [];
 const categories = categoryRows.map((item) => ({ id: item.id, slug: item.slug, name: item.translation?.name ?? item.slug, description: item.translation?.description ?? null, color: item.color, icon: item.icon, parentId: item.parentId, sortOrder: item.sortOrder, postCount: item.postCount }));
 const tags = tagRows.map((item) => ({ id: item.id, slug: item.slug, name: item.translation?.name ?? item.slug, color: item.color, postCount: item.postCount }));
 const filterOptions = { categories: categories.map(({ id, name }) => ({ id, name })), tags: adminTags.map(({ id, name }) => ({ id, name })), authors };
@@ -68,6 +70,6 @@ const filterOptions = { categories: categories.map(({ id, name }) => ({ id, name
 <BaseLayout title={`${authT.organizations.blog.title} — ${org.name}`} description={authT.organizations.blog.description}>
   <AuthLayout title={org.name}>
     <OrgSidebar slot="sidebar" t={authT} locale={locale} org={org} activeItem="blog" orgRole={activeOrgRole} />
-    <BlogAdminPage locale={locale} blogT={blogT} title={`${authT.organizations.blog.title} — ${org.name}`} posts={rows} postsMeta={meta} stats={stats} moderationCount={moderationCount} categories={categories} tags={tags} moderation={moderation} baseAdminUrl={baseAdminUrl} basePublicUrl={basePublicUrl} organizationId={org.id} userId={user.id} canCreate={canCreate} canUpdate={canUpdate} canPublish={canPublish} canDelete={canDelete} filterOptions={filterOptions} />
+    <BlogAdminPage savedViews={savedViews} locale={locale} blogT={blogT} title={`${authT.organizations.blog.title} — ${org.name}`} posts={rows} postsMeta={meta} stats={stats} moderationCount={moderationCount} categories={categories} tags={tags} moderation={moderation} baseAdminUrl={baseAdminUrl} basePublicUrl={basePublicUrl} organizationId={org.id} userId={user.id} canCreate={canCreate} canUpdate={canUpdate} canPublish={canPublish} canDelete={canDelete} filterOptions={filterOptions} />
   </AuthLayout>
 </BaseLayout>

@@ -1,9 +1,11 @@
-import { defineAction, ActionError } from "astro:actions";
+import { Effect } from "effect";
+import { defineAction } from "astro:actions";
 import { z } from "astro/zod";
 import { eq, and, isNull } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { blogNotifications } from "@database/schemas";
 import { blogOrganizationIdSchema } from "./_helpers";
+import { actionTry, effectHandler, requireUser } from "@/lib/effect/action";
 
 function notificationOrganizationScope(organizationId: string | null | undefined) {
   if (organizationId === undefined) return undefined;
@@ -18,9 +20,9 @@ export const markBlogNotificationRead = defineAction({
     id: z.uuid(),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
-    const user = context.locals.user;
-    if (!user) throw new ActionError({ code: "UNAUTHORIZED", message: "Connexion requise." });
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireUser(context, "Connexion requise.");
+    return yield* actionTry("blog/notification.markBlogNotificationRead", async () => {
 
     const db = getDrizzle();
     await db
@@ -35,7 +37,8 @@ export const markBlogNotificationRead = defineAction({
       );
 
     return { success: true };
-  },
+    });
+  })),
 });
 
 /** Marks every unread notification belonging to the requesting user as read. */
@@ -43,9 +46,9 @@ export const markAllBlogNotificationsRead = defineAction({
   input: z.object({
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
-    const user = context.locals.user;
-    if (!user) throw new ActionError({ code: "UNAUTHORIZED", message: "Connexion requise." });
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireUser(context, "Connexion requise.");
+    return yield* actionTry("blog/notification.markAllBlogNotificationsRead", async () => {
 
     const db = getDrizzle();
     await db
@@ -60,5 +63,6 @@ export const markAllBlogNotificationsRead = defineAction({
       );
 
     return { success: true };
-  },
+    });
+  })),
 });

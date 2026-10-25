@@ -23,6 +23,15 @@ const serviceListDefinition = {
     { id: "viewCount", queryParam: "sortBy", directions: ["asc", "desc"] },
   ],
   defaultSort: "updatedAt",
+  // Actions groupées (moteur core/bulk) : ids alignés sur les opérations de l'action serveur.
+  selection: true,
+  bulkActions: [
+    { id: "publish", permission: "service:publish" },
+    { id: "unpublish", permission: "service:publish" },
+    { id: "archive", permission: "service:update", confirmationKey: "services.bulk.archive" },
+    { id: "restore", permission: "service:update" },
+    { id: "delete", permission: "service:delete", destructive: true, confirmationKey: "services.bulk.delete" },
+  ],
 } as const;
 
 assertAdminResourceListDefinition(serviceListDefinition);
@@ -30,7 +39,7 @@ assertAdminResourceListDefinition(serviceListDefinition);
 export const serviceAdminResource: AdminResourceDefinition = {
   id: "service",
   entity: "service",
-  management: { list: true, search: true, filters: true, sort: true, pagination: true, stats: true },
+  management: { list: true, search: true, filters: true, sort: true, pagination: true, stats: true, selection: true },
   list: serviceListDefinition,
   actions: {
     create: true,
@@ -42,7 +51,7 @@ export const serviceAdminResource: AdminResourceDefinition = {
     archive: true,
     restore: true,
     delete: true,
-    bulk: false,
+    bulk: true,
   },
   presentation: {
     card: ["default", "compact", "featured", "horizontal"],

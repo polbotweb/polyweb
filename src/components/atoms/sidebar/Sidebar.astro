@@ -100,7 +100,7 @@ const {
   ...rest
 } = Astro.props;
 
-const SIDEBAR_WIDTH_MOBILE = "18rem";
+// Largeur mobile : classe `[--sidebar-width:18rem]` sur SheetContent (CSP stricte).
 ---
 
 {/* Non-collapsible sidebar */}
@@ -143,8 +143,7 @@ const SIDEBAR_WIDTH_MOBILE = "18rem";
       <Sheet class="md:hidden" data-slot="sidebar-mobile">
         <SheetContent
           side={side}
-          class={sidebarMobileContent()}
-          style={{ "--sidebar-width": SIDEBAR_WIDTH_MOBILE }}
+          class={sidebarMobileContent({ class: "[--sidebar-width:18rem]" })}
         >
           <SheetHeader class="sr-only">
             <SheetTitle>Sidebar</SheetTitle>

@@ -1,4 +1,5 @@
 ---
+import { hiddenUntilScript } from "@/lib/ui/inline-style";
 /**
  * AdminSitePage — Tabbed admin for site settings, social links, contact info & opening hours.
  * Uses Astro Actions for mutations, server-rendered forms with client JS.
@@ -125,7 +126,7 @@ const cms = t.admin.cms.site;
               <form
                 class="grid gap-4 locale-settings-form"
                 data-form-locale={l}
-                style={l !== locale ? 'display:none' : ''}
+                {...(l !== locale ? hiddenUntilScript() : {})}
               >
                 <div class="grid gap-2">
                   <Label for={fieldIds.siteName}>{cms.siteName}</Label>
@@ -231,7 +232,7 @@ const cms = t.admin.cms.site;
                       <option value="__other" selected={!isKnown}>{cms.otherPlatform}</option>
                     </select>
                   </div>
-                  <div class="grid gap-1" style={isKnown ? 'display:none' : ''} data-custom-wrap>
+                  <div class="grid gap-1" {...(isKnown ? hiddenUntilScript() : {})} data-custom-wrap>
                     <Label>{cms.customPlatformName}</Label>
                     <Input name="customPlatform" value={isKnown ? '' : link.platform} class="social-custom-platform" />
                   </div>
@@ -338,7 +339,7 @@ const cms = t.admin.cms.site;
                     </label>
                   </div>
                   {/* Standard hours (no midday break) */}
-                  <div class="hours-standard flex flex-wrap gap-3" style={midday ? 'display:none' : ''}>
+                  <div class="hours-standard flex flex-wrap gap-3" {...(midday ? hiddenUntilScript() : {})}>
                     <div class="grid gap-1">
                       <Label class="text-xs">{cms.openTime}</Label>
                       <Input type="time" value={row?.openTime ?? '09:00'} class="hours-open w-28" />
@@ -349,7 +350,7 @@ const cms = t.admin.cms.site;
                     </div>
                   </div>
                   {/* Midday break hours */}
-                  <div class="hours-split flex flex-wrap gap-3" style={midday ? '' : 'display:none'}>
+                  <div class="hours-split flex flex-wrap gap-3" {...(midday ? {} : hiddenUntilScript())}>
                     <div class="grid gap-1">
                       <Label class="text-xs">{cms.morningOpen}</Label>
                       <Input type="time" value={row?.morningOpen ?? '09:00'} class="hours-morning-open w-28" />
@@ -406,7 +407,7 @@ const cms = t.admin.cms.site;
               <form
                 class="grid gap-4 header-settings-form"
                 data-form-locale={l}
-                style={l !== locale ? 'display:none' : ''}
+                {...(l !== locale ? hiddenUntilScript() : {})}
               >
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div class="grid gap-2">
@@ -467,7 +468,7 @@ const cms = t.admin.cms.site;
               <form
                 class="grid gap-4 footer-settings-form"
                 data-form-locale={l}
-                style={l !== locale ? 'display:none' : ''}
+                {...(l !== locale ? hiddenUntilScript() : {})}
               >
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div class="grid gap-2">
@@ -723,7 +724,7 @@ const cms = t.admin.cms.site;
             <option value="__other">${tOtherPlatform}</option>
           </select>
         </div>
-        <div class="grid gap-1" style="display:none" data-custom-wrap>
+        <div class="grid gap-1" hidden data-style-hidden data-style="display:none" data-custom-wrap>
           <label class="text-sm font-medium">${tCustomPlatform}</label>
           <input name="customPlatform" class="social-custom-platform border-input dark:bg-input/30 text-foreground ring-offset-background w-full rounded-md border bg-transparent shadow-xs h-9 px-3 text-sm focus-visible:border-outline focus-visible:ring-outline/50 transition-[color,box-shadow] outline-none focus-visible:ring-3" />
         </div>

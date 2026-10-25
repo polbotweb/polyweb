@@ -1,6 +1,8 @@
 import { Client } from 'pg';
 import { type DbEnv, getDbUrl, maskUrl, dbNameFromUrl } from '../env';
-import { c, safeConnect } from './_utils';
+import { c } from './_utils';
+import { Effect } from 'effect';
+import { runScript, ScriptError, scopedConnection, step } from './_effect';
 
 // ─── Environnements valides ──────────────────────────────────────────
 const VALID_ENVS: DbEnv[] = ['LOCAL', 'PROD', 'TEST'];
@@ -74,12 +76,14 @@ function diffRows(rowsA: SqlRow[], rowsB: SqlRow[]) {
 
 // ─── Comparer une paire ──────────────────────────────────────────────
 
-async function comparePair(
+const comparePair = (
   envA: DbEnv, clientA: Client,
   envB: DbEnv, clientB: Client,
-): Promise<boolean> {
-  const schemaA = await getSchema(clientA);
-  const schemaB = await getSchema(clientB);
+) => Effect.gen(function* () {
+  const [schemaA, schemaB] = yield* Effect.all([
+    step(`schéma ${envA}`, () => getSchema(clientA)),
+    step(`schéma ${envB}`, () => getSchema(clientB)),
+  ]);
 
   // ── ÉTAPE 1 : Tables ──────────────────────────────────────────
   const tablesA = schemaA.tables.map((t: SqlRow) => t.table_name as string);
@@ -130,8 +134,10 @@ async function comparePair(
 
   let totalDiffs = 0;
   for (const table of commonTables) {
-    const dataA = await getData(clientA, table);
-    const dataB = await getData(clientB, table);
+    const [dataA, dataB] = yield* Effect.all([
+      step(`données ${envA}.${table}`, () => getData(clientA, table)),
+      step(`données ${envB}.${table}`, () => getData(clientB, table)),
+    ]);
     if (dataA === null || dataB === null) {
       console.log(c.red(`  ❗ ${table} — inaccessible dans l'une des bases`));
       totalDiffs++;
@@ -163,11 +169,11 @@ async function comparePair(
   }
 
   return identical;
-}
+});
 
 // ─── Main ────────────────────────────────────────────────────────────
 
-async function compare() {
+const program = Effect.scoped(Effect.gen(function* () {
   const pairs = parseArgs();
   const isFullScan = pairs.length > 1;
 
@@ -185,22 +191,19 @@ async function compare() {
   const connections = new Map<DbEnv, Client>();
   const failedEnvs: DbEnv[] = [];
 
+  // Toutes les connexions sont tentées (diagnostic complet) puis fermées à la sortie du scope.
   for (const env of neededEnvs) {
     const url = getDbUrl(env);
     console.log(`\n  ${env} : ${dbNameFromUrl(url)} ${c.dim(`(${maskUrl(url)})`)}`);
-    const conn = await safeConnect(env, url);
-    if (conn.ok) {
-      connections.set(env, conn.client);
-    } else {
-      failedEnvs.push(env);
-    }
+    const client = yield* scopedConnection(env, url);
+    if (client) connections.set(env, client);
+    else failedEnvs.push(env);
   }
 
   if (failedEnvs.length > 0) {
     console.error(c.red(c.bold(`\n❌ Connexion impossible : ${failedEnvs.join(', ')}`)));
     console.error(c.yellow(`   Corrigez les identifiants/URLs dans .env puis relancez.`));
-    for (const client of connections.values()) await client.end();
-    process.exit(1);
+    return yield* Effect.fail(new ScriptError({ step: 'connexion', cause: failedEnvs.join(', ') }));
   }
 
   // ── Comparer chaque paire ─────────────────────────────────────
@@ -211,7 +214,7 @@ async function compare() {
     console.log(c.cyan(c.bold(`│  ${envA} ↔ ${envB}${' '.repeat(47 - envA.length - envB.length - 3)}│`)));
     console.log(c.cyan(c.bold(`└─────────────────────────────────────────────────────┘`)));
 
-    const identical = await comparePair(envA, connections.get(envA)!, envB, connections.get(envB)!);
+    const identical = yield* comparePair(envA, connections.get(envA)!, envB, connections.get(envB)!);
     results.push({ pair: `${envA} ↔ ${envB}`, identical });
   }
 
@@ -231,11 +234,8 @@ async function compare() {
 
   console.log(c.cyan(c.bold(`═══════════════════════════════════════════════════════\n`)));
 
-  // ── Fermer les connexions ─────────────────────────────────────
-  for (const client of connections.values()) await client.end();
-}
+}));
 
-compare().catch(e => {
-  console.error(c.red('[compare] Échec inattendu:'), e?.message || e);
-  process.exit(1);
-});
+
+// Entrée Effect : erreurs typées (ScriptError), code de sortie ; connexions fermées dans tous les cas.
+runScript('db:compare', program);

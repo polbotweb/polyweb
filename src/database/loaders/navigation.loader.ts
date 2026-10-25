@@ -1,8 +1,11 @@
 import { eq, asc, and } from "drizzle-orm";
+import { Effect } from "effect";
 import { getDrizzle } from "@database/drizzle";
 import { cached } from "@database/cache";
 import { navigationMenus, navigationItems } from "@database/schemas";
 import { isValidLocale } from "@i18n/utils";
+import type { DbError } from "@/lib/effect/errors";
+import { dbTry, runOrThrow } from "@/lib/effect/run";
 
 export interface NavMenu {
   id: string;
@@ -23,48 +26,37 @@ export interface NavTreeItem {
   children: NavTreeItem[];
 }
 
+/** Conteneur de menu par nom (null si inconnu). */
+const menuByNameEffect = (menuName: string) =>
+  dbTry("nav.menuByName", () =>
+    getDrizzle().select().from(navigationMenus).where(eq(navigationMenus.name, menuName)).limit(1),
+  ).pipe(Effect.map(([row]) => row ?? null));
+
 /**
- * Load a navigation menu by name and locale, returning a hierarchical tree.
- * Top-level items (parentId = null) are returned with their children nested.
+ * Menu par nom et locale en arbre hiérarchique (racines = parentId null, enfants imbriqués,
+ * cycles et profondeur contrôlés). Menu inconnu ou masqué → arbre vide.
  */
+const menuEffect = (menuName: string, locale: string): Effect.Effect<NavTreeItem[], DbError> =>
+  !isValidLocale(locale)
+    ? Effect.succeed([])
+    : Effect.gen(function* () {
+        const menu = yield* menuByNameEffect(menuName);
+        if (!menu || !menu.isVisible) return [];
+        const items = yield* dbTry("nav.items", () =>
+          getDrizzle()
+            .select()
+            .from(navigationItems)
+            .where(and(eq(navigationItems.menuId, menu.id), eq(navigationItems.locale, locale), eq(navigationItems.isActive, true)))
+            .orderBy(asc(navigationItems.sortOrder))
+            .limit(500),
+        );
+        return buildNavTree(items);
+      });
+
+/** Load a navigation menu by name and locale, returning a hierarchical tree (cached). */
 export const getMenu = cached(
   (menuName: string, locale: string) => `nav:${menuName}:${locale}`,
-  async (
-    menuName: string,
-    locale: string,
-  ): Promise<NavTreeItem[]> => {
-  if (!isValidLocale(locale)) return [];
-  const db = getDrizzle();
-
-  // Find the menu container
-  const [menu] = await db
-    .select()
-    .from(navigationMenus)
-    .where(eq(navigationMenus.name, menuName))
-    .limit(1);
-
-  if (!menu) return [];
-
-  // If menu is hidden, return empty tree
-  if (!menu.isVisible) return [];
-
-  // Fetch all items for this menu + locale (flat)
-  const items = await db
-    .select()
-    .from(navigationItems)
-    .where(
-      and(
-        eq(navigationItems.menuId, menu.id),
-        eq(navigationItems.locale, locale),
-        eq(navigationItems.isActive, true),
-      ),
-    )
-    .orderBy(asc(navigationItems.sortOrder))
-    .limit(500);
-
-  // Build tree from flat list (with cycle detection)
-  return buildNavTree(items);
-  },
+  (menuName: string, locale: string): Promise<NavTreeItem[]> => runOrThrow(menuEffect(menuName, locale)),
 );
 
 const MAX_NAV_DEPTH = 10;
@@ -131,29 +123,24 @@ export function buildNavTree(
   return roots;
 }
 
-/**
- * List all navigation menus (for admin UI).
- */
+const menusListEffect = (): Effect.Effect<NavMenu[], DbError> =>
+  dbTry("nav.menus", () => getDrizzle().select().from(navigationMenus).orderBy(asc(navigationMenus.name)).limit(100));
+
+/** Lectures navigation Effect-natives (non mises en cache ; les exports Promise le sont). */
+export const navigationLoaderEffects = {
+  getMenu: menuEffect,
+  getMenusList: menusListEffect,
+  getMenuMeta: (menuName: string): Effect.Effect<NavMenu | null, DbError> => menuByNameEffect(menuName),
+};
+
+/** List all navigation menus (for admin UI). */
 export const getMenusList = cached(
   () => "nav:menus",
-  async (): Promise<NavMenu[]> => {
-    const db = getDrizzle();
-    return db.select().from(navigationMenus).orderBy(asc(navigationMenus.name)).limit(100);
-  },
+  (): Promise<NavMenu[]> => runOrThrow(menusListEffect()),
 );
 
-/**
- * Get a single menu's metadata by name (for BaseLayout heading logic).
- */
+/** Get a single menu's metadata by name (for BaseLayout heading logic). */
 export const getMenuMeta = cached(
   (menuName: string) => `nav:meta:${menuName}`,
-  async (menuName: string): Promise<NavMenu | null> => {
-    const db = getDrizzle();
-    const [row] = await db
-      .select()
-      .from(navigationMenus)
-      .where(eq(navigationMenus.name, menuName))
-      .limit(1);
-    return row ?? null;
-  },
+  (menuName: string): Promise<NavMenu | null> => runOrThrow(menuByNameEffect(menuName)),
 );

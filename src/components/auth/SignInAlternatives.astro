@@ -48,11 +48,11 @@ const providerLabel: Record<string, string> = { github: 'GitHub', google: 'Googl
       <summary class="cursor-pointer text-sm font-medium">{s.otpTitle}</summary>
       <form id="email-otp-form" class="mt-3 grid gap-3" novalidate>
         <Label for="otp-email">{s.otpEmail}</Label>
-        <Input id="otp-email" name="email" type="email" autocomplete="email" required />
+        <Input id="otp-email" name="otp_email" type="email" autocomplete="email" required />
         <Button type="button" variant="outline" id="otp-send">{s.otpSend}</Button>
         <div id="otp-code-group" class="hidden grid gap-2">
           <Label for="otp-code">{s.otpCode}</Label>
-          <Input id="otp-code" name="otp" inputmode="numeric" autocomplete="one-time-code" maxlength={6} />
+          <Input id="otp-code" name="otp_code" inputmode="numeric" autocomplete="one-time-code" maxlength={6} />
           <Button type="submit">{s.otpVerify}</Button>
         </div>
       </form>

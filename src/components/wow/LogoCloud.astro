@@ -38,9 +38,8 @@ const { logos = [], class: className, ...rest } = Astro.props;
 
     <!-- Marquee container - CSS variabes determine marquee item gap and duration (speed of animation) -->
     <div
-      class="flex gap-(--gap) overflow-hidden"
+      class="flex gap-(--gap) overflow-hidden [--gap:3rem] [--marquee-duration:25s]"
       id="marquee-logo-cloud-03"
-      style={{ "--gap": "3rem", "--marquee-duration": "25s" }}
     >
       <!-- First set of logos -->
       <div class="animate-marquee flex min-w-full shrink-0 items-center justify-around gap-(--gap)">

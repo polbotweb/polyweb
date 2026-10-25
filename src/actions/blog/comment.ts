@@ -1,4 +1,5 @@
-import { assertBlogPermission, resolveBlogTenant, auditBlog, blogOrganizationIdSchema, blogPublicRateLimit, invalidateBlogCache } from "./_helpers";
+import { Effect } from "effect";
+import { resolveBlogTenant, auditBlog, blogOrganizationIdSchema, invalidateBlogCache, requireBlogPermission, blogPublicRateLimitEffect } from "./_helpers";
 import { defineAction, ActionError } from "astro:actions";
 import { eq, and, isNull } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
@@ -7,6 +8,7 @@ import { sanitizeHtml } from "@/lib/sanitize";
 import { blogCommentFormSchema, blogCommentModerationSchema } from "@/lib/blog/validation";
 import { publicBlogPostScope } from "@/lib/blog/public-visibility";
 import { extractIp } from "@/lib/audit";
+import { actionTry, effectHandler } from "@/lib/effect/action";
 
 // Public loaders render roots plus one reply level; reject deeper trees so no
 // accepted comment becomes unreachable in the public thread.
@@ -14,8 +16,9 @@ const MAX_COMMENT_REPLY_DEPTH = 1;
 
 export const createBlogComment = defineAction({
   input: blogCommentFormSchema,
-  handler: async (input, context) => {
-    blogPublicRateLimit(context, "comment-create", { window: 300, max: 5 });
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    yield* blogPublicRateLimitEffect(context, "comment-create", { window: 300, max: 5 });
+    return yield* actionTry("blog/comment.createBlogComment", async () => {
     const db = getDrizzle();
     const [post] = await db
       .select({ id: blogPosts.id, commentStatus: blogPosts.commentStatus, organizationId: blogPosts.organizationId })
@@ -91,16 +94,18 @@ export const createBlogComment = defineAction({
     // comment that is not visible until approved. Notification is sent on
     // approval in moderateBlogComment.
     return { id: comment.id, status: comment.status };
-  },
+    });
+  })),
 });
 
 export const moderateBlogComment = defineAction({
   input: blogCommentModerationSchema.extend({
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blogComment: ["moderate"] });
+    const user = yield* requireBlogPermission(context, tenant, { blogComment: ["moderate"] });
+    return yield* actionTry("blog/comment.moderateBlogComment", async () => {
 
     const db = getDrizzle();
     const { newStatus } = await db.transaction(async (tx) => {
@@ -227,5 +232,5 @@ export const moderateBlogComment = defineAction({
 
     invalidateBlogCache();
     return { success: true };
-  },
+  }); })),
 });

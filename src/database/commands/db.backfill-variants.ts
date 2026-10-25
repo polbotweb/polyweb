@@ -23,6 +23,8 @@ import { getDrizzle, shutdownDb } from '../drizzle';
 import { mediaFiles } from '../schemas';
 import { generateResponsiveVariants, serializeVariants } from '@/media/variants';
 import { c, logTarget } from './_utils';
+import { Effect } from 'effect';
+import { runScript, step } from './_effect';
 
 const force = process.argv.includes('--force');
 
@@ -31,92 +33,59 @@ function diskPathFor(publicUrl: string): string {
   return join(process.cwd(), 'public', publicUrl.replace(/^\/+/, ''));
 }
 
-async function backfillVariants() {
+type Row = { id: string; url: string; mimeType: string; size: number };
+type Outcome = { kind: 'generated'; before: number; after: number } | { kind: 'skipped' } | { kind: 'failed' };
+
+/** Un média : fichier absent → « en échec » (non bloquant) ; erreur de génération/mise à jour → échec du script. */
+const backfillOne = (row: Row) =>
+  Effect.gen(function* () {
+    const disk = diskPathFor(row.url);
+    const buffer = yield* Effect.tryPromise(() => readFile(disk)).pipe(Effect.option);
+    if (buffer._tag === 'None') {
+      console.log(c.yellow(`  ⚠ Fichier introuvable, ignoré : ${row.url}`));
+      return { kind: 'failed' } as Outcome;
+    }
+    const variants = yield* step(`variantes ${row.url}`, () =>
+      generateResponsiveVariants({ buffer: buffer.value, mimeType: row.mimeType, url: row.url, dir: join(disk, '..') }));
+    if (variants.length === 0) return { kind: 'skipped' } as Outcome;
+
+    yield* step(`enregistrement ${row.url}`, () =>
+      getDrizzle().update(mediaFiles).set({ variants: serializeVariants(variants) }).where(eq(mediaFiles.id, row.id)));
+    const smallest = variants[0];
+    console.log(c.green(`  ✔ ${row.url}`) + c.dim(`  ${variants.length} variantes  ${formatBytes(row.size)} → ${formatBytes(smallest.size)}`));
+    return { kind: 'generated', before: row.size, after: smallest.size } as Outcome;
+  });
+
+const program = Effect.gen(function* () {
   console.log(c.cyan(c.bold('\n  🖼️  Backfill Media Variants — WebP responsive\n')));
   logTarget();
 
-  const db = getDrizzle();
-
-  const rows = await db
-    .select({
-      id: mediaFiles.id,
-      url: mediaFiles.url,
-      mimeType: mediaFiles.mimeType,
-      size: mediaFiles.size,
-      variants: mediaFiles.variants,
-    })
+  const rows = yield* step('sélection des médias', () => getDrizzle()
+    .select({ id: mediaFiles.id, url: mediaFiles.url, mimeType: mediaFiles.mimeType, size: mediaFiles.size, variants: mediaFiles.variants })
     .from(mediaFiles)
-    .where(
-      force
-        ? undefined
-        : or(isNull(mediaFiles.variants), eqOp(mediaFiles.variants, [] as unknown as never)),
-    );
+    .where(force ? undefined : or(isNull(mediaFiles.variants), eqOp(mediaFiles.variants, [] as unknown as never))));
 
   if (rows.length === 0) {
     console.log(c.yellow('  ℹ Aucun média à traiter.\n'));
-    await shutdownDb();
     return;
   }
 
-  let generated = 0;
-  let skipped = 0;
-  let failed = 0;
-  let bytesBefore = 0;
-  let bytesAfter = 0;
-
-  for (const row of rows) {
-    const disk = diskPathFor(row.url);
-    let buffer: Buffer;
-    try {
-      buffer = await readFile(disk);
-    } catch {
-      console.log(c.yellow(`  ⚠ Fichier introuvable, ignoré : ${row.url}`));
-      failed++;
-      continue;
-    }
-
-    const variants = await generateResponsiveVariants({
-      buffer,
-      mimeType: row.mimeType,
-      url: row.url,
-      dir: join(disk, '..'),
-    });
-
-    if (variants.length === 0) {
-      skipped++;
-      continue;
-    }
-
-    const smallest = variants[0];
-    bytesBefore += row.size;
-    bytesAfter += smallest.size;
-    generated++;
-
-    await db
-      .update(mediaFiles)
-      .set({ variants: serializeVariants(variants) })
-      .where(eq(mediaFiles.id, row.id));
-
-    console.log(
-      c.green(`  ✔ ${row.url}`) +
-        c.dim(`  ${variants.length} variantes  ${formatBytes(row.size)} → ${formatBytes(smallest.size)}`),
-    );
-  }
+  // Séquentiel (sharp est déjà multi-thread ; évite de saturer la mémoire sur de gros originaux).
+  const outcomes = yield* Effect.forEach(rows, backfillOne);
+  const generated = outcomes.filter((o): o is Extract<Outcome, { kind: 'generated' }> => o.kind === 'generated');
+  const skipped = outcomes.filter((o) => o.kind === 'skipped').length;
+  const failed = outcomes.filter((o) => o.kind === 'failed').length;
+  const bytesBefore = generated.reduce((n, o) => n + o.before, 0);
+  const bytesAfter = generated.reduce((n, o) => n + o.after, 0);
 
   console.log('');
-  console.log(c.bold(`  Générées : ${generated}   Ignorées : ${skipped}   En échec : ${failed}`));
-  if (generated > 0) {
+  console.log(c.bold(`  Générées : ${generated.length}   Ignorées : ${skipped}   En échec : ${failed}`));
+  if (generated.length > 0) {
     const ratio = bytesBefore > 0 ? Math.round((1 - bytesAfter / bytesBefore) * 100) : 0;
-    console.log(
-      c.green(
-        `  Poids de la plus petite variante : ${formatBytes(bytesBefore)} → ${formatBytes(bytesAfter)} (-${ratio} %)`,
-      ),
-    );
+    console.log(c.green(`  Poids de la plus petite variante : ${formatBytes(bytesBefore)} → ${formatBytes(bytesAfter)} (-${ratio} %)`));
   }
   console.log('');
-
-  await shutdownDb();
-}
+});
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -124,7 +93,6 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MiB`;
 }
 
-backfillVariants().catch((err) => {
-  console.error(c.red(`[ERREUR] ${err.message}`));
-  process.exit(1);
-});
+
+// Entrée Effect : erreurs typées (ScriptError), code de sortie ; pool fermé dans tous les cas.
+runScript('db:backfill-variants', program, { dispose: shutdownDb });

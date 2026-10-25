@@ -1,11 +1,19 @@
+import { Effect } from "effect";
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { eq, and, asc, desc, isNull, isNotNull, inArray, max } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { pages, pageSections, pageVersions } from "@database/schemas";
 import { invalidateCache } from "@database/cache";
-import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
+import { auditAdmin } from "./_helpers";
 import { LOCALES } from "@i18n/config";
+import { ActionFailure, actionRateLimit, actionTry, effectHandler, fail, requireActionPermission } from "@/lib/effect/action";
+import { BulkActionError, runBulkAction } from "@/core/bulk";
+import type { ActionAPIContext } from "astro:actions";
+import type { AuditAction } from "@/lib/audit";
+import { lockOwnerFrom } from "@/core/locks/service";
+import { lockLocaleFrom } from "@/core/locks/errors";
+import { pageLock, PAGE_LOCK_TTL_MS } from "@/lib/pages/locks";
 
 const localeEnum = z.enum(LOCALES, {
   message: `La locale doit être l'une des suivantes : ${LOCALES.join(", ")}.`,
@@ -53,9 +61,10 @@ export const createPage = defineAction({
     template: z.string().max(50, "Le template ne peut pas dépasser 50 caractères.").optional(),
     sortOrder: z.number().int("L'ordre doit être un nombre entier.").min(0, "L'ordre doit être positif.").max(10000, "L'ordre ne peut pas dépasser 10 000.").nullable().optional(),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { page: ["create"] });
-    adminRateLimit(context, user.id, "pages");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { page: ["create"] });
+    yield* actionRateLimit(user.id, "pages");
+    return yield* actionTry("admin/pages.createPage", async () => {
 
     assertSlugNotReserved(input.slug);
     const db = getDrizzle();
@@ -91,7 +100,8 @@ export const createPage = defineAction({
 
     invalidateCache("page:");
     return created;
-  },
+    });
+  })),
 });
 
 export const updatePage = defineAction({
@@ -114,22 +124,17 @@ export const updatePage = defineAction({
     sortOrder: z.number().int("L'ordre doit être un nombre entier.").min(0, "L'ordre doit être positif.").max(10000, "L'ordre ne peut pas dépasser 10 000.").optional(),
     expectedUpdatedAt: z.string().optional(),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { page: ["update"] });
-    adminRateLimit(context, user.id, "pages");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { page: ["update"] });
+    yield* actionRateLimit(user.id, "pages");
+    // Verrou générique (src/core/locks) : refus si un autre propriétaire (utilisateur + session) détient la page.
+    yield* pageLock.ensureNotLockedByOther(input.id, lockOwnerFrom(user.id, context.locals.session?.id), lockLocaleFrom(context.request.headers));
+    return yield* actionTry("admin/pages.updatePage", async () => {
 
     const { id, expectedUpdatedAt, ...data } = input;
     if (data.slug) assertSlugNotReserved(data.slug);
 
     const db = getDrizzle();
-
-    // Check content lock before updating
-    const [lockCheck] = await db
-      .select({ lockedBy: pages.lockedBy, lockedAt: pages.lockedAt })
-      .from(pages)
-      .where(eq(pages.id, id))
-      .limit(1);
-    if (lockCheck) assertNotLockedByOther(lockCheck, user.id);
 
     const whereClause = expectedUpdatedAt
       ? and(eq(pages.id, id), eq(pages.updatedAt, new Date(expectedUpdatedAt)))
@@ -176,16 +181,18 @@ export const updatePage = defineAction({
 
     invalidateCache("page:");
     return updated;
-  },
+    });
+  })),
 });
 
 export const deletePage = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { page: ["delete"] });
-    adminRateLimit(context, user.id, "pages");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { page: ["delete"] });
+    yield* actionRateLimit(user.id, "pages");
+    return yield* actionTry("admin/pages.deletePage", async () => {
 
     const db = getDrizzle();
     const [archived] = await db
@@ -209,7 +216,8 @@ export const deletePage = defineAction({
 
     invalidateCache("page:");
     return { success: true as const };
-  },
+    });
+  })),
 });
 
 export const publishPage = defineAction({
@@ -217,9 +225,10 @@ export const publishPage = defineAction({
     id: z.string().min(1, "L'identifiant est requis."),
     isPublished: z.boolean(),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { page: ["publish"] });
-    adminRateLimit(context, user.id, "pages");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { page: ["publish"] });
+    yield* actionRateLimit(user.id, "pages");
+    return yield* actionTry("admin/pages.publishPage", async () => {
 
     const db = getDrizzle();
     const publishedAt = input.isPublished ? new Date() : null;
@@ -277,7 +286,8 @@ export const publishPage = defineAction({
 
     invalidateCache("page:");
     return updated;
-  },
+    });
+  })),
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -292,9 +302,10 @@ export const schedulePage = defineAction({
       "La date de publication programmée doit être dans le futur.",
     ),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { page: ["publish"] });
-    adminRateLimit(context, user.id, "pages");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { page: ["publish"] });
+    yield* actionRateLimit(user.id, "pages");
+    return yield* actionTry("admin/pages.schedulePage", async () => {
 
     const db = getDrizzle();
     const [updated] = await db
@@ -315,16 +326,18 @@ export const schedulePage = defineAction({
 
     invalidateCache("page:");
     return updated;
-  },
+    });
+  })),
 });
 
 export const unschedulePage = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { page: ["publish"] });
-    adminRateLimit(context, user.id, "pages");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { page: ["publish"] });
+    yield* actionRateLimit(user.id, "pages");
+    return yield* actionTry("admin/pages.unschedulePage", async () => {
 
     const db = getDrizzle();
     const [updated] = await db
@@ -344,7 +357,8 @@ export const unschedulePage = defineAction({
 
     invalidateCache("page:");
     return updated;
-  },
+    });
+  })),
 });
 
 export const scheduleUnpublishPage = defineAction({
@@ -355,9 +369,10 @@ export const scheduleUnpublishPage = defineAction({
       "La date de dépublication programmée doit être dans le futur.",
     ),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { page: ["publish"] });
-    adminRateLimit(context, user.id, "pages");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { page: ["publish"] });
+    yield* actionRateLimit(user.id, "pages");
+    return yield* actionTry("admin/pages.scheduleUnpublishPage", async () => {
 
     const db = getDrizzle();
     const [updated] = await db
@@ -378,16 +393,18 @@ export const scheduleUnpublishPage = defineAction({
 
     invalidateCache("page:");
     return updated;
-  },
+    });
+  })),
 });
 
 export const unscheduleUnpublishPage = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { page: ["publish"] });
-    adminRateLimit(context, user.id, "pages");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { page: ["publish"] });
+    yield* actionRateLimit(user.id, "pages");
+    return yield* actionTry("admin/pages.unscheduleUnpublishPage", async () => {
 
     const db = getDrizzle();
     const [updated] = await db
@@ -407,7 +424,8 @@ export const unscheduleUnpublishPage = defineAction({
 
     invalidateCache("page:");
     return updated;
-  },
+    });
+  })),
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -418,9 +436,10 @@ export const restoreFromTrash = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { page: ["update"] });
-    adminRateLimit(context, user.id, "pages");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { page: ["update"] });
+    yield* actionRateLimit(user.id, "pages");
+    return yield* actionTry("admin/pages.restoreFromTrash", async () => {
 
     const db = getDrizzle();
     const [restored] = await db
@@ -441,16 +460,18 @@ export const restoreFromTrash = defineAction({
 
     invalidateCache("page:");
     return { success: true as const };
-  },
+    });
+  })),
 });
 
 export const permanentlyDeletePage = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { page: ["delete"] });
-    adminRateLimit(context, user.id, "pages");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { page: ["delete"] });
+    yield* actionRateLimit(user.id, "pages");
+    return yield* actionTry("admin/pages.permanentlyDeletePage", async () => {
 
     const db = getDrizzle();
 
@@ -481,152 +502,107 @@ export const permanentlyDeletePage = defineAction({
 
     invalidateCache("page:");
     return { success: true as const };
-  },
+    });
+  })),
 });
 
 // ═══════════════════════════════════════════════════════════════════════
 // Bulk Operations
 // ═══════════════════════════════════════════════════════════════════════
 
+type PageRow = typeof pages.$inferSelect;
+type PagesDb = ReturnType<typeof getDrizzle>;
+type PagesTx = Parameters<Parameters<PagesDb["transaction"]>[0]>[0];
+type PageBulkOperation = "publish" | "unpublish" | "archive" | "restore" | "delete";
+const bulkIdsSchema = z.array(z.string().min(1)).min(1, "Au moins une page est requise.").max(100, "Maximum 100 pages.");
+
+/** Erreur du moteur core/bulk → erreur d'action (mêmes codes). */
+const bulkToAction = <A, E>(effect: Effect.Effect<A, E | BulkActionError>): Effect.Effect<A, E | ActionFailure> =>
+  effect.pipe(Effect.mapError((e) => (e instanceof BulkActionError ? new ActionFailure({ code: e.code, message: e.message }) : e)));
+
+/** Instantané de version d'une page (même contenu que la publication unitaire), dans la transaction. */
+async function snapshotPage(tx: PagesTx, page: PageRow, userId: string) {
+  const sections = await tx.select().from(pageSections).where(eq(pageSections.pageId, page.id)).orderBy(asc(pageSections.sortOrder));
+  const [latest] = await tx.select({ versionNumber: pageVersions.versionNumber }).from(pageVersions).where(eq(pageVersions.pageId, page.id)).orderBy(desc(pageVersions.versionNumber)).limit(1);
+  const versionNumber = (latest?.versionNumber ?? 0) + 1;
+  const { createdAt: _pc, updatedAt: _pu, ...pageData } = page;
+  const sectionSnapshots = sections.map(({ createdAt: _sc, updatedAt: _su, ...section }) => section);
+  await tx.insert(pageVersions).values({ pageId: page.id, versionNumber, snapshot: { page: pageData, sections: sectionSnapshots }, createdBy: userId, note: `Auto-snapshot à la publication groupée (v${versionNumber})` });
+}
+
+const notTrashed = (row: PageRow) => (row.deletedAt ? `La page « ${row.title} » est dans la corbeille.` : null);
+const trashed = (row: PageRow) => (row.deletedAt ? null : `La page « ${row.title} » n'est pas dans la corbeille.`);
+
+/**
+ * Actions groupées des pages sur le moteur générique core/bulk : tout ou rien (une page dans un
+ * état incompatible fait échouer l'ensemble, sans écriture), verrous d'édition respectés,
+ * une transaction, audit par page (batchId commun), cache invalidé après validation.
+ */
+const pageBulkOperations = {
+  publish: { validate: notTrashed, auditAction: "PAGES_BULK_PUBLISH", apply: async (tx: PagesTx, row: PageRow, actor: { id: string }) => {
+    await tx.update(pages).set({ isPublished: true, publishedAt: new Date(), updatedBy: actor.id }).where(eq(pages.id, row.id));
+    await snapshotPage(tx, row, actor.id);
+  }, auditMetadata: () => ({ isPublished: true }) },
+  unpublish: { validate: notTrashed, auditAction: "PAGES_BULK_PUBLISH", apply: async (tx: PagesTx, row: PageRow, actor: { id: string }) => {
+    await tx.update(pages).set({ isPublished: false, publishedAt: null, updatedBy: actor.id }).where(eq(pages.id, row.id));
+  }, auditMetadata: () => ({ isPublished: false }) },
+  archive: { validate: notTrashed, auditAction: "PAGES_BULK_ARCHIVE", confirmationKey: "pages.bulk.archive", apply: async (tx: PagesTx, row: PageRow, actor: { id: string }) => {
+    await tx.update(pages).set({ deletedAt: new Date(), isPublished: false, updatedBy: actor.id }).where(eq(pages.id, row.id));
+  } },
+  restore: { validate: trashed, auditAction: "PAGES_BULK_RESTORE", apply: async (tx: PagesTx, row: PageRow, actor: { id: string }) => {
+    await tx.update(pages).set({ deletedAt: null, updatedBy: actor.id }).where(eq(pages.id, row.id));
+  } },
+  // Suppression définitive : uniquement depuis la corbeille.
+  delete: { validate: trashed, auditAction: "PAGES_BULK_DELETE", destructive: true, apply: async (tx: PagesTx, row: PageRow) => {
+    await tx.delete(pages).where(eq(pages.id, row.id));
+  } },
+} as const;
+
+const PAGE_BULK_PERMISSION: Record<PageBulkOperation, "publish" | "update" | "delete"> = { publish: "publish", unpublish: "publish", archive: "delete", restore: "update", delete: "delete" };
+
+function runPageBulk(context: ActionAPIContext, operation: PageBulkOperation, ids: readonly string[]) {
+  const db = getDrizzle();
+  return bulkToAction(runBulkAction({
+    resource: "pages",
+    operations: pageBulkOperations,
+    authorize: (op: PageBulkOperation) => Effect.gen(function* () {
+      const user = yield* requireActionPermission(context, { page: [PAGE_BULK_PERMISSION[op]] });
+      yield* actionRateLimit(user.id, "pages");
+      return { id: user.id };
+    }),
+    load: (selected) => actionTry(`admin/pages.bulk.${operation}.load`, () => db.select().from(pages).where(inArray(pages.id, [...selected]))),
+    guard: (selected, actor) => pageLock.ensureNoneLockedByOther(selected, lockOwnerFrom(actor.id, context.locals.session?.id), lockLocaleFrom(context.request.headers)),
+    transaction: (body) => db.transaction((tx) => body(tx)),
+    audit: (actor, action, entry) => auditAdmin(context, actor.id, action as AuditAction, entry),
+    afterCommit: () => invalidateCache("page:"),
+  }, { ids, operation })).pipe(Effect.map((r) => ({ success: true as const, count: r.updated, batchId: r.batchId })));
+}
+
+/** Point d'entrée unique pour la barre générique AdminBulkBar ({ ids, operation }). */
+export const PAGE_BULK_OPERATIONS = ["publish", "unpublish", "archive", "restore", "delete"] as const;
+export const bulkPageLifecycle = defineAction({
+  input: z.object({ ids: bulkIdsSchema, operation: z.enum(PAGE_BULK_OPERATIONS), organizationId: z.string().nullable().optional() }),
+  handler: effectHandler((input, context) => runPageBulk(context, input.operation, input.ids).pipe(Effect.map((r) => ({ ...r, updated: r.count })))),
+});
+
 export const bulkPublishPages = defineAction({
-  input: z.object({
-    ids: z.array(z.string().min(1)).min(1, "Au moins une page est requise.").max(100, "Maximum 100 pages."),
-    isPublished: z.boolean(),
-  }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { page: ["publish"] });
-    adminRateLimit(context, user.id, "pages");
-
-    const db = getDrizzle();
-    const publishedAt = input.isPublished ? new Date() : null;
-
-    const updated = await db
-      .update(pages)
-      .set({ isPublished: input.isPublished, publishedAt, updatedBy: user.id })
-      .where(and(inArray(pages.id, input.ids), isNull(pages.deletedAt)))
-      .returning({ id: pages.id });
-
-    // Batch auto-snapshot on bulk publish (same behaviour as single publishPage)
-    if (input.isPublished && updated.length > 0) {
-      try {
-        for (const { id: pageId } of updated) {
-          const [page] = await db.select().from(pages).where(eq(pages.id, pageId)).limit(1);
-          if (!page) continue;
-
-          const sections = await db
-            .select()
-            .from(pageSections)
-            .where(eq(pageSections.pageId, pageId))
-            .orderBy(asc(pageSections.sortOrder));
-
-          const [latest] = await db
-            .select({ versionNumber: pageVersions.versionNumber })
-            .from(pageVersions)
-            .where(eq(pageVersions.pageId, pageId))
-            .orderBy(desc(pageVersions.versionNumber))
-            .limit(1);
-
-          const versionNumber = (latest?.versionNumber ?? 0) + 1;
-          const { createdAt: _pc, updatedAt: _pu, ...pageData } = page;
-          const sectionSnapshots = sections.map(({ createdAt: _sc, updatedAt: _su, ...s }) => s);
-
-          await db.insert(pageVersions).values({
-            pageId,
-            versionNumber,
-            snapshot: { page: pageData, sections: sectionSnapshots },
-            createdBy: user.id,
-            note: `Auto-snapshot à la publication groupée (v${versionNumber})`,
-          });
-        }
-      } catch (err: unknown) {
-        console.error('[pages] Bulk auto-snapshot failed for some pages:', err);
-      }
-    }
-
-    auditAdmin(context, user.id, "PAGES_BULK_PUBLISH", {
-      resource: "pages",
-      metadata: { count: updated.length, isPublished: input.isPublished },
-    });
-
-    invalidateCache("page:");
-    return { success: true as const, count: updated.length };
-  },
+  input: z.object({ ids: bulkIdsSchema, isPublished: z.boolean() }),
+  handler: effectHandler((input, context) => runPageBulk(context, input.isPublished ? "publish" : "unpublish", input.ids)),
 });
 
 export const bulkArchivePages = defineAction({
-  input: z.object({
-    ids: z.array(z.string().min(1)).min(1, "Au moins une page est requise.").max(100, "Maximum 100 pages."),
-  }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { page: ["delete"] });
-    adminRateLimit(context, user.id, "pages");
-
-    const db = getDrizzle();
-
-    const updated = await db
-      .update(pages)
-      .set({ deletedAt: new Date(), isPublished: false, updatedBy: user.id })
-      .where(and(inArray(pages.id, input.ids), isNull(pages.deletedAt)))
-      .returning({ id: pages.id });
-
-    auditAdmin(context, user.id, "PAGES_BULK_ARCHIVE", {
-      resource: "pages",
-      metadata: { count: updated.length },
-    });
-
-    invalidateCache("page:");
-    return { success: true as const, count: updated.length };
-  },
+  input: z.object({ ids: bulkIdsSchema }),
+  handler: effectHandler((input, context) => runPageBulk(context, "archive", input.ids)),
 });
 
 export const bulkRestorePages = defineAction({
-  input: z.object({
-    ids: z.array(z.string().min(1)).min(1, "Au moins une page est requise.").max(100, "Maximum 100 pages."),
-  }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { page: ["update"] });
-    adminRateLimit(context, user.id, "pages");
-
-    const db = getDrizzle();
-    const restored = await db
-      .update(pages)
-      .set({ deletedAt: null, updatedBy: user.id })
-      .where(and(inArray(pages.id, input.ids), isNotNull(pages.deletedAt)))
-      .returning({ id: pages.id });
-
-    auditAdmin(context, user.id, "PAGES_BULK_RESTORE", {
-      resource: "pages",
-      metadata: { count: restored.length },
-    });
-
-    invalidateCache("page:");
-    return { success: true as const, count: restored.length };
-  },
+  input: z.object({ ids: bulkIdsSchema }),
+  handler: effectHandler((input, context) => runPageBulk(context, "restore", input.ids)),
 });
 
 export const bulkDeletePages = defineAction({
-  input: z.object({
-    ids: z.array(z.string().min(1)).min(1, "Au moins une page est requise.").max(100, "Maximum 100 pages."),
-  }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { page: ["delete"] });
-    adminRateLimit(context, user.id, "pages");
-
-    const db = getDrizzle();
-    // Only allow permanent deletion of trashed pages
-    const deleted = await db
-      .delete(pages)
-      .where(and(inArray(pages.id, input.ids), isNotNull(pages.deletedAt)))
-      .returning({ id: pages.id });
-
-    auditAdmin(context, user.id, "PAGES_BULK_DELETE", {
-      resource: "pages",
-      metadata: { count: deleted.length },
-    });
-
-    invalidateCache("page:");
-    return { success: true as const, count: deleted.length };
-  },
+  input: z.object({ ids: bulkIdsSchema }),
+  handler: effectHandler((input, context) => runPageBulk(context, "delete", input.ids)),
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -644,9 +620,10 @@ export const clonePage = defineAction({
       .regex(slugRegex, "Le slug ne peut contenir que des lettres minuscules, chiffres et tirets."),
     title: z.string().trim().min(1, "Le titre est requis.").max(200, "Le titre ne peut pas dépasser 200 caractères."),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { page: ["create"] });
-    adminRateLimit(context, user.id, "pages");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { page: ["create"] });
+    yield* actionRateLimit(user.id, "pages");
+    return yield* actionTry("admin/pages.clonePage", async () => {
 
     assertSlugNotReserved(input.slug);
     const db = getDrizzle();
@@ -724,89 +701,46 @@ export const clonePage = defineAction({
 
     invalidateCache("page:");
     return cloned;
-  },
+    });
+  })),
 });
 
 // ═══════════════════════════════════════════════════════════════════════
 // Content Locking
 // ═══════════════════════════════════════════════════════════════════════
 
-/** Lock expires after 5 minutes of inactivity. */
-const LOCK_TTL_MS = 5 * 60 * 1000;
-
 export const lockPage = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
+    takeOver: z.boolean().optional(),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { page: ["update"] });
-    adminRateLimit(context, user.id, "pages");
-
-    const db = getDrizzle();
-    const now = new Date();
-
-    // Check current lock status
-    const [page] = await db
-      .select({ lockedBy: pages.lockedBy, lockedAt: pages.lockedAt })
-      .from(pages)
-      .where(eq(pages.id, input.id))
-      .limit(1);
-
-    if (!page) {
-      throw new ActionError({ code: "NOT_FOUND", message: "Page introuvable." });
-    }
-
-    // If locked by another user and lock is still fresh, reject
-    if (page.lockedBy && page.lockedBy !== user.id && page.lockedAt) {
-      const lockAge = now.getTime() - page.lockedAt.getTime();
-      if (lockAge < LOCK_TTL_MS) {
-        throw new ActionError({
-          code: "CONFLICT",
-          message: "Cette page est en cours de modification par un autre utilisateur.",
-        });
-      }
-    }
-
-    // Acquire or refresh lock
-    await db
-      .update(pages)
-      .set({ lockedBy: user.id, lockedAt: now })
-      .where(eq(pages.id, input.id));
-
-    return { success: true as const, lockedBy: user.id, lockedAt: now.toISOString() };
-  },
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { page: ["update"] });
+    yield* actionRateLimit(user.id, "pages");
+    const [page] = yield* actionTry("admin/pages.lockPage.load", () => getDrizzle().select({ id: pages.id }).from(pages).where(eq(pages.id, input.id)).limit(1));
+    if (!page) return yield* fail("NOT_FOUND", "Page introuvable.");
+    const sessionId = context.locals.session?.id;
+    // Verrou générique (src/core/locks) : même utilisateur dans une autre session → confirmation
+    // « reprendre ici ? » puis reprise auditée ; un autre utilisateur reste bloqué (CONFLICT).
+    const outcome = yield* pageLock.acquire(input.id, lockOwnerFrom(user.id, sessionId), { takeOver: input.takeOver, locale: lockLocaleFrom(context.request.headers) }).pipe(
+      Effect.map((acquired) => ({ ok: true as const, ...acquired })),
+      Effect.catchTag("LockHeldError", (error) => (error.sameUser ? Effect.succeed({ ok: false as const, takeOverPrompt: error.message }) : Effect.fail(error))),
+    );
+    if (!outcome.ok) return { success: false as const, takeOverPrompt: outcome.takeOverPrompt };
+    if (outcome.tookOverFrom !== null) auditAdmin(context, user.id, "PAGE_LOCK_TAKEOVER", { resource: "page", resourceId: input.id, metadata: { previousSessionId: outcome.tookOverFrom } });
+    const lockedAt = new Date(outcome.expiresAt.getTime() - PAGE_LOCK_TTL_MS);
+    return { success: true as const, lockedBy: user.id, lockedAt: lockedAt.toISOString(), expiresAt: outcome.expiresAt.toISOString() };
+  })),
 });
 
 export const unlockPage = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
-    await assertPermission(context, { page: ["update"] });
-    const db = getDrizzle();
-
-    // Only the lock owner (or any admin via force) can unlock
-    await db
-      .update(pages)
-      .set({ lockedBy: null, lockedAt: null })
-      .where(eq(pages.id, input.id));
-
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { page: ["update"] });
+    // Seul le propriétaire (utilisateur + session) libère ; libération d'un autre : forceReleaseLock (admin, auditée).
+    yield* pageLock.release(input.id, lockOwnerFrom(user.id, context.locals.session?.id));
     return { success: true as const };
-  },
+  })),
 });
-
-/** Helper: check if page is locked by another user. Throws on conflict. */
-function assertNotLockedByOther(
-  page: { lockedBy: string | null; lockedAt: Date | null },
-  userId: string,
-) {
-  if (page.lockedBy && page.lockedBy !== userId && page.lockedAt) {
-    const lockAge = Date.now() - page.lockedAt.getTime();
-    if (lockAge < LOCK_TTL_MS) {
-      throw new ActionError({
-        code: "CONFLICT",
-        message: "Cette page est verrouillée par un autre utilisateur.",
-      });
-    }
-  }
-}

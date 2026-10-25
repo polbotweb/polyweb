@@ -1,0 +1,82 @@
+---
+/** Webhooks sortants signés (brique d) — liste et création. Logique en Effect. */
+import { Effect } from 'effect';
+import { requirePermission } from '@/lib/auth-guards';
+import PlatformAdminShell from '@organisms/PlatformAdmin/PlatformAdminShell.astro';
+import { getPlatformLabel, getPlatformAdminUrl } from '@/core/localization/platform-labels';
+import { getAdminSite, userCan } from '@/lib/platform/admin';
+import { logAuditEvent, extractIp } from '@/lib/audit';
+import { runAppResult } from '@/lib/effect/http';
+import { ForbiddenError } from '@/lib/effect/errors';
+import { createWebhook, listWebhooks, EVENT_PATTERNS } from '@/modules/webhooks/domain/webhooks';
+
+export const prerender = false;
+const result = await requirePermission(Astro, { webhook: ['read'] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT, user } = result;
+const site = await getAdminSite(Astro);
+const canCreate = await userCan(user.id, { webhook: ['create'] });
+
+let error: string | null = null;
+let created: { id: string; secret: string } | null = null;
+
+if (Astro.request.method === 'POST') {
+  const fd = await Astro.request.formData();
+  const r = await runAppResult(
+    Effect.gen(function* () {
+      if (!canCreate) return yield* new ForbiddenError({ reason: 'Permission refusée' });
+      return yield* createWebhook(site.id, { name: String(fd.get('name') ?? ''), url: String(fd.get('url') ?? ''), events: fd.getAll('events').map(String) }, user.id);
+    }),
+  );
+  if (r.ok) {
+    created = { id: r.value.webhook.id, secret: r.value.secret };
+    void logAuditEvent({ userId: user.id, action: 'WEBHOOK_CREATE', resource: 'webhook', resourceId: r.value.webhook.id, metadata: { url: r.value.webhook.url, events: r.value.webhook.events }, ipAddress: extractIp(Astro.request.headers, Astro.clientAddress), userAgent: Astro.request.headers.get('user-agent') });
+  } else error = r.error.message;
+}
+const listed = await runAppResult(listWebhooks(site.id));
+const hooks = listed.ok ? listed.value : [];
+---
+<PlatformAdminShell t={authT} locale={locale} section="webhooks" title={getPlatformLabel('webhooks', locale)}>
+  {error && <p class="rounded-md border border-error bg-error/10 p-3 text-sm" role="alert">{error}</p>}
+  {created && (
+    <div class="rounded-md border border-warning bg-warning/10 p-4 text-sm" aria-live="polite">
+      <p class="font-medium">Webhook créé. Secret de signature (affiché une seule fois) :</p>
+      <code class="mt-2 block break-all rounded bg-background p-2 font-mono" data-secret>{created.secret}</code>
+      <p class="mt-2"><a class="underline" href={getPlatformAdminUrl(locale, 'webhooks', created.id)}>Voir le webhook</a></p>
+    </div>
+  )}
+  <p class="text-muted-foreground text-sm">
+    Chaque requête est signée : en-tête <code>Polyweb-Signature: t=&lt;unix&gt;,v1=&lt;HMAC-SHA256(secret, "t.corps")&gt;</code>.
+    Essais : 1 immédiat puis backoff exponentiel (cron <code>POST /api/cron/webhooks</code>), abandon après N échecs. Les adresses privées/internes sont refusées (SSRF).
+  </p>
+
+  {canCreate && (
+    <form method="post" class="grid gap-3 rounded-md border p-4">
+      <h2 class="font-semibold">Nouveau webhook</h2>
+      <label class="grid gap-1 text-sm">Nom<input name="name" required maxlength="120" class="rounded-md border bg-background px-3 py-2" /></label>
+      <label class="grid gap-1 text-sm">URL<input name="url" type="url" required placeholder="https://exemple.com/hooks/polyweb" class="rounded-md border bg-background px-3 py-2" /></label>
+      <fieldset class="grid gap-1 text-sm sm:grid-cols-3">
+        <legend class="mb-1">Événements</legend>
+        {EVENT_PATTERNS.map((e) => <label class="flex items-center gap-2"><input type="checkbox" name="events" value={e} checked={e === 'content.*'} /> <code>{e}</code></label>)}
+      </fieldset>
+      <div><button class="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">Créer le webhook</button></div>
+    </form>
+  )}
+
+  {hooks.length === 0 ? <p>Aucun webhook.</p> : (
+    <table class="w-full text-sm">
+      <thead><tr class="border-b"><th class="py-2 text-start">Nom</th><th class="text-start">URL</th><th class="text-start">Événements</th><th class="text-start">État</th><th></th></tr></thead>
+      <tbody>
+        {hooks.map((h) => (
+          <tr class="border-b">
+            <td class="py-2 font-medium">{h.name}</td>
+            <td class="max-w-xs truncate"><code>{h.url}</code></td>
+            <td>{h.events.join(', ')}</td>
+            <td>{h.active ? 'actif' : `désactivé${h.disabledReason ? ` (${h.disabledReason})` : ''}`}{h.consecutiveFailures > 0 && <span class="text-error ms-1">· {h.consecutiveFailures} échec(s)</span>}</td>
+            <td class="text-end"><a class="hover:underline" href={getPlatformAdminUrl(locale, 'webhooks', h.id)}>Détails</a></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</PlatformAdminShell>

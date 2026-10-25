@@ -6,6 +6,9 @@ import { blogPosts, blogPostViewStats } from "@database/schemas";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { publicBlogPostScope } from "@/lib/blog/public-visibility";
 import { extractIp } from "@/lib/audit";
+import { Effect } from "effect";
+import { actionTry, effectHandler, fail } from "@/lib/effect/action";
+import { dbTry } from "@/lib/effect/run";
 
 type DeviceType = "DESKTOP" | "MOBILE" | "TABLET";
 
@@ -40,14 +43,16 @@ export const recordBlogPostView = defineAction({
     postId: z.uuid(),
     referrer: z.string().trim().max(500).optional(),
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const db = getDrizzle();
-    const [visiblePost] = await db
-      .select({ id: blogPosts.id })
-      .from(blogPosts)
-      .where(and(eq(blogPosts.id, input.postId), publicBlogPostScope(blogPosts)))
-      .limit(1);
-    if (!visiblePost) throw new ActionError({ code: "NOT_FOUND", message: "Article introuvable." });
+    const [visiblePost] = yield* dbTry("blog/view.visiblePost", () =>
+      db
+        .select({ id: blogPosts.id })
+        .from(blogPosts)
+        .where(and(eq(blogPosts.id, input.postId), publicBlogPostScope(blogPosts)))
+        .limit(1),
+    );
+    if (!visiblePost) return yield* fail("NOT_FOUND", "Article introuvable.");
 
     // Resolve the stable visitor id FIRST (cookie for anon, session for auth)
     // so it can drive de-duplication — not the IP alone.
@@ -78,6 +83,7 @@ export const recordBlogPostView = defineAction({
       return { recorded: false };
     }
 
+    return yield* actionTry("blog/view.recordBlogPostView", async () => {
     const now = new Date();
     const deviceType = detectDeviceType(context.request.headers.get("user-agent"));
 
@@ -105,5 +111,6 @@ export const recordBlogPostView = defineAction({
     // fire-and-forget event, not a security/significant action, and logging
     // every view would bloat audit_log and slow real audit queries.
     return { recorded: true };
-  },
+    });
+  })),
 });

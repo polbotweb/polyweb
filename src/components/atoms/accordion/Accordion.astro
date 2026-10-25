@@ -224,6 +224,7 @@ const { type = "single", defaultValue, class: className, ...rest } = Astro.props
         item.content.style.setProperty("animation", "none");
       } else {
         item.content.style.removeProperty("animation");
+        item.content.setAttribute("data-animated", "");
       }
 
       // Set content height variable for animations

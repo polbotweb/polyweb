@@ -1,0 +1,34 @@
+---
+import { requirePermission } from '@/lib/auth-guards';
+import PlatformAdminShell from '@organisms/PlatformAdmin/PlatformAdminShell.astro';
+import { getPlatformLabel, getPlatformAdminUrl } from '@/core/localization/platform-labels';
+import { getAdminSite, userCan } from '@/lib/platform/admin';
+import { listContentTypes, countEntriesByType } from '@/modules/content/domain/content-types';
+
+export const prerender = false;
+const result = await requirePermission(Astro, { contentType: ['read'] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT, user } = result;
+const site = await getAdminSite(Astro);
+const [types, counts, canCreate] = await Promise.all([listContentTypes(site.id), countEntriesByType(site.id), userCan(user.id, { contentType: ['create'] })]);
+---
+<PlatformAdminShell t={authT} locale={locale} section="content-types" title={getPlatformLabel('content-types', locale)}>
+  {canCreate && <a slot="actions" class="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground" href={getPlatformAdminUrl(locale, 'content-types', 'new')}>+ Nouveau type</a>}
+  <p class="text-muted-foreground text-sm">Site : <strong>{site.name}</strong>. Les types définissent les champs des entrées ; l’API publique et la spec OpenAPI sont générées à partir d’eux.</p>
+  {types.length === 0 ? <p>Aucun type de contenu.</p> : (
+    <table class="w-full text-sm">
+      <thead><tr class="border-b text-start"><th class="py-2 text-start">Nom</th><th class="text-start">Slug</th><th class="text-start">Champs</th><th class="text-start">Entrées</th><th></th></tr></thead>
+      <tbody>
+        {types.map((t) => (
+          <tr class="border-b">
+            <td class="py-2 font-medium">{t.name}{t.settings.singleton && <span class="text-muted-foreground ms-2 text-xs">(singleton)</span>}</td>
+            <td><code>{t.slug}</code></td>
+            <td>{t.fields.length}</td>
+            <td><a class="hover:underline" href={getPlatformAdminUrl(locale, 'content', t.slug)}>{counts[t.id] ?? 0}</a></td>
+            <td class="text-end"><a class="hover:underline" href={getPlatformAdminUrl(locale, 'content-types', t.id)}>Modifier</a></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</PlatformAdminShell>

@@ -9,8 +9,12 @@
  * Les handlers sont exécutés en parallèle, isolés les uns des autres : une
  * erreur d'un abonné est journalisée mais n'empêche jamais la mutation
  * d'aboutir ni les autres abonnés de tourner.
+ *
+ * Implémentation Effect : `emitEventEffect` exécute les handlers en parallèle,
+ * chacun borné par un timeout (`HANDLER_TIMEOUT`) ; `emitEvent` est l'adaptateur Promise.
  */
 import { randomUUID } from "node:crypto";
+import { Duration, Effect } from "effect";
 
 export const POLYWEB_EVENTS = [
   "content.created",
@@ -54,28 +58,43 @@ export function onEvent(name: PolywebEventName | "*", handler: PolywebEventHandl
   return () => set.delete(handler);
 }
 
+const HANDLER_TIMEOUT = Duration.seconds(30);
+
+const runHandler = (name: PolywebEventName, handler: PolywebEventHandler, event: PolywebEvent) =>
+  Effect.tryPromise(async () => handler(event)).pipe(
+    Effect.timeoutOrElse({ duration: HANDLER_TIMEOUT, orElse: () => Effect.fail(new Error(`handler timeout after 30s`)) }),
+    Effect.catch((error) => Effect.logError(`[events] handler failed for ${name}`, error)),
+  );
+
 /**
- * Émet un événement et attend la fin de tous les handlers.
- * Ne lève jamais : les erreurs des abonnés sont journalisées.
+ * Émet un événement et attend la fin de tous les handlers (parallèles, isolés).
+ * Ne échoue jamais : les erreurs et timeouts des abonnés sont journalisés.
  */
-export async function emitEvent<T extends Record<string, unknown>>(
+export const emitEventEffect = <T extends Record<string, unknown>>(
+  name: PolywebEventName,
+  payload: T,
+  options: { siteId?: string | null } = {},
+): Effect.Effect<PolywebEvent<T>> =>
+  Effect.gen(function* () {
+    const event: PolywebEvent<T> = {
+      id: randomUUID(),
+      name,
+      occurredAt: new Date().toISOString(),
+      siteId: options.siteId ?? null,
+      payload,
+    };
+    const targets = [...(handlers.get(name) ?? []), ...(handlers.get("*") ?? [])];
+    yield* Effect.forEach(targets, (handler) => runHandler(name, handler, event as PolywebEvent), { concurrency: "unbounded", discard: true });
+    return event;
+  }).pipe(Effect.withSpan("events.emit", { attributes: { "event.name": name } }));
+
+/** Adaptateur Promise de `emitEventEffect`. */
+export function emitEvent<T extends Record<string, unknown>>(
   name: PolywebEventName,
   payload: T,
   options: { siteId?: string | null } = {},
 ): Promise<PolywebEvent<T>> {
-  const event: PolywebEvent<T> = {
-    id: randomUUID(),
-    name,
-    occurredAt: new Date().toISOString(),
-    siteId: options.siteId ?? null,
-    payload,
-  };
-  const targets = [...(handlers.get(name) ?? []), ...(handlers.get("*") ?? [])];
-  const results = await Promise.allSettled(targets.map((handler) => handler(event as PolywebEvent)));
-  for (const result of results) {
-    if (result.status === "rejected") console.error(`[events] handler failed for ${name}:`, result.reason);
-  }
-  return event;
+  return Effect.runPromise(emitEventEffect(name, payload, options));
 }
 
 export function clearEventHandlersForTests(): void {

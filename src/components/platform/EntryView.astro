@@ -1,0 +1,36 @@
+---
+/** Rendu d'une entrée (pages publiques et aperçu signé). */
+import BlockRenderer from '@/components/blocks/BlockRenderer.astro';
+import { labelFor } from '@/core/content-types/fields';
+import type { FullEntry, EntryTranslation } from '@/modules/content/domain/entries';
+
+interface Props { entry: FullEntry; translation: EntryTranslation; locale: string; preview?: boolean }
+const { entry, translation: t, locale, preview = false } = Astro.props;
+const values: Record<string, unknown> = { ...entry.sharedData, ...t.data };
+const visible = entry.type.fields.filter((f) => f.type !== 'json' && values[f.name] !== undefined && values[f.name] !== '' && !(Array.isArray(values[f.name]) && (values[f.name] as unknown[]).length === 0));
+const display = (name: string, v: unknown) => {
+  const f = entry.type.fields.find((x) => x.name === name)!;
+  if (f.type === 'boolean') return v ? '✓' : '✗';
+  if ((f.type === 'select' || f.type === 'multiselect') && f.options) {
+    const arr = Array.isArray(v) ? v : [v];
+    return arr.map((x) => labelFor(f.options!.find((o) => o.value === x)?.label ?? String(x), locale)).join(', ');
+  }
+  return Array.isArray(v) ? v.join(', ') : String(v);
+};
+---
+<article class="mx-auto max-w-3xl px-4 py-12" lang={t.locale} dir={t.locale === 'ar' ? 'rtl' : 'ltr'}>
+  {preview && <output class="block mb-6 rounded-md border border-warning bg-warning/10 p-3 text-sm">Aperçu — statut : {entry.status}, version {entry.version}</output>}
+  <h1 class="font-heading text-4xl font-semibold">{t.title}</h1>
+  {entry.publishedAt && <time class="text-muted-foreground mt-2 block text-sm" datetime={entry.publishedAt.toISOString()}>{entry.publishedAt.toLocaleDateString(locale)}</time>}
+  {visible.length > 0 && (
+    <dl class="mt-8 grid gap-x-6 gap-y-2 sm:grid-cols-[max-content_1fr]">
+      {visible.map((f) => (
+        <>
+          <dt class="text-muted-foreground text-sm">{labelFor(f.label, locale)}</dt>
+          <dd class="text-sm">{f.type === 'url' ? <a class="underline" href={String(values[f.name])} rel="noopener noreferrer">{String(values[f.name])}</a> : f.type === 'media' ? <img src={String(values[f.name])} alt="" class="max-h-64 rounded" loading="lazy" /> : display(f.name, values[f.name])}</dd>
+        </>
+      ))}
+    </dl>
+  )}
+  {t.blocks && <BlockRenderer doc={t.blocks} class="mt-10" />}
+</article>

@@ -1,3 +1,6 @@
+import { Duration, Effect } from 'effect';
+import { DbError, NotFoundError } from '@/lib/effect/errors';
+
 /**
  * Internal link resolver registry.
  *
@@ -54,3 +57,39 @@ export function getInternalLinkResolver(name: string): InternalLinkResolver | un
 export function hasInternalLinkResolver(name: string): boolean {
   return registry.has(name);
 }
+
+// ─── Vue Effect du registre ───────────────────────────────────────────────────
+// Les résolveurs restent des objets Promise (contrat ouvert aux modules) ; ces
+// fonctions les exécutent en Effect avec erreurs typées et délai borné.
+
+
+type LinkContext = { locale: string; organizationId?: string | null; limit?: number };
+
+const RESOLVER_TIMEOUT = Duration.seconds(10);
+
+/** Résolveur enregistré, ou `NotFoundError` (entité `internal-link-resolver`). */
+export const getInternalLinkResolverEffect = (name: string): Effect.Effect<InternalLinkResolver, NotFoundError> => {
+  const resolver = registry.get(name);
+  return resolver ? Effect.succeed(resolver) : Effect.fail(new NotFoundError({ entity: 'internal-link-resolver', id: name }));
+};
+
+const callResolver = <A>(name: string, op: string, f: (r: InternalLinkResolver) => Promise<A>) =>
+  getInternalLinkResolverEffect(name).pipe(
+    Effect.flatMap((resolver) =>
+      Effect.tryPromise({ try: () => f(resolver), catch: (cause) => new DbError({ operation: `internal-link.${name}.${op}`, cause }) }),
+    ),
+    Effect.timeoutOrElse({
+      duration: RESOLVER_TIMEOUT,
+      orElse: () => Effect.fail(new DbError({ operation: `internal-link.${name}.${op}`, cause: new Error('timeout') })),
+    }),
+    Effect.withSpan(`internal-link ${name}.${op}`),
+  );
+
+export const resolveInternalLinkEffect = (name: string, target: string, ctx: LinkContext) =>
+  callResolver(name, 'resolve', (r) => r.resolve(target, ctx));
+
+export const listInternalLinkTargetsEffect = (name: string, ctx: LinkContext) =>
+  callResolver(name, 'listValidTargets', (r) => r.listValidTargets(ctx));
+
+export const searchInternalLinksEffect = (name: string, query: string, ctx: LinkContext) =>
+  callResolver(name, 'search', (r) => r.search(query, ctx));

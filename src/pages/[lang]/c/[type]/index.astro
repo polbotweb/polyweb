@@ -1,0 +1,43 @@
+---
+/** Liste publique des entrées publiées d'un type (lecture publique activée). */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { toLocale } from '@i18n/utils';
+import { getContentType } from '@/modules/content/domain/content-types';
+import { listEntries, pickTranslation } from '@/modules/content/domain/entries';
+import { ensureDefaultSite } from '@/modules/sites/domain/sites';
+
+export const prerender = false;
+const locale = toLocale(Astro.params.lang);
+const site = Astro.locals.site ?? (await ensureDefaultSite());
+const type = await getContentType(site.id, Astro.params.type!);
+if (!type || type.settings.publicRead === false || type.slug !== Astro.params.type) return new Response('Not Found', { status: 404 });
+const page = Math.max(1, Number(Astro.url.searchParams.get('page')) || 1);
+const { items, total } = await listEntries(type, { status: 'published', limit: 12, offset: (page - 1) * 12 });
+const pages = Math.max(1, Math.ceil(total / 12));
+---
+<BaseLayout title={type.name} description={type.description ?? type.name}>
+  <section class="mx-auto max-w-5xl px-4 py-12">
+    <h1 class="font-heading mb-8 text-3xl font-semibold">{type.name}</h1>
+    {items.length === 0 ? <p class="text-muted-foreground">—</p> : (
+      <ul class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((e) => {
+          const t = pickTranslation(e, locale, site.defaultLocale);
+          return (
+            <li class="rounded-xl border p-5">
+              <h2 class="text-lg font-semibold"><a class="hover:underline" href={`/${locale}/c/${type.slug}/${e.slug}`}>{t?.title}</a></h2>
+              {t?.seo.metaDescription && <p class="text-muted-foreground mt-2 text-sm">{t.seo.metaDescription}</p>}
+              {e.publishedAt && <time class="text-muted-foreground mt-3 block text-xs" datetime={e.publishedAt.toISOString()}>{e.publishedAt.toLocaleDateString(locale)}</time>}
+            </li>
+          );
+        })}
+      </ul>
+    )}
+    {pages > 1 && (
+      <nav class="mt-8 flex gap-3 text-sm" aria-label="Pagination">
+        {page > 1 && <a class="underline" href={`?page=${page - 1}`}>←</a>}
+        <span>{page} / {pages}</span>
+        {page < pages && <a class="underline" href={`?page=${page + 1}`}>→</a>}
+      </nav>
+    )}
+  </section>
+</BaseLayout>

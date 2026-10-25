@@ -1,4 +1,5 @@
-import { defineAction, ActionError } from "astro:actions";
+import { Effect } from "effect";
+import { defineAction } from "astro:actions";
 import { z } from "astro/zod";
 import { eq, and } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
@@ -7,14 +8,15 @@ import {
   blogPostGalleryMedia,
 } from "@database/schemas";
 import {
-  assertBlogPermission,
   resolveBlogTenant,
-  assertPostInTenant,
-  assertMediaInTenant,
-  blogRateLimit,
   auditBlog,
   blogOrganizationIdSchema,
+  blogRateLimitEffect,
+  mediaInTenant,
+  postInTenant,
+  requireBlogPermission,
 } from "./_helpers";
+import { actionTry, effectHandler, fail } from "@/lib/effect/action";
 
 export const createBlogGallery = defineAction({
   input: z.object({
@@ -24,12 +26,13 @@ export const createBlogGallery = defineAction({
     sortOrder: z.number().int().min(0).default(0),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    blogRateLimit(context, user.id, "gallery-create");
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* blogRateLimitEffect(user.id, "gallery-create");
 
-    await assertPostInTenant(input.postId, tenant);
+    yield* postInTenant(input.postId, tenant);
+    return yield* actionTry("blog/gallery.createBlogGallery", async () => {
 
     const db = getDrizzle();
     const [gallery] = await db
@@ -49,8 +52,19 @@ export const createBlogGallery = defineAction({
     });
 
     return { id: gallery.id };
-  },
+  }); })),
 });
+
+/** Galerie existante dont l'article appartient au tenant (Effect : NOT_FOUND / FORBIDDEN typés). */
+const galleryInTenant = (galleryId: string, tenant: ReturnType<typeof resolveBlogTenant>) =>
+  Effect.gen(function* () {
+    const [gallery] = yield* actionTry("blog/gallery.load", () =>
+      getDrizzle().select().from(blogPostGalleries).where(eq(blogPostGalleries.id, galleryId)).limit(1),
+    );
+    if (!gallery) return yield* fail("NOT_FOUND", "Galerie introuvable.");
+    yield* postInTenant(gallery.postId, tenant);
+    return gallery;
+  });
 
 export const updateBlogGallery = defineAction({
   input: z.object({
@@ -60,20 +74,13 @@ export const updateBlogGallery = defineAction({
     sortOrder: z.number().int().min(0).optional(),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    blogRateLimit(context, user.id, "gallery-update");
-
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* blogRateLimitEffect(user.id, "gallery-update");
+    const gallery = yield* galleryInTenant(input.id, tenant);
+    return yield* actionTry("blog/gallery.updateBlogGallery", async () => {
     const db = getDrizzle();
-    const [gallery] = await db
-      .select()
-      .from(blogPostGalleries)
-      .where(eq(blogPostGalleries.id, input.id))
-      .limit(1);
-    if (!gallery) throw new ActionError({ code: "NOT_FOUND", message: "Galerie introuvable." });
-
-    await assertPostInTenant(gallery.postId, tenant);
 
     await db
       .update(blogPostGalleries)
@@ -91,7 +98,7 @@ export const updateBlogGallery = defineAction({
     });
 
     return { success: true };
-  },
+  }); })),
 });
 
 export const deleteBlogGallery = defineAction({
@@ -99,20 +106,13 @@ export const deleteBlogGallery = defineAction({
     id: z.uuid(),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    blogRateLimit(context, user.id, "gallery-delete");
-
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* blogRateLimitEffect(user.id, "gallery-delete");
+    const gallery = yield* galleryInTenant(input.id, tenant);
+    return yield* actionTry("blog/gallery.deleteBlogGallery", async () => {
     const db = getDrizzle();
-    const [gallery] = await db
-      .select()
-      .from(blogPostGalleries)
-      .where(eq(blogPostGalleries.id, input.id))
-      .limit(1);
-    if (!gallery) throw new ActionError({ code: "NOT_FOUND", message: "Galerie introuvable." });
-
-    await assertPostInTenant(gallery.postId, tenant);
 
     await db.delete(blogPostGalleries).where(eq(blogPostGalleries.id, input.id));
 
@@ -123,7 +123,7 @@ export const deleteBlogGallery = defineAction({
     });
 
     return { success: true };
-  },
+  }); })),
 });
 
 export const addGalleryMedia = defineAction({
@@ -135,22 +135,14 @@ export const addGalleryMedia = defineAction({
     sortOrder: z.number().int().min(0).default(0),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    blogRateLimit(context, user.id, "gallery-media-add");
-
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* blogRateLimitEffect(user.id, "gallery-media-add");
+    yield* galleryInTenant(input.galleryId, tenant);
+    yield* mediaInTenant(input.mediaId, tenant);
+    return yield* actionTry("blog/gallery.addGalleryMedia", async () => {
     const db = getDrizzle();
-    const [gallery] = await db
-      .select()
-      .from(blogPostGalleries)
-      .where(eq(blogPostGalleries.id, input.galleryId))
-      .limit(1);
-    if (!gallery) throw new ActionError({ code: "NOT_FOUND", message: "Galerie introuvable." });
-
-    await assertPostInTenant(gallery.postId, tenant);
-
-    await assertMediaInTenant(input.mediaId, tenant);
 
     const [row] = await db
       .insert(blogPostGalleryMedia)
@@ -170,7 +162,7 @@ export const addGalleryMedia = defineAction({
     });
 
     return { success: true };
-  },
+  }); })),
 });
 
 export const removeGalleryMedia = defineAction({
@@ -179,21 +171,14 @@ export const removeGalleryMedia = defineAction({
     mediaId: z.uuid(),
     organizationId: blogOrganizationIdSchema,
   }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveBlogTenant(input);
-    const user = await assertBlogPermission(context, tenant, { blog: ["update"] });
-    blogRateLimit(context, user.id, "gallery-media-remove");
-
+    const user = yield* requireBlogPermission(context, tenant, { blog: ["update"] });
+    yield* blogRateLimitEffect(user.id, "gallery-media-remove");
+    yield* galleryInTenant(input.galleryId, tenant);
+    yield* mediaInTenant(input.mediaId, tenant);
+    return yield* actionTry("blog/gallery.removeGalleryMedia", async () => {
     const db = getDrizzle();
-    const [gallery] = await db
-      .select()
-      .from(blogPostGalleries)
-      .where(eq(blogPostGalleries.id, input.galleryId))
-      .limit(1);
-    if (!gallery) throw new ActionError({ code: "NOT_FOUND", message: "Galerie introuvable." });
-
-    await assertPostInTenant(gallery.postId, tenant);
-    await assertMediaInTenant(input.mediaId, tenant);
 
     await db
       .delete(blogPostGalleryMedia)
@@ -211,5 +196,5 @@ export const removeGalleryMedia = defineAction({
     });
 
     return { success: true };
-  },
+  }); })),
 });

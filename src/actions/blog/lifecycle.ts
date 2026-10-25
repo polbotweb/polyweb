@@ -1,11 +1,16 @@
+import { Effect } from "effect";
+import { blogPostLock } from "@/modules/blog/locks";
+import { lockOwnerFrom } from "@/core/locks/service";
+import { lockLocaleFrom } from "@/core/locks/errors";
 import { defineAction, ActionError, type ActionAPIContext } from "astro:actions";
 import { z } from "astro/zod";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
-import { blogPosts, blogPostTranslations, blogPostCategories, blogPostTags, blogPostRevisions, blogPostSeo, blogPostGalleries, blogPostGalleryMedia, blogPostLinks, blogPostLocks } from "@database/schemas";
+import { blogPosts, blogPostTranslations, blogPostCategories, blogPostTags, blogPostRevisions, blogPostSeo, blogPostGalleries, blogPostGalleryMedia, blogPostLinks } from "@database/schemas";
 import { LOCALES, type Locale } from "@i18n/config";
 import { BLOG_POST_TRANSITIONS, type BlogPostStatus } from "@/lib/blog/constants";
-import { assertBlogPermission, assertPostInTenant, auditBlog, blogOrganizationIdSchema, blogRateLimit, invalidateBlogCache, resolveBlogTenant } from "./_helpers";
+import { auditBlog, blogOrganizationIdSchema, invalidateBlogCache, resolveBlogTenant, blogRateLimitEffect, postInTenant, requireBlogPermission } from "./_helpers";
+import { actionTry, effectHandler, fail } from "@/lib/effect/action";
 
 type Db = ReturnType<typeof getDrizzle>;
 type DbTransaction = Parameters<Db["transaction"]>[0] extends (tx: infer T, ...args: never[]) => unknown ? T : never;
@@ -23,21 +28,26 @@ async function appendRevision(tx: DbTransaction, postId: string, userId: string,
   await tx.insert(blogPostRevisions).values({ postId, authorId: userId, locale: translation.locale, title: translation.title, slug: translation.slug, content: translation.content, excerpt: translation.excerpt, status: revisionStatus(status), revisionNote });
 }
 
-async function performTransition(input: z.infer<typeof lifecycleInput>, context: ActionAPIContext, to: BlogPostStatus, permission: "publish" | "update", action: "BLOG_POST_PUBLISH" | "BLOG_POST_UNPUBLISH" | "BLOG_POST_ARCHIVE" | "BLOG_POST_RESTORE", note: string) {
-  const tenant = resolveBlogTenant(input); const user = await assertBlogPermission(context, tenant, { blog: [permission] }); blogRateLimit(context, user.id, `post-${action.toLowerCase()}`); const post = await assertPostInTenant(input.id, tenant); assertTransition(post.status as BlogPostStatus, to);
+function performTransition(input: z.infer<typeof lifecycleInput>, context: ActionAPIContext, to: BlogPostStatus, permission: "publish" | "update", action: "BLOG_POST_PUBLISH" | "BLOG_POST_UNPUBLISH" | "BLOG_POST_ARCHIVE" | "BLOG_POST_RESTORE", note: string) {
+  return Effect.gen(function* () {
+  const tenant = resolveBlogTenant(input); const user = yield* requireBlogPermission(context, tenant, { blog: [permission] }); yield* blogRateLimitEffect(user.id, `post-${action.toLowerCase()}`); const post = yield* postInTenant(input.id, tenant);
+  return yield* actionTry(`blog/lifecycle.${action}`, async () => { assertTransition(post.status as BlogPostStatus, to);
   await getDrizzle().transaction(async (tx) => { await tx.update(blogPosts).set({ status: to, publishedAt: to === "PUBLISHED" ? new Date() : null, updatedBy: user.id }).where(eq(blogPosts.id, input.id)); await appendRevision(tx, input.id, user.id, to, note); });
   auditBlog(context, user.id, action, { resource: "blog_posts", resourceId: input.id, metadata: { organizationId: tenant.organizationId, from: post.status, to } }); invalidateBlogCache(); return { success: true };
+  });
+  });
 }
 
-export const publishBlogPost = defineAction({ input: lifecycleInput, handler: (input, context) => performTransition(input, context, "PUBLISHED", "publish", "BLOG_POST_PUBLISH", "Publication") });
-export const unpublishBlogPost = defineAction({ input: lifecycleInput, handler: (input, context) => performTransition(input, context, "DRAFT", "publish", "BLOG_POST_UNPUBLISH", "Dépublication") });
-export const archiveBlogPost = defineAction({ input: lifecycleInput, handler: (input, context) => performTransition(input, context, "ARCHIVED", "update", "BLOG_POST_ARCHIVE", "Archivage") });
-export const restoreBlogPost = defineAction({ input: lifecycleInput, handler: (input, context) => performTransition(input, context, "DRAFT", "update", "BLOG_POST_RESTORE", "Restauration") });
+export const publishBlogPost = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => performTransition(input, context, "PUBLISHED", "publish", "BLOG_POST_PUBLISH", "Publication")) });
+export const unpublishBlogPost = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => performTransition(input, context, "DRAFT", "publish", "BLOG_POST_UNPUBLISH", "Dépublication")) });
+export const archiveBlogPost = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => performTransition(input, context, "ARCHIVED", "update", "BLOG_POST_ARCHIVE", "Archivage")) });
+export const restoreBlogPost = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => performTransition(input, context, "DRAFT", "update", "BLOG_POST_RESTORE", "Restauration")) });
 
-export const deleteBlogPost = defineAction({ input: lifecycleInput, handler: async (input, context) => { const tenant = resolveBlogTenant(input); const user = await assertBlogPermission(context, tenant, { blog: ["delete"] }); blogRateLimit(context, user.id, "post-delete"); const post = await assertPostInTenant(input.id, tenant); assertTransition(post.status as BlogPostStatus, "DELETED"); await getDrizzle().transaction(async (tx) => { await tx.update(blogPosts).set({ status: "DELETED", publishedAt: null, updatedBy: user.id }).where(eq(blogPosts.id, input.id)); await appendRevision(tx, input.id, user.id, "DELETED", "Suppression"); }); auditBlog(context, user.id, "BLOG_POST_DELETE", { resource: "blog_posts", resourceId: input.id, metadata: { organizationId: tenant.organizationId, from: post.status, to: "DELETED" } }); invalidateBlogCache(); return { success: true }; } });
+export const deleteBlogPost = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => Effect.gen(function* () { const tenant = resolveBlogTenant(input); const user = yield* requireBlogPermission(context, tenant, { blog: ["delete"] }); yield* blogRateLimitEffect(user.id, "post-delete"); const post = yield* postInTenant(input.id, tenant); return yield* actionTry("blog/lifecycle.deleteBlogPost", async () => { assertTransition(post.status as BlogPostStatus, "DELETED"); await getDrizzle().transaction(async (tx) => { await tx.update(blogPosts).set({ status: "DELETED", publishedAt: null, updatedBy: user.id }).where(eq(blogPosts.id, input.id)); await appendRevision(tx, input.id, user.id, "DELETED", "Suppression"); }); auditBlog(context, user.id, "BLOG_POST_DELETE", { resource: "blog_posts", resourceId: input.id, metadata: { organizationId: tenant.organizationId, from: post.status, to: "DELETED" } }); invalidateBlogCache(); return { success: true }; }); })) });
 
-export const duplicateBlogPost = defineAction({ input: lifecycleInput, handler: async (input, context) => {
-  const tenant = resolveBlogTenant(input); const user = await assertBlogPermission(context, tenant, { blog: ["create"] }); const source = await assertPostInTenant(input.id, tenant); const db = getDrizzle();
+export const duplicateBlogPost = defineAction({ input: lifecycleInput, handler: effectHandler((input, context) => Effect.gen(function* () {
+  const tenant = resolveBlogTenant(input); const user = yield* requireBlogPermission(context, tenant, { blog: ["create"] }); const source = yield* postInTenant(input.id, tenant);
+  return yield* actionTry("blog/lifecycle.duplicateBlogPost", async () => { const db = getDrizzle();
   const [translations, categories, tags, seo, galleries, links] = await Promise.all([
     db.select().from(blogPostTranslations).where(eq(blogPostTranslations.postId, input.id)).orderBy(blogPostTranslations.locale),
     db.select({ categoryId: blogPostCategories.categoryId }).from(blogPostCategories).where(eq(blogPostCategories.postId, input.id)),
@@ -60,11 +70,19 @@ export const duplicateBlogPost = defineAction({ input: lifecycleInput, handler: 
     return post;
   });
   auditBlog(context, user.id, "BLOG_POST_CREATE", { resource: "blog_posts", resourceId: duplicated.id, metadata: { organizationId: tenant.organizationId, duplicatedFrom: input.id } }); invalidateBlogCache(); return { id: duplicated.id, slug: duplicated.slug };
-} });
+}); })) });
 
-export const restoreBlogPostRevision = defineAction({ input: z.object({ postId: z.uuid(), revisionId: z.uuid(), organizationId: blogOrganizationIdSchema }), handler: async (input, context) => {
-  const tenant = resolveBlogTenant(input); const post = await assertPostInTenant(input.postId, tenant); const db = getDrizzle(); const [revision] = await db.select().from(blogPostRevisions).where(and(eq(blogPostRevisions.id, input.revisionId), eq(blogPostRevisions.postId, input.postId))).limit(1); if (!revision) throw new ActionError({ code: "NOT_FOUND", message: "Révision introuvable." }); const targetStatus = revision.status as BlogPostStatus; const requiredPermission = targetStatus === "PUBLISHED" ? "publish" : "update"; const user = await assertBlogPermission(context, tenant, { blog: [requiredPermission] }); const [lock] = await db.select().from(blogPostLocks).where(eq(blogPostLocks.postId, input.postId)).limit(1); const sessionId = context.locals.session?.id ?? ""; if (!lock || lock.expiresAt <= new Date() || lock.userId !== user.id || lock.sessionId !== sessionId) throw new ActionError({ code: "CONFLICT", message: "Le verrou de modification est requis pour restaurer une révision." }); assertRevisionRestoreStatus(post.status as BlogPostStatus, targetStatus);
-  await db.transaction(async (tx) => { const [translation] = await tx.select().from(blogPostTranslations).where(and(eq(blogPostTranslations.postId, input.postId), eq(blogPostTranslations.locale, revision.locale))).limit(1); if (translation) await tx.update(blogPostTranslations).set({ title: revision.title, slug: revision.slug, content: revision.content, excerpt: revision.excerpt }).where(eq(blogPostTranslations.id, translation.id)); else await tx.insert(blogPostTranslations).values({ postId: input.postId, organizationId: tenant.organizationId, locale: revision.locale, title: revision.title, slug: revision.slug, content: revision.content, excerpt: revision.excerpt }); await tx.update(blogPosts).set({ slug: revision.slug, status: targetStatus, publishedAt: targetStatus === "PUBLISHED" ? (post.status === "PUBLISHED" ? post.publishedAt : new Date()) : null, updatedBy: user.id }).where(eq(blogPosts.id, input.postId)); await appendRevision(tx, input.postId, user.id, targetStatus, `Restauration de la révision ${revision.id}`, revision.locale); }); auditBlog(context, user.id, "BLOG_POST_UPDATE", { resource: "blog_posts", resourceId: input.postId, metadata: { organizationId: tenant.organizationId, restoredRevisionId: input.revisionId } }); invalidateBlogCache(); return { success: true }; } });
+export const restoreBlogPostRevision = defineAction({ input: z.object({ postId: z.uuid(), revisionId: z.uuid(), organizationId: blogOrganizationIdSchema }), handler: effectHandler((input, context) => Effect.gen(function* () {
+  const tenant = resolveBlogTenant(input); const post = yield* postInTenant(input.postId, tenant);
+  const db = getDrizzle();
+  const [revision] = yield* actionTry("blog/lifecycle.restoreBlogPostRevision.load", () => db.select().from(blogPostRevisions).where(and(eq(blogPostRevisions.id, input.revisionId), eq(blogPostRevisions.postId, input.postId))).limit(1));
+  if (!revision) return yield* fail("NOT_FOUND", "Révision introuvable.");
+  const targetStatus = revision.status as BlogPostStatus; const requiredPermission = targetStatus === "PUBLISHED" ? "publish" : "update";
+  const user = yield* requireBlogPermission(context, tenant, { blog: [requiredPermission] });
+  // Restauration : le verrou actif de l'appelant (utilisateur + session) est exigé → LockExpiredError / LockHeldError (CONFLICT).
+  yield* blogPostLock.requireOwn(input.postId, lockOwnerFrom(user.id, context.locals.session?.id), lockLocaleFrom(context.request.headers));
+  return yield* actionTry("blog/lifecycle.restoreBlogPostRevision", async () => { assertRevisionRestoreStatus(post.status as BlogPostStatus, targetStatus);
+  await db.transaction(async (tx) => { const [translation] = await tx.select().from(blogPostTranslations).where(and(eq(blogPostTranslations.postId, input.postId), eq(blogPostTranslations.locale, revision.locale))).limit(1); if (translation) await tx.update(blogPostTranslations).set({ title: revision.title, slug: revision.slug, content: revision.content, excerpt: revision.excerpt }).where(eq(blogPostTranslations.id, translation.id)); else await tx.insert(blogPostTranslations).values({ postId: input.postId, organizationId: tenant.organizationId, locale: revision.locale, title: revision.title, slug: revision.slug, content: revision.content, excerpt: revision.excerpt }); await tx.update(blogPosts).set({ slug: revision.slug, status: targetStatus, publishedAt: targetStatus === "PUBLISHED" ? (post.status === "PUBLISHED" ? post.publishedAt : new Date()) : null, updatedBy: user.id }).where(eq(blogPosts.id, input.postId)); await appendRevision(tx, input.postId, user.id, targetStatus, `Restauration de la révision ${revision.id}`, revision.locale); }); auditBlog(context, user.id, "BLOG_POST_UPDATE", { resource: "blog_posts", resourceId: input.postId, metadata: { organizationId: tenant.organizationId, restoredRevisionId: input.revisionId } }); invalidateBlogCache(); return { success: true }; }); })) });
 
 function tenantScope(organizationId: string | null) { return organizationId === null ? isNull(blogPosts.organizationId) : eq(blogPosts.organizationId, organizationId); }
 async function uniqueCopySlug(db: Db, organizationId: string | null, sourceSlug: string) { const base = `${sourceSlug}-copy`; let candidate = base; for (let i = 2; ; i += 1) { const [collision] = await db.select({ id: blogPosts.id }).from(blogPosts).where(and(eq(blogPosts.slug, candidate), tenantScope(organizationId))).limit(1); if (!collision) return candidate; candidate = `${base}-${i}`; } }

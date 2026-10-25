@@ -11,6 +11,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { redactDir, scanDir } = require('./lighthouse-redact.cjs');
 
 const LH_DIR = path.resolve(__dirname, '../../.lighthouseci');
 const REPORTS_DIR = path.resolve(__dirname, '../reports');
@@ -51,10 +52,22 @@ if (!jsonFiles.length) {
 if (!fs.existsSync(REPORTS_DIR)) fs.mkdirSync(REPORTS_DIR, { recursive: true });
 if (!fs.existsSync(DEST_DIR)) fs.mkdirSync(DEST_DIR, { recursive: true });
 
+// Caviardage des cookies/en-têtes de session (audits authentifiés) avant toute copie.
+const redacted = redactDir(LH_DIR);
+if (redacted) console.log(`Redacted session headers in ${redacted} Lighthouse file(s).`);
+
 // Copy all JSON + HTML files to tests/reports/lighthouse/
 const allFiles = fs.readdirSync(LH_DIR).filter(f => f.endsWith('.json') || f.endsWith('.html'));
 for (const f of allFiles) {
   fs.copyFileSync(path.join(LH_DIR, f), path.join(DEST_DIR, f));
+}
+
+// Garde-fou : échec si un cookie ou en-tête sensible subsiste dans les rapports archivés.
+redactDir(DEST_DIR);
+const leaks = scanDir(DEST_DIR);
+if (leaks.length) {
+  for (const { file } of leaks) console.error(`✗ Cookie/en-tête sensible résiduel : ${file}`);
+  process.exit(1);
 }
 
 // ── Parse reports ────────────────────────────────────────────────────

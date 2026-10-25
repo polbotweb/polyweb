@@ -1,10 +1,12 @@
-import { defineAction, ActionError } from "astro:actions";
+import { defineAction } from "astro:actions";
+import { Effect } from "effect";
 import { eq } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { user } from "@database/schemas";
 import { userProfileSchema } from "@/lib/blog/validation";
 import { sanitizeHtml } from "@/lib/sanitize";
-import { logAuditEvent, extractIp } from "@/lib/audit";
+import { logAuditEventEffect, extractIp } from "@/lib/audit";
+import { actionTry, effectHandler, fail } from "@/lib/effect/action";
 
 /**
  * Updates the current user's public profile (bio + social links).
@@ -13,43 +15,43 @@ import { logAuditEvent, extractIp } from "@/lib/audit";
  */
 export const updateUserProfile = defineAction({
   input: userProfileSchema,
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const currentUser = context.locals.user;
-    if (!currentUser) {
-      throw new ActionError({ code: "UNAUTHORIZED", message: "Vous devez être connecté." });
-    }
+    if (!currentUser) return yield* fail("UNAUTHORIZED", "Vous devez être connecté.");
 
-    const db = getDrizzle();
-
-    const twitter = input.twitter?.trim() || null;
-    const linkedin = input.linkedin?.trim() || null;
     // Normalize social handles: strip leading @ and any URL prefix.
-    const normalizeHandle = (value: string | null): string | null => {
-      if (!value) return null;
-      return value.replace(/^@/, "").replace(/^https?:\/\/(twitter\.com|x\.com|linkedin\.com\/in)\//, "");
+    const normalizeHandle = (value: string | undefined): string | null => {
+      const v = value?.trim();
+      if (!v) return null;
+      return v.replace(/^@/, "").replace(/^https?:\/\/(twitter\.com|x\.com|linkedin\.com\/in)\//, "");
     };
 
-    await db
-      .update(user)
-      .set({
-        bio: input.bio ? sanitizeHtml(input.bio) : null,
-        website: input.website ? input.website.trim() : null,
-        twitter: normalizeHandle(twitter),
-        linkedin: normalizeHandle(linkedin),
-        updatedAt: new Date(),
-      })
-      .where(eq(user.id, currentUser.id));
+    yield* actionTry("blog/profile.update", () =>
+      getDrizzle()
+        .update(user)
+        .set({
+          bio: input.bio ? sanitizeHtml(input.bio) : null,
+          website: input.website ? input.website.trim() : null,
+          twitter: normalizeHandle(input.twitter),
+          linkedin: normalizeHandle(input.linkedin),
+          updatedAt: new Date(),
+        })
+        .where(eq(user.id, currentUser.id)),
+    );
 
-    void logAuditEvent({
-      userId: currentUser.id,
-      action: "USER_PROFILE_UPDATE",
-      resource: "user",
-      resourceId: currentUser.id,
-      metadata: { fields: Object.keys(input).filter((k) => input[k as keyof typeof input] !== undefined) },
-      ipAddress: extractIp(context.request.headers, context.clientAddress),
-      userAgent: context.request.headers.get("user-agent"),
-    }).catch(() => {});
+    // Journal d'audit non bloquant (ne fait jamais échouer la mise à jour du profil).
+    yield* Effect.forkDetach(
+      logAuditEventEffect({
+        userId: currentUser.id,
+        action: "USER_PROFILE_UPDATE",
+        resource: "user",
+        resourceId: currentUser.id,
+        metadata: { fields: Object.keys(input).filter((k) => input[k as keyof typeof input] !== undefined) },
+        ipAddress: extractIp(context.request.headers, context.clientAddress),
+        userAgent: context.request.headers.get("user-agent"),
+      }),
+    );
 
     return { success: true };
-  },
+  }).pipe(Effect.withSpan("action blog/profile.updateUserProfile"))),
 });

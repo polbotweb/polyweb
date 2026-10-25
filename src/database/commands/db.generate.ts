@@ -3,26 +3,23 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import fs from 'fs';
 import { c, logTarget } from './_utils';
+import { Effect } from 'effect';
+import { runScript, ScriptError, step } from './_effect';
 
 const schemaDir = path.resolve(process.cwd(), 'src', 'database');
 const schemaFile = path.resolve(schemaDir, 'schemas.ts');
 const schemasFolder = path.resolve(schemaDir, 'schemas');
 
 // ─── Validations ─────────────────────────────────────────────────────
-function validateSchemaStructure(): void {
-  if (!fs.existsSync(schemaDir)) {
-    console.error(c.red(`[ERREUR] Dossier introuvable : ${schemaDir}`));
-    process.exit(1);
+/** Arborescence attendue : src/database, schemas.ts, schemas/ — sinon ScriptError. */
+const validateSchemaStructure = Effect.gen(function* () {
+  for (const [what, target] of [['Dossier introuvable', schemaDir], ['Fichier introuvable', schemaFile], ['Dossier de schémas introuvable', schemasFolder]] as const) {
+    if (!fs.existsSync(target)) {
+      console.error(c.red(`[ERREUR] ${what} : ${target}`));
+      return yield* Effect.fail(new ScriptError({ step: 'structure des schémas', cause: `${what} : ${target}` }));
+    }
   }
-  if (!fs.existsSync(schemaFile)) {
-    console.error(c.red(`[ERREUR] Fichier introuvable : ${schemaFile}`));
-    process.exit(1);
-  }
-  if (!fs.existsSync(schemasFolder)) {
-    console.error(c.red(`[ERREUR] Dossier de schémas introuvable : ${schemasFolder}`));
-    process.exit(1);
-  }
-}
+});
 
 function getSchemaFiles(): string[] {
   return fs.readdirSync(schemasFolder).filter(f => f.endsWith('.ts') || f.endsWith('.js'));
@@ -86,17 +83,17 @@ function run(cmd: string, args: string[]): Promise<void> {
 }
 
 // ─── Main ────────────────────────────────────────────────────────────
-(async () => {
-  validateSchemaStructure();
+const program = Effect.gen(function* () {
+  yield* validateSchemaStructure;
 
-  const schemasFiles = getSchemaFiles();
+  const schemasFiles = yield* step('lecture des schémas', async () => getSchemaFiles());
   if (schemasFiles.length === 0) {
     console.log(c.yellow('[INFO] Aucun fichier de schéma dans src/database/schemas/'));
     console.log(`  Créez un schéma, puis relancez : ${c.cyan('npm run db:generate')}`);
-    process.exit(0);
+    return;
   }
 
-  const schemaContent = fs.readFileSync(schemaFile, 'utf8').trim();
+  const schemaContent = yield* step('lecture de schemas.ts', async () => fs.readFileSync(schemaFile, 'utf8').trim());
   // Only check for non-comment content
   const hasExports = schemaContent.split('\n').some(l => l.trim() && !l.trim().startsWith('//'));
   if (!hasExports) {
@@ -105,19 +102,19 @@ function run(cmd: string, args: string[]): Promise<void> {
   }
 
   // UX: propose d'ajouter les imports manquants
-  const notImported = getNotImported(schemasFiles);
-  await maybeAddImports(notImported);
+  const notImported = yield* step('exports manquants', async () => getNotImported(schemasFiles));
+  yield* step('ajout des exports', () => maybeAddImports(notImported));
 
   // Ensure migrations/meta exists
   const migrationsMetaDir = path.resolve(process.cwd(), 'src', 'database', 'migrations', 'meta');
   const journalFile = path.join(migrationsMetaDir, '_journal.json');
-  if (!fs.existsSync(migrationsMetaDir)) {
-    fs.mkdirSync(migrationsMetaDir, { recursive: true });
-  }
-  if (!fs.existsSync(journalFile)) {
-    fs.writeFileSync(journalFile, '{"entries":[]}', 'utf8');
-    console.log(c.green('[OK] migrations/meta/_journal.json créé.'));
-  }
+  yield* step('journal des migrations', async () => {
+    if (!fs.existsSync(migrationsMetaDir)) fs.mkdirSync(migrationsMetaDir, { recursive: true });
+    if (!fs.existsSync(journalFile)) {
+      fs.writeFileSync(journalFile, '{"entries":[]}', 'utf8');
+      console.log(c.green('[OK] migrations/meta/_journal.json créé.'));
+    }
+  });
 
   // Detect migrations before generation
   const migrationsDir = path.resolve(process.cwd(), 'src', 'database', 'migrations');
@@ -129,7 +126,7 @@ function run(cmd: string, args: string[]): Promise<void> {
   logTarget();
   console.log(c.cyan(`[génération] Config: ${configPath} (DB_ENV=${process.env.DB_ENV ?? 'LOCAL'})`));
 
-  await run('npx', ['drizzle-kit', 'generate', '--config', configPath]);
+  yield* step('drizzle-kit generate', () => run('npx', ['drizzle-kit', 'generate', '--config', configPath]));
 
   // Detect new migrations
   const afterSet = new Set(listSql(migrationsDir));
@@ -143,11 +140,7 @@ function run(cmd: string, args: string[]): Promise<void> {
     console.log(c.yellow('\nAucun changement de schéma détecté.'));
     console.log(`Éditez vos schémas dans ${c.cyan('src/database/schemas/')} puis relancez ${c.cyan('npm run db:generate')}`);
   }
-})().catch((err) => {
-  console.error(c.red('[génération] Échec :'), err);
-  process.exit(1);
 });
 
-
-
-
+// Entrée Effect : erreurs typées (ScriptError), code de sortie et journalisation communs.
+runScript('db:generate', program);

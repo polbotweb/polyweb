@@ -1,10 +1,12 @@
-import { defineAction, ActionError } from "astro:actions";
+import { defineAction } from "astro:actions";
+import { Effect } from "effect";
 import { z } from "astro/zod";
 import { eq } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { contactInfo } from "@database/schemas";
 import { invalidateCache } from "@database/cache";
-import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
+import { auditAdmin } from "./_helpers";
+import { actionRateLimit, actionTry, effectHandler, fail, requireActionPermission } from "@/lib/effect/action";
 
 export const updateContactInfo = defineAction({
   input: z.object({
@@ -73,24 +75,12 @@ export const updateContactInfo = defineAction({
       });
     }
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { site: ["update"] });
-    adminRateLimit(context, user.id, "contact");
-
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { site: ["update"] });
+    yield* actionRateLimit(user.id, "contact");
     const { id, ...data } = input;
-    const db = getDrizzle();
-    const [updated] = await db
-      .update(contactInfo)
-      .set(data)
-      .where(eq(contactInfo.id, id))
-      .returning();
-
-    if (!updated) {
-      throw new ActionError({
-        code: "NOT_FOUND",
-        message: "Informations de contact introuvables.",
-      });
-    }
+    const [updated] = yield* actionTry("contact.update", () => getDrizzle().update(contactInfo).set(data).where(eq(contactInfo.id, id)).returning());
+    if (!updated) return yield* fail("NOT_FOUND", "Informations de contact introuvables.");
 
     auditAdmin(context, user.id, "CONTACT_INFO_UPDATE", {
       resource: "contact_info",
@@ -100,5 +90,5 @@ export const updateContactInfo = defineAction({
 
     invalidateCache("site:contact");
     return updated;
-  },
+  })),
 });

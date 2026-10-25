@@ -1,4 +1,5 @@
 ---
+import { styleAttr } from "@/lib/ui/inline-style";
 import type { HTMLAttributes } from "astro/types";
 import { tv } from "tailwind-variants";
 
@@ -66,8 +67,8 @@ const indicatorClasses = indicator({
 });
 
 const indicatorStyle = isIndeterminate
-  ? ""
-  : `transform: translateX(-${100 - (valuePercent ?? 0)}%);`;
+  ? {}
+  : styleAttr({ transform: `translateX(-${100 - (valuePercent ?? 0)}%)` });
 ---
 
 <div
@@ -83,7 +84,7 @@ const indicatorStyle = isIndeterminate
   {...rest}
   data-slot="progress"
 >
-  <div class:list={[indicatorClasses]} style={indicatorStyle}></div>
+  <div class:list={[indicatorClasses]} {...indicatorStyle}></div>
 </div>
 
 <script>

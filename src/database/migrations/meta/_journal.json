@@ -92,6 +92,69 @@
       "when": 1792309802501,
       "tag": "0012_auth_2fa_passkey",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792310608575,
+      "tag": "0013_content_platform",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792311658845,
+      "tag": "0014_api_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1792312135124,
+      "tag": "0015_webhooks",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792313169395,
+      "tag": "0016_forms",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792313709955,
+      "tag": "0017_plugins",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792314216075,
+      "tag": "0018_search_documents",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792331356793,
+      "tag": "0019_page_locks",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792343099578,
+      "tag": "0020_drop_pages_legacy_lock",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792354712395,
+      "tag": "0021_admin_saved_views",
+      "breakpoints": true
     }
   ]
 }

@@ -172,13 +172,13 @@ async function fillPostForm(
   await page.locator('#post-title').fill(post.initialTitle);
   await page.locator('#post-slug').fill(post.slug);
   await page.locator('#post-excerpt').fill(post.excerpt);
-  await page.locator('#post-content').fill(post.content);
+  await page.locator('#content-editor-content-textarea').fill(post.content);
 }
 
 async function updatePostTitle(page: import('@playwright/test').Page, title: string) {
   await page.getByRole('tab', { name: /contenu|content/i }).click();
   await page.locator('#post-title').fill(title);
-  await page.locator('#post-content').fill(`<p>${title} updated content.</p>`);
+  await page.locator('#content-editor-content-textarea').fill(`<p>${title} updated content.</p>`);
 }
 
 async function submitPostForm(page: import('@playwright/test').Page) {
@@ -278,6 +278,8 @@ test.describe.serial('Blog surfaces', () => {
       },
       {
         postId: orgPostId,
+        // Le trigger de tenant exige l'organization_id du parent sur la traduction.
+        organizationId: org.id,
         locale: 'fr',
         title: orgPostTitle,
         slug: orgPostSlug,
@@ -310,6 +312,7 @@ test.describe.serial('Blog surfaces', () => {
       },
       {
         categoryId: orgCategoryId,
+        organizationId: org.id,
         locale: 'fr',
         name: orgCategoryName,
         slug: orgCategorySlug,
@@ -578,6 +581,8 @@ test.describe.serial('Blog surfaces', () => {
       await dismissCookieDialog(authedPage);
 
       await authedPage.locator('#review-form').scrollIntoViewIfNeeded();
+      // La note est obligatoire (radios `required`) : sans elle, la validation native bloque l'envoi.
+      await authedPage.locator('#review-form label[for="rating-5"]').click();
       await authedPage.locator('#review-title').fill(seeded.globalReviewTitle);
       await authedPage.locator('#review-content').fill(seeded.globalReviewContent);
       await authedPage.locator('#review-form button[type="submit"]').click();

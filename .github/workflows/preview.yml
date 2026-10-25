@@ -40,10 +40,10 @@ jobs:
       SMTP_FROM_EMAIL: ci@test.local
       SMTP_HOST: localhost
     steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v5
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with: { version: 10 }
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:migrate && pnpm db:infra && pnpm db:seed
@@ -69,12 +69,12 @@ jobs:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         if: env.VERCEL_TOKEN != ''
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@v6
         if: env.VERCEL_TOKEN != ''
         with: { version: 10 }
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         if: env.VERCEL_TOKEN != ''
         with: { node-version: 22, cache: pnpm }
       - if: env.VERCEL_TOKEN != ''

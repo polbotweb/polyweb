@@ -1,19 +1,23 @@
+import { Effect } from "effect";
 import { defineAction } from "astro:actions";
 import { and, eq } from "drizzle-orm";
 import { z } from "astro/zod";
 import { getDrizzle } from "@database/drizzle";
 import { serviceReactions } from "@database/schemas";
-import { assertServiceInTenant, assertServicePermission, resolveServiceTenant, serviceOrganizationIdSchema, serviceRateLimit } from "./_helpers";
+import { resolveServiceTenant, serviceOrganizationIdSchema } from "./_helpers";
 import { auditService, invalidateServicesCache } from "./_helpers";
 import type { ServiceReactionType } from "@/modules/services/domain";
+import { actionTry, effectHandler } from "@/lib/effect/action";
+import { requireServicePermission, serviceInTenant, serviceRateLimitEffect } from "@/modules/services/permissions";
 
 export const toggleServiceReaction = defineAction({
   input: z.object({ serviceId: z.uuid(), organizationId: serviceOrganizationIdSchema, reactionType: z.enum(["LIKE", "LOVE", "FIRE", "CLAP"]) }),
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveServiceTenant(input);
-    const user = await assertServicePermission(context, tenant, { service: ["read"] });
-    await assertServiceInTenant(input.serviceId, tenant);
-    serviceRateLimit(context, user.id, "reaction");
+    const user = yield* requireServicePermission(context, tenant, { service: ["read"] });
+    yield* serviceInTenant(input.serviceId, tenant);
+    yield* serviceRateLimitEffect(user.id, "reaction");
+    return yield* actionTry("services/reactions.toggleServiceReaction", async () => {
     const db = getDrizzle();
     let result: { active: ServiceReactionType | null; previous: ServiceReactionType | null } = { active: null, previous: null };
     await db.transaction(async (tx) => {
@@ -36,5 +40,6 @@ export const toggleServiceReaction = defineAction({
     else auditService(context, user.id, "SERVICE_REACTION_ADD", { resource: "services", resourceId: input.serviceId, metadata: { from: result.previous, to: result.active } });
     invalidateServicesCache();
     return { active: result.active };
-  },
+    });
+  })),
 });

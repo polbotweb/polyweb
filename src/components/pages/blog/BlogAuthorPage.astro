@@ -170,10 +170,11 @@ const currentView = (Astro.cookies.get("blog-view")?.value ?? "grid") as "grid" 
     {/* Posts column */}
     <div class="min-w-0">
       <div class="mb-6 flex items-center justify-between gap-3">
-        <p class="text-sm text-muted-foreground">
+        {/* Titre de section (h2) : les cartes d'articles (h3) ne sautent pas de niveau après le h1. */}
+        <h2 class="text-sm font-normal text-muted-foreground">
           {blogT.labels.authorArticles}
           {meta.total > 0 && <span class="ml-1.5 tabular-nums">({meta.total})</span>}
-        </p>
+        </h2>
         <PostGridToggle blogT={blogT} />
       </div>
 

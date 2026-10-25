@@ -43,7 +43,7 @@ const enabled = !!u?.twoFactorEnabled;
       </div>
       <div id="totp-setup" class="hidden grid gap-3">
         <p class="text-sm">{s.totpScan}</p>
-        <div id="totp-qr" class="size-48 rounded bg-white p-2" role="img" aria-label="QR code TOTP"></div>
+        <div id="totp-qr" class="size-48 rounded bg-white p-2"></div>
         <code id="totp-uri" class="text-muted-foreground break-all text-xs"></code>
         <div class="grid gap-2 max-w-xs">
           <Label for="totp-verify-code">Code</Label>
@@ -97,7 +97,11 @@ const enabled = !!u?.twoFactorEnabled;
       if (error || !data || data.method !== 'totp') return fail(error?.message);
       document.getElementById('totp-setup')!.classList.remove('hidden');
       // SVG généré localement (aucun service tiers) à partir de l'URI otpauth://
-      document.getElementById('totp-qr')!.innerHTML = renderSVG(data.totpURI);
+      const qr = document.getElementById('totp-qr')!;
+      qr.innerHTML = renderSVG(data.totpURI);
+      // Le SVG porte lui-même le rôle image (le linter interdit role="img" sur un <div>).
+      qr.firstElementChild?.setAttribute('role', 'img');
+      qr.firstElementChild?.setAttribute('aria-label', 'QR code TOTP');
       document.getElementById('totp-uri')!.textContent = data.totpURI;
       const list = document.getElementById('totp-backup-codes')!;
       list.replaceChildren(...data.backupCodes.map((c) => Object.assign(document.createElement('li'), { textContent: c })));

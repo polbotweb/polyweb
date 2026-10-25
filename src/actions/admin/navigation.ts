@@ -1,12 +1,14 @@
+import { Effect } from "effect";
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { eq, and, inArray } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { navigationItems, navigationMenus } from "@database/schemas";
 import { invalidateCache } from "@database/cache";
-import { assertPermission, adminRateLimit, auditAdmin } from "./_helpers";
+import { auditAdmin } from "./_helpers";
 import { LOCALES } from "@i18n/config";
 import type { DrizzleDB } from "@database/drizzle";
+import { actionRateLimit, actionTry, effectHandler, requireActionPermission } from "@/lib/effect/action";
 
 /** Walk up the parent chain to detect circular references (with depth limit). */
 export async function assertNoCycle(
@@ -89,9 +91,10 @@ const navItemBase = z.object({
 
 export const createNavigationItem = defineAction({
   input: navItemBase,
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { navigation: ["update"] });
-    adminRateLimit(context, user.id, "nav");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { navigation: ["update"] });
+    yield* actionRateLimit(user.id, "nav");
+    return yield* actionTry("admin/navigation.createNavigationItem", async () => {
 
     const db = getDrizzle();
 
@@ -138,16 +141,18 @@ export const createNavigationItem = defineAction({
 
     invalidateCache("nav:");
     return created;
-  },
+    });
+  })),
 });
 
 export const updateNavigationItem = defineAction({
   input: navItemBase.partial().extend({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { navigation: ["update"] });
-    adminRateLimit(context, user.id, "nav");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { navigation: ["update"] });
+    yield* actionRateLimit(user.id, "nav");
+    return yield* actionTry("admin/navigation.updateNavigationItem", async () => {
 
     const { id, ...data } = input;
     const db = getDrizzle();
@@ -180,16 +185,18 @@ export const updateNavigationItem = defineAction({
 
     invalidateCache("nav:");
     return updated;
-  },
+    });
+  })),
 });
 
 export const deleteNavigationItem = defineAction({
   input: z.object({
     id: z.string().min(1, "L'identifiant est requis."),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { navigation: ["update"] });
-    adminRateLimit(context, user.id, "nav");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { navigation: ["update"] });
+    yield* actionRateLimit(user.id, "nav");
+    return yield* actionTry("admin/navigation.deleteNavigationItem", async () => {
 
     const db = getDrizzle();
     const [deleted] = await db
@@ -212,7 +219,8 @@ export const deleteNavigationItem = defineAction({
 
     invalidateCache("nav:");
     return { success: true as const };
-  },
+    });
+  })),
 });
 
 export const reorderNavigationItems = defineAction({
@@ -228,9 +236,10 @@ export const reorderNavigationItems = defineAction({
       .min(1, "La liste ne peut pas être vide.")
       .max(200, "Maximum 200 éléments par réordonnancement."),
   }),
-  handler: async (input, context) => {
-    const user = await assertPermission(context, { navigation: ["update"] });
-    adminRateLimit(context, user.id, "nav");
+  handler: effectHandler((input, context) => Effect.gen(function* () {
+    const user = yield* requireActionPermission(context, { navigation: ["update"] });
+    yield* actionRateLimit(user.id, "nav");
+    return yield* actionTry("admin/navigation.reorderNavigationItems", async () => {
 
     const db = getDrizzle();
     let menuId: string | null = null;
@@ -291,5 +300,6 @@ export const reorderNavigationItems = defineAction({
 
     invalidateCache("nav:");
     return { success: true as const };
-  },
+    });
+  })),
 });

@@ -1,0 +1,119 @@
+---
+/** Détail d'un webhook (brique d) : édition, ping, journal des livraisons, relivraison, rotation du secret. */
+import { Effect } from 'effect';
+import { requirePermission } from '@/lib/auth-guards';
+import PlatformAdminShell from '@organisms/PlatformAdmin/PlatformAdminShell.astro';
+import { getPlatformLabel, getPlatformAdminUrl } from '@/core/localization/platform-labels';
+import { getAdminSite, userCan, formatDate } from '@/lib/platform/admin';
+import { logAuditEvent, extractIp } from '@/lib/audit';
+import { runAppResult } from '@/lib/effect/http';
+import { ForbiddenError, NotFoundError } from '@/lib/effect/errors';
+import { getWebhook, updateWebhook, deleteWebhook, rotateSecret, listDeliveries, EVENT_PATTERNS } from '@/modules/webhooks/domain/webhooks';
+import { redeliver, sendPing } from '@/modules/webhooks/domain/dispatcher';
+
+export const prerender = false;
+const result = await requirePermission(Astro, { webhook: ['read'] });
+if ('redirect' in result) return result.redirect;
+const { locale, authT, user } = result;
+const site = await getAdminSite(Astro);
+const id = Astro.params.id!;
+const listUrl = getPlatformAdminUrl(locale, 'webhooks');
+const selfUrl = getPlatformAdminUrl(locale, 'webhooks', id);
+const [canUpdate, canDelete] = await Promise.all([userCan(user.id, { webhook: ['update'] }), userCan(user.id, { webhook: ['delete'] })]);
+
+let error: string | null = null;
+let newSecret: string | null = null;
+
+if (Astro.request.method === 'POST') {
+  const fd = await Astro.request.formData();
+  const intent = String(fd.get('intent') ?? '');
+  const meta = { ipAddress: extractIp(Astro.request.headers, Astro.clientAddress), userAgent: Astro.request.headers.get('user-agent') };
+  const r = await runAppResult(
+    Effect.gen(function* () {
+      const needs = intent === 'delete' ? canDelete : canUpdate;
+      if (!needs) return yield* new ForbiddenError({ reason: 'Permission refusée' });
+      yield* getWebhook(site.id, id); // garantit l'appartenance au site
+      switch (intent) {
+        case 'save':
+          yield* updateWebhook(site.id, id, { name: String(fd.get('name') ?? ''), url: String(fd.get('url') ?? ''), events: fd.getAll('events').map(String), active: fd.get('active') === 'on' });
+          return 'saved';
+        case 'ping': {
+          const o = yield* sendPing(id, site.id);
+          return o.status === 'success' ? 'ping-ok' : 'ping-failed';
+        }
+        case 'redeliver':
+          yield* redeliver(String(fd.get('deliveryId') ?? ''));
+          return 'redelivered';
+        case 'rotate':
+          newSecret = yield* rotateSecret(site.id, id);
+          return 'rotated';
+        case 'delete':
+          yield* deleteWebhook(site.id, id);
+          return 'deleted';
+        default:
+          return yield* new NotFoundError({ entity: 'Action', id: intent });
+      }
+    }),
+  );
+  if (r.ok) {
+    const auditAction = ({ save: 'WEBHOOK_UPDATE', ping: 'WEBHOOK_PING', redeliver: 'WEBHOOK_DELIVERY_RETRY', rotate: 'WEBHOOK_ROTATE_SECRET', delete: 'WEBHOOK_DELETE' } as const)[intent as 'save'] ?? 'WEBHOOK_UPDATE';
+    void logAuditEvent({ userId: user.id, action: auditAction, resource: 'webhook', resourceId: id, ...meta });
+    if (r.value === 'deleted') return Astro.redirect(`${listUrl}?saved=deleted`, 303);
+    if (r.value !== 'rotated') return Astro.redirect(`${selfUrl}?saved=${r.value}`, 303);
+  } else error = r.error.message;
+}
+
+const loaded = await runAppResult(Effect.all({ hook: getWebhook(site.id, id), deliveries: listDeliveries(id, 50) }));
+if (!loaded.ok) return Astro.redirect(listUrl);
+const { hook, deliveries } = loaded.value;
+const saved = Astro.url.searchParams.get('saved');
+const messages: Record<string, string> = { saved: 'Enregistré.', 'ping-ok': 'Ping livré avec succès.', 'ping-failed': 'Ping en échec — voir le journal.', redelivered: 'Relivraison effectuée.' };
+---
+<PlatformAdminShell t={authT} locale={locale} section="webhooks" title={`Webhook : ${hook.name}`}>
+  <a slot="actions" class="rounded-md border px-3 py-2 text-sm" href={listUrl}>← {getPlatformLabel('webhooks', locale)}</a>
+  {saved && messages[saved] && <output class="block rounded-md border border-success bg-success/10 p-3 text-sm">{messages[saved]}</output>}
+  {error && <p class="rounded-md border border-error bg-error/10 p-3 text-sm" role="alert">{error}</p>}
+  {newSecret && <div class="rounded-md border border-warning bg-warning/10 p-4 text-sm" aria-live="polite"><p class="font-medium">Nouveau secret (affiché une seule fois) :</p><code class="mt-2 block break-all font-mono">{newSecret}</code></div>}
+
+  <form method="post" class="grid gap-3 rounded-md border p-4">
+    <input type="hidden" name="intent" value="save" />
+    <label class="grid gap-1 text-sm">Nom<input name="name" required value={hook.name} class="rounded-md border bg-background px-3 py-2" disabled={!canUpdate} /></label>
+    <label class="grid gap-1 text-sm">URL<input name="url" type="url" required value={hook.url} class="rounded-md border bg-background px-3 py-2" disabled={!canUpdate} /></label>
+    <fieldset class="grid gap-1 text-sm sm:grid-cols-3">
+      <legend class="mb-1">Événements</legend>
+      {EVENT_PATTERNS.map((e) => <label class="flex items-center gap-2"><input type="checkbox" name="events" value={e} checked={hook.events.includes(e)} disabled={!canUpdate} /> <code>{e}</code></label>)}
+    </fieldset>
+    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="active" checked={hook.active} disabled={!canUpdate} /> Actif {hook.disabledReason && <span class="text-error">(désactivé automatiquement : {hook.disabledReason})</span>}</label>
+    {canUpdate && <div><button class="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">Enregistrer</button></div>}
+  </form>
+
+  <div class="flex flex-wrap gap-2">
+    {canUpdate && <form method="post"><input type="hidden" name="intent" value="ping" /><button class="rounded-md border px-3 py-2 text-sm">Envoyer un ping</button></form>}
+    {canUpdate && <form method="post"><input type="hidden" name="intent" value="rotate" /><button class="rounded-md border px-3 py-2 text-sm">Régénérer le secret</button></form>}
+    {canDelete && <form method="post"><input type="hidden" name="intent" value="delete" /><button class="rounded-md border border-error px-3 py-2 text-sm text-error" data-confirm="Supprimer ce webhook et son journal ?">Supprimer</button></form>}
+  </div>
+
+  <h2 class="mt-4 font-semibold">Livraisons récentes</h2>
+  {deliveries.length === 0 ? <p class="text-sm">Aucune livraison.</p> : (
+    <table class="w-full text-sm" data-testid="deliveries">
+      <thead><tr class="border-b"><th class="py-2 text-start">Date</th><th class="text-start">Événement</th><th class="text-start">État</th><th class="text-start">Essais</th><th class="text-start">HTTP</th><th class="text-start">Détail</th><th></th></tr></thead>
+      <tbody>
+        {deliveries.map((d) => (
+          <tr class="border-b align-top">
+            <td class="py-2">{formatDate(d.createdAt, locale)}</td>
+            <td><code>{d.event}</code></td>
+            <td>{d.status}{d.status === 'failed' && d.nextAttemptAt && <span class="text-muted-foreground block text-xs">prochain essai {formatDate(d.nextAttemptAt, locale)}</span>}</td>
+            <td>{d.attempts}</td>
+            <td>{d.lastStatusCode ?? '—'}{d.durationMs != null && <span class="text-muted-foreground"> · {d.durationMs} ms</span>}</td>
+            <td class="max-w-xs truncate text-xs">{d.lastError ?? d.responseSnippet ?? ''}</td>
+            <td class="text-end">{canUpdate && <form method="post"><input type="hidden" name="intent" value="redeliver" /><input type="hidden" name="deliveryId" value={d.id} /><button class="hover:underline">Relivrer</button></form>}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</PlatformAdminShell>
+<script>
+  import { initConfirmButtons } from '@/lib/platform/confirm';
+  initConfirmButtons();
+</script>

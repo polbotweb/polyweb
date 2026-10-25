@@ -8,10 +8,11 @@ const { execSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const config = require('../../lighthouserc.cjs');
+const { redactDir } = require('../helpers/lighthouse-redact.cjs');
 
 const chromePath = config.ci?.collect?.settings?.chromePath;
 
-function buildTempConfig(urls, cookie) {
+function buildTempConfig(urls, cookie, label) {
   return {
     ci: {
       collect: {
@@ -22,6 +23,9 @@ function buildTempConfig(urls, cookie) {
           preset: 'desktop',
           ...(chromePath ? { chromePath } : {}),
           extraHeaders: { Cookie: cookie },
+          // Back-office : exclu de l'indexation à dessein (robots.txt « Disallow: /<locale>/admin/ »).
+          // On n'évalue donc pas « is-crawlable » ; le reste du score SEO garde le seuil de 0.9.
+          ...(label === 'admin' ? { skipAudits: ['is-crawlable'] } : {}),
         },
       },
       assert: {
@@ -33,7 +37,10 @@ function buildTempConfig(urls, cookie) {
         },
       },
       upload: {
-        target: 'temporary-public-storage',
+        // Sortie brute locale (ignorée par git, jamais de stockage public) ; copies renommées
+        // et caviardées versionnées via tests/helpers/lighthouse-report.cjs.
+        target: 'filesystem',
+        outputDir: '.lighthouseci/filesystem',
       },
     },
   };
@@ -52,7 +59,7 @@ function run(urls, cookie, label) {
   console.log(`\n[lhci] Running ${label} audit (${urls.length} URLs)…`);
 
   const tmpConfig = path.resolve(__dirname, `../../.lighthouseci-${label}.json`);
-  fs.writeFileSync(tmpConfig, JSON.stringify(buildTempConfig(urls, cookie), null, 2));
+  fs.writeFileSync(tmpConfig, JSON.stringify(buildTempConfig(urls, cookie, label), null, 2));
 
   try {
     execSync(`npx lhci autorun --config "${tmpConfig}"`, {
@@ -70,8 +77,10 @@ function run(urls, cookie, label) {
     }
     console.warn(`[lhci] ${label}: chrome-launcher exit error ignored (reports exist)`);
   } finally {
-    // Clean up temp config
+    // Clean up temp config (contient le cookie)
     try { fs.unlinkSync(tmpConfig); } catch { /* ignore */ }
+    // Lighthouse recopie extraHeaders (cookie) dans chaque LHR : caviardage immédiat.
+    redactDir(path.resolve(__dirname, '../../.lighthouseci'));
   }
 }
 

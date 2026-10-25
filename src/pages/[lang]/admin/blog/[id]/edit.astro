@@ -1,4 +1,6 @@
 ---
+import { canAdministerTenant } from "@/core/permissions/tenant";
+import { runOrThrow } from "@/lib/effect/run";
 import { requirePermission } from "@/lib/auth-guards";
 import { getBlogTranslations } from "@i18n/utils";
 import { getBlogCategories, getBlogTags } from "@database/loaders/blog.loader";
@@ -51,12 +53,14 @@ const editorData: BlogPostEditorData = {
   revisions: postAdminData.revisions,
   lock: postAdminData.lock,
 };
+// Libération administrative du verrou : administrateur global, ou administrateur de cette organisation (revérifié côté action).
+const canForceReleaseLock = await runOrThrow(canAdministerTenant(Astro.locals.user, null)).catch(() => false);
 ---
 <BaseLayout title={blogT.admin.editPost} description={blogT.admin.title}>
   <AuthLayout title={blogT.admin.editPost}>
     <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="blog" />
     <AdminFormShell>
-      <AdminPostForm locale={locale} blogT={blogT} mode="edit" editorData={editorData} categories={categories} tags={tags} baseAdminUrl={baseAdminUrl} basePublicUrl={basePublicUrl} canCreate={canCreate} canUpdate={true} canPublish={canPublish} canDelete={canDelete} />
+      <AdminPostForm canForceReleaseLock={canForceReleaseLock} locale={locale} blogT={blogT} mode="edit" editorData={editorData} categories={categories} tags={tags} baseAdminUrl={baseAdminUrl} basePublicUrl={basePublicUrl} canCreate={canCreate} canUpdate={true} canPublish={canPublish} canDelete={canDelete} />
     </AdminFormShell>
   </AuthLayout>
 </BaseLayout>

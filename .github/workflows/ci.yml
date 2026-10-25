@@ -20,13 +20,38 @@ jobs:
     env:
       SITE_URL: ${{ vars.SITE_URL }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: ESLint
+        run: pnpm lint
+
+      - name: Astro Check
+        run: npx astro check
+
+  # Audit de dépendances : job séparé (toujours bloquant pour le résumé CI) afin qu'une
+  # vulnérabilité amont n'empêche plus lint, astro check, E2E et accessibilité de s'exécuter.
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -35,12 +60,6 @@ jobs:
 
       - name: Security Audit
         run: pnpm audit --prod --audit-level=moderate
-
-      - name: ESLint
-        run: pnpm lint
-
-      - name: Astro Check
-        run: npx astro check
 
   unit-tests:
     name: Unit & Integration Tests
@@ -70,13 +89,13 @@ jobs:
       SMTP_FROM_EMAIL: ci@test.local
       SMTP_HOST: localhost
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -88,6 +107,16 @@ jobs:
 
       - name: Apply SQL Infra (indexes, triggers)
         run: pnpm db:infra
+
+      # Les tests d'intégration (consent/legal CMS, liens internes blog, comptes de démo…)
+      # lisent les données de seed, comme preview.yml.
+      - name: Seed Database
+        run: pnpm db:seed
+
+      # Types Astro (`astro:actions`, `.astro/types.d.ts`) requis par le test de compilation
+      # du module généré (tests/unit/scripts/new-module.test.ts).
+      - name: Generate Astro Types
+        run: npx astro sync
 
       - name: Vitest
         run: pnpm test -- --coverage
@@ -133,13 +162,13 @@ jobs:
       SMTP_FROM_EMAIL: ci@test.local
       SMTP_HOST: localhost
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -154,6 +183,9 @@ jobs:
 
       - name: Apply SQL Infra (indexes, triggers)
         run: pnpm db:infra
+
+      - name: Seed Database
+        run: pnpm db:seed
 
       - name: Build
         run: pnpm build
@@ -202,13 +234,13 @@ jobs:
       SMTP_FROM_EMAIL: ci@test.local
       SMTP_HOST: localhost
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -223,6 +255,9 @@ jobs:
 
       - name: Apply SQL Infra (indexes, triggers)
         run: pnpm db:infra
+
+      - name: Seed Database
+        run: pnpm db:seed
 
       - name: Build
         run: pnpm build
@@ -281,20 +316,20 @@ jobs:
   deploy:
     name: Build & Deploy
     runs-on: ubuntu-latest
-    needs: [unit-tests, e2e-tests, a11y-perf]
+    needs: [security-audit, unit-tests, e2e-tests, a11y-perf]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     env:
       SITE_URL: ${{ vars.SITE_URL }}
       BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
       BETTER_AUTH_URL: ${{ vars.BETTER_AUTH_URL }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -323,7 +358,7 @@ jobs:
   ci-summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [lint-and-check, unit-tests, e2e-tests, a11y-perf]
+    needs: [security-audit, lint-and-check, unit-tests, e2e-tests, a11y-perf]
     if: always()
     steps:
       - name: CI Status Report
@@ -332,6 +367,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Audit | ${{ needs.security-audit.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Lint & Type Check | ${{ needs.lint-and-check.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Unit & Integration Tests | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| E2E Tests | ${{ needs.e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY

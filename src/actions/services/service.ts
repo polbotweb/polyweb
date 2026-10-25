@@ -1,3 +1,7 @@
+import { Effect } from "effect";
+import { serviceLock } from "@/modules/services/locks";
+import { lockOwnerFrom } from "@/core/locks/service";
+import { lockLocaleFrom } from "@/core/locks/errors";
 import { defineAction, ActionError } from "astro:actions";
 import { and, eq } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
@@ -5,22 +9,26 @@ import { services, serviceTranslations, serviceCategoryLinks, serviceTagLinks, s
 import { sanitizeHtml } from "@lib/sanitize";
 import { generateExcerpt } from "@/core/content/text";
 import { serviceFormSchema, serviceUpdateSchema, calculateServiceSeoScore } from "@/modules/services/validation";
-import { serviceRateLimit, assertServicePermission, resolveServiceTenant, assertServiceInTenant, assertServiceLockOwner, assertServiceCategoryInTenant, assertServiceTagInTenant, assertServiceMediaInTenant } from "@/modules/services/permissions";
+import { resolveServiceTenant } from "@/modules/services/permissions";
 import { auditService, invalidateServicesCache } from "./_helpers";
+import { actionTry, effectHandler } from "@/lib/effect/action";
+import { requireServicePermission, serviceCategoryInTenant, serviceInTenant, serviceMediaInTenant, serviceRateLimitEffect, serviceTagInTenant } from "@/modules/services/permissions";
 
 export const createService = defineAction({
   input: serviceFormSchema,
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveServiceTenant(input);
-    const user = await assertServicePermission(context, tenant, { service: ["create"] });
-    serviceRateLimit(context, user.id, "create");
+    const user = yield* requireServicePermission(context, tenant, { service: ["create"] });
+    yield* serviceRateLimitEffect(user.id, "create");
+    // Références tenant vérifiées en Effect avant toute écriture (mêmes contrôles, en parallèle).
+    yield* Effect.all(input.categoryIds.map((id) => serviceCategoryInTenant(id, tenant)), { concurrency: "unbounded" });
+    yield* Effect.all(input.tagIds.map((id) => serviceTagInTenant(id, tenant)), { concurrency: "unbounded" });
+    if (input.coverImageId) yield* serviceMediaInTenant(input.coverImageId, tenant);
+    if (input.ogImageId) yield* serviceMediaInTenant(input.ogImageId, tenant);
+    return yield* actionTry("services/service.createService", async () => {
     const content = sanitizeHtml(input.content);
     const excerpt = input.excerpt?.trim() || generateExcerpt(content);
     const seoScore = calculateServiceSeoScore({ title: input.title, metaTitle: input.metaTitle ?? undefined, metaDescription: input.metaDescription ?? undefined, focusKeyword: input.focusKeyword ?? undefined });
-    await Promise.all(input.categoryIds.map((id) => assertServiceCategoryInTenant(id, tenant)));
-    await Promise.all(input.tagIds.map((id) => assertServiceTagInTenant(id, tenant)));
-    if (input.coverImageId) await assertServiceMediaInTenant(input.coverImageId, tenant);
-    if (input.ogImageId) await assertServiceMediaInTenant(input.ogImageId, tenant);
 
     const db = getDrizzle();
     let createdId = "";
@@ -42,22 +50,23 @@ export const createService = defineAction({
     auditService(context, user.id, "SERVICE_CREATE", { resource: "services", resourceId: createdId, metadata: { organizationId: tenant.organizationId } });
     invalidateServicesCache();
     return { id: createdId };
-  },
+    });
+  })),
 });
 
 export const updateService = defineAction({
   input: serviceUpdateSchema,
-  handler: async (input, context) => {
+  handler: effectHandler((input, context) => Effect.gen(function* () {
     const tenant = resolveServiceTenant(input);
-    const user = await assertServicePermission(context, tenant, { service: ["update"] });
-    serviceRateLimit(context, user.id, "update");
-    const existing = await assertServiceInTenant(input.id, tenant);
-    await assertServiceLockOwner(input.id, user.id, context.locals.session?.id);
-
-    if (input.categoryIds) await Promise.all(input.categoryIds.map((id) => assertServiceCategoryInTenant(id, tenant)));
-    if (input.tagIds) await Promise.all(input.tagIds.map((id) => assertServiceTagInTenant(id, tenant)));
-    if (input.coverImageId) await assertServiceMediaInTenant(input.coverImageId, tenant);
-    if (input.ogImageId) await assertServiceMediaInTenant(input.ogImageId, tenant);
+    const user = yield* requireServicePermission(context, tenant, { service: ["update"] });
+    yield* serviceRateLimitEffect(user.id, "update");
+    const existing = yield* serviceInTenant(input.id, tenant);
+    yield* serviceLock.ensureNotLockedByOther(input.id, lockOwnerFrom(user.id, context.locals.session?.id), lockLocaleFrom(context.request.headers));
+    if (input.categoryIds) yield* Effect.all(input.categoryIds.map((id) => serviceCategoryInTenant(id, tenant)), { concurrency: "unbounded" });
+    if (input.tagIds) yield* Effect.all(input.tagIds.map((id) => serviceTagInTenant(id, tenant)), { concurrency: "unbounded" });
+    if (input.coverImageId) yield* serviceMediaInTenant(input.coverImageId, tenant);
+    if (input.ogImageId) yield* serviceMediaInTenant(input.ogImageId, tenant);
+    return yield* actionTry("services/service.updateService", async () => {
 
     const db = getDrizzle();
     const locale = input.locale;
@@ -129,5 +138,6 @@ export const updateService = defineAction({
     auditService(context, user.id, "SERVICE_UPDATE", { resource: "services", resourceId: input.id, metadata: { organizationId: tenant.organizationId } });
     invalidateServicesCache();
     return { id: input.id };
-  },
+    });
+  })),
 });
