@@ -21,3 +21,4 @@ export * from "./schemas/plugins.schema";
 export * from "./schemas/search.schema";
 export * from "./schemas/saved-views.schema";
 export * from "../modules/events/schema";
+export * from "../modules/formations/schema";

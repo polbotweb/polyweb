@@ -1,0 +1,35 @@
+---
+/**
+ * Page de détail du domaine formations.
+ *
+ * La DTO arrive par props : la page a fait appel au loader. Ce composant
+ * n'interroge jamais la base. Aucune inscription ni progression ici (hors CMS
+ * Core, TODO §19.1).
+ */
+import type { FormationPublicDTO } from "@/modules/formations/loaders/formation.loader";
+import type { FormationsTranslations } from "@/modules/formations/i18n";
+
+interface Props {
+  item: FormationPublicDTO;
+  t: FormationsTranslations;
+  formatPrice: (minor: number, currency: string) => string;
+  backHref: string;
+}
+
+const { item, t, formatPrice, backHref } = Astro.props as Props;
+---
+
+<article class="flex flex-col gap-6" data-slot="formation-detail">
+  <a href={backHref} class="text-sm hover:underline">← {t.labels.back}</a>
+  <h1 class="font-heading text-3xl font-bold">{item.title}</h1>
+  <dl class="grid gap-2 sm:grid-cols-2">
+    {item.level && (<div><dt class="text-sm text-muted-foreground">{t.labels.level}</dt><dd>{t.levels[item.level]}</dd></div>)}
+    {item.durationHours !== null && (<div><dt class="text-sm text-muted-foreground">{t.labels.duration}</dt><dd>{item.durationHours} {t.labels.hours}</dd></div>)}
+    {item.priceMinor !== null && (<div><dt class="text-sm text-muted-foreground">{t.labels.price}</dt><dd>{item.priceMinor === 0 || !item.currency ? t.labels.free : formatPrice(item.priceMinor, item.currency)}</dd></div>)}
+    {item.certificate && (<div><dt class="text-sm text-muted-foreground">{t.labels.certificate}</dt><dd>✓</dd></div>)}
+  </dl>
+  {item.excerpt && <p class="text-lg">{item.excerpt}</p>}
+  {item.objectives && (<section><h2 class="font-heading text-xl font-semibold">{t.labels.objectives}</h2><p class="whitespace-pre-line">{item.objectives}</p></section>)}
+  {item.prerequisites && (<section><h2 class="font-heading text-xl font-semibold">{t.labels.prerequisites}</h2><p class="whitespace-pre-line">{item.prerequisites}</p></section>)}
+  <div class="prose max-w-none whitespace-pre-line">{item.content}</div>
+</article>
