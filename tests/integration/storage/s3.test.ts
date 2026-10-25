@@ -1,14 +1,12 @@
 /**
- * Driver S3/R2 testé contre un serveur compatible S3 réel en local (s3rver).
+ * Driver S3/R2 testé contre un serveur compatible S3 réel en local (SeaweedFS, voir scripts/s3-test-server.mjs).
+ * S3_TEST_ENDPOINT=http://… permet de cibler un serveur S3 déjà lancé (bucket « polyweb » créé si absent).
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import sharp from 'sharp';
 import { Effect } from 'effect';
-// @ts-expect-error — s3rver ne fournit pas de types
-import S3rver from 's3rver';
+import { CreateBucketCommand, S3Client } from '@aws-sdk/client-s3';
+import { startSeaweedS3 } from '../../../scripts/s3-test-server.mjs';
 import { makeS3Storage } from '@/lib/storage/s3';
 import { s3SettingsFromEnv, storageFromEnv, storagePublicOrigin, Storage } from '@/lib/storage';
 import { prepareUpload, storeUpload } from '@/media/upload';
@@ -16,24 +14,32 @@ import { deleteMediaByUrl } from '@/media/delete';
 import { listMedia } from '@/media/list';
 import { ConfigError } from '@/lib/effect/errors';
 
-let server: { run(): Promise<{ port: number }>; close(): Promise<void> };
-let dir: string;
+let stop: (() => Promise<void>) | undefined;
 let endpoint: string;
+const ACCESS_KEY = 'polyweb-test';
+const SECRET_KEY = 'polyweb-test-secret';
 
 beforeAll(async () => {
-  dir = await mkdtemp(join(tmpdir(), 's3rver-'));
-  server = new S3rver({ port: 0, address: '127.0.0.1', silent: true, directory: dir, configureBuckets: [{ name: 'polyweb' }] });
-  const { port } = await server.run();
-  endpoint = `http://127.0.0.1:${port}`;
-});
+  if (process.env.S3_TEST_ENDPOINT) {
+    endpoint = process.env.S3_TEST_ENDPOINT;
+  } else {
+    const server = await startSeaweedS3();
+    endpoint = server.endpoint;
+    stop = server.stop;
+  }
+  const client = new S3Client({ endpoint, region: 'us-east-1', forcePathStyle: true, credentials: { accessKeyId: ACCESS_KEY, secretAccessKey: SECRET_KEY } });
+  await client.send(new CreateBucketCommand({ Bucket: 'polyweb' })).catch((e: { name?: string }) => {
+    if (e.name !== 'BucketAlreadyOwnedByYou' && e.name !== 'BucketAlreadyExists') throw e;
+  });
+  client.destroy();
+}, 240_000);
 afterAll(async () => {
-  await server.close();
-  await rm(dir, { recursive: true, force: true });
+  await stop?.();
 });
 
 const storage = () =>
   makeS3Storage({
-    bucket: 'polyweb', region: 'us-east-1', endpoint, accessKeyId: 'S3RVER', secretAccessKey: 'S3RVER',
+    bucket: 'polyweb', region: 'us-east-1', endpoint, accessKeyId: ACCESS_KEY, secretAccessKey: SECRET_KEY,
     forcePathStyle: true, publicUrl: 'https://cdn.example.test', prefix: 'site-a/', timeoutMs: 10_000,
   });
 
@@ -55,7 +61,7 @@ describe('S3 storage driver', () => {
     const s = storage();
     expect((await Effect.runPromise(Effect.flip(s.put('../etc/passwd', new Uint8Array(), { contentType: 'x' }))))._tag).toBe('InvalidStorageKeyError');
     expect((await Effect.runPromise(Effect.flip(s.get('images/missing.png'))))._tag).toBe('StorageError');
-    const broken = makeS3Storage({ bucket: 'nope', region: 'us-east-1', endpoint, accessKeyId: 'S3RVER', secretAccessKey: 'S3RVER', forcePathStyle: true, publicUrl: 'https://x', prefix: '', timeoutMs: 5000 });
+    const broken = makeS3Storage({ bucket: 'polyweb-missing-bucket', region: 'us-east-1', endpoint, accessKeyId: ACCESS_KEY, secretAccessKey: SECRET_KEY, forcePathStyle: true, publicUrl: 'https://x', prefix: '', timeoutMs: 5000 });
     expect((await Effect.runPromise(Effect.flip(broken.put('a.txt', new Uint8Array([1]), { contentType: 'text/plain' }))))._tag).toBe('StorageError');
   });
 
