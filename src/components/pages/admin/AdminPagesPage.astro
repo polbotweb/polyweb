@@ -14,6 +14,7 @@ import { NativeSelect, NativeSelectOption } from '@atoms/native-select';
 import { DataView } from '@molecules/DataView';
 import AdminPagination from '@molecules/AdminPagination/AdminPagination.astro';
 import AdminBulkBar from '@organisms/AdminBulkBar.astro';
+import DraftPreviewLinkButton from '@/components/admin/DraftPreviewLinkButton.astro';
 import AdminFacets from '@organisms/AdminFacets.astro';
 import AdminSavedViews from '@organisms/AdminSavedViews.astro';
 import { canonicalListQuery, facetLinks } from '@/core/filters';
@@ -203,6 +204,7 @@ function isoDate(d: Date | string | null) {
                     <Button size="sm" variant="outline" class="page-toggle-btn" data-id={page.id} data-published={String(page.isPublished)}>
                       {page.isPublished ? cms.unpublish : cms.publish}
                     </Button>
+                    <DraftPreviewLinkButton kind="page" resourceId={page.id} locale={locale} />
                     <Button size="sm" variant="outline" class="page-edit-btn" data-id={page.id}>
                       {cms.editPage}
                     </Button>
@@ -264,6 +266,7 @@ function isoDate(d: Date | string | null) {
                 <Button size="sm" variant="outline" class="page-toggle-btn" data-id={page.id} data-published={String(page.isPublished)}>
                   {page.isPublished ? cms.unpublish : cms.publish}
                 </Button>
+                <DraftPreviewLinkButton kind="page" resourceId={page.id} locale={locale} />
                 <Button size="sm" variant="outline" class="page-edit-btn" data-id={page.id}>
                   {cms.editPage}
                 </Button>

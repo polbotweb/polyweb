@@ -1,0 +1,60 @@
+---
+/**
+ * Bouton « Lien d'aperçu » (core/preview) — action `createDraftPreviewLink`.
+ * Crée un lien signé à durée limitée (24 h) vers l'état courant de la ressource,
+ * brouillon compris, puis le copie. Le serveur vérifie la permission du type et audite.
+ */
+import Button from "@atoms/button/Button.astro";
+
+interface Props {
+  kind: string;
+  resourceId: string;
+  locale: string;
+}
+
+const { kind, resourceId, locale } = Astro.props as Props;
+const labels = {
+  fr: { action: "Lien d’aperçu", done: "Lien d’aperçu copié (valable 24 h).", copy: "Lien d’aperçu (valable 24 h) :" },
+  en: { action: "Preview link", done: "Preview link copied (valid 24 h).", copy: "Preview link (valid 24 h):" },
+  es: { action: "Enlace de vista previa", done: "Enlace de vista previa copiado (válido 24 h).", copy: "Enlace de vista previa (válido 24 h):" },
+  ar: { action: "رابط المعاينة", done: "تم نسخ رابط المعاينة (صالح 24 ساعة).", copy: "رابط المعاينة (صالح 24 ساعة):" },
+} as const;
+const t = labels[(locale in labels ? locale : "fr") as keyof typeof labels];
+---
+
+<Button
+  type="button"
+  size="sm"
+  variant="outline"
+  data-draft-preview-link
+  data-kind={kind}
+  data-resource-id={resourceId}
+  data-done={t.done}
+  data-copy={t.copy}
+>{t.action}</Button>
+
+<script>
+  import { actions } from "astro:actions";
+  import { toast } from "@atoms/toast";
+
+  const bind = () => {
+    document.querySelectorAll<HTMLButtonElement>("[data-draft-preview-link]:not([data-bound])").forEach((button) => {
+      button.dataset.bound = "true";
+      button.addEventListener("click", async () => {
+        const { kind = "", resourceId = "", done = "", copy = "" } = button.dataset;
+        button.disabled = true;
+        const { data, error } = await actions.createDraftPreviewLink({ kind, id: resourceId, ttl: "24h" });
+        button.disabled = false;
+        if (error || !data) { toast.error(error?.message ?? "Erreur"); return; }
+        try {
+          await navigator.clipboard.writeText(data.url);
+          toast.success(done);
+        } catch {
+          window.prompt(copy, data.url);
+        }
+      });
+    });
+  };
+  bind();
+  document.addEventListener("astro:page-load", bind);
+</script>
