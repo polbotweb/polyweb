@@ -18,6 +18,7 @@ interface FilterOptions { categories: { id: string; name: string }[]; tags: { id
 interface Props {
   /** Vues enregistrées de l'utilisateur pour la liste (core/filters). */
   savedViews?: readonly { id: string; name: string; query: string }[];
+  facets?: Record<string, readonly { value: string; count: number }[]>;
   locale: Locale;
   blogT: BlogTranslations;
   title: string;
@@ -38,7 +39,7 @@ interface Props {
   canDelete: boolean;
   filterOptions: FilterOptions;
 }
-const { savedViews = [], title, locale, blogT, posts, postsMeta, stats, moderationCount, categories, tags, moderation, baseAdminUrl, basePublicUrl, organizationId, userId, canCreate, canUpdate, canPublish, canDelete, filterOptions } = Astro.props;
+const { facets = {}, savedViews = [], title, locale, blogT, posts, postsMeta, stats, moderationCount, categories, tags, moderation, baseAdminUrl, basePublicUrl, organizationId, userId, canCreate, canUpdate, canPublish, canDelete, filterOptions } = Astro.props;
 const localeSwitcherT = blogT.admin.localeSwitcher;
 const currentPath = Astro.url.pathname;
 const pathWithoutLocale = currentPath.replace(new RegExp(`^/${locale}(?=/|$)`), "") || "/";
@@ -72,7 +73,7 @@ function buildLocaleHref(targetLocale: Locale): string { return `${getRelativeLo
           <TabsTrigger value="stats">{blogT.admin.stats}</TabsTrigger>
         </TabsList>
         <TabsContent value="posts" defaultActive class="pt-4">
-          <AdminPostList savedViews={savedViews} locale={locale} blogT={blogT} rows={posts} meta={postsMeta} baseAdminUrl={baseAdminUrl} basePublicUrl={basePublicUrl} canCreate={canCreate} canUpdate={canUpdate} canPublish={canPublish} canDelete={canDelete} organizationId={organizationId} filterOptions={filterOptions} />
+          <AdminPostList facets={facets} savedViews={savedViews} locale={locale} blogT={blogT} rows={posts} meta={postsMeta} baseAdminUrl={baseAdminUrl} basePublicUrl={basePublicUrl} canCreate={canCreate} canUpdate={canUpdate} canPublish={canPublish} canDelete={canDelete} organizationId={organizationId} filterOptions={filterOptions} />
         </TabsContent>
         <TabsContent value="categories" class="pt-4"><AdminTaxonomyManager locale={locale} blogT={blogT} kind="category" items={categories} organizationId={organizationId} /></TabsContent>
         <TabsContent value="tags" class="pt-4"><AdminTaxonomyManager locale={locale} blogT={blogT} kind="tag" items={tags} organizationId={organizationId} /></TabsContent>

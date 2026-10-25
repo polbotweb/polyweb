@@ -3,7 +3,8 @@ import { requireAuth } from "@/lib/auth-guards";
 import { fetchOrgData, getUserOrgRole } from "@/lib/auth-data";
 import { getBlogTranslations } from "@i18n/utils";
 import { getBlogCategories, getBlogTags, getBlogModerationQueue } from "@database/loaders/blog.loader";
-import { getBlogAdminPostData, getBlogAdminAuthors, getBlogAdminTags } from "@database/loaders/blog-admin.loader";
+import { getBlogAdminPostData, getBlogAdminAuthors, getBlogAdminTags, getBlogAdminFacets } from "@database/loaders/blog-admin.loader";
+import { Effect } from "effect";
 import { getBlogAdminModerationCount } from "@database/loaders/blog-admin-moderation.loader";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
@@ -62,7 +63,11 @@ const [{ rows, meta, stats }, categoryRows, tagRows, moderation, authors, adminT
   getBlogAdminTags(org.id, locale),
   getBlogAdminModerationCount(org.id),
 ]);
-const savedViews = Astro.locals.user ? await loadSavedViews(Astro.locals.user.id, "blog-post", org.id) : [];
+// core/filters : facettes (chacune sans son propre filtre) + vues enregistrées de l'utilisateur.
+const [facets, savedViews] = await Promise.all([
+  Effect.runPromise(getBlogAdminFacets(org.id, locale, filters)).catch(() => ({})),
+  Astro.locals.user ? loadSavedViews(Astro.locals.user.id, "blog-post", org.id) : Promise.resolve([]),
+]);
 const categories = categoryRows.map((item) => ({ id: item.id, slug: item.slug, name: item.translation?.name ?? item.slug, description: item.translation?.description ?? null, color: item.color, icon: item.icon, parentId: item.parentId, sortOrder: item.sortOrder, postCount: item.postCount }));
 const tags = tagRows.map((item) => ({ id: item.id, slug: item.slug, name: item.translation?.name ?? item.slug, color: item.color, postCount: item.postCount }));
 const filterOptions = { categories: categories.map(({ id, name }) => ({ id, name })), tags: adminTags.map(({ id, name }) => ({ id, name })), authors };
@@ -70,6 +75,6 @@ const filterOptions = { categories: categories.map(({ id, name }) => ({ id, name
 <BaseLayout title={`${authT.organizations.blog.title} — ${org.name}`} description={authT.organizations.blog.description}>
   <AuthLayout title={org.name}>
     <OrgSidebar slot="sidebar" t={authT} locale={locale} org={org} activeItem="blog" orgRole={activeOrgRole} />
-    <BlogAdminPage savedViews={savedViews} locale={locale} blogT={blogT} title={`${authT.organizations.blog.title} — ${org.name}`} posts={rows} postsMeta={meta} stats={stats} moderationCount={moderationCount} categories={categories} tags={tags} moderation={moderation} baseAdminUrl={baseAdminUrl} basePublicUrl={basePublicUrl} organizationId={org.id} userId={user.id} canCreate={canCreate} canUpdate={canUpdate} canPublish={canPublish} canDelete={canDelete} filterOptions={filterOptions} />
+    <BlogAdminPage facets={facets} savedViews={savedViews} locale={locale} blogT={blogT} title={`${authT.organizations.blog.title} — ${org.name}`} posts={rows} postsMeta={meta} stats={stats} moderationCount={moderationCount} categories={categories} tags={tags} moderation={moderation} baseAdminUrl={baseAdminUrl} basePublicUrl={basePublicUrl} organizationId={org.id} userId={user.id} canCreate={canCreate} canUpdate={canUpdate} canPublish={canPublish} canDelete={canDelete} filterOptions={filterOptions} />
   </AuthLayout>
 </BaseLayout>

@@ -5,12 +5,12 @@ import { blogModule } from "@/modules/blog/module";
 const blogPostListDefinition = {
   filters: [
     { id: "search", kind: "search", queryParam: "search" },
-    { id: "status", kind: "select", queryParam: "status" },
+    { id: "status", kind: "select", queryParam: "status", options: ["DRAFT", "PUBLISHED", "ARCHIVED", "DELETED"], facet: true },
     { id: "category", kind: "select", queryParam: "categoryId" },
     { id: "tag", kind: "select", queryParam: "tagId" },
     { id: "author", kind: "select", queryParam: "authorId" },
-    { id: "featured", kind: "boolean", queryParam: "featured" },
-    { id: "sticky", kind: "boolean", queryParam: "sticky" },
+    { id: "featured", kind: "boolean", queryParam: "featured", facet: true },
+    { id: "sticky", kind: "boolean", queryParam: "sticky", facet: true },
     { id: "locale", kind: "select", queryParam: "translationLocale" },
   ],
   sorts: [
@@ -21,6 +21,8 @@ const blogPostListDefinition = {
     { id: "viewCount", queryParam: "sortBy", directions: ["asc", "desc"] },
   ],
   defaultSort: "updatedAt",
+  facets: true,
+  savedViews: true,
   // Actions groupées (moteur core/bulk) : ids alignés sur les opérations de l'action serveur.
   selection: true,
   bulkActions: [
