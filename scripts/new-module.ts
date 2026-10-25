@@ -11,7 +11,7 @@
  * quand on en a besoin, pas d'avance.
  */
 
-import { mkdirSync, writeFileSync, existsSync } from "node:fs";
+import { mkdirSync, writeFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const args = process.argv.slice(2);
@@ -20,7 +20,7 @@ const entityFlag = args.find((a) => a.startsWith("--entity="));
 const rootFlag = args.find((a) => a.startsWith("--root="));
 
 if (!name) {
-  console.error("usage: pnpm module:new <domaine> [--entity=entite]");
+  console.error("usage: pnpm module:new <domaine> [--entity=entite] [--table=nom_sql]");
   process.exit(1);
 }
 if (!/^[a-z][a-z0-9-]*$/.test(name)) {
@@ -51,6 +51,29 @@ const entityCamel = entity.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase(
 const snake = name.replace(/-/g, "_");
 const upper = snake.toUpperCase();
 
+/**
+ * Pluriel anglais simple d'un nom snake_case (dernier segment) : category → categories,
+ * box → boxes, class → classes, product → products ; déjà au pluriel (…s) → inchangé.
+ */
+function pluralizeSnake(word: string): string {
+  if (/(ss|sh|ch|x|z)$/.test(word)) return word + "es";
+  if (/[^aeiou]y$/.test(word)) return word.slice(0, -1) + "ies";
+  if (word.endsWith("s")) return word;
+  return word + "s";
+}
+
+/**
+ * Tables SQL nommées d'après l'entité au pluriel (`--entity=product` → `products`,
+ * `products_revisions`, `products_locks`), pas d'après le domaine. `--table=<snake>`
+ * force un autre nom. Les modules existants gardent leurs tables (aucun renommage).
+ */
+const tableFlag = args.find((a) => a.startsWith("--table="))?.split("=")[1];
+const table = tableFlag ?? pluralizeSnake(entity.replace(/-/g, "_"));
+if (!/^[a-z][a-z0-9_]*$/.test(table)) {
+  console.error(`nom de table invalide: "${table}" — snake_case attendu (ex: products)`);
+  process.exit(1);
+}
+
 // `--root=<dir>` permet de générer ailleurs que dans `src/` (tests, essais).
 const root = rootFlag?.split("=")[1] ?? "src";
 const moduleDir = join(root, "modules", name);
@@ -58,6 +81,22 @@ const compDir = join(root, "components", name);
 
 if (existsSync(moduleDir) || existsSync(compDir)) {
   console.error(`"${name}" existe déjà — rien n'a été écrit.`);
+  process.exit(1);
+}
+
+/** Fichiers .ts sous `dir` (récursif) : détection des tables SQL déjà déclarées. */
+function tsFiles(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const p = join(dir, e.name);
+    return e.isDirectory() ? tsFiles(p) : e.name.endsWith(".ts") ? [p] : [];
+  });
+}
+const taken = [table, `${table}_revisions`, `${table}_locks`].filter((t) =>
+  tsFiles(join(root, "database")).concat(tsFiles(join(root, "modules"))).some((f) => readFileSync(f, "utf8").includes(`pgTable("${t}"`)),
+);
+if (taken.length) {
+  console.error(`table(s) déjà déclarée(s) : ${taken.join(", ")} — choisir --entity=… ou --table=… ; rien n'a été écrit.`);
   process.exit(1);
 }
 
@@ -131,8 +170,8 @@ export const ${camel}CapabilityProviders = {
   content: "${name}",
   localization: "${name}Translations",
   publication: "${camel}Workflow",
-  revisions: "${snake}_revisions",
-  locks: "${snake}_locks",
+  revisions: "${table}_revisions",
+  locks: "${table}_locks",
 } as unknown as PolywebModuleCapabilityProviders;
 `,
 
@@ -359,7 +398,7 @@ import { index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-cor
 import { user } from "@database/schemas/auth.schema";
 import { ${upper}_STATUSES } from "../domain/workflow";
 
-export const ${camel} = pgTable("${snake}", {
+export const ${camel} = pgTable("${table}", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   organizationId: text("organization_id"),
   slug: text("slug").notNull(),
@@ -368,10 +407,10 @@ export const ${camel} = pgTable("${snake}", {
   createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
-}, (table) => [uniqueIndex("${snake}_org_slug_uidx").on(table.organizationId, table.slug)]);
+}, (table) => [uniqueIndex("${table}_org_slug_uidx").on(table.organizationId, table.slug)]);
 
 /** Révisions (core/revision) : une ligne par écriture, pour l'historique et la restauration. */
-export const ${camel}Revisions = pgTable("${snake}_revisions", {
+export const ${camel}Revisions = pgTable("${table}_revisions", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   resourceId: text("resource_id").notNull().references(() => ${camel}.id, { onDelete: "cascade" }),
   authorId: text("author_id").notNull().references(() => user.id, { onDelete: "cascade" }),
@@ -380,10 +419,10 @@ export const ${camel}Revisions = pgTable("${snake}_revisions", {
   status: text("status", { enum: ${upper}_STATUSES }).notNull(),
   note: text("note"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => [index("${snake}_revisions_resource_idx").on(table.resourceId)]);
+}, (table) => [index("${table}_revisions_resource_idx").on(table.resourceId)]);
 
 /** Verrous d'édition (core/locks) : une ligne par ressource, propriétaire utilisateur + session. */
-export const ${camel}Locks = pgTable("${snake}_locks", {
+export const ${camel}Locks = pgTable("${table}_locks", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   resourceId: text("resource_id").notNull().unique().references(() => ${camel}.id, { onDelete: "cascade" }),
   userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
@@ -437,16 +476,28 @@ export const ${camel}Lock = defineLockResource("${name}", drizzleLockStore("${na
 `,
 
   [`${moduleDir}/permissions/index.ts`]: `/**
- * Garde de permission Effect du domaine ${name} (RBAC better-auth). Le namespace
- * « ${name} » doit être déclaré dans le contrôle d'accès (\`src/lib/permissions\`).
+ * Gardes de permission Effect du domaine ${name}, tenant-aware (core \`permissions/tenant\`) :
+ * administrateur global → tout ; propriétaire / administrateur d'organisation → le contenu
+ * de SA organisation uniquement ; contenu plateforme (\`organizationId = null\`) → RBAC global.
+ * Le namespace « ${name} » doit être déclaré dans le contrôle d'accès (\`src/lib/permissions\`).
  */
 import type { ActionAPIContext } from "astro:actions";
-import { requireActionPermission } from "@/lib/effect/action";
+import { eq } from "drizzle-orm";
+import { getDrizzle } from "@database/drizzle";
+import { requireTenantPermission, requireTenantResourcePermission } from "@/lib/effect/action";
+import { ${camel} } from "../schema";
 
 export type ${pascal}Permission = "create" | "read" | "update" | "publish" | "delete";
 
-export const require${pascal}Permission = (context: ActionAPIContext, permissions: readonly ${pascal}Permission[]) =>
-  requireActionPermission(context, { "${name}": [...permissions] });
+/** Contenu de l'organisation \`organizationId\` (\`null\` = plateforme) : création, actions groupées. */
+export const require${pascal}Permission = (context: ActionAPIContext, permissions: readonly ${pascal}Permission[], organizationId: string | null) =>
+  requireTenantPermission(context, { "${name}": [...permissions] }, organizationId);
+
+/** Élément existant : son organisation est lue en base (introuvable → NOT_FOUND) avant la garde tenant. */
+export const require${pascal}ResourcePermission = (context: ActionAPIContext, permissions: readonly ${pascal}Permission[], id: string) =>
+  requireTenantResourcePermission(context, { "${name}": [...permissions] }, () =>
+    getDrizzle().select({ organizationId: ${camel}.organizationId }).from(${camel}).where(eq(${camel}.id, id)).limit(1),
+  );
 `,
 
   [`${moduleDir}/services/${entity}.service.ts`]: `/**
@@ -518,7 +569,7 @@ import { Effect } from "effect";
 import { effectHandler } from "@/lib/effect/action";
 import { lockOwnerFrom } from "@/core/locks/service";
 import { lockLocaleFrom } from "@/core/locks/errors";
-import { require${pascal}Permission } from "../permissions";
+import { require${pascal}Permission, require${pascal}ResourcePermission } from "../permissions";
 import { ${camel}Service } from "../services/${entity}.service";
 import { ${upper}_STATUSES } from "../domain/workflow";
 import { bulk${pascal}Lifecycle } from "./bulk";
@@ -531,28 +582,28 @@ export const ${camel}Actions = {
   create: defineAction({
     input: z.object({ title: z.string().min(1).max(200), slug: z.string().min(1).max(200), organizationId: z.string().nullable().default(null) }),
     handler: effectHandler((input, context) => Effect.gen(function* () {
-      const user = yield* require${pascal}Permission(context, ["create"]);
+      const user = yield* require${pascal}Permission(context, ["create"], input.organizationId);
       return yield* ${camel}Service.create(input, user.id);
     })),
   }),
   update: defineAction({
     input: idInput.extend({ title: z.string().min(1).max(200).optional(), slug: z.string().min(1).max(200).optional() }),
     handler: effectHandler(({ id, ...patch }, context) => Effect.gen(function* () {
-      const user = yield* require${pascal}Permission(context, ["update"]);
+      const user = yield* require${pascal}ResourcePermission(context, ["update"], id);
       return yield* ${camel}Service.update(id, patch, lockOwnerFrom(user.id, context.locals.session?.id), lockLocaleFrom(context.request.headers));
     })),
   }),
   transition: defineAction({
     input: idInput.extend({ to: z.enum(${upper}_STATUSES) }),
     handler: effectHandler((input, context) => Effect.gen(function* () {
-      const user = yield* require${pascal}Permission(context, input.to === "PUBLISHED" ? ["publish"] : ["update"]);
+      const user = yield* require${pascal}ResourcePermission(context, input.to === "PUBLISHED" ? ["publish"] : ["update"], input.id);
       return yield* ${camel}Service.transition(input.id, input.to, lockOwnerFrom(user.id, context.locals.session?.id), lockLocaleFrom(context.request.headers));
     })),
   }),
   lock: defineAction({
     input: idInput.extend({ takeOver: z.boolean().optional() }),
     handler: effectHandler((input, context) => Effect.gen(function* () {
-      const user = yield* require${pascal}Permission(context, ["update"]);
+      const user = yield* require${pascal}ResourcePermission(context, ["update"], input.id);
       // Même utilisateur dans une autre session → LockHeldError { sameUser } : confirmer côté UI puis renvoyer takeOver.
       return yield* ${camel}Service.lock(input.id, lockOwnerFrom(user.id, context.locals.session?.id), { takeOver: input.takeOver, locale: lockLocaleFrom(context.request.headers) });
     })),
@@ -560,7 +611,7 @@ export const ${camel}Actions = {
   unlock: defineAction({
     input: idInput,
     handler: effectHandler((input, context) => Effect.gen(function* () {
-      const user = yield* require${pascal}Permission(context, ["update"]);
+      const user = yield* require${pascal}ResourcePermission(context, ["update"], input.id);
       yield* ${camel}Service.unlock(input.id, lockOwnerFrom(user.id, context.locals.session?.id));
       return { success: true };
     })),
@@ -623,7 +674,7 @@ export const bulk${pascal}Lifecycle = defineAction({
     return runBulkAction({
       resource: "${snake}",
       operations: ${camel}BulkOperations,
-      authorize: (op: ${pascal}BulkOperation) => require${pascal}Permission(context, [PERMISSION[op]]).pipe(Effect.map((user) => ({ id: user.id }))),
+      authorize: (op: ${pascal}BulkOperation) => require${pascal}Permission(context, [PERMISSION[op]], input.organizationId).pipe(Effect.map((user) => ({ id: user.id }))),
       load: (ids) => actionTry("${name}.bulk.load", () => db.select().from(${camel}).where(and(inTenant, inArray(${camel}.id, [...ids])))),
       guard: (ids, actor) => ${camel}Lock.ensureNoneLockedByOther(ids, lockOwnerFrom(actor.id, context.locals.session?.id), lockLocaleFrom(context.request.headers)),
       transaction: (body) => db.transaction((tx) => body(tx)),

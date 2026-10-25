@@ -106,6 +106,46 @@ export const requireActionPermission = (context: ActionAPIContext, permissions: 
     return user;
   });
 
+/**
+ * Garde tenant (core `permissions/tenant`) pour une ressource de l'organisation
+ * `organizationId` (`null` = plateforme) :
+ * - administrateur global : tout ;
+ * - ressource plateforme : RBAC global (`userHasPermission`) ;
+ * - ressource d'organisation : propriétaire / administrateur de CETTE organisation
+ *   uniquement (autre organisation ou simple membre → FORBIDDEN).
+ */
+export const requireTenantPermission = (context: ActionAPIContext, permissions: Permissions, organizationId: string | null) =>
+  Effect.gen(function* () {
+    const user = context.locals.user;
+    if (!user) return yield* fail('UNAUTHORIZED', 'Vous devez être connecté pour effectuer cette action.');
+    if (user.banned) return yield* fail('FORBIDDEN', 'Compte suspendu.');
+    const tenant = yield* actionTry('permissions.tenant', () => import('@/core/permissions/tenant'));
+    if (tenant.isGlobalAdmin(user)) return user;
+    if (organizationId === null) return yield* requireActionPermission(context, permissions);
+    const organizationRole = yield* tenant.organizationRoleOf(user.id, organizationId);
+    if (!tenant.tenantAdminDecision({ actor: user, organizationId, organizationRole })) {
+      return yield* fail('FORBIDDEN', "Vous ne pouvez gérer que le contenu de votre organisation.");
+    }
+    return user;
+  });
+
+/**
+ * Garde tenant d'une ressource existante : la session est vérifiée AVANT toute
+ * lecture (pas de fuite d'existence), puis l'organisation de la ressource est lue
+ * (`loadOrganization` → `[]` si introuvable → NOT_FOUND) et `requireTenantPermission` appliquée.
+ */
+export const requireTenantResourcePermission = (
+  context: ActionAPIContext,
+  permissions: Permissions,
+  loadOrganization: () => Promise<ReadonlyArray<{ organizationId: string | null }>>,
+) =>
+  Effect.gen(function* () {
+    if (!context.locals.user) return yield* fail('UNAUTHORIZED', 'Vous devez être connecté pour effectuer cette action.');
+    const [row] = yield* actionTry('permissions.tenantResource', loadOrganization);
+    if (!row) return yield* fail('NOT_FOUND', 'Élément introuvable.');
+    return yield* requireTenantPermission(context, permissions, row.organizationId ?? null);
+  });
+
 /** Limite par utilisateur et par portée (mêmes clés que `adminRateLimit`). */
 export const actionRateLimit = (userId: string, scope: string, opts = { window: 60, max: 30 }) =>
   Effect.suspend(() => {

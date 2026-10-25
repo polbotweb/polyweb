@@ -25,6 +25,26 @@ describe('scripts/new-module.ts', () => {
     expect(existsSync(join(dir, 'components/event-tickets/EventTicketsCard.astro'))).toBe(true);
   });
 
+  it("names SQL tables after the pluralized entity (not the domain), with --table override and collision guard", () => {
+    const schema = (m: string) => readFileSync(join(dir, `modules/${m}/schema/index.ts`), 'utf8');
+    expect(schema('event-tickets')).toContain('pgTable("tickets", {');
+    expect(schema('event-tickets')).toContain('pgTable("tickets_revisions", {');
+    expect(schema('event-tickets')).toContain('pgTable("tickets_locks", {');
+    expect(schema('event-tickets')).toContain('uniqueIndex("tickets_org_slug_uidx")');
+    expect(schema('event-tickets')).not.toContain('pgTable("event_tickets"');
+    run(['catalog', '--entity=category']);
+    expect(schema('catalog')).toContain('pgTable("categories", {');
+    expect(readFileSync(join(dir, 'modules/catalog/capabilities.ts'), 'utf8')).toContain('revisions: "categories_revisions"');
+    run(['boxes-shop', '--entity=box']);
+    expect(schema('boxes-shop')).toContain('pgTable("boxes", {');
+    run(['news', '--entity=news-item', '--table=news_entries']);
+    expect(schema('news')).toContain('pgTable("news_entries", {');
+    // Table déjà déclarée par un autre module → refus, rien n'est écrit.
+    expect(() => run(['other-tickets', '--entity=ticket'])).toThrow(/tickets/);
+    expect(existsSync(join(dir, 'modules/other-tickets'))).toBe(false);
+    expect(() => run(['bad-table', '--table=Bad-Name'])).toThrow();
+  });
+
   it('refuses invalid names and existing modules', () => {
     expect(() => run(['Bad_Name'])).toThrow();
     expect(() => run(['event-tickets'])).toThrow();
@@ -37,16 +57,23 @@ describe('scripts/new-module.ts', () => {
     expect(read('locks.ts')).toContain('tenantOf: (id) =>');
     expect(readFileSync(join(dir, 'components/event-tickets/admin/EventTicketsAdminList.astro'), 'utf8')).toContain('<ForceReleaseLockButton resourceType="event-tickets"');
     expect(read('domain/workflow.ts')).toContain('export const eventTicketsWorkflow: WorkflowDefinition<EventTicketsStatus>');
-    expect(read('permissions/index.ts')).toContain('requireActionPermission(context, { "event-tickets": [...permissions] })');
+    const perms = read('permissions/index.ts');
+    expect(perms).toContain('requireTenantPermission(context, { "event-tickets": [...permissions] }, organizationId)');
+    expect(perms).toContain('requireTenantResourcePermission(context, { "event-tickets": [...permissions] }, () =>');
+    expect(perms).toContain('.from(eventTickets).where(eq(eventTickets.id, id))');
     const service = read('services/ticket.service.ts');
     expect(service).toContain('eventTicketsLock.ensureNotLockedByOther');
     expect(service).toContain('canTransition(eventTicketsWorkflow');
     expect(service).toContain('dbTry("event-tickets.update"');
     expect(read('loaders/ticket.loader.ts')).toContain('runOrThrow(eventTicketsLoader.byId(id, viewerId))');
-    expect(read('actions/index.ts')).toContain('yield* requireEventTicketsPermission(context, ["update"])');
+    const actions = read('actions/index.ts');
+    expect(actions).toContain('yield* requireEventTicketsPermission(context, ["create"], input.organizationId)');
+    expect(actions).toContain('yield* requireEventTicketsResourcePermission(context, ["update"], id)');
+    expect(actions).toContain('yield* requireEventTicketsResourcePermission(context, ["update"], input.id)');
     expect(read('module.ts')).toMatch(/locks: true,[\s\S]*/);
     // Actions groupées (core/bulk) : action générée, ressource activée, barre générique dans la liste.
     const bulk = read('actions/bulk.ts');
+    expect(bulk).toContain('requireEventTicketsPermission(context, [PERMISSION[op]], input.organizationId)');
     expect(bulk).toContain('runBulkAction({');
     expect(bulk).toContain('eventTicketsLock.ensureNoneLockedByOther');
     expect(bulk).toContain('canTransition(eventTicketsWorkflow');

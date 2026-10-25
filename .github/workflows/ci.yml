@@ -208,12 +208,12 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium-firefox-webkit
       - name: Install Playwright Browsers
         if: steps.pw-cache.outputs.cache-hit != 'true'
-        timeout-minutes: 15
-        run: for i in 1 2 3; do timeout 300 pnpm exec playwright install --with-deps chromium firefox webkit && exit 0; echo "tentative $i échouée"; done; exit 1
+        timeout-minutes: 35
+        run: bash .github/scripts/playwright-install.sh full chromium firefox webkit
       - name: Install Playwright system deps (browsers from cache)
         if: steps.pw-cache.outputs.cache-hit == 'true'
-        timeout-minutes: 10
-        run: for i in 1 2 3; do timeout 240 pnpm exec playwright install-deps chromium firefox webkit && exit 0; echo "tentative $i échouée"; done; exit 1
+        timeout-minutes: 25
+        run: bash .github/scripts/playwright-install.sh deps chromium firefox webkit
 
       - name: Run Migrations
         run: pnpm db:migrate
@@ -300,12 +300,12 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
       - name: Install Playwright Browsers
         if: steps.pw-cache.outputs.cache-hit != 'true'
-        timeout-minutes: 15
-        run: for i in 1 2 3; do timeout 300 pnpm exec playwright install --with-deps chromium && exit 0; echo "tentative $i échouée"; done; exit 1
+        timeout-minutes: 35
+        run: bash .github/scripts/playwright-install.sh full chromium
       - name: Install Playwright system deps (browsers from cache)
         if: steps.pw-cache.outputs.cache-hit == 'true'
-        timeout-minutes: 10
-        run: for i in 1 2 3; do timeout 240 pnpm exec playwright install-deps chromium && exit 0; echo "tentative $i échouée"; done; exit 1
+        timeout-minutes: 25
+        run: bash .github/scripts/playwright-install.sh deps chromium
 
       - name: Run Migrations
         run: pnpm db:migrate

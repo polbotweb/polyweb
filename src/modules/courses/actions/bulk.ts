@@ -53,7 +53,7 @@ export const bulkCoursesLifecycle = defineAction({
     return runBulkAction({
       resource: "courses",
       operations: coursesBulkOperations,
-      authorize: (op: CoursesBulkOperation) => requireCoursesPermission(context, [PERMISSION[op]]).pipe(Effect.map((user) => ({ id: user.id }))),
+      authorize: (op: CoursesBulkOperation) => requireCoursesPermission(context, [PERMISSION[op]], input.organizationId).pipe(Effect.map((user) => ({ id: user.id }))),
       load: (ids) => actionTry("courses.bulk.load", () => db.select().from(courses).where(and(inTenant, inArray(courses.id, [...ids])))),
       guard: (ids, actor) => coursesLock.ensureNoneLockedByOther(ids, lockOwnerFrom(actor.id, context.locals.session?.id), lockLocaleFrom(context.request.headers)),
       transaction: (body) => db.transaction((tx) => body(tx)),
