@@ -5,7 +5,7 @@
  * pour produire la migration (le générateur n'écrit aucune migration).
  */
 import { sql } from "drizzle-orm";
-import { boolean, check, index, integer, pgTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import { type AnyPgColumn, boolean, check, index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 import { organization, user } from "@database/schemas/auth.schema";
 import { mediaFiles } from "@database/schemas/media.schema";
 import { LOCALES } from "@i18n/config";
@@ -143,3 +143,51 @@ export const shopLocks = pgTable("shop_locks", {
   lockedAt: timestamp("locked_at").defaultNow().notNull(),
   expiresAt: timestamp("expires_at").notNull(),
 });
+
+/**
+ * Catégories (core/taxonomy, contrat générique `defineCategoryTaxonomy`) : tables PROPRES
+ * au module (pas de table polymorphe), forme commune du cœur, hiérarchie via `parent_id`.
+ */
+export const productCategories = pgTable("product_categories", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: text("organization_id").references(() => organization.id, { onDelete: "cascade" }),
+  parentId: text("parent_id").references((): AnyPgColumn => productCategories.id, { onDelete: "set null" }),
+  slug: text("slug").notNull(),
+  icon: text("icon"),
+  color: text("color"),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
+}, (table) => [
+  uniqueIndex("product_categories_org_slug_uidx").on(table.organizationId, table.slug).where(sql`${table.organizationId} IS NOT NULL`),
+  uniqueIndex("product_categories_global_slug_uidx").on(table.slug).where(sql`${table.organizationId} IS NULL`),
+  index("product_categories_org_idx").on(table.organizationId),
+  index("product_categories_parent_idx").on(table.parentId),
+  check("product_categories_no_self_parent", sql`${table.parentId} IS NULL OR ${table.parentId} != ${table.id}`),
+]);
+
+/** Traductions des catégories : une ligne par locale (pas de JSONB). */
+export const productCategoryTranslations = pgTable("product_category_translations", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  categoryId: text("category_id").notNull().references(() => productCategories.id, { onDelete: "cascade" }),
+  organizationId: text("organization_id").references(() => organization.id, { onDelete: "cascade" }),
+  locale: text("locale", { enum: LOCALES }).notNull(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
+}, (table) => [
+  uniqueIndex("product_category_translations_category_locale_uidx").on(table.categoryId, table.locale),
+  uniqueIndex("product_category_translations_org_locale_slug_uidx").on(table.organizationId, table.locale, table.slug).where(sql`${table.organizationId} IS NOT NULL`),
+  uniqueIndex("product_category_translations_global_locale_slug_uidx").on(table.locale, table.slug).where(sql`${table.organizationId} IS NULL`),
+]);
+
+/** Liaison explicite product ↔ catégorie. */
+export const productCategoryLinks = pgTable("product_category_links", {
+  productId: text("product_id").notNull().references(() => shop.id, { onDelete: "cascade" }),
+  categoryId: text("category_id").notNull().references(() => productCategories.id, { onDelete: "cascade" }),
+}, (table) => [
+  primaryKey({ columns: [table.productId, table.categoryId] }),
+  index("product_category_links_category_idx").on(table.categoryId),
+]);

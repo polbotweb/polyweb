@@ -11,6 +11,7 @@ export const formationsCapabilityProviders = {
   content: "formations",
   media: "media_files (formations.cover_image_id)",
   localization: "formation_translations",
+  taxonomy: "formation_categories (core/taxonomy, formationsCategoryTaxonomy)",
   publication: "formationsWorkflow",
   revisions: "formations_revisions",
   locks: "formations_locks",

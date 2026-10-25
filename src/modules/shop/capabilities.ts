@@ -11,6 +11,7 @@ export const shopCapabilityProviders = {
   content: "shop",
   media: "media_files (shop_products.cover_image_id)",
   localization: "product_translations",
+  taxonomy: "product_categories (core/taxonomy, shopCategoryTaxonomy)",
   publication: "shopWorkflow",
   revisions: "shop_revisions",
   locks: "shop_locks",

@@ -6,6 +6,8 @@ import { defineAction } from "astro:actions";
 import { z } from "astro/zod";
 import { Effect } from "effect";
 import { effectHandler } from "@/lib/effect/action";
+import { defineCategoryActions } from "@/core/taxonomy/actions";
+import { eventsCategoryTaxonomy } from "../taxonomy";
 import { lockOwnerFrom } from "@/core/locks/service";
 import { lockLocaleFrom } from "@/core/locks/errors";
 import { requireEventsPermission, requireEventsResourcePermission } from "../permissions";
@@ -16,6 +18,8 @@ import { bulkEventsLifecycle } from "./bulk";
 const idInput = z.object({ id: z.uuid() });
 
 export const eventsActions = {
+  // Catégories (core/taxonomy) — voir ../taxonomy.ts.
+  categories: defineCategoryActions(eventsCategoryTaxonomy, "events"),
   // Actions groupées (core/bulk) — voir ./bulk.ts.
   bulk: bulkEventsLifecycle,
   create: defineAction({

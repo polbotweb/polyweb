@@ -11,6 +11,7 @@ export const eventsCapabilityProviders = {
   content: "events",
   media: "media_files (events.cover_image_id)",
   localization: "event_translations",
+  taxonomy: "event_categories (core/taxonomy, eventsCategoryTaxonomy)",
   publication: "eventsWorkflow",
   revisions: "events_revisions",
   locks: "events_locks",
