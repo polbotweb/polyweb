@@ -53,7 +53,7 @@ export const bulkShopLifecycle = defineAction({
     return runBulkAction({
       resource: "shop",
       operations: shopBulkOperations,
-      authorize: (op: ShopBulkOperation) => requireShopPermission(context, [PERMISSION[op]]).pipe(Effect.map((user) => ({ id: user.id }))),
+      authorize: (op: ShopBulkOperation) => requireShopPermission(context, [PERMISSION[op]], input.organizationId).pipe(Effect.map((user) => ({ id: user.id }))),
       load: (ids) => actionTry("shop.bulk.load", () => db.select().from(shop).where(and(inTenant, inArray(shop.id, [...ids])))),
       guard: (ids, actor) => shopLock.ensureNoneLockedByOther(ids, lockOwnerFrom(actor.id, context.locals.session?.id), lockLocaleFrom(context.request.headers)),
       transaction: (body) => db.transaction((tx) => body(tx)),

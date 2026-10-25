@@ -53,7 +53,7 @@ export const bulkFormationsLifecycle = defineAction({
     return runBulkAction({
       resource: "formations",
       operations: formationsBulkOperations,
-      authorize: (op: FormationsBulkOperation) => requireFormationsPermission(context, [PERMISSION[op]]).pipe(Effect.map((user) => ({ id: user.id }))),
+      authorize: (op: FormationsBulkOperation) => requireFormationsPermission(context, [PERMISSION[op]], input.organizationId).pipe(Effect.map((user) => ({ id: user.id }))),
       load: (ids) => actionTry("formations.bulk.load", () => db.select().from(formations).where(and(inTenant, inArray(formations.id, [...ids])))),
       guard: (ids, actor) => formationsLock.ensureNoneLockedByOther(ids, lockOwnerFrom(actor.id, context.locals.session?.id), lockLocaleFrom(context.request.headers)),
       transaction: (body) => db.transaction((tx) => body(tx)),
