@@ -155,7 +155,7 @@ Domain-specific behavior stays in the module. Transactional capabilities such as
 
 ## Scaffolding (`pnpm module:new`) and core abstractions
 
-`pnpm module:new <domain> [--entity=<entity>] [--table=<sql_name>]` generates, in addition to the module contract, loaders, admin
+`pnpm module:new <domain> [--entity=<entity>] [--table=<sql_name>] [--taxonomy]` generates, in addition to the module contract, loaders, admin
 resource and components, a module wired to the core Effect abstractions:
 
 | File | Core abstraction |
@@ -174,6 +174,32 @@ The module declares `publication`, `revisions` and `locks` capabilities with the
 purpose (manual steps printed by the generator): the migration (export the schema from
 `src/database/schemas/index.ts`, then `pnpm db:generate`), the `<domain>` namespace in the access-control
 statements, the re-export of the actions from `src/actions/index.ts`, and the page route.
+
+### Categories (`core/taxonomy`, opt-in `--taxonomy`)
+
+Categories are a **generic core contract** (`src/core/taxonomy/categories.ts`) that any module opts into; there is
+no universal polymorphic table. Each module owns three typed tables — `<entity>_categories` (tenant, parent,
+slug, sort order, icon, color), `<entity>_category_translations` (one row per locale, no JSONB) and
+`<entity>_category_links` (resource ↔ category) — and declares them with `defineCategoryTaxonomy` +
+`registerCategoryTaxonomy` in `src/modules/<domain>/taxonomy.ts` (one storage per resource type; duplicates throw).
+
+The contract provides `list` / `tree` (localized, no locale fallback), `create` / `update` (slug + color
+validation, cycle refusal → `ValidationError`), `remove` (refused while the category has children →
+`ConflictError`), `setResourceCategories` (categories of the resource's own tenant only → `ForbiddenError`
+otherwise), `categoriesOf`, `filterCondition` and `facet` (category facet for `core/filters`, counted with the
+other active filters). Tenant scope is strict (`organizationId = null` is platform content; never a fallback).
+`defineCategoryActions` (`src/core/taxonomy/actions.ts`) exposes the tenant-aware Astro actions
+`<domain>Actions.categories.{list,create,update,remove,assign}` (global admins everywhere, org owners/admins in
+their own organization, `{ <domain>: ["update"] }` permission for platform content).
+
+| Module | Storage |
+| --- | --- |
+| Events, Formations, Courses, Shop | new tables (migration `0026_categories_taxonomy`, additive) |
+| Blog, Services | adapters over the **existing** `blog_categories*` / `service_categor*` tables — behavior and data unchanged, no data migration |
+
+Every admin list above exposes a "category" facet (`categoryId` query parameter, uuid only, filtered in the tenant).
+`pnpm module:new <domain> --taxonomy` scaffolds the three tables, `taxonomy.ts`, the `taxonomy` capability, the
+`categories` actions, the resource filter and the loader filter/condition/facet; without the flag nothing is generated.
 
 Existing modules keep their table names (no rename): `events`, `formations` and `courses` already match their
 pluralized entity; renaming the Shop tables (`shop_products` / `shop_revisions` / `shop_locks`, Drizzle const `shop`, → `products` / `product_revisions` / `product_locks`) is only a proposal
