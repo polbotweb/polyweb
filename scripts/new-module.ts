@@ -11,7 +11,7 @@
  * quand on en a besoin, pas d'avance.
  */
 
-import { mkdirSync, writeFileSync, existsSync } from "node:fs";
+import { mkdirSync, writeFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const args = process.argv.slice(2);
@@ -20,7 +20,7 @@ const entityFlag = args.find((a) => a.startsWith("--entity="));
 const rootFlag = args.find((a) => a.startsWith("--root="));
 
 if (!name) {
-  console.error("usage: pnpm module:new <domaine> [--entity=entite]");
+  console.error("usage: pnpm module:new <domaine> [--entity=entite] [--table=nom_sql]");
   process.exit(1);
 }
 if (!/^[a-z][a-z0-9-]*$/.test(name)) {
@@ -51,6 +51,29 @@ const entityCamel = entity.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase(
 const snake = name.replace(/-/g, "_");
 const upper = snake.toUpperCase();
 
+/**
+ * Pluriel anglais simple d'un nom snake_case (dernier segment) : category → categories,
+ * box → boxes, class → classes, product → products ; déjà au pluriel (…s) → inchangé.
+ */
+function pluralizeSnake(word: string): string {
+  if (/(ss|sh|ch|x|z)$/.test(word)) return word + "es";
+  if (/[^aeiou]y$/.test(word)) return word.slice(0, -1) + "ies";
+  if (word.endsWith("s")) return word;
+  return word + "s";
+}
+
+/**
+ * Tables SQL nommées d'après l'entité au pluriel (`--entity=product` → `products`,
+ * `products_revisions`, `products_locks`), pas d'après le domaine. `--table=<snake>`
+ * force un autre nom. Les modules existants gardent leurs tables (aucun renommage).
+ */
+const tableFlag = args.find((a) => a.startsWith("--table="))?.split("=")[1];
+const table = tableFlag ?? pluralizeSnake(entity.replace(/-/g, "_"));
+if (!/^[a-z][a-z0-9_]*$/.test(table)) {
+  console.error(`nom de table invalide: "${table}" — snake_case attendu (ex: products)`);
+  process.exit(1);
+}
+
 // `--root=<dir>` permet de générer ailleurs que dans `src/` (tests, essais).
 const root = rootFlag?.split("=")[1] ?? "src";
 const moduleDir = join(root, "modules", name);
@@ -58,6 +81,22 @@ const compDir = join(root, "components", name);
 
 if (existsSync(moduleDir) || existsSync(compDir)) {
   console.error(`"${name}" existe déjà — rien n'a été écrit.`);
+  process.exit(1);
+}
+
+/** Fichiers .ts sous `dir` (récursif) : détection des tables SQL déjà déclarées. */
+function tsFiles(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const p = join(dir, e.name);
+    return e.isDirectory() ? tsFiles(p) : e.name.endsWith(".ts") ? [p] : [];
+  });
+}
+const taken = [table, `${table}_revisions`, `${table}_locks`].filter((t) =>
+  tsFiles(join(root, "database")).concat(tsFiles(join(root, "modules"))).some((f) => readFileSync(f, "utf8").includes(`pgTable("${t}"`)),
+);
+if (taken.length) {
+  console.error(`table(s) déjà déclarée(s) : ${taken.join(", ")} — choisir --entity=… ou --table=… ; rien n'a été écrit.`);
   process.exit(1);
 }
 
@@ -131,8 +170,8 @@ export const ${camel}CapabilityProviders = {
   content: "${name}",
   localization: "${name}Translations",
   publication: "${camel}Workflow",
-  revisions: "${snake}_revisions",
-  locks: "${snake}_locks",
+  revisions: "${table}_revisions",
+  locks: "${table}_locks",
 } as unknown as PolywebModuleCapabilityProviders;
 `,
 
@@ -359,7 +398,7 @@ import { index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-cor
 import { user } from "@database/schemas/auth.schema";
 import { ${upper}_STATUSES } from "../domain/workflow";
 
-export const ${camel} = pgTable("${snake}", {
+export const ${camel} = pgTable("${table}", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   organizationId: text("organization_id"),
   slug: text("slug").notNull(),
@@ -368,10 +407,10 @@ export const ${camel} = pgTable("${snake}", {
   createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
-}, (table) => [uniqueIndex("${snake}_org_slug_uidx").on(table.organizationId, table.slug)]);
+}, (table) => [uniqueIndex("${table}_org_slug_uidx").on(table.organizationId, table.slug)]);
 
 /** Révisions (core/revision) : une ligne par écriture, pour l'historique et la restauration. */
-export const ${camel}Revisions = pgTable("${snake}_revisions", {
+export const ${camel}Revisions = pgTable("${table}_revisions", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   resourceId: text("resource_id").notNull().references(() => ${camel}.id, { onDelete: "cascade" }),
   authorId: text("author_id").notNull().references(() => user.id, { onDelete: "cascade" }),
@@ -380,10 +419,10 @@ export const ${camel}Revisions = pgTable("${snake}_revisions", {
   status: text("status", { enum: ${upper}_STATUSES }).notNull(),
   note: text("note"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => [index("${snake}_revisions_resource_idx").on(table.resourceId)]);
+}, (table) => [index("${table}_revisions_resource_idx").on(table.resourceId)]);
 
 /** Verrous d'édition (core/locks) : une ligne par ressource, propriétaire utilisateur + session. */
-export const ${camel}Locks = pgTable("${snake}_locks", {
+export const ${camel}Locks = pgTable("${table}_locks", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   resourceId: text("resource_id").notNull().unique().references(() => ${camel}.id, { onDelete: "cascade" }),
   userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),

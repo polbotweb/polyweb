@@ -25,6 +25,26 @@ describe('scripts/new-module.ts', () => {
     expect(existsSync(join(dir, 'components/event-tickets/EventTicketsCard.astro'))).toBe(true);
   });
 
+  it("names SQL tables after the pluralized entity (not the domain), with --table override and collision guard", () => {
+    const schema = (m: string) => readFileSync(join(dir, `modules/${m}/schema/index.ts`), 'utf8');
+    expect(schema('event-tickets')).toContain('pgTable("tickets", {');
+    expect(schema('event-tickets')).toContain('pgTable("tickets_revisions", {');
+    expect(schema('event-tickets')).toContain('pgTable("tickets_locks", {');
+    expect(schema('event-tickets')).toContain('uniqueIndex("tickets_org_slug_uidx")');
+    expect(schema('event-tickets')).not.toContain('pgTable("event_tickets"');
+    run(['catalog', '--entity=category']);
+    expect(schema('catalog')).toContain('pgTable("categories", {');
+    expect(readFileSync(join(dir, 'modules/catalog/capabilities.ts'), 'utf8')).toContain('revisions: "categories_revisions"');
+    run(['boxes-shop', '--entity=box']);
+    expect(schema('boxes-shop')).toContain('pgTable("boxes", {');
+    run(['news', '--entity=news-item', '--table=news_entries']);
+    expect(schema('news')).toContain('pgTable("news_entries", {');
+    // Table déjà déclarée par un autre module → refus, rien n'est écrit.
+    expect(() => run(['other-tickets', '--entity=ticket'])).toThrow(/tickets/);
+    expect(existsSync(join(dir, 'modules/other-tickets'))).toBe(false);
+    expect(() => run(['bad-table', '--table=Bad-Name'])).toThrow();
+  });
+
   it('refuses invalid names and existing modules', () => {
     expect(() => run(['Bad_Name'])).toThrow();
     expect(() => run(['event-tickets'])).toThrow();

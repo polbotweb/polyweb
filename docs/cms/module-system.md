@@ -155,12 +155,12 @@ Domain-specific behavior stays in the module. Transactional capabilities such as
 
 ## Scaffolding (`pnpm module:new`) and core abstractions
 
-`pnpm module:new <domain> [--entity=<entity>]` generates, in addition to the module contract, loaders, admin
+`pnpm module:new <domain> [--entity=<entity>] [--table=<sql_name>]` generates, in addition to the module contract, loaders, admin
 resource and components, a module wired to the core Effect abstractions:
 
 | File | Core abstraction |
 | --- | --- |
-| `schema/index.ts` | content table, `<domain>_revisions`, `<domain>_locks` (lock columns expected by `core/locks`) |
+| `schema/index.ts` | content table named after the **pluralized entity** (`--entity=product` → `products`; `--table` overrides), `<table>_revisions`, `<table>_locks` (lock columns expected by `core/locks`); the generator refuses a table name already declared under `src/database` or `src/modules` |
 | `domain/workflow.ts` | `WorkflowDefinition` (`core/workflow`): `DRAFT` / `PUBLISHED` / `ARCHIVED` transitions |
 | `locks.ts` | `defineLockResource` + `drizzleLockStore` (`core/locks`): user + session owner, same-user takeover, TTL, purge |
 | `locks.ts` (`tenantOf`) | owning organization for the generic, audited `forceReleaseLock` admin action (global admins anywhere, org owners/admins in their own organization only); auto-registered via `src/modules/*/locks.ts` |
@@ -174,6 +174,10 @@ The module declares `publication`, `revisions` and `locks` capabilities with the
 purpose (manual steps printed by the generator): the migration (export the schema from
 `src/database/schemas/index.ts`, then `pnpm db:generate`), the `<domain>` namespace in the access-control
 statements, the re-export of the actions from `src/actions/index.ts`, and the page route.
+
+Existing modules keep their table names (no rename): `events`, `formations` and `courses` already match their
+pluralized entity; renaming the Shop tables (`shop` → `products`, with `_revisions` / `_locks`) is only a proposal
+(foreign keys, lock store and migrations involved — not trivially safe).
 
 `tests/unit/scripts/new-module.test.ts` generates a module inside the repository (ignored `tmp*` folder), runs
 `tsc --noEmit` on every generated TypeScript file against the real core code, and imports `module.ts` so the
