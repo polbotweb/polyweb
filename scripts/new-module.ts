@@ -179,7 +179,69 @@ export const load${pascal} = (id: string, viewerId: string | null): Promise<${pa
   runOrThrow(${camel}Loader.byId(id, viewerId));
 `,
 
+  [`${moduleDir}/loaders/${entity}-admin.loader.ts`]: `/**
+ * Liste back-office du domaine ${name} (core/filters) : filtres lus dans l'URL
+ * canonique de la ressource admin, conditions SQL partagées par la liste et les
+ * comptes, facettes calculées par \`computeFacets\` (Effect, FacetError typé) —
+ * chaque facette est comptée avec les autres filtres actifs mais sans le sien,
+ * toujours dans le tenant.
+ */
+import { and, count, eq, ilike, isNull, type SQL } from "drizzle-orm";
+import { getDrizzle } from "@database/drizzle";
+import { computeFacets, parseListUrlState } from "@/core/filters";
+import { runOrThrow } from "@/lib/effect/run";
+import { ${entityCamel}AdminResource } from "../admin/resource";
+import { ${upper}_STATUSES, type ${pascal}Status } from "../domain/workflow";
+import { ${camel} } from "../schema";
+
+export interface ${pascal}AdminFilters {
+  readonly search?: string;
+  readonly status?: ${pascal}Status;
+}
+
+/** URL → filtres typés (valeurs hors définition ignorées par parseListUrlState). */
+export function ${camel}AdminFiltersFromUrl(params: URLSearchParams | string): ${pascal}AdminFilters {
+  const { filters } = parseListUrlState(${entityCamel}AdminResource.list!, params);
+  return {
+    search: typeof filters.search === "string" ? filters.search : undefined,
+    status: ${upper}_STATUSES.find((status) => status === filters.status),
+  };
+}
+
+const escapeLike = (value: string) => value.replace(/[\\\\%_]/g, (c) => "\\\\" + c);
+
+/** Conditions SQL (tenant + filtres) partagées par la liste, le total et les facettes. */
+export function ${camel}AdminConditions(organizationId: string | null, filters: ${pascal}AdminFilters): SQL[] {
+  const conditions: SQL[] = [organizationId === null ? isNull(${camel}.organizationId) : eq(${camel}.organizationId, organizationId)];
+  if (filters.search) conditions.push(ilike(${camel}.title, "%" + escapeLike(filters.search) + "%"));
+  if (filters.status) conditions.push(eq(${camel}.status, filters.status));
+  return conditions;
+}
+
+/** Comptes de facettes de la liste admin (Effect). */
+export const ${camel}AdminFacets = (organizationId: string | null, filters: ${pascal}AdminFilters) =>
+  computeFacets(filters, [
+    {
+      id: "status",
+      filterKey: "status",
+      count: async (without) => {
+        const rows = await getDrizzle()
+          .select({ value: ${camel}.status, count: count() })
+          .from(${camel})
+          .where(and(...${camel}AdminConditions(organizationId, without)))
+          .groupBy(${camel}.status);
+        return rows.map((row) => ({ value: String(row.value), count: Number(row.count) }));
+      },
+    },
+  ]);
+
+/** Adaptateur Promise (pages Astro). */
+export const load${pascal}AdminFacets = (organizationId: string | null, filters: ${pascal}AdminFilters) =>
+  runOrThrow(${camel}AdminFacets(organizationId, filters));
+`,
+
   [`${moduleDir}/loaders/index.ts`]: `export * from "./${entity}.loader";
+export * from "./${entity}-admin.loader";
 `,
 
   [`${moduleDir}/client/init.ts`]: `/**
@@ -203,6 +265,7 @@ export function init${pascal}(): void {
   [`${moduleDir}/admin/resource.ts`]: `import { assertAdminResourceListDefinition } from "@/core/admin/filter-contract";
 import { assertResourceCompatibility, type AdminResourceDefinition } from "@/lib/cms/resource-contract";
 import { ${camel}Module } from "@/modules/${name}/module";
+import { ${upper}_STATUSES } from "@/modules/${name}/domain/workflow";
 
 /**
  * Définition de la liste back-office.
@@ -211,9 +274,16 @@ import { ${camel}Module } from "@/modules/${name}/module";
  * lit dans l'URL, ce qui rend une vue filtrée partageable par lien.
  * \`assertAdminResourceListDefinition\` valide qu'aucun identifiant n'est
  * dupliqué et que \`defaultSort\` désigne un tri déclaré.
+ *
+ * Facettes et vues enregistrées (core/filters) : le filtre \`status\` est compté par
+ * \`${camel}AdminFacets\` (loaders/${entity}-admin.loader.ts) ; les vues enregistrées
+ * exigent l'inscription de la ressource dans \`src/lib/admin/list-registry.ts\`.
  */
 const ${entityCamel}ListDefinition = {
-  filters: [{ id: "search", kind: "search", queryParam: "search" }],
+  filters: [
+    { id: "search", kind: "search", queryParam: "search" },
+    { id: "status", kind: "select", queryParam: "status", options: [...${upper}_STATUSES], facet: true },
+  ],
   sorts: [{ id: "createdAt", queryParam: "sortBy", directions: ["asc", "desc"] }],
   defaultSort: "createdAt",
   // Actions groupées (core/bulk, \`actions/bulk.ts\`) : ids = opérations du moteur ;
@@ -225,6 +295,8 @@ const ${entityCamel}ListDefinition = {
     { id: "archive", permission: "${name}:update", confirmationKey: "${name}.bulk.archive" },
     { id: "restore", permission: "${name}:update" },
   ],
+  facets: true,
+  savedViews: true,
 } as const;
 
 assertAdminResourceListDefinition(${entityCamel}ListDefinition);
@@ -628,7 +700,14 @@ const { item } = Astro.props as Props;
  * Actions groupées : barre générique \`AdminBulkBar\` (core/bulk) — cases par ligne,
  * case « page », compteur annoncé, confirmation modale. Les opérations affichées sont
  * celles de la ressource admin, filtrées par la page selon les permissions.
+ *
+ * Facettes et vues enregistrées (core/filters) : passer \`baseUrl\` (Astro.url), les
+ * comptes de \`load${pascal}AdminFacets\` et les vues de \`loadSavedViews(userId, "${entity}", organizationId)\`.
  */
+import AdminFacets from "@organisms/AdminFacets.astro";
+import AdminSavedViews from "@organisms/AdminSavedViews.astro";
+import { canonicalListQuery, facetLinks, type FacetBucket } from "@/core/filters";
+import { ${entityCamel}AdminResource } from "@/modules/${name}/admin/resource";
 import ForceReleaseLockButton from "@/components/admin/ForceReleaseLockButton.astro";
 import AdminBulkBar from "@organisms/AdminBulkBar.astro";
 import type { AdminBulkBarOperation } from "@/core/bulk/ui";
@@ -643,12 +722,31 @@ interface Props {
   bulkOperations?: AdminBulkBarOperation[];
   /** Calculé par la page : \`canAdministerTenant(Astro.locals.user, organizationId)\` (core/permissions/tenant). */
   canForceReleaseLock?: boolean;
+  /** URL courante (Astro.url) : active facettes et vues enregistrées. */
+  baseUrl?: URL;
+  /** Comptes de facettes (\`load${pascal}AdminFacets\`), chacune sans son propre filtre. */
+  facets?: Record<string, readonly FacetBucket[]>;
+  /** Vues enregistrées de l'utilisateur pour la ressource « ${entity} ». */
+  savedViews?: readonly { id: string; name: string; query: string }[];
 }
 
-const { items, locale, organizationId = null, bulkOperations = [], canForceReleaseLock = false } = Astro.props as Props;
+const { items, locale, organizationId = null, bulkOperations = [], canForceReleaseLock = false, baseUrl, facets = {}, savedViews = [] } = Astro.props as Props;
 const bulkT = getBulkUiTranslations(locale);
 const bulkEnabled = bulkOperations.length > 0;
+const listDefinition = ${entityCamel}AdminResource.list!;
+const listBaseUrl = baseUrl?.pathname ?? "";
+const currentQuery = baseUrl ? canonicalListQuery(listDefinition, baseUrl.searchParams) : "";
+// Libellés à traduire avec les autres libellés du module (modules/${name}/i18n/).
+const facetGroups = baseUrl ? [{ id: "status", label: "Statut", links: facetLinks(listDefinition, currentQuery, "status", facets.status ?? [], listBaseUrl) }] : [];
+const hasFilters = [...new URLSearchParams(currentQuery).keys()].some((key) => key !== "sortBy" && key !== "sortOrder" && key !== "page");
 ---
+
+{baseUrl && (
+  <>
+    <AdminFacets locale={locale} groups={facetGroups} clearHref={hasFilters ? listBaseUrl : null} />
+    <AdminSavedViews locale={locale} resource="${entity}" organizationId={organizationId} views={savedViews} baseUrl={listBaseUrl} currentQuery={currentQuery} />
+  </>
+)}
 
 <AdminBulkBar action="${camel}.bulk" locale={locale} organizationId={organizationId} operations={bulkOperations}>
   <div class="flex flex-col gap-4">
@@ -704,6 +802,8 @@ Module « ${name} » généré.
   5. si le domaine a des avis/commentaires : engagement/ + components/${name}/engagement/
      (copier la forme de blog, services ou trips — les trois sont alignés)
   6. enregistrer la page                    (src/pages/[lang]/${name}/[slug].astro)
+  7. vues enregistrées : inscrire « ${entity} » (src/lib/admin/list-registry.ts → ADMIN_LISTS)
+     facettes : load${pascal}AdminFacets() + baseUrl/facets/savedViews sur ${pascal}AdminList
 
 Dossiers optionnels, à créer SEULEMENT si utilisés : ${optionalDirs.join(", ")}
 `);

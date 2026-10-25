@@ -14,6 +14,11 @@ import { NativeSelect, NativeSelectOption } from '@atoms/native-select';
 import { DataView } from '@molecules/DataView';
 import AdminPagination from '@molecules/AdminPagination/AdminPagination.astro';
 import AdminBulkBar from '@organisms/AdminBulkBar.astro';
+import DraftPreviewLinkButton from '@/components/admin/DraftPreviewLinkButton.astro';
+import AdminFacets from '@organisms/AdminFacets.astro';
+import AdminSavedViews from '@organisms/AdminSavedViews.astro';
+import { canonicalListQuery, facetLinks } from '@/core/filters';
+import { pagesListDefinition } from '@/lib/pages/admin-list';
 import { formatBulk, getBulkOperationLabels, getBulkUiTranslations } from '@/core/bulk/i18n';
 
 type PageRow = Pick<
@@ -35,10 +40,23 @@ interface Props {
   currentPage: number;
   totalPages: number;
   baseUrl: URL;
+  /** Comptes de facettes (core/filters), chacune sans son propre filtre. */
+  facets?: Record<string, readonly { value: string; count: number }[]>;
+  /** Vues enregistrées de l'utilisateur (resource « pages »). */
+  savedViews?: readonly { id: string; name: string; query: string }[];
 }
 
-const { t, locale, pages: allPages, currentPage, totalPages, baseUrl } = Astro.props;
+const { t, locale, pages: allPages, currentPage, totalPages, baseUrl, facets = {}, savedViews = [] } = Astro.props;
+// Facettes (core/filters) : liens SSR vers l'URL canonique qui bascule chaque valeur.
+const listBaseUrl = baseUrl.pathname;
+const currentQuery = canonicalListQuery(pagesListDefinition, baseUrl.searchParams);
 const cms = t.admin.cms.pages;
+const facetGroups = [
+  { id: 'status', label: t.admin.cms.pages.columns.status, links: facetLinks(pagesListDefinition, currentQuery, 'status', facets.status ?? [], listBaseUrl, (v) => (v === 'published' ? t.admin.cms.pages.published : t.admin.cms.pages.draft)) },
+  { id: 'template', label: t.admin.cms.pages.columns.template, links: facetLinks(pagesListDefinition, currentQuery, 'template', facets.template ?? [], listBaseUrl) },
+  { id: 'locale', label: t.admin.cms.pages.columns.locale, links: facetLinks(pagesListDefinition, currentQuery, 'locale', facets.locale ?? [], listBaseUrl, (v) => v.toUpperCase()) },
+];
+const hasFilters = [...new URLSearchParams(currentQuery).keys()].some((k) => k !== 'sortBy' && k !== 'sortOrder' && k !== 'page');
 const LOCK_TTL_MS = 5 * 60 * 1000;
 // Actions groupées (core/bulk → bulkPageLifecycle) : la liste ne montre que les pages hors corbeille.
 const bulkT = getBulkUiTranslations(locale);
@@ -82,6 +100,9 @@ function isoDate(d: Date | string | null) {
     </div>
     <Button id="create-page-btn" size="sm">{cms.createPage}</Button>
   </div>
+
+  <AdminFacets locale={locale} groups={facetGroups} clearHref={hasFilters ? listBaseUrl : null} />
+  <AdminSavedViews locale={locale} resource="pages" organizationId={null} views={savedViews} baseUrl={listBaseUrl} currentQuery={currentQuery} />
 
   <AdminBulkBar action="bulkPageLifecycle" locale={locale} operations={bulkOperations}>
   <DataView>
@@ -183,6 +204,7 @@ function isoDate(d: Date | string | null) {
                     <Button size="sm" variant="outline" class="page-toggle-btn" data-id={page.id} data-published={String(page.isPublished)}>
                       {page.isPublished ? cms.unpublish : cms.publish}
                     </Button>
+                    <DraftPreviewLinkButton kind="page" resourceId={page.id} locale={locale} />
                     <Button size="sm" variant="outline" class="page-edit-btn" data-id={page.id}>
                       {cms.editPage}
                     </Button>
@@ -244,6 +266,7 @@ function isoDate(d: Date | string | null) {
                 <Button size="sm" variant="outline" class="page-toggle-btn" data-id={page.id} data-published={String(page.isPublished)}>
                   {page.isPublished ? cms.unpublish : cms.publish}
                 </Button>
+                <DraftPreviewLinkButton kind="page" resourceId={page.id} locale={locale} />
                 <Button size="sm" variant="outline" class="page-edit-btn" data-id={page.id}>
                   {cms.editPage}
                 </Button>

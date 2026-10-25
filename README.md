@@ -49,7 +49,7 @@ SSR multi-language web application with complete authentication, organisation ma
 
 ### Prerequisites
 
-- **Node.js** >= 22.12.0
+- **Node.js** >= 22.23.4
 - **pnpm** >= 10
 - **PostgreSQL** >= 16
 
@@ -113,6 +113,7 @@ pnpm dev
 ```
 src/components/
 admin/
+  DraftPreviewLinkButton.astro
   ForceReleaseLockButton.astro
   MarkdownEditor.astro
 atoms/
@@ -205,9 +206,12 @@ molecules/
   AdminResourceStats.astro
   DataView/
 organisms/
+  AdminBulkBar.astro
+  AdminFacets.astro
   AdminFormShell.astro
   AdminResourceList.astro
   AdminResourceShell.astro
+  AdminSavedViews.astro
   AdminSidebar/
   AuthLayout/
   AuthSidebar/
@@ -262,7 +266,7 @@ images/
 
 - **atoms/** — 48 components
 - **molecules/** — 3 components
-- **organisms/** — 13 components
+- **organisms/** — 16 components
 - **pages/** — 10 components
 - **wow/** — 9 components
 
@@ -402,6 +406,7 @@ loaders/
   media.loader.ts
   navigation.loader.ts
   page.loader.ts
+  pages-admin.loader.ts
   site.loader.ts
 migrations/
   0000_plain_old_lace.sql
@@ -425,6 +430,7 @@ migrations/
   0018_search_documents.sql
   0019_page_locks.sql
   0020_drop_pages_legacy_lock.sql
+  0021_admin_saved_views.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -443,6 +449,7 @@ migrations/
     0018_snapshot.json
     0019_snapshot.json
     0020_snapshot.json
+    0021_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -458,6 +465,7 @@ schemas/
   page.schema.ts
   payments.schema.ts
   plugins.schema.ts
+  saved-views.schema.ts
   search.schema.ts
   services-engagement.schema.ts
   services.schema.ts
@@ -590,6 +598,9 @@ schemas.ts
 **search.schema.ts**
 - `search_documents`: `id`, `siteId`, `kind`, `type`, `entityId`, `locale`, `title`, `excerpt`, `body`, `url`, `publishedAt`, `tsv`, `updatedAt`
 
+**saved-views.schema.ts**
+- `admin_saved_views`: `id`, `userId`, `organizationId`, `resource`, `name`, `query`, `createdAt`, `updatedAt`
+
 ### Migrations
 
 - `0000_plain_old_lace.sql`
@@ -613,6 +624,7 @@ schemas.ts
 - `0018_search_documents.sql`
 - `0019_page_locks.sql`
 - `0020_drop_pages_legacy_lock.sql`
+- `0021_admin_saved_views.sql`
 
 ### Commands
 
@@ -736,6 +748,11 @@ blocks/
   index.ts
   registry.ts
   tiptap-html.ts
+bulk/
+  i18n.ts
+  index.ts
+  selection.ts
+  ui.ts
 cache/
   index.ts
 capabilities/
@@ -753,6 +770,11 @@ engagement/
   index.ts
 events/
   index.ts
+filters/
+  facets.ts
+  i18n.ts
+  index.ts
+  url-state.ts
 index.ts
 localization/
   index.ts
@@ -780,6 +802,9 @@ plugins/
   contract.ts
   host.ts
 presentation/
+  index.ts
+preview/
+  draft-preview.ts
   index.ts
 revision/
   index.ts
@@ -960,6 +985,7 @@ src/pages/
     [slug]/
   preview/
     [token].astro
+    draft/
   services/
     [slug].astro
     category/
@@ -1018,6 +1044,8 @@ Atomic CMS is organized around shared CMS/platform capabilities and first-class 
 - `tests/e2e/services-lifecycle.spec.ts`
 - `tests/e2e/services.spec.ts`
 - `tests/integration/blog-actions.test.ts`
+- `tests/integration/blog-bulk-core.test.ts`
+- `tests/integration/blog-facets.test.ts`
 - `tests/integration/blog-internal-link.test.ts`
 - `tests/integration/cms-admin.test.ts`
 - `tests/integration/consent-cms.test.ts`
@@ -1025,6 +1053,8 @@ Atomic CMS is organized around shared CMS/platform capabilities and first-class 
 - `tests/integration/legal-cms.test.ts`
 - `tests/integration/loaders/blog-loader-effect.test.ts`
 - `tests/integration/navigation-cycle.test.ts`
+- `tests/integration/services-bulk-core.test.ts`
+- `tests/integration/services-facets.test.ts`
 - `tests/unit/admin-consent.test.ts`
 - `tests/unit/admin-contact.test.ts`
 - `tests/unit/admin-helpers.test.ts`
@@ -1082,7 +1112,6 @@ public/
 favicon.ico
 favicon.svg
 uploads/
-  images/
 ```
 
 ### Upload & Processing
