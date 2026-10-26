@@ -1,0 +1,103 @@
+---
+/**
+ * Back-office plateforme : fiche d'une expédition — destinataire, lignes, transitions de statut
+ * (numéro de BL au passage à READY, sortie de stock à SHIPPED), suivi transporteur.
+ * Comportements : `modules/logistics/client` (`[data-logistics-record]`).
+ */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { requirePermission } from "@lib/auth-guards";
+import { shipmentLabel, totalUnits } from "@/modules/logistics/domain/shipment";
+import { FINAL_STATUSES, isEditable, nextStatuses } from "@/modules/logistics/domain/workflow";
+import { getLogisticsTranslations } from "@/modules/logistics/i18n";
+import { loadShipment } from "@/modules/logistics/loaders";
+import { hasLogisticsPermission } from "@/modules/logistics/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { logistics: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getLogisticsTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/logistics`;
+const s = await loadShipment(Astro.params.id ?? "", null);
+if (!s) return new Response(null, { status: 404 });
+const [canUpdate, canDelete] = await Promise.all([hasLogisticsPermission(Astro, ["update"]), hasLogisticsPermission(Astro, ["delete"])]);
+const label = shipmentLabel(s);
+const targets = canUpdate ? nextStatuses(s.status) : [];
+const deletable = canDelete && (s.status === "DRAFT" || s.status === "CANCELLED");
+const date = (value: Date | null) => (value ? new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(value) : t.admin.none);
+---
+<BaseLayout title={label} description={t.meta.description}>
+  <AuthLayout title={label}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="logistics" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8" data-logistics-record data-kind="shipment" data-id={s.id} data-list-url={baseAdminUrl}>
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-semibold" data-testid="logistics-heading">{label}</h1>
+          <p class="text-muted-foreground">{t.fields.status} : <span data-testid="logistics-status">{t.statuses[s.status]}</span></p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          {canUpdate && isEditable(s.status) && <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/${s.id}/edit`}>{t.admin.edit}</a>}
+          {deletable && <Button type="button" variant="outline" data-logistics-op="delete" data-confirm={`${t.admin.delete} — ${label} ?`}>{t.admin.delete}</Button>}
+          <a class="inline-flex min-h-11 items-center px-3 underline" href={baseAdminUrl}>{t.admin.back}</a>
+        </div>
+      </div>
+      <p class="text-sm text-destructive" role="alert" tabindex="-1" data-logistics-error hidden></p>
+      {!isEditable(s.status) && !FINAL_STATUSES.includes(s.status) && <p class="text-sm">{t.admin.lockedNote}</p>}
+
+      <dl class="grid gap-3 sm:grid-cols-3">
+        <div><dt class="text-sm text-muted-foreground">{t.fields.number}</dt><dd data-testid="logistics-number">{s.number ?? t.admin.none}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.warehouse}</dt><dd>{s.warehouse ? `${s.warehouse.code} — ${s.warehouse.name}` : t.admin.none}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.salesDocument}</dt><dd>{s.salesDocument ? <a class="underline" href={`/${locale}/admin/sales/${s.salesDocument.id}`}>{s.salesDocument.number ?? s.salesDocument.title}</a> : t.admin.none}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.recipientName}</dt><dd>{s.recipientName} ({s.country})</dd></div>
+        <div class="sm:col-span-2"><dt class="text-sm text-muted-foreground">{t.fields.address}</dt><dd class="whitespace-pre-line">{s.address ?? t.admin.none}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.weightGrams}</dt><dd>{s.weightGrams ?? t.admin.none}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.shippedAt}</dt><dd>{date(s.shippedAt)}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.deliveredAt}</dt><dd>{date(s.deliveredAt)}</dd></div>
+        {s.notes && <div class="sm:col-span-3"><dt class="text-sm text-muted-foreground">{t.fields.notes}</dt><dd class="whitespace-pre-line">{s.notes}</dd></div>}
+      </dl>
+
+      <section class="flex flex-col gap-3" aria-labelledby="lg-lines-heading">
+        <h2 id="lg-lines-heading" class="text-lg font-semibold">{t.fields.lines} ({totalUnits(s.lines)} {t.fields.units})</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm" data-testid="logistics-lines">
+            <thead><tr class="border-b text-start"><th scope="col" class="py-2 text-start">{t.fields.sku}</th><th scope="col" class="py-2 text-start">{t.fields.description}</th><th scope="col" class="py-2 text-end">{t.fields.quantity}</th></tr></thead>
+            <tbody>{s.lines.map((line) => <tr class="border-b"><td class="py-2 font-mono">{line.sku}</td><td class="py-2">{line.description ?? ""}</td><td class="py-2 text-end">{line.quantity}</td></tr>)}</tbody>
+          </table>
+        </div>
+      </section>
+
+      {targets.length > 0 && (
+        <section class="flex flex-col gap-3" aria-labelledby="lg-status-heading">
+          <h2 id="lg-status-heading" class="text-lg font-semibold">{t.fields.status}</h2>
+          <div class="flex flex-wrap gap-2">
+            {targets.map((to) => <Button type="button" variant={to === "CANCELLED" || to === "RETURNED" ? "outline" : "default"} data-logistics-op="transition" data-to={to} data-testid={`logistics-to-${to}`}>{t.actions.moveTo} {t.statuses[to]}</Button>)}
+          </div>
+        </section>
+      )}
+
+      {canUpdate && s.status !== "CANCELLED" && (
+        <form class="flex flex-col gap-3" data-logistics-form="tracking" data-id={s.id} data-done={t.admin.saved} aria-labelledby="lg-tracking-heading" novalidate>
+          <h2 id="lg-tracking-heading" class="text-lg font-semibold">{t.actions.updateTracking}</h2>
+          <div class="grid max-w-2xl gap-4 sm:grid-cols-2">
+            <div class="grid gap-2"><Label for="lg-tk-carrier">{t.fields.carrier}</Label><Input id="lg-tk-carrier" name="carrier" maxlength={100} value={s.carrier ?? ""} /></div>
+            <div class="grid gap-2"><Label for="lg-tk-number">{t.fields.trackingNumber}</Label><Input id="lg-tk-number" name="trackingNumber" maxlength={64} value={s.trackingNumber ?? ""} /></div>
+          </div>
+          <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+          <div><Button type="submit" variant="outline">{t.actions.updateTracking}</Button></div>
+        </form>
+      )}
+    </main>
+  </AuthLayout>
+</BaseLayout>
+
+<script>
+  import { initLogistics } from "@/modules/logistics/client/init";
+
+  initLogistics();
+  document.addEventListener("astro:after-swap", initLogistics);
+</script>

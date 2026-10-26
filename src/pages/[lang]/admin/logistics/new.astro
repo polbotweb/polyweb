@@ -1,0 +1,29 @@
+---
+/** Back-office plateforme : nouvelle expédition (brouillon). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { requirePermission } from "@lib/auth-guards";
+import ShipmentForm from "@/components/logistics/admin/ShipmentForm.astro";
+import { getLogisticsTranslations } from "@/modules/logistics/i18n";
+import { loadSalesDocumentOptions, loadWarehouses } from "@/modules/logistics/loaders";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { logistics: ["create"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getLogisticsTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/logistics`;
+const [warehouses, salesDocuments] = await Promise.all([loadWarehouses(null), loadSalesDocumentOptions(null)]);
+---
+<BaseLayout title={t.admin.newShipment} description={t.meta.description}>
+  <AuthLayout title={t.admin.newShipment}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="logistics" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <h1 class="text-2xl font-semibold">{t.admin.newShipment}</h1>
+      {warehouses.length === 0
+        ? <p>{t.admin.noWarehouses} <a class="underline" href={`${baseAdminUrl}/warehouses`}>{t.admin.newWarehouse}</a></p>
+        : <ShipmentForm locale={locale} viewBaseUrl={baseAdminUrl} listUrl={baseAdminUrl} warehouses={warehouses} salesDocuments={salesDocuments} />}
+    </main>
+  </AuthLayout>
+</BaseLayout>

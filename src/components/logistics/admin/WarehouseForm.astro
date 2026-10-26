@@ -1,0 +1,36 @@
+---
+/** Formulaire d'entrepôt (création / édition). Soumission : `modules/logistics/client/forms.ts`. */
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import type { Locale } from "@i18n/config";
+import { getLogisticsTranslations } from "@/modules/logistics/i18n";
+
+interface Props {
+  locale: Locale;
+  organizationId?: string | null;
+  viewBaseUrl?: string;
+  warehouse?: { id: string; code: string; name: string; country: string | null; address: string | null; active: boolean };
+}
+const { locale, organizationId = null, viewBaseUrl = "", warehouse: w } = Astro.props as Props;
+const t = getLogisticsTranslations(locale);
+const p = w ? "lg-wh-edit" : "lg-wh-new";
+---
+<form class="flex max-w-3xl flex-col gap-4" data-logistics-form="warehouse" data-id={w?.id ?? ""} data-organization-id={organizationId ?? ""} data-view-base-url={viewBaseUrl} data-done={w ? t.admin.saved : t.admin.created} novalidate>
+  <div class="grid gap-4 sm:grid-cols-3">
+    <div class="grid gap-2"><Label for={`${p}-code`}>{t.fields.code}</Label><Input id={`${p}-code`} name="code" required maxlength={16} value={w?.code ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${p}-name`}>{t.fields.name}</Label><Input id={`${p}-name`} name="name" required maxlength={200} value={w?.name ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${p}-country`}>{t.fields.country}</Label><Input id={`${p}-country`} name="country" maxlength={2} pattern="[A-Za-z]{2}" value={w?.country ?? ""} /></div>
+    <div class="grid gap-2 sm:col-span-3"><Label for={`${p}-address`}>{t.fields.address}</Label><textarea id={`${p}-address`} name="address" rows="2" maxlength="1000" class="rounded-md border bg-transparent px-3 py-2 text-sm">{w?.address ?? ""}</textarea></div>
+    <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" class="size-6" name="active" checked={w ? w.active : true} />{t.fields.active}</label>
+  </div>
+  <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+  <div><Button type="submit">{w ? t.admin.save : t.admin.create}</Button></div>
+</form>
+
+<script>
+  import { initLogistics } from "@/modules/logistics/client/init";
+
+  initLogistics();
+  document.addEventListener("astro:after-swap", initLogistics);
+</script>

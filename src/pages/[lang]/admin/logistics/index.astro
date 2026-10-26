@@ -1,0 +1,50 @@
+---
+/** Back-office plateforme : logistique — liste des expéditions (facettes, vues, actions groupées) et accès entrepôts / articles / stock. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import AdminPagination from "@molecules/AdminPagination/AdminPagination.astro";
+import { Effect } from "effect";
+import { requirePermission } from "@lib/auth-guards";
+import { loadSavedViews } from "@/lib/admin/saved-views";
+import { bulkBarOperations } from "@/core/bulk/ui";
+import ShipmentAdminList from "@/components/logistics/admin/ShipmentAdminList.astro";
+import { shipmentAdminResource } from "@/modules/logistics/admin/resource";
+import { getLogisticsTranslations } from "@/modules/logistics/i18n";
+import { logisticsAdminFiltersFromUrl, logisticsAdminList, loadLogisticsAdminFacets } from "@/modules/logistics/loaders";
+import { hasLogisticsPermission } from "@/modules/logistics/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { logistics: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getLogisticsTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/logistics`;
+const [list, facets, savedViews, canCreate, canUpdate] = await Promise.all([
+  Effect.runPromise(logisticsAdminList(null, Astro.url.searchParams)),
+  loadLogisticsAdminFacets(null, logisticsAdminFiltersFromUrl(Astro.url.searchParams)).catch(() => ({})),
+  Astro.locals.user ? loadSavedViews(Astro.locals.user.id, "logistics-shipment", null) : Promise.resolve([]),
+  hasLogisticsPermission(Astro, ["create"]),
+  hasLogisticsPermission(Astro, ["update"]),
+]);
+const bulkOperations = bulkBarOperations(shipmentAdminResource.list?.bulkActions, t.admin.bulk, { cancel: canUpdate, deliver: canUpdate });
+---
+<BaseLayout title={t.admin.title} description={t.meta.description}>
+  <AuthLayout title={t.admin.title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="logistics" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{t.admin.title}</h1>
+        <nav class="flex flex-wrap gap-2" aria-label={t.admin.title}>
+          <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/warehouses`}>{t.admin.warehouses}</a>
+          <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/items`}>{t.admin.items}</a>
+          <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/stock`}>{t.admin.stock}</a>
+          {canCreate && <a class="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-primary-foreground" href={`${baseAdminUrl}/new`} data-testid="logistics-new-shipment">{t.admin.newShipment}</a>}
+        </nav>
+      </div>
+      <h2 class="text-lg font-semibold">{t.admin.shipments}</h2>
+      <ShipmentAdminList items={list.items} locale={locale} viewBaseUrl={baseAdminUrl} bulkOperations={bulkOperations} baseUrl={Astro.url} facets={facets} savedViews={savedViews} />
+      {list.totalPages > 1 && <AdminPagination currentPage={list.page} totalPages={list.totalPages} baseUrl={Astro.url} />}
+    </main>
+  </AuthLayout>
+</BaseLayout>

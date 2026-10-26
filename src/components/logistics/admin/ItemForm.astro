@@ -1,0 +1,34 @@
+---
+/** Formulaire d'article (création / édition ; SKU figé dès le premier mouvement). Soumission : `modules/logistics/client/forms.ts`. */
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import type { Locale } from "@i18n/config";
+import { getLogisticsTranslations } from "@/modules/logistics/i18n";
+
+interface Props {
+  locale: Locale;
+  organizationId?: string | null;
+  viewBaseUrl?: string;
+  item?: { id: string; sku: string; name: string; variantId: string | null };
+}
+const { locale, organizationId = null, viewBaseUrl = "", item: i } = Astro.props as Props;
+const t = getLogisticsTranslations(locale);
+const p = i ? "lg-item-edit" : "lg-item-new";
+---
+<form class="flex max-w-3xl flex-col gap-4" data-logistics-form="item" data-id={i?.id ?? ""} data-organization-id={organizationId ?? ""} data-view-base-url={viewBaseUrl} data-done={i ? t.admin.saved : t.admin.created} novalidate>
+  <div class="grid gap-4 sm:grid-cols-3">
+    <div class="grid gap-2"><Label for={`${p}-sku`}>{t.fields.sku}</Label><Input id={`${p}-sku`} name="sku" required maxlength={64} value={i?.sku ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${p}-name`}>{t.fields.name}</Label><Input id={`${p}-name`} name="name" required maxlength={200} value={i?.name ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${p}-variant`}>{t.fields.variant}</Label><Input id={`${p}-variant`} name="variantId" maxlength={64} value={i?.variantId ?? ""} /></div>
+  </div>
+  <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+  <div><Button type="submit">{i ? t.admin.save : t.admin.create}</Button></div>
+</form>
+
+<script>
+  import { initLogistics } from "@/modules/logistics/client/init";
+
+  initLogistics();
+  document.addEventListener("astro:after-swap", initLogistics);
+</script>

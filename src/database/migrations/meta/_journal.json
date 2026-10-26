@@ -232,6 +232,13 @@
       "when": 1793028131787,
       "tag": "0032_crm",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793032198517,
+      "tag": "0033_logistics",
+      "breakpoints": true
     }
   ]
 }

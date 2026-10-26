@@ -21,6 +21,7 @@ import BriefcaseIcon from '@tabler/icons/outline/briefcase.svg';
 import ReceiptTaxIcon from '@tabler/icons/outline/receipt-tax.svg';
 import FileInvoiceIcon from '@tabler/icons/outline/file-invoice.svg';
 import AddressBookIcon from '@tabler/icons/outline/address-book.svg';
+import TruckDeliveryIcon from '@tabler/icons/outline/truck-delivery.svg';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail, SidebarSeparator } from '@atoms/sidebar';
 
 interface Props { t: AuthTranslations; locale: Locale; activeItem?: AdminSubpage; activePlatform?: PlatformSection; }
@@ -41,6 +42,7 @@ const cmsItems: { id: AdminSubpage; title: string; url: string; icon: typeof Set
   { id: 'tax', title: getModuleLabel('tax', locale), url: getAdminUrl(locale, 'tax'), icon: ReceiptTaxIcon },
   { id: 'sales', title: getModuleLabel('sales', locale), url: getAdminUrl(locale, 'sales'), icon: FileInvoiceIcon },
   { id: 'crm', title: getModuleLabel('crm', locale), url: getAdminUrl(locale, 'crm'), icon: AddressBookIcon },
+  { id: 'logistics', title: getModuleLabel('logistics', locale), url: getAdminUrl(locale, 'logistics'), icon: TruckDeliveryIcon },
   { id: 'site', title: t.admin.tabs.site, url: getAdminUrl(locale, 'site'), icon: SettingsIcon },
   { id: 'navigation', title: t.admin.tabs.navigation, url: getAdminUrl(locale, 'navigation'), icon: MenuIcon },
   { id: 'pages', title: t.admin.tabs.pages, url: getAdminUrl(locale, 'pages'), icon: LayoutIcon },

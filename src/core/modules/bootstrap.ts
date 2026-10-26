@@ -8,6 +8,7 @@ import { shopModule } from "@/modules/shop/module";
 import { taxModule } from "@/modules/tax/module";
 import { salesModule } from "@/modules/sales/module";
 import { crmModule } from "@/modules/crm/module";
+import { logisticsModule } from "@/modules/logistics/module";
 import { coursesModule } from "@/modules/courses/module";
 import { formationsModule } from "@/modules/formations/module";
 import { registerInternalLinkResolver } from "@/lib/content/internal-link-resolver";
@@ -29,6 +30,7 @@ export function bootstrapModules(): void {
   registerModule(taxModule);
   registerModule(salesModule);
   registerModule(crmModule);
+  registerModule(logisticsModule);
   registerModule(coursesModule);
   registerModule(formationsModule);
   // Modules optionnels, activés par variable d'environnement

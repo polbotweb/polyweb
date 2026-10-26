@@ -1,0 +1,78 @@
+---
+/** Formulaire d'expédition (création / édition d'un brouillon) avec lignes dynamiques. Soumission : `modules/logistics/client/forms.ts`. */
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import type { Locale } from "@i18n/config";
+import { getLogisticsTranslations } from "@/modules/logistics/i18n";
+
+interface Props {
+  locale: Locale;
+  organizationId?: string | null;
+  viewBaseUrl: string;
+  listUrl: string;
+  warehouses: readonly { id: string; code: string; name: string; active: boolean }[];
+  salesDocuments: readonly { id: string; kind: string; title: string; number: string | null }[];
+  shipment?: {
+    id: string; title: string | null; warehouseId: string; salesDocumentId: string | null; recipientName: string; address: string | null; country: string;
+    carrier: string | null; trackingNumber: string | null; weightGrams: number | null; notes: string | null;
+    lines: readonly { sku: string; description: string | null; quantity: number }[];
+  };
+}
+const { locale, organizationId = null, viewBaseUrl, listUrl, warehouses, salesDocuments, shipment: s } = Astro.props as Props;
+const t = getLogisticsTranslations(locale);
+const lines = s?.lines.length ? s.lines : [{ sku: "", description: null, quantity: 1 }];
+const choosable = warehouses.filter((w) => w.active || w.id === s?.warehouseId);
+---
+<form class="flex max-w-4xl flex-col gap-6" data-logistics-form="shipment" data-id={s?.id ?? ""} data-organization-id={organizationId ?? ""} data-view-base-url={viewBaseUrl} data-done={s ? t.admin.saved : t.admin.created} novalidate>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div class="grid gap-2"><Label for="lg-title">{t.fields.title}</Label><Input id="lg-title" name="title" maxlength={200} value={s?.title ?? ""} /></div>
+    <div class="grid gap-2"><Label for="lg-warehouse">{t.fields.warehouse}</Label>
+      <NativeSelect id="lg-warehouse" name="warehouseId" required>{choosable.map((w) => <NativeSelectOption value={w.id} selected={s?.warehouseId === w.id}>{w.code} — {w.name}</NativeSelectOption>)}</NativeSelect>
+    </div>
+    <div class="grid gap-2"><Label for="lg-recipient">{t.fields.recipientName}</Label><Input id="lg-recipient" name="recipientName" required maxlength={200} autocomplete="name" value={s?.recipientName ?? ""} /></div>
+    <div class="grid gap-2"><Label for="lg-country">{t.fields.country}</Label><Input id="lg-country" name="country" required maxlength={2} pattern="[A-Za-z]{2}" autocomplete="country" value={s?.country ?? ""} /></div>
+    <div class="grid gap-2 sm:col-span-2"><Label for="lg-address">{t.fields.address}</Label><textarea id="lg-address" name="address" rows="2" maxlength="1000" autocomplete="street-address" class="rounded-md border bg-transparent px-3 py-2 text-sm">{s?.address ?? ""}</textarea></div>
+    <div class="grid gap-2"><Label for="lg-sales">{t.fields.salesDocument}</Label>
+      <NativeSelect id="lg-sales" name="salesDocumentId"><NativeSelectOption value="">{t.admin.none}</NativeSelectOption>{salesDocuments.map((d) => <NativeSelectOption value={d.id} selected={s?.salesDocumentId === d.id}>{d.number ?? d.title}</NativeSelectOption>)}</NativeSelect>
+    </div>
+    <div class="grid gap-2"><Label for="lg-weight">{t.fields.weightGrams}</Label><Input id="lg-weight" name="weightGrams" type="number" min={0} value={s?.weightGrams === null || s?.weightGrams === undefined ? "" : String(s.weightGrams)} /></div>
+    <div class="grid gap-2"><Label for="lg-carrier">{t.fields.carrier}</Label><Input id="lg-carrier" name="carrier" maxlength={100} value={s?.carrier ?? ""} /></div>
+    <div class="grid gap-2"><Label for="lg-tracking">{t.fields.trackingNumber}</Label><Input id="lg-tracking" name="trackingNumber" maxlength={64} value={s?.trackingNumber ?? ""} /></div>
+    <div class="grid gap-2 sm:col-span-2"><Label for="lg-notes">{t.fields.notes}</Label><textarea id="lg-notes" name="notes" rows="3" maxlength="5000" class="rounded-md border bg-transparent px-3 py-2 text-sm">{s?.notes ?? ""}</textarea></div>
+  </div>
+
+  <fieldset class="flex flex-col gap-3">
+    <legend class="text-lg font-semibold">{t.fields.lines}</legend>
+    <div class="flex flex-col gap-3" data-lines>
+      {lines.map((line, index) => (
+        <div class="grid gap-2 sm:grid-cols-[10rem_1fr_7rem_auto] sm:items-end" data-line>
+          <div class="grid gap-1"><Label for={`lg-sku-${index}`}>{t.fields.sku}</Label><Input id={`lg-sku-${index}`} name="sku" maxlength={64} value={line.sku} /></div>
+          <div class="grid gap-1"><Label for={`lg-desc-${index}`}>{t.fields.description}</Label><Input id={`lg-desc-${index}`} name="description" maxlength={500} value={line.description ?? ""} /></div>
+          <div class="grid gap-1"><Label for={`lg-qty-${index}`}>{t.fields.quantity}</Label><Input id={`lg-qty-${index}`} name="quantity" type="number" min={1} value={String(line.quantity)} /></div>
+          <Button type="button" variant="outline" data-remove-line>{t.admin.removeLine}</Button>
+        </div>
+      ))}
+    </div>
+    <template data-line-template>
+      <div class="grid gap-2 sm:grid-cols-[10rem_1fr_7rem_auto] sm:items-end" data-line>
+        <label class="grid gap-1 text-sm font-medium">{t.fields.sku}<Input name="sku" maxlength={64} /></label>
+        <label class="grid gap-1 text-sm font-medium">{t.fields.description}<Input name="description" maxlength={500} /></label>
+        <label class="grid gap-1 text-sm font-medium">{t.fields.quantity}<Input name="quantity" type="number" min={1} value="1" /></label>
+        <Button type="button" variant="outline" data-remove-line>{t.admin.removeLine}</Button>
+      </div>
+    </template>
+    <div><Button type="button" variant="outline" data-add-line>{t.admin.addLine}</Button></div>
+  </fieldset>
+
+  <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+  <div class="flex gap-3"><Button type="submit">{s ? t.admin.save : t.admin.create}</Button><a class="inline-flex min-h-11 items-center px-3 underline" href={listUrl}>{t.admin.back}</a></div>
+</form>
+
+<script>
+  import { initLogistics } from "@/modules/logistics/client/init";
+
+  initLogistics();
+  document.addEventListener("astro:after-swap", initLogistics);
+</script>

@@ -34,6 +34,7 @@ import { shopActions } from "@/modules/shop/actions";
 import { taxActions } from "@/modules/tax/actions";
 import { salesActions } from "@/modules/sales/actions";
 import { crmActions } from "@/modules/crm/actions";
+import { logisticsActions } from "@/modules/logistics/actions";
 import { coursesActions } from "@/modules/courses/actions";
 import { formationsActions } from "@/modules/formations/actions";
 
@@ -55,6 +56,7 @@ export const server = {
   tax: taxActions,
   sales: salesActions,
   crm: crmActions,
+  logistics: logisticsActions,
   courses: coursesActions,
   formations: formationsActions,
 };
