@@ -29,3 +29,4 @@ export * from "../modules/formations/schema";
 export * from "../modules/sales/schema";
 export * from "../modules/crm/schema";
 export * from "../modules/logistics/schema";
+export * from "../modules/purchasing/schema";
