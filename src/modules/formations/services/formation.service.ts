@@ -10,7 +10,7 @@ import { dbTry } from "@/lib/effect/run";
 import { fail } from "@/lib/effect/action";
 import { canTransition } from "@/core/workflow";
 import type { LockOwner } from "@/core/locks/policy";
-import { formations, formationsRevisions } from "../schema";
+import { formations, formationRevisions } from "../schema";
 import { formationsLock } from "../locks";
 import { formationsWorkflow, type FormationsStatus } from "../domain/workflow";
 
@@ -23,7 +23,7 @@ const required = (id: string) =>
   Effect.flatMap(findById(id), (row) => (row ? Effect.succeed(row) : fail("NOT_FOUND", "Élément introuvable.")));
 
 const revision = (row: Row, authorId: string, note: string) =>
-  dbTry("formations.revision", () => getDrizzle().insert(formationsRevisions).values({ resourceId: row.id, authorId, title: row.title, slug: row.slug, status: row.status, note }));
+  dbTry("formations.revision", () => getDrizzle().insert(formationRevisions).values({ resourceId: row.id, authorId, title: row.title, slug: row.slug, status: row.status, note }));
 
 export const formationsService = {
   create: (input: { title: string; slug: string; organizationId: string | null }, authorId: string) =>

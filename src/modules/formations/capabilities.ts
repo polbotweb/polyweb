@@ -13,6 +13,6 @@ export const formationsCapabilityProviders = {
   localization: "formation_translations",
   taxonomy: "formation_categories (core/taxonomy, formationsCategoryTaxonomy)",
   publication: "formationsWorkflow",
-  revisions: "formations_revisions",
-  locks: "formations_locks",
+  revisions: "formation_revisions",
+  locks: "formation_locks",
 } as unknown as PolywebModuleCapabilityProviders;

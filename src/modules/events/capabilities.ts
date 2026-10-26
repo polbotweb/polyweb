@@ -13,6 +13,6 @@ export const eventsCapabilityProviders = {
   localization: "event_translations",
   taxonomy: "event_categories (core/taxonomy, eventsCategoryTaxonomy)",
   publication: "eventsWorkflow",
-  revisions: "events_revisions",
-  locks: "events_locks",
+  revisions: "event_revisions",
+  locks: "event_locks",
 } as unknown as PolywebModuleCapabilityProviders;
