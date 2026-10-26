@@ -23,6 +23,8 @@ const timeoutFromEnv = () => {
   return Number.isFinite(value) && value > 0 ? value : DEFAULT_TIMEOUT_MS;
 };
 
+const isTimeout = (cause: unknown) => cause instanceof Error && cause.name === "TimeoutError";
+
 let browserPromise: Promise<Browser> | null = null;
 
 const launch = async (executablePath: string): Promise<Browser> => {
@@ -70,7 +72,7 @@ export const makePuppeteerPdfRenderer = (executablePath = chromiumExecutablePath
     const timeoutMs = options.timeoutMs ?? timeoutFromEnv();
     return Effect.tryPromise({
       try: () => renderWith(executablePath, html, options, timeoutMs),
-      catch: (cause) => new DocumentRenderError({ reason: "render", cause }),
+      catch: (cause) => new DocumentRenderError({ reason: isTimeout(cause) ? "timeout" : "render", cause }),
     }).pipe(
       Effect.timeoutOrElse({ duration: Duration.millis(timeoutMs + 1_000), orElse: () => Effect.fail(new DocumentRenderError({ reason: "timeout" })) }),
     );
