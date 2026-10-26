@@ -72,7 +72,7 @@
     "@astrojs/vercel": "^11.0.16",
     "@aws-sdk/client-s3": "^3.1152.0",
     "@better-auth/passkey": "1.7.10",
-    "@iconify-json/circle-flags": "^1.2.10",
+    "@iconify-json/circle-flags": "^1.2.12",
     "@iconify-json/mdi": "^1.2.3",
     "@iconify-json/openmoji": "^1.2.29",
     "@opentelemetry/api": "^1.9.1",
