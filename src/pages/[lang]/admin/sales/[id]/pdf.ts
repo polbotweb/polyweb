@@ -35,6 +35,8 @@ const streamOf = (bytes: Uint8Array) => {
 export const GET: APIRoute = async (context) => {
   const id = context.params.id ?? "";
   const locale = toLocale(context.params.lang) as Locale;
+  // Pas de session : refus avant toute lecture (l'existence d'un document ne se sonde pas).
+  if (!context.locals.user) return new Response(null, { status: 401 });
   const program = Effect.gen(function* () {
     const owner = yield* Effect.promise(() => salesOrganizationOf(id));
     if (!owner) return new Response(null, { status: 404 });

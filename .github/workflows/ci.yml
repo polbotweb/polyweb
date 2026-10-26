@@ -236,6 +236,8 @@ jobs:
         if: steps.pw-cache.outputs.cache-hit == 'true'
         timeout-minutes: 40
         run: bash .github/scripts/playwright-install.sh deps chromium firefox webkit
+      - name: Expose Chromium for PDF rendering
+        run: echo "PDF_CHROMIUM_PATH=$(node -e "console.log(require('@playwright/test').chromium.executablePath())")" >> "$GITHUB_ENV"
 
       - name: Run Migrations
         run: pnpm db:migrate

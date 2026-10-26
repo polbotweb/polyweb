@@ -74,6 +74,35 @@ test('axe: /fr/admin/tax et /fr/admin/tax/new sans violation grave, titres et ci
   }
 });
 
+test('axe: /fr/admin/sales (liste, nouveau, détail) sans violation grave, titres et cibles', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Parcours admin : Chromium');
+  const { getDrizzle } = await import('../../src/database/drizzle');
+  const { sales, salesDocumentLines } = await import('../../src/database/schemas');
+  const { eq } = await import('drizzle-orm');
+  const db = getDrizzle();
+  // Facture émise (détail avec transitions, encaissement et relance) insérée directement.
+  const suffix = Date.now().toString(36);
+  const [doc] = await db.insert(sales).values({
+    kind: 'invoice', slug: `a11y-${suffix}`, title: `A11y vente ${suffix}`, status: 'ISSUED', number: `A11Y-${suffix}`,
+    customerName: 'Client A11y', customerCountry: 'FR', customerType: 'B2C', sellerCountry: 'FR', currency: 'EUR',
+    issueDate: '2026-10-01', dueDate: '2026-10-31', netMinor: 10000, taxMinor: 2000, grossMinor: 12000,
+  }).returning({ id: sales.id });
+  await db.insert(salesDocumentLines).values({ documentId: doc!.id, position: 1, description: 'Prestation', quantity: '1', unitPriceMinor: 10000, ratePercent: '20', netMinor: 10000 });
+  try {
+    await signInAsAdmin(page);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    for (const path of ['/fr/admin/sales', '/fr/admin/sales/new?kind=invoice', `/fr/admin/sales/${doc!.id}`, `/ar/admin/sales/${doc!.id}`, '/ar/admin/sales']) {
+      await page.goto(path, { waitUntil: 'networkidle' });
+      const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+      const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${path} ${v.id}: ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(' | ')}`);
+      const structure = await structureViolations(page);
+      expect([...serious, ...structure], [...serious, ...structure].join('\n')).toEqual([]);
+    }
+  } finally {
+    await db.delete(sales).where(eq(sales.id, doc!.id));
+  }
+});
+
 /**
  * WCAG 2.5.5 (AAA, approuvé) : les commandes icônes de l'admin navigation font
  * au moins 44 × 44 px (axe ne vérifie que le seuil AA de 24 px).
