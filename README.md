@@ -453,6 +453,7 @@ migrations/
   0025_shop_module.sql
   0026_categories_taxonomy.sql
   0027_rename_shop_tables.sql
+  0028_singular_aux_tables.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -478,6 +479,7 @@ migrations/
     0025_snapshot.json
     0026_snapshot.json
     0027_snapshot.json
+    0028_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -659,6 +661,7 @@ schemas.ts
 - `0025_shop_module.sql`
 - `0026_categories_taxonomy.sql`
 - `0027_rename_shop_tables.sql`
+- `0028_singular_aux_tables.sql`
 
 ### Commands
 
@@ -1266,7 +1269,6 @@ public/
 favicon.ico
 favicon.svg
 uploads/
-  images/
 ```
 
 ### Upload & Processing

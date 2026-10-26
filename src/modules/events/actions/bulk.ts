@@ -17,7 +17,7 @@ import { lockLocaleFrom } from "@/core/locks/errors";
 import { logAuditEvent, extractIp } from "@/lib/audit";
 import { ActionFailure, actionTry, effectHandler } from "@/lib/effect/action";
 import { requireEventsPermission, type EventsPermission } from "../permissions";
-import { events, eventsRevisions } from "../schema";
+import { events, eventRevisions } from "../schema";
 import { eventsLock } from "../locks";
 import { eventsWorkflow, type EventsStatus } from "../domain/workflow";
 
@@ -36,7 +36,7 @@ const transition = (op: EventsBulkOperation): BulkOperationDefinition<Row, Tx, A
   validate: (row) => (canTransition(eventsWorkflow, row.status, TARGET[op]) ? null : "Transition de statut invalide : " + row.status + " → " + TARGET[op] + "."),
   apply: async (tx, row, actor) => {
     await tx.update(events).set({ status: TARGET[op] }).where(eq(events.id, row.id));
-    await tx.insert(eventsRevisions).values({ resourceId: row.id, authorId: actor.id, title: row.title, slug: row.slug, status: TARGET[op], note: "Action groupée : " + op });
+    await tx.insert(eventRevisions).values({ resourceId: row.id, authorId: actor.id, title: row.title, slug: row.slug, status: TARGET[op], note: "Action groupée : " + op });
   },
   auditAction: "BULK_ACTION",
   auditMetadata: (row) => ({ operation: op, from: row.status, to: TARGET[op] }),

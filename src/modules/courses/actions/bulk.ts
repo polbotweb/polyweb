@@ -17,7 +17,7 @@ import { lockLocaleFrom } from "@/core/locks/errors";
 import { logAuditEvent, extractIp } from "@/lib/audit";
 import { ActionFailure, actionTry, effectHandler } from "@/lib/effect/action";
 import { requireCoursesPermission, type CoursesPermission } from "../permissions";
-import { courses, coursesRevisions } from "../schema";
+import { courses, courseRevisions } from "../schema";
 import { coursesLock } from "../locks";
 import { coursesWorkflow, type CoursesStatus } from "../domain/workflow";
 
@@ -36,7 +36,7 @@ const transition = (op: CoursesBulkOperation): BulkOperationDefinition<Row, Tx, 
   validate: (row) => (canTransition(coursesWorkflow, row.status, TARGET[op]) ? null : "Transition de statut invalide : " + row.status + " → " + TARGET[op] + "."),
   apply: async (tx, row, actor) => {
     await tx.update(courses).set({ status: TARGET[op] }).where(eq(courses.id, row.id));
-    await tx.insert(coursesRevisions).values({ resourceId: row.id, authorId: actor.id, title: row.title, slug: row.slug, status: TARGET[op], note: "Action groupée : " + op });
+    await tx.insert(courseRevisions).values({ resourceId: row.id, authorId: actor.id, title: row.title, slug: row.slug, status: TARGET[op], note: "Action groupée : " + op });
   },
   auditAction: "BULK_ACTION",
   auditMetadata: (row) => ({ operation: op, from: row.status, to: TARGET[op] }),
