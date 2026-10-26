@@ -6,11 +6,14 @@
  * actions restent regroupés et testables hors rendu.
  */
 
+import { initSalesDocument } from "./document-actions";
+import { initSalesDocumentForm } from "./document-form";
+
 /**
  * Branche les comportements d'une page. Idempotent : appelé au premier rendu
  * puis à chaque `astro:after-swap`.
  */
 export function initSales(): void {
-  // TODO: appeler les modules client du domaine, par exemple
-  //   initSalesEngagementBar();
+  initSalesDocumentForm();
+  initSalesDocument();
 }

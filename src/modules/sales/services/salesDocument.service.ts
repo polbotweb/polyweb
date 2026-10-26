@@ -19,7 +19,7 @@ import { taxActiveRates } from "@/modules/tax/loaders/tax-rate-admin.loader";
 import type { CustomerType, SupplyType } from "@/modules/tax/domain/rules";
 import { sales, salesDocumentLines, salesDocumentRevisions, salesPayments, salesReminders } from "../schema";
 import { salesLock } from "../locks";
-import { isLocked, workflowFor, type SalesDocumentKind, type SalesStatus } from "../domain/workflow";
+import { DERIVED_SALES_STATUSES, isLocked, workflowFor, type SalesDocumentKind, type SalesStatus } from "../domain/workflow";
 import { computeSalesTotals, type SalesLineInput } from "../domain/lines";
 import { DEFAULT_SALES_NUMBERING, NUMBERED_AT, SALES_NUMBERING_KEYS } from "../domain/numbering";
 import { CREDITABLE_INVOICE_STATUSES, validateCreditAmount } from "../domain/credit";
@@ -170,7 +170,7 @@ const insertDraft = (executor: Executor, input: SalesDocumentInput & { readonly 
   });
 
 /** Transitions dérivées : posées par les encaissements / avoirs / conversions, jamais à la main. */
-const DERIVED: readonly SalesStatus[] = ["PARTIALLY_PAID", "PAID", "CREDITED", "CONVERTED"];
+const DERIVED = DERIVED_SALES_STATUSES;
 
 /** Émission : numéro sans trou + date + échéance + totaux figés à la date d'émission. */
 const issue = (tx: DbTransaction, row: SalesDocumentRow, to: SalesStatus, today: string) =>

@@ -74,6 +74,13 @@ export const salesWorkflow: WorkflowDefinition<SalesStatus> = {
   transitions: [...quoteWorkflow.transitions, ...invoiceWorkflow.transitions, ...creditNoteWorkflow.transitions],
 };
 
+/** Statuts calculés par le service (encaissements, avoirs, conversion) : jamais demandés à la main. */
+export const DERIVED_SALES_STATUSES: readonly SalesStatus[] = ["PARTIALLY_PAID", "PAID", "CREDITED", "CONVERTED"];
+
+/** Cibles proposées à l'utilisateur depuis `from` (hors statuts dérivés et retour au brouillon). */
+export const manualTargets = (kind: SalesDocumentKind, from: SalesStatus): readonly SalesStatus[] =>
+  workflowFor(kind).transitions.filter((t) => t.from === from && t.to !== "DRAFT" && !DERIVED_SALES_STATUSES.includes(t.to)).map((t) => t.to);
+
 /** Un document émis (numéroté légalement) est figé : ni édition des lignes ni suppression. */
 export const isLocked = (_kind: SalesDocumentKind, status: SalesStatus) => status !== "DRAFT";
 

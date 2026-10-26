@@ -1,0 +1,89 @@
+---
+/**
+ * Formulaire back-office d'un document de vente brouillon (devis / facture) : en-tête client,
+ * fiscalité et éditeur de lignes. Soumission par `modules/sales/client/document-form.ts`
+ * (actions `sales.create` / `sales.update`), jamais par `<form method="post">`.
+ */
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import type { Locale } from "@i18n/config";
+import { currencyExponent, isCurrencyCode } from "@/core/money";
+import { getSalesTranslations } from "@/modules/sales/i18n";
+import { getTaxTranslations } from "@/modules/tax/i18n";
+import { CUSTOMER_TYPES, SUPPLY_TYPES, TAX_CATEGORIES } from "@/modules/tax/domain/rules";
+import type { SalesDocumentDetail } from "@/modules/sales/loaders";
+
+interface Props {
+  locale: Locale;
+  kind: "quote" | "invoice";
+  organizationId?: string | null;
+  /** URL de base des fiches (`<base>/<id>`) : redirection après enregistrement. */
+  viewBaseUrl: string;
+  listUrl: string;
+  document?: SalesDocumentDetail;
+}
+
+const { locale, kind, organizationId = null, viewBaseUrl, listUrl, document: doc } = Astro.props as Props;
+const t = getSalesTranslations(locale);
+const taxT = getTaxTranslations(locale);
+const currency = doc?.currency ?? "EUR";
+const exponent = isCurrencyCode(currency) ? currencyExponent(currency) : 2;
+const major = (minor: number) => (minor / 10 ** exponent).toFixed(exponent);
+const trimZeros = (value: string) => String(Number(value));
+const lines = doc?.lines.length ? doc.lines.map((line) => ({ description: line.description, quantity: trimZeros(line.quantity), unitPrice: major(line.unitPriceMinor), discount: trimZeros(line.discountPercent), taxCategory: line.taxCategory })) : [{ description: "", quantity: "1", unitPrice: "", discount: "0", taxCategory: "standard" as const }];
+---
+
+<form class="flex max-w-4xl flex-col gap-6" data-sales-document-form data-mode={doc ? "update" : "create"} data-id={doc?.id ?? ""} data-kind={kind} data-organization-id={organizationId ?? ""} data-view-base-url={viewBaseUrl} data-done={doc ? t.admin.saved : t.admin.created} novalidate>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div class="grid gap-2 sm:col-span-2"><Label for="sales-title">{t.fields.title}</Label><Input id="sales-title" name="title" required maxlength={200} value={doc?.title ?? ""} /></div>
+    <div class="grid gap-2"><Label for="sales-customer">{t.fields.customerName}</Label><Input id="sales-customer" name="customerName" required maxlength={200} autocomplete="organization" value={doc?.customerName ?? ""} /></div>
+    <div class="grid gap-2"><Label for="sales-email">{t.fields.customerEmail}</Label><Input id="sales-email" name="customerEmail" type="email" autocomplete="email" value={doc?.customerEmail ?? ""} /></div>
+    <div class="grid gap-2 sm:col-span-2"><Label for="sales-address">{t.fields.customerAddress}</Label><textarea id="sales-address" name="customerAddress" rows="2" maxlength="1000" class="rounded-md border bg-transparent px-3 py-2 text-sm">{doc?.customerAddress ?? ""}</textarea></div>
+    <div class="grid gap-2"><Label for="sales-customer-country">{t.fields.customerCountry}</Label><Input id="sales-customer-country" name="customerCountry" required maxlength={2} pattern="[A-Za-z]{2}" autocomplete="off" value={doc?.customerCountry ?? "FR"} /></div>
+    <div class="grid gap-2"><Label for="sales-customer-type">{t.fields.customerType}</Label>
+      <NativeSelect id="sales-customer-type" name="customerType">{CUSTOMER_TYPES.map((type) => <NativeSelectOption value={type} selected={(doc?.customerType ?? "B2B") === type}>{taxT.customerTypes[type]}</NativeSelectOption>)}</NativeSelect>
+    </div>
+    <div class="grid gap-2"><Label for="sales-vat">{t.fields.customerVatNumber}</Label><Input id="sales-vat" name="customerVatNumber" maxlength={32} autocomplete="off" value={doc?.customerVatNumber ?? ""} /></div>
+    <div class="grid gap-2"><Label for="sales-seller-country">{t.fields.sellerCountry}</Label><Input id="sales-seller-country" name="sellerCountry" required maxlength={2} pattern="[A-Za-z]{2}" autocomplete="off" value={doc?.sellerCountry ?? "FR"} /></div>
+    <div class="grid gap-2"><Label for="sales-supply">{t.fields.supplyType}</Label>
+      <NativeSelect id="sales-supply" name="supplyType">{SUPPLY_TYPES.map((type) => <NativeSelectOption value={type} selected={(doc?.supplyType ?? "services") === type}>{t.supplyTypes[type]}</NativeSelectOption>)}</NativeSelect>
+    </div>
+    <div class="grid gap-2"><Label for="sales-currency">{t.fields.currency}</Label><Input id="sales-currency" name="currency" required maxlength={3} pattern="[A-Za-z]{3}" autocomplete="off" value={currency} /></div>
+    {kind === "quote"
+      ? <div class="grid gap-2"><Label for="sales-valid">{t.fields.validUntil}</Label><Input id="sales-valid" name="validUntil" type="date" value={doc?.validUntil ?? ""} /></div>
+      : <div class="grid gap-2"><Label for="sales-term">{t.fields.paymentTermDays}</Label><Input id="sales-term" name="paymentTermDays" type="number" min={0} max={365} value={String(doc?.paymentTermDays ?? 30)} /></div>}
+    <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" class="size-6" name="ossRegistered" checked={doc?.ossRegistered ?? false} />{t.fields.ossRegistered}</label>
+    <div class="grid gap-2 sm:col-span-2"><Label for="sales-notes">{t.fields.notes}</Label><textarea id="sales-notes" name="notes" rows="3" maxlength="4000" class="rounded-md border bg-transparent px-3 py-2 text-sm">{doc?.notes ?? ""}</textarea></div>
+  </div>
+
+  <fieldset class="flex flex-col gap-3">
+    <legend class="text-lg font-semibold">{t.lines.title}</legend>
+    <ol class="flex flex-col gap-3" data-sales-lines>
+      {lines.map((line, index) => (
+        <li class="grid gap-2 border p-3 sm:grid-cols-6" data-sales-line>
+          <div class="grid gap-1 sm:col-span-2"><Label for={`line-${index}-description`}>{t.lines.description}</Label><Input id={`line-${index}-description`} name="lineDescription" required maxlength={500} value={line.description} /></div>
+          <div class="grid gap-1"><Label for={`line-${index}-quantity`}>{t.lines.quantity}</Label><Input id={`line-${index}-quantity`} name="lineQuantity" required inputmode="decimal" value={line.quantity} /></div>
+          <div class="grid gap-1"><Label for={`line-${index}-price`}>{t.lines.unitPrice}</Label><Input id={`line-${index}-price`} name="lineUnitPrice" required inputmode="decimal" value={line.unitPrice} /></div>
+          <div class="grid gap-1"><Label for={`line-${index}-discount`}>{t.lines.discount}</Label><Input id={`line-${index}-discount`} name="lineDiscount" inputmode="decimal" value={line.discount} /></div>
+          <div class="grid gap-1"><Label for={`line-${index}-category`}>{t.lines.taxCategory}</Label>
+            <NativeSelect id={`line-${index}-category`} name="lineTaxCategory">{TAX_CATEGORIES.map((category) => <NativeSelectOption value={category} selected={line.taxCategory === category}>{taxT.categories[category]}</NativeSelectOption>)}</NativeSelect>
+          </div>
+          <div class="sm:col-span-6"><button type="button" class="min-h-11 px-2 text-sm underline" data-sales-line-remove>{t.lines.remove}</button></div>
+        </li>
+      ))}
+    </ol>
+    <div><Button type="button" variant="outline" data-sales-line-add>{t.lines.add}</Button></div>
+  </fieldset>
+
+  <p class="text-sm text-destructive" role="alert" data-form-error hidden></p>
+  <div class="flex gap-3"><Button type="submit">{doc ? t.admin.save : t.admin.create}</Button><a class="inline-flex min-h-11 items-center px-3 underline" href={listUrl}>{t.admin.back}</a></div>
+</form>
+
+<script>
+  import { initSales } from "@/modules/sales/client/init";
+
+  initSales();
+  document.addEventListener("astro:after-swap", initSales);
+</script>
