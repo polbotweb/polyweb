@@ -6,7 +6,7 @@
  *  - db:migrate : base vide → toutes les migrations appliquées (une transaction chacune) ; relance sans effet.
  *  - db:infra : --dry-run n'exécute rien ; puis application (une transaction par fichier).
  *  - db:seed : manifest inséré dans une transaction ; relance idempotente (onConflictDoNothing).
- *  - db:seed-media : indexe public/uploads (dossiers logiques) ; relance → tout ignoré.
+ *  - db:seed-media : indexe public/uploads (dossiers logiques) ; relance → déjà indexés ignorés, aucun doublon.
  *  - db:sync + db:compare : copie LOCAL (base jetable) → TEST (2e base jetable migrée), puis comparaison identique.
  *  - db:backfill-variants : base sans média → rien à traiter (aucun fichier écrit).
  *  - db:generate : schéma à jour → aucune migration générée.
@@ -93,13 +93,24 @@ describe('commandes db:* Effect (base jetable)', () => {
 
   it('db:seed-media : indexe les uploads puis ignore les déjà indexés', async () => {
     const strip = (t: string) => t.replace(/\x1b\[[0-9;]*m/g, '');
+    // Base partagée avec db:seed (médias du manifest) et public/uploads partagé avec les tests
+    // d'upload qui y écrivent en parallèle : on compare des deltas, jamais des totaux absolus.
+    const mediaCount = () => scratch(async (c) => (await c.query('SELECT count(*)::int AS n FROM media_files')).rows[0].n as number);
+    const before = await mediaCount();
     const first = strip(cmd('db.seed-media.ts'));
-    const files = await scratch(async (c) => (await c.query('SELECT count(*)::int AS n FROM media_files')).rows[0].n);
-    if (first.includes('Aucun fichier à indexer')) expect(files).toBe(0);
+    const indexed = (await mediaCount()) - before;
+    if (first.includes('Aucun fichier à indexer')) expect(indexed).toBe(0);
     else {
-      expect(files).toBeGreaterThan(0);
+      expect(indexed).toBeGreaterThan(0);
       expect(await scratch(async (c) => (await c.query(`SELECT count(*)::int AS n FROM media_folders WHERE name IN ('Avatars','Brand','Médias')`)).rows[0].n)).toBe(3);
-      expect(strip(cmd('db.seed-media.ts'))).toContain('0 fichiers indexés');
+      // Relance : tout ce qui a été indexé au 1er passage est ignoré (des fichiers apparus entre-temps
+      // peuvent être indexés, d'où « ≥ » et non « 0 fichiers indexés »), sans aucun doublon.
+      const count = (text: string, label: string) => Number(new RegExp(`(\\d+) ${label}`).exec(text)?.[1] ?? NaN);
+      const second = strip(cmd('db.seed-media.ts'));
+      expect(count(second, 'dossiers? créés?')).toBe(0);
+      expect(count(second, 'fichiers? déjà indexés?')).toBeGreaterThanOrEqual(indexed);
+      const duplicates = await scratch(async (c) => (await c.query('SELECT count(*)::int AS n FROM (SELECT url FROM media_files GROUP BY url HAVING count(*) > 1) d')).rows[0].n);
+      expect(duplicates).toBe(0);
     }
   }, 120_000);
 
