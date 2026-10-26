@@ -11,7 +11,7 @@ import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { dbTry, runOrThrow } from "@/lib/effect/run";
 import type { Locale } from "@i18n/config";
-import { productOptions, productOptionTranslations, productOptionValues, productOptionValueTranslations, productTranslations, productVariantOptionValues, productVariants, shop } from "../schema";
+import { productOptions, productOptionTranslations, productOptionValues, productOptionValueTranslations, productTranslations, productVariantOptionValues, productVariants, products } from "../schema";
 
 /** DTO public du domaine. */
 export interface ShopDTO {
@@ -52,12 +52,12 @@ export interface ProductVariantDTO {
 }
 
 const publicColumns = {
-  id: shop.id,
+  id: products.id,
   slug: productTranslations.slug,
   title: productTranslations.title,
   excerpt: productTranslations.excerpt,
   content: productTranslations.content,
-  coverImageId: shop.coverImageId,
+  coverImageId: products.coverImageId,
   metaTitle: productTranslations.metaTitle,
   metaDescription: productTranslations.metaDescription,
 };
@@ -67,7 +67,7 @@ const publicColumns = {
  * repli silencieux d'une organisation vers le global (TODO §21).
  */
 const tenantScope = (organizationId: string | null) =>
-  organizationId ? eq(shop.organizationId, organizationId) : isNull(shop.organizationId);
+  organizationId ? eq(products.organizationId, organizationId) : isNull(products.organizationId);
 
 export const shopLoader = {
   /** Élément publié par slug localisé (relationnel, sans repli de locale). */
@@ -76,11 +76,11 @@ export const shopLoader = {
       getDrizzle()
         .select(publicColumns)
         .from(productTranslations)
-        .innerJoin(shop, eq(shop.id, productTranslations.productId))
+        .innerJoin(products, eq(products.id, productTranslations.productId))
         .where(and(
           eq(productTranslations.locale, locale),
           eq(productTranslations.slug, slug),
-          eq(shop.status, "PUBLISHED"),
+          eq(products.status, "PUBLISHED"),
           tenantScope(organizationId),
         ))
         .limit(1),
@@ -91,13 +91,13 @@ export const shopLoader = {
       getDrizzle()
         .select(publicColumns)
         .from(productTranslations)
-        .innerJoin(shop, eq(shop.id, productTranslations.productId))
+        .innerJoin(products, eq(products.id, productTranslations.productId))
         .where(and(
           eq(productTranslations.locale, locale),
-          eq(shop.status, "PUBLISHED"),
+          eq(products.status, "PUBLISHED"),
           tenantScope(organizationId),
         ))
-        .orderBy(asc(shop.title))
+        .orderBy(asc(products.title))
         .limit(limit),
     ).pipe(Effect.map((rows): ProductPublicDTO[] => rows)),
   /**
@@ -155,9 +155,9 @@ export const shopLoader = {
   byId: (id: string, viewerId: string | null) =>
     dbTry("shop.byId", () =>
       getDrizzle()
-        .select({ id: shop.id, slug: shop.slug, title: shop.title, status: shop.status })
-        .from(shop)
-        .where(viewerId ? eq(shop.id, id) : and(eq(shop.id, id), eq(shop.status, "PUBLISHED")))
+        .select({ id: products.id, slug: products.slug, title: products.title, status: products.status })
+        .from(products)
+        .where(viewerId ? eq(products.id, id) : and(eq(products.id, id), eq(products.status, "PUBLISHED")))
         .limit(1),
     ).pipe(Effect.map((rows): ShopDTO | null => rows[0] ?? null)),
 };

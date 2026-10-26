@@ -17,11 +17,11 @@ import { lockLocaleFrom } from "@/core/locks/errors";
 import { logAuditEvent, extractIp } from "@/lib/audit";
 import { ActionFailure, actionTry, effectHandler } from "@/lib/effect/action";
 import { requireShopPermission, type ShopPermission } from "../permissions";
-import { shop, shopRevisions } from "../schema";
+import { products, productRevisions } from "../schema";
 import { shopLock } from "../locks";
 import { shopWorkflow, type ShopStatus } from "../domain/workflow";
 
-type Row = typeof shop.$inferSelect;
+type Row = typeof products.$inferSelect;
 type Db = ReturnType<typeof getDrizzle>;
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 type Actor = { id: string };
@@ -35,8 +35,8 @@ const PERMISSION: Record<ShopBulkOperation, ShopPermission> = { publish: "publis
 const transition = (op: ShopBulkOperation): BulkOperationDefinition<Row, Tx, Actor> => ({
   validate: (row) => (canTransition(shopWorkflow, row.status, TARGET[op]) ? null : "Transition de statut invalide : " + row.status + " → " + TARGET[op] + "."),
   apply: async (tx, row, actor) => {
-    await tx.update(shop).set({ status: TARGET[op] }).where(eq(shop.id, row.id));
-    await tx.insert(shopRevisions).values({ resourceId: row.id, authorId: actor.id, title: row.title, slug: row.slug, status: TARGET[op], note: "Action groupée : " + op });
+    await tx.update(products).set({ status: TARGET[op] }).where(eq(products.id, row.id));
+    await tx.insert(productRevisions).values({ resourceId: row.id, authorId: actor.id, title: row.title, slug: row.slug, status: TARGET[op], note: "Action groupée : " + op });
   },
   auditAction: "BULK_ACTION",
   auditMetadata: (row) => ({ operation: op, from: row.status, to: TARGET[op] }),
@@ -49,12 +49,12 @@ export const bulkShopLifecycle = defineAction({
   input: z.object({ ids: z.array(z.uuid()).min(1).max(DEFAULT_BULK_MAX_ITEMS), organizationId: z.string().nullable().default(null), operation: z.enum(SHOP_BULK_OPERATIONS) }),
   handler: effectHandler((input, context) => {
     const db = getDrizzle();
-    const inTenant = input.organizationId === null ? isNull(shop.organizationId) : eq(shop.organizationId, input.organizationId);
+    const inTenant = input.organizationId === null ? isNull(products.organizationId) : eq(products.organizationId, input.organizationId);
     return runBulkAction({
       resource: "shop",
       operations: shopBulkOperations,
       authorize: (op: ShopBulkOperation) => requireShopPermission(context, [PERMISSION[op]], input.organizationId).pipe(Effect.map((user) => ({ id: user.id }))),
-      load: (ids) => actionTry("shop.bulk.load", () => db.select().from(shop).where(and(inTenant, inArray(shop.id, [...ids])))),
+      load: (ids) => actionTry("shop.bulk.load", () => db.select().from(products).where(and(inTenant, inArray(products.id, [...ids])))),
       guard: (ids, actor) => shopLock.ensureNoneLockedByOther(ids, lockOwnerFrom(actor.id, context.locals.session?.id), lockLocaleFrom(context.request.headers)),
       transaction: (body) => db.transaction((tx) => body(tx)),
       audit: (actor, _action, entry) => void logAuditEvent({ userId: actor.id, action: "BULK_ACTION", ...entry, ipAddress: extractIp(context.request.headers, context.clientAddress), userAgent: context.request.headers.get("user-agent") }),
