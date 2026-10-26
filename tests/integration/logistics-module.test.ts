@@ -14,6 +14,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { getDrizzle } from '@database/drizzle';
 import { organization, user, logisticsShipmentRevisions } from '@database/schemas';
 import { logisticsService } from '@/modules/logistics/services/logistics.service';
+import { logisticsLoader } from '@/modules/logistics/loaders';
 
 const db = getDrizzle();
 const t = `log-${Date.now().toString(36)}`;
@@ -29,7 +30,7 @@ const failure = async <A, E>(effect: Effect.Effect<A, E>) => {
   return (reason as { error: { code?: string; message?: string; _tag: string } } | undefined)?.error;
 };
 const levelOf = async (warehouseId: string, sku: string) =>
-  (await run(logisticsService.stockLevels(orgId, warehouseId))).find((row) => row.sku === sku)?.level ?? 0;
+  (await run(logisticsLoader.stockLevels(orgId, warehouseId))).find((row) => row.sku === sku)?.level ?? 0;
 
 beforeAll(async () => {
   await db.insert(user).values({ id: author, name: 'Logistics author', email: `${author}@test.local`, role: 'admin' });

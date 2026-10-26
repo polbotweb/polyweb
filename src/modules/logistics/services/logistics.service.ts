@@ -305,20 +305,6 @@ export const logisticsService = {
         }));
     }),
 
-  /** Niveaux de stock du tenant par entrepôt × article (lignes à zéro incluses si l'article a bougé). */
-  stockLevels: (organizationId: string | null, warehouseId?: string) =>
-    dbTry("logistics.stock.levels", () =>
-      getDrizzle().select({
-        warehouseId: logisticsStockMovements.warehouseId, itemId: logisticsStockMovements.itemId, sku: logisticsItems.sku, name: logisticsItems.name,
-        warehouseCode: logisticsWarehouses.code, level: sql<number>`sum(${logisticsStockMovements.delta})::int`,
-      }).from(logisticsStockMovements)
-        .innerJoin(logisticsItems, eq(logisticsItems.id, logisticsStockMovements.itemId))
-        .innerJoin(logisticsWarehouses, eq(logisticsWarehouses.id, logisticsStockMovements.warehouseId))
-        .where(and(sameTenant(logisticsStockMovements.organizationId, organizationId), warehouseId ? eq(logisticsStockMovements.warehouseId, warehouseId) : undefined))
-        .groupBy(logisticsStockMovements.warehouseId, logisticsStockMovements.itemId, logisticsItems.sku, logisticsItems.name, logisticsWarehouses.code)
-        .orderBy(asc(logisticsWarehouses.code), asc(logisticsItems.sku)),
-    ).pipe(Effect.map((rows) => rows.map((row) => ({ ...row, level: Number(row.level) })))),
-
   // ── Expéditions ─────────────────────────────────────────────────────────
   createShipment: (input: ShipmentInput & { readonly organizationId: string | null }, authorId: string) =>
     dbTransaction("logistics.shipment.create", (tx) =>
