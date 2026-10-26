@@ -185,6 +185,27 @@ async function submitPostForm(page: import('@playwright/test').Page) {
   await page.locator('#blog-post-form button[type="submit"]').click();
 }
 
+/**
+ * Attend la réponse HTTP de l'action Astro déclenchée par `trigger`.
+ * Fermer le contexte pendant qu'une action est en vol (réponse pas encore
+ * reçue, formulaire encore « dirty » avec son `beforeunload`) interrompt la
+ * requête côté serveur (`Error: aborted`) et peut bloquer le contexte suivant
+ * sous Firefox ; on attend donc toujours la fin de l'action avant d'enchaîner.
+ */
+async function awaitAction(
+  page: import('@playwright/test').Page,
+  name: string,
+  trigger: () => Promise<void>,
+) {
+  const response = page.waitForResponse(
+    (candidate) => candidate.request().method() === 'POST' && new URL(candidate.url()).pathname.replace(/\/$/, '').endsWith(`/_actions/${name}`),
+    { timeout: 20_000 },
+  );
+  await trigger();
+  const settled = await response;
+  expect(settled.ok(), `action ${name} → HTTP ${settled.status()}`).toBe(true);
+}
+
 async function openModerationTab(page: import('@playwright/test').Page) {
   await page.getByRole('tab', { name: /modération|moderation/i }).click();
   await expect(page.locator('[data-tabs-content][data-value="moderation"]')).toHaveAttribute('data-state', 'active');
@@ -486,7 +507,7 @@ test.describe.serial('Blog surfaces', () => {
       await expect.poll(async () => getTranslationTitle(seeded.globalWorkflow.id!)).toBe(seeded.globalWorkflow.initialTitle);
 
       await updatePostTitle(page, seeded.globalWorkflow.editedTitle);
-      await submitPostForm(page);
+      await awaitAction(page, 'updateBlogPost', () => submitPostForm(page));
 
       await expect.poll(async () => getTranslationTitle(seeded.globalWorkflow.id!)).toBe(seeded.globalWorkflow.editedTitle);
     } finally {
@@ -505,9 +526,11 @@ test.describe.serial('Blog surfaces', () => {
         'href',
         buildGlobalPostUrl(seeded.globalWorkflow.slug),
       );
-      await row.locator('.publish-btn').click();
+      await awaitAction(adminPage, 'publishBlogPost', () => row.locator('.publish-btn').click());
 
       await expect.poll(async () => getPostStatus(seeded.globalWorkflow.id!)).toBe('PUBLISHED');
+      // Le succès recharge la liste : on attend la ligne republiée avant de fermer le contexte.
+      await expect(row.locator('.unpublish-btn')).toBeVisible();
     } finally {
       await context.close();
     }
@@ -657,7 +680,7 @@ test.describe.serial('Blog surfaces', () => {
       const row = adminPage.locator('tbody tr').filter({ hasText: seeded.globalWorkflow.editedTitle }).first();
       await expect(row).toBeVisible();
       adminPage.once('dialog', (dialog) => dialog.accept());
-      await row.locator('.delete-btn').click();
+      await awaitAction(adminPage, 'deleteBlogPost', () => row.locator('.delete-btn').click());
 
       await expect.poll(async () => getPostStatus(seeded.globalWorkflow.id!)).toBe('DELETED');
     } finally {
@@ -700,7 +723,7 @@ test.describe.serial('Blog surfaces', () => {
       await expect.poll(async () => getPostStatus(seeded.orgWorkflow.id!)).toBe('DRAFT');
 
       await updatePostTitle(adminPage, seeded.orgWorkflow.editedTitle);
-      await submitPostForm(adminPage);
+      await awaitAction(adminPage, 'updateBlogPost', () => submitPostForm(adminPage));
       await expect.poll(async () => getTranslationTitle(seeded.orgWorkflow.id!)).toBe(seeded.orgWorkflow.editedTitle);
 
       await adminPage.goto(`/fr/${seeded.orgSlug}/admin/blog`, { waitUntil: 'networkidle' });
@@ -710,9 +733,10 @@ test.describe.serial('Blog surfaces', () => {
         'href',
         buildOrgPostUrl(seeded.orgWorkflow.slug),
       );
-      await row.locator('.publish-btn').click();
+      await awaitAction(adminPage, 'publishBlogPost', () => row.locator('.publish-btn').click());
 
       await expect.poll(async () => getPostStatus(seeded.orgWorkflow.id!)).toBe('PUBLISHED');
+      await expect(row.locator('.unpublish-btn')).toBeVisible();
     } finally {
       await context.close();
     }
@@ -747,7 +771,7 @@ test.describe.serial('Blog surfaces', () => {
       const row = cleanupPage.locator('tbody tr').filter({ hasText: seeded.orgWorkflow.editedTitle }).first();
       await expect(row).toBeVisible();
       cleanupPage.once('dialog', (dialog) => dialog.accept());
-      await row.locator('.delete-btn').click();
+      await awaitAction(cleanupPage, 'deleteBlogPost', () => row.locator('.delete-btn').click());
 
       await expect.poll(async () => getPostStatus(seeded.orgWorkflow.id!)).toBe('DELETED');
     } finally {
