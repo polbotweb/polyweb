@@ -1,6 +1,6 @@
 ════════════════════════════════════════════════════════════════════════════════
   VITEST UNIT & INTEGRATION TEST REPORT
-  Generated: 2026-10-26 06:19:49
+  Generated: 2026-10-26 10:57:43
 ════════════════════════════════════════════════════════════════════════════════
 
   ✅ tests/integration/audit.test.ts  (8/8 passed)
@@ -148,6 +148,7 @@
   ✅ tests/integration/loaders/navigation-consent-effect.test.ts  (3/3 passed)
   ✅ tests/integration/loaders/page-loader-effect.test.ts  (4/4 passed)
   ✅ tests/integration/loaders/site-media-admin-effect.test.ts  (3/3 passed)
+  ✅ tests/integration/locks/core-locks-pg.test.ts  (8/8 passed)
   ✅ tests/integration/observability/observability.test.ts  (5/5 passed)
   ✅ tests/integration/platform/api-v1.test.ts  (8/8 passed)
   ✅ tests/integration/platform/blocks-media.test.ts  (2/2 passed)
@@ -158,7 +159,6 @@
   ✅ tests/integration/platform/sites.test.ts  (5/5 passed)
   ✅ tests/integration/platform/webhooks.test.ts  (6/6 passed)
   ✅ tests/integration/search/search.test.ts  (4/5 passed, 1 skipped)
-  ✅ tests/integration/locks/core-locks-pg.test.ts  (8/8 passed)
   ✅ tests/integration/storage/s3.test.ts  (4/4 passed)
   ✅ tests/unit/blog/status-transitions.test.ts  (17/17 passed)
   ✅ tests/unit/cms/admin-filter-contract.test.ts  (2/2 passed)
@@ -170,12 +170,12 @@
   ✅ tests/unit/cms/resource-contract.test.ts  (6/6 passed)
   ✅ tests/unit/cms/workflow.test.ts  (4/4 passed)
   ✅ tests/unit/core/category-taxonomy.test.ts  (5/5 passed)
+  ✅ tests/unit/effect/foundation.test.ts  (4/4 passed)
   ✅ tests/unit/database/migration-sql.test.ts  (12/12 passed)
   ✅ tests/unit/database/seed-data-contract.test.ts  (2/2 passed)
   ✅ tests/unit/database/seed-manifest.test.ts  (3/3 passed)
   ✅ tests/unit/database/services-data-invariants.test.ts  (5/5 passed)
   ✅ tests/unit/database/services-data-shape.test.ts  (1/1 passed)
-  ✅ tests/unit/effect/foundation.test.ts  (4/4 passed)
   ✅ tests/unit/payments/providers.test.ts  (5/5 passed)
   ✅ tests/unit/platform/blocks.test.ts  (5/5 passed)
   ✅ tests/unit/platform/fields.test.ts  (5/5 passed)
