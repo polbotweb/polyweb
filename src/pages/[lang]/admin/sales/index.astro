@@ -1,0 +1,51 @@
+---
+/** Back-office plateforme : documents de vente (devis, factures, avoirs) — facettes type/statut, vues, actions groupées. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import AdminPagination from "@molecules/AdminPagination/AdminPagination.astro";
+import { Effect } from "effect";
+import { requirePermission } from "@lib/auth-guards";
+import { loadSavedViews } from "@/lib/admin/saved-views";
+import { bulkBarOperations } from "@/core/bulk/ui";
+import { canAdministerTenant } from "@/core/permissions/tenant";
+import SalesAdminList from "@/components/sales/admin/SalesAdminList.astro";
+import { salesDocumentAdminResource } from "@/modules/sales/admin/resource";
+import { getSalesTranslations } from "@/modules/sales/i18n";
+import { loadSalesAdminFacets, salesAdminFiltersFromUrl, salesAdminList } from "@/modules/sales/loaders";
+import { hasSalesPermission } from "@/modules/sales/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { sales: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getSalesTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/sales`;
+const [list, facets, savedViews, canCreate, canUpdate, canForceReleaseLock] = await Promise.all([
+  Effect.runPromise(salesAdminList(null, Astro.url.searchParams)),
+  loadSalesAdminFacets(null, salesAdminFiltersFromUrl(Astro.url.searchParams)).catch(() => ({})),
+  Astro.locals.user ? loadSavedViews(Astro.locals.user.id, "sales-document", null) : Promise.resolve([]),
+  hasSalesPermission(Astro, ["create"]),
+  hasSalesPermission(Astro, ["update"]),
+  Effect.runPromise(canAdministerTenant(Astro.locals.user, null)).catch(() => false),
+]);
+const bulkOperations = bulkBarOperations(salesDocumentAdminResource.list?.bulkActions, t.admin.bulk, { cancel: canUpdate, expire: canUpdate });
+---
+<BaseLayout title={t.admin.title} description={t.meta.description}>
+  <AuthLayout title={t.admin.title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="sales" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{t.admin.title}</h1>
+        {canCreate && (
+          <div class="flex flex-wrap gap-2">
+            <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/new?kind=quote`} data-testid="sales-new-quote">{t.admin.newQuote}</a>
+            <a class="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-primary-foreground" href={`${baseAdminUrl}/new?kind=invoice`} data-testid="sales-new-invoice">{t.admin.newInvoice}</a>
+          </div>
+        )}
+      </div>
+      <SalesAdminList items={list.items} locale={locale} viewBaseUrl={baseAdminUrl} bulkOperations={bulkOperations} canForceReleaseLock={canForceReleaseLock} baseUrl={Astro.url} facets={facets} savedViews={savedViews} />
+      {list.totalPages > 1 && <AdminPagination currentPage={list.page} totalPages={list.totalPages} baseUrl={Astro.url} />}
+    </main>
+  </AuthLayout>
+</BaseLayout>
