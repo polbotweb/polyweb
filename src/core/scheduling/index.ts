@@ -118,3 +118,7 @@ export const freeSlots = (date: string, windows: readonly WeeklyWindow[], zone: 
   }
   return slots;
 };
+
+/** Affiche un instant dans le fuseau d'une ressource (date + heure courtes, locale d'interface). */
+export const formatZoned = (instant: Date, zone: string, locale: string, options: Intl.DateTimeFormatOptions = { dateStyle: "medium", timeStyle: "short" }) =>
+  new Intl.DateTimeFormat(locale, { ...options, timeZone: zone }).format(instant);
