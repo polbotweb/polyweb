@@ -118,6 +118,30 @@ Régressions : `tests/unit/inline-style.test.ts` (filtres + **aucun `style=` dan
 sur les pages publiques, `data-style` effectivement appliqués). Les gabarits d'e-mail
 (`src/smtp/`) ne sont pas concernés (pas de CSP côté client mail).
 
+#### Faux positif WebKit : `style-src-attr` sur `<select>` (sample vide)
+
+Avec Playwright 1.64.x (WebKit 27.2, build `webkit-2370`), **chaque `<select>`** — statique
+ou créé par `document.createElement("select")`, même non inséré — émet un événement
+`securitypolicyviolation` `style-src-attr` / `blockedURI: inline` avec un **`sample` vide**,
+sans aucun attribut `style=` dans notre code. Chromium et Firefox ne signalent rien.
+
+- **Cause (moteur, pas le projet)** : régression WebKit 321159@main (bug 322676) :
+  `HTMLSelectElement::didAddUserAgentShadowRoot` pose `style="text-overflow:inherit"` sur un
+  `<slot>` de son shadow tree UA *avant* de l'y insérer ; l'exemption CSP des shadow trees UA
+  (`isInUserAgentShadowTree()`) ne s'applique donc pas encore.
+- **Suivi amont** : [WebKit bug 327212](https://bugs.webkit.org/show_bug.cgi?id=327212)
+  (corrigé dans 324283@main ; doublon 327752) ;
+  [microsoft/playwright#43416](https://github.com/microsoft/playwright/issues/43416) et
+  [#43617](https://github.com/microsoft/playwright/issues/43617) : correctif attendu avec le
+  prochain roll WebKit de Playwright (build r2383 ou plus).
+- **Traitement dans `tests/e2e/csp.spec.ts`** : filtre ciblé — on ignore uniquement les
+  événements qui cumulent `violatedDirective === 'style-src-attr'`, `sample` vide **et**
+  `target` instance de `HTMLSelectElement`. Toute autre violation (dont un vrai `style=` sur un
+  `<select>`, qui aurait un `sample` non vide) fait toujours échouer le test. On n'utilise
+  **pas** `bypassCSP: true` (contournement suggéré en amont) : il désactiverait le test.
+- **À retirer** quand la version de Playwright embarquera un WebKit ≥ r2383 : supprimer le
+  filtre, relancer `pnpm exec playwright test tests/e2e/csp.spec.ts --project=webkit`.
+
 ### SVG XSS Prevention
 
 Les fichiers SVG uploadés (`/uploads/*.svg`) sont servis avec :
