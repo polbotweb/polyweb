@@ -9,6 +9,7 @@ import { blogPostAdminResource } from "@/modules/blog/admin/resource";
 import { pagesListDefinition } from "@/lib/pages/admin-list";
 import { eventAdminResource } from "@/modules/events/admin/resource";
 import { productAdminResource } from "@/modules/shop/admin/resource";
+import { taxRateAdminResource } from "@/modules/tax/admin/resource";
 import { courseAdminResource } from "@/modules/courses/admin/resource";
 import { formationAdminResource } from "@/modules/formations/admin/resource";
 
@@ -23,6 +24,7 @@ export const ADMIN_LISTS: Readonly<Record<string, AdminListEntry>> = {
   pages: { definition: pagesListDefinition, readPermission: { page: ["read"] } },
   event: { definition: eventAdminResource.list!, readPermission: { events: ["read"] } },
   product: { definition: productAdminResource.list!, readPermission: { shop: ["read"] } },
+  "tax-rate": { definition: taxRateAdminResource.list!, readPermission: { tax: ["read"] } },
   course: { definition: courseAdminResource.list!, readPermission: { courses: ["read"] } },
   formation: { definition: formationAdminResource.list!, readPermission: { formations: ["read"] } },
 };

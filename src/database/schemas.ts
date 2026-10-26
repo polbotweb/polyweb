@@ -22,5 +22,6 @@ export * from "./schemas/search.schema";
 export * from "./schemas/saved-views.schema";
 export * from "../modules/events/schema";
 export * from "../modules/shop/schema";
+export * from "../modules/tax/schema";
 export * from "../modules/courses/schema";
 export * from "../modules/formations/schema";

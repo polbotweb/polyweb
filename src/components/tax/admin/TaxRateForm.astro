@@ -1,0 +1,63 @@
+---
+/**
+ * Formulaire back-office d'un taux de TVA (création / édition). Soumission par le
+ * module client `modules/tax/client/rate-form.ts` (actions Astro `tax.create` / `tax.update`),
+ * jamais par `<form method="post">` : aucune valeur dans l'URL.
+ */
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import type { Locale } from "@i18n/config";
+import { getTaxTranslations } from "@/modules/tax/i18n";
+import { CUSTOMER_TYPES, TAX_CATEGORIES, type CustomerType, type TaxCategory } from "@/modules/tax/domain/rules";
+import { TAX_STATUSES, type TaxStatus } from "@/modules/tax/domain/workflow";
+
+interface Props {
+  locale: Locale;
+  organizationId?: string | null;
+  /** URL de la liste (redirection après création / enregistrement). */
+  listUrl: string;
+  rate?: { id: string; title: string; slug: string; countryCode: string; category: TaxCategory; customerType: CustomerType | null; ratePercent: string; validFrom: string | null; validTo: string | null; status: TaxStatus };
+  canPublish?: boolean;
+}
+
+const { locale, organizationId = null, listUrl, rate, canPublish = false } = Astro.props as Props;
+const t = getTaxTranslations(locale);
+const rateValue = rate ? String(Number(rate.ratePercent)) : "";
+---
+
+<form class="flex max-w-2xl flex-col gap-4" data-tax-rate-form data-mode={rate ? "update" : "create"} data-id={rate?.id ?? ""} data-organization-id={organizationId ?? ""} data-list-url={listUrl} data-done={rate ? t.admin.saved : t.admin.created} data-status={rate?.status ?? ""} novalidate>
+  <div class="grid gap-2"><Label for="tax-title">{t.fields.title}</Label><Input id="tax-title" name="title" required maxlength={200} value={rate?.title ?? ""} /></div>
+  <div class="grid gap-2"><Label for="tax-slug">{t.fields.slug}</Label><Input id="tax-slug" name="slug" required maxlength={200} pattern="[a-z0-9-]+" value={rate?.slug ?? ""} /></div>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div class="grid gap-2"><Label for="tax-country">{t.fields.countryCode}</Label><Input id="tax-country" name="countryCode" required maxlength={2} pattern="[A-Za-z]{2}" autocomplete="off" aria-describedby="tax-country-hint" value={rate?.countryCode ?? ""} /><p id="tax-country-hint" class="text-xs text-muted-foreground">{t.fields.countryHint}</p></div>
+    <div class="grid gap-2"><Label for="tax-rate">{t.fields.ratePercent}</Label><Input id="tax-rate" name="ratePercent" required inputmode="decimal" aria-describedby="tax-rate-hint" value={rateValue} /><p id="tax-rate-hint" class="text-xs text-muted-foreground">{t.fields.rateHint}</p></div>
+    <div class="grid gap-2"><Label for="tax-category">{t.fields.category}</Label>
+      <NativeSelect id="tax-category" name="category">{TAX_CATEGORIES.map((category) => <NativeSelectOption value={category} selected={(rate?.category ?? "standard") === category}>{t.categories[category]}</NativeSelectOption>)}</NativeSelect>
+    </div>
+    <div class="grid gap-2"><Label for="tax-customer">{t.fields.customerType}</Label>
+      <NativeSelect id="tax-customer" name="customerType">
+        <NativeSelectOption value="" selected={!rate?.customerType}>{t.customerTypes.all}</NativeSelectOption>
+        {CUSTOMER_TYPES.map((type) => <NativeSelectOption value={type} selected={rate?.customerType === type}>{t.customerTypes[type]}</NativeSelectOption>)}
+      </NativeSelect>
+    </div>
+    <div class="grid gap-2"><Label for="tax-from">{t.fields.validFrom}</Label><Input id="tax-from" name="validFrom" type="date" value={rate?.validFrom ?? ""} /></div>
+    <div class="grid gap-2"><Label for="tax-to">{t.fields.validTo}</Label><Input id="tax-to" name="validTo" type="date" value={rate?.validTo ?? ""} /></div>
+    {canPublish && (
+      <div class="grid gap-2"><Label for="tax-status">{t.fields.status}</Label>
+        <NativeSelect id="tax-status" name="status">{TAX_STATUSES.map((status) => <NativeSelectOption value={status} selected={(rate?.status ?? "PUBLISHED") === status}>{t.statuses[status]}</NativeSelectOption>)}</NativeSelect>
+      </div>
+    )}
+  </div>
+  <p class="text-sm text-muted-foreground">{t.admin.defaultsNote}</p>
+  <p class="text-sm text-destructive" role="alert" data-form-error hidden></p>
+  <div class="flex gap-3"><Button type="submit">{rate ? t.admin.save : t.admin.create}</Button><a class="inline-flex min-h-11 items-center px-3 underline" href={listUrl}>{t.admin.back}</a></div>
+</form>
+
+<script>
+  import { initTax } from "@/modules/tax/client/init";
+
+  initTax();
+  document.addEventListener("astro:after-swap", initTax);
+</script>

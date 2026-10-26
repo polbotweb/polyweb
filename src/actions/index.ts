@@ -31,6 +31,7 @@ import { addServiceMedia, updateServiceMedia, removeServiceMedia } from "./servi
 import { resolveServiceInternalLink } from "./services/internal-link";
 import { eventsActions } from "@/modules/events/actions";
 import { shopActions } from "@/modules/shop/actions";
+import { taxActions } from "@/modules/tax/actions";
 import { coursesActions } from "@/modules/courses/actions";
 import { formationsActions } from "@/modules/formations/actions";
 
@@ -49,6 +50,7 @@ export const server = {
   createServiceCategory, updateServiceCategory, deleteServiceCategory, createServiceTag, updateServiceTag, deleteServiceTag, moderateServiceComment, moderateServiceReview, resolveServiceReport, addServiceMedia, updateServiceMedia, removeServiceMedia, resolveServiceInternalLink,
   events: eventsActions,
   shop: shopActions,
+  tax: taxActions,
   courses: coursesActions,
   formations: formationsActions,
 };

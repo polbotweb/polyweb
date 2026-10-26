@@ -61,6 +61,19 @@ test('axe: /fr/admin/navigation cibles ≥ 24 px (boutons monter/descendre)', as
   expect(violations, violations.join('\n')).toEqual([]);
 });
 
+test('axe: /fr/admin/tax et /fr/admin/tax/new sans violation grave, titres et cibles', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Parcours admin : Chromium');
+  await signInAsAdmin(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  for (const path of ['/fr/admin/tax', '/fr/admin/tax/new']) {
+    await page.goto(path, { waitUntil: 'networkidle' });
+    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+    const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${path} ${v.id}: ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(' | ')}`);
+    const structure = await structureViolations(page);
+    expect([...serious, ...structure], [...serious, ...structure].join('\n')).toEqual([]);
+  }
+});
+
 /**
  * WCAG 2.5.5 (AAA, approuvé) : les commandes icônes de l'admin navigation font
  * au moins 44 × 44 px (axe ne vérifie que le seuil AA de 24 px).

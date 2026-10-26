@@ -1,0 +1,32 @@
+---
+/** Back-office plateforme : édition d'un taux de TVA. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Effect } from "effect";
+import { requirePermission } from "@lib/auth-guards";
+import TaxRateForm from "@/components/tax/admin/TaxRateForm.astro";
+import { getTaxTranslations } from "@/modules/tax/i18n";
+import { taxAdminById } from "@/modules/tax/loaders";
+import { hasTaxPermission } from "@/modules/tax/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { tax: ["update"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getTaxTranslations(locale);
+const [rate, canPublish] = await Promise.all([
+  Effect.runPromise(taxAdminById(Astro.params.id ?? "", null)),
+  hasTaxPermission(Astro, ["publish"]),
+]);
+if (!rate) return new Response(null, { status: 404 });
+---
+<BaseLayout title={t.admin.editRate} description={t.meta.description}>
+  <AuthLayout title={t.admin.editRate}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="tax" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <h1 class="text-2xl font-semibold">{t.admin.editRate}</h1>
+      <TaxRateForm locale={locale} listUrl={`/${locale}/admin/tax`} rate={rate} canPublish={canPublish} />
+    </main>
+  </AuthLayout>
+</BaseLayout>

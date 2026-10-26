@@ -1,0 +1,27 @@
+---
+/**
+ * Page de détail du domaine tax.
+ *
+ * La DTO arrive par props : la page a fait appel au loader. Ce composant se
+ * contente de composer les atomes de `molecules/`.
+ */
+import type { TaxDTO } from "@/modules/tax/loaders/tax-rate.loader";
+import TaxCard from "@/components/tax/TaxCard.astro";
+
+interface Props {
+  item: TaxDTO;
+}
+
+const { item } = Astro.props as Props;
+---
+
+<section class="flex flex-col gap-6">
+  <TaxCard id={item.id} title={item.id} href="#" />
+</section>
+
+<script>
+  import { initTax } from "@/modules/tax/client/init";
+
+  initTax();
+  document.addEventListener("astro:after-swap", initTax);
+</script>
