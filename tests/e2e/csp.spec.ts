@@ -16,6 +16,11 @@ test.describe('CSP stricte', () => {
           // WebKit ≥ 27 (Playwright 1.6x) : tout <select> (statique ou créé en JS) déclenche
           // un faux positif `style-src-attr` (sample vide) venant de son shadow DOM interne.
           // Reproduit hors projet avec une page minimale ; aucun attribut style= côté code.
+          // Régression moteur WebKit (bug 322676 / 321159@main), corrigée en amont :
+          // https://bugs.webkit.org/show_bug.cgi?id=327212 (324283@main) ; suivi Playwright :
+          // https://github.com/microsoft/playwright/issues/43416. À retirer dès que Playwright
+          // embarque un WebKit ≥ r2383. Pas de `bypassCSP` (il neutraliserait ce test).
+          // Détails : docs/security.md § « Faux positif WebKit ».
           if (e.violatedDirective === 'style-src-attr' && !e.sample && e.target instanceof HTMLSelectElement) return;
           const t = e.target instanceof Element ? e.target.outerHTML.slice(0, 160) : String(e.target);
           (window as unknown as { __csp: string[] }).__csp.push(
