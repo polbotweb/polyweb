@@ -11,6 +11,7 @@ import { eventAdminResource } from "@/modules/events/admin/resource";
 import { productAdminResource } from "@/modules/shop/admin/resource";
 import { taxRateAdminResource } from "@/modules/tax/admin/resource";
 import { salesDocumentAdminResource } from "@/modules/sales/admin/resource";
+import { opportunityAdminResource } from "@/modules/crm/admin/resource";
 import { courseAdminResource } from "@/modules/courses/admin/resource";
 import { formationAdminResource } from "@/modules/formations/admin/resource";
 
@@ -27,6 +28,7 @@ export const ADMIN_LISTS: Readonly<Record<string, AdminListEntry>> = {
   product: { definition: productAdminResource.list!, readPermission: { shop: ["read"] } },
   "tax-rate": { definition: taxRateAdminResource.list!, readPermission: { tax: ["read"] } },
   "sales-document": { definition: salesDocumentAdminResource.list!, readPermission: { sales: ["read"] } },
+  "crm-opportunity": { definition: opportunityAdminResource.list!, readPermission: { crm: ["read"] } },
   course: { definition: courseAdminResource.list!, readPermission: { courses: ["read"] } },
   formation: { definition: formationAdminResource.list!, readPermission: { formations: ["read"] } },
 };
