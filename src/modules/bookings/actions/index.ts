@@ -13,6 +13,7 @@ import { bookingsService } from "../services/bookings.service";
 import { BOOKING_STATUSES } from "../domain/workflow";
 import { MAX_WINDOWS, RESOURCE_KINDS } from "../domain/resource";
 import { bulkBookingsLifecycle } from "./bulk";
+import { bookingsLoader } from "../loaders/bookings.loader";
 
 const idInput = z.object({ id: z.uuid() });
 const orgInput = { organizationId: z.string().nullable().default(null) };
@@ -65,8 +66,9 @@ export const bookingsActions = {
     input: z.object({ resourceId: z.uuid(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }),
     handler: effectHandler((input, context) => Effect.gen(function* () {
       yield* requireBookingsResourcePermission(context, ["read"], input.resourceId, "resource");
-      const { slots } = yield* bookingsService.availability(input.resourceId, input.date, { notBefore: new Date() });
-      return slots.map((s) => ({ startsAt: s.start.toISOString(), endsAt: s.end.toISOString() }));
+      const organizationId = yield* bookingsLoader.resourceOrganization(input.resourceId);
+      const day = yield* bookingsLoader.availability(input.resourceId, organizationId, input.date, { notBefore: new Date() });
+      return (day?.slots ?? []).map((s) => ({ startsAt: s.start.toISOString(), endsAt: s.end.toISOString() }));
     })),
   }),
 

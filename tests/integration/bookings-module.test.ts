@@ -14,6 +14,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { getDrizzle } from '@database/drizzle';
 import { organization, user } from '@database/schemas';
 import { bookingsService } from '@/modules/bookings/services/bookings.service';
+import { bookingsLoader } from '@/modules/bookings/loaders';
 
 const db = getDrizzle();
 const t = `book-${Date.now().toString(36)}`;
@@ -79,7 +80,9 @@ describe('module bookings', () => {
   });
 
   it('liste les créneaux libres du jour', async () => {
-    const { slots } = await run(bookingsService.availability(room, monday));
+    const day = await run(bookingsLoader.availability(room, orgId, monday));
+    expect(await run(bookingsLoader.availability(room, otherOrg, monday))).toBeNull();
+    const slots = day!.slots;
     // Locale : 09-10 et 10-11 pris, 14:00-15:30 pris → 11:00 et 17:00 libres, rien hors plage.
     const starts = slots.map((s) => s.start.toISOString().slice(11, 16));
     expect(starts).toContain('10:00'); // 11:00 locale

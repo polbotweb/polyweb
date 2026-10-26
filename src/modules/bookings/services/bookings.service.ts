@@ -16,7 +16,7 @@ import { fail } from "@/lib/effect/action";
 import { canTransition } from "@/core/workflow";
 import { assignDocumentNumber } from "@/core/numbering";
 import type { LockOwner } from "@/core/locks/policy";
-import { freeSlots, zonedToUtc, type Interval, type WeeklyWindow } from "@/core/scheduling";
+import { zonedToUtc, type Interval, type WeeklyWindow } from "@/core/scheduling";
 import { bookings, bookingsResources, bookingsRevisions } from "../schema";
 import { bookingsLock } from "../locks";
 import { ACTIVE_STATUSES, assignsNumber, bookingWorkflow, isEditable, reoccupiesSlot, type BookingStatus } from "../domain/workflow";
@@ -162,18 +162,6 @@ export const bookingsService = {
         const rows = yield* dbTry("bookings.resource.delete", () => tx.delete(bookingsResources).where(eq(bookingsResources.id, id)).returning({ id: bookingsResources.id }));
         return rows[0] ? { id } : yield* fail("NOT_FOUND", "Ressource introuvable.");
       })),
-
-  /** Créneaux libres d'une ressource pour une date locale (busy = réservations actives). */
-  availability: (resourceId: string, date: string, options: { readonly notBefore?: Date } = {}) =>
-    Effect.gen(function* () {
-      const [resource] = yield* dbTry("bookings.resource.find", () => getDrizzle().select().from(bookingsResources).where(eq(bookingsResources.id, resourceId)).limit(1));
-      if (!resource) return yield* fail("NOT_FOUND", "Ressource introuvable.");
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return yield* fail("BAD_REQUEST", "Date invalide.");
-      const dayStart = zonedToUtc(date, "00:00", resource.timezone);
-      const window = { start: new Date(dayStart.getTime() - 86_400_000), end: new Date(dayStart.getTime() + 2 * 86_400_000) };
-      const busy = yield* activeOverlapping(getDrizzle(), resource.id, window);
-      return { resource, slots: resource.active ? freeSlots(date, resource.windows, resource.timezone, busy, resource.slotMinutes, options.notBefore) : [] };
-    }),
 
   // ── Réservations ────────────────────────────────────────────────────────
   createBooking: (input: BookingInput & { readonly organizationId: string | null }, authorId: string) =>
