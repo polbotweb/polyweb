@@ -1,0 +1,21 @@
+---
+/**
+ * Carte de liste du domaine sales.
+ *
+ * Présentational : les données viennent des props, jamais d'une requête. Le
+ * script, s'il y en a un, passe par `modules/sales/client/`.
+ */
+interface Props {
+  id: string;
+  title: string;
+  href: string;
+}
+
+const { title, href } = Astro.props as Props;
+---
+
+<article class="rounded-2xl border bg-card p-5">
+  <h3 class="font-heading font-semibold">
+    <a href={href} class="hover:underline">{title}</a>
+  </h3>
+</article>

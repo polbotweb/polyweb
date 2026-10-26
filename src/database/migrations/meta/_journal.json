@@ -218,6 +218,13 @@
       "when": 1793019842556,
       "tag": "0030_document_sequences",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793022683314,
+      "tag": "0031_sales_documents",
+      "breakpoints": true
     }
   ]
 }

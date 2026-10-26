@@ -10,7 +10,7 @@ export const CREDITABLE_INVOICE_STATUSES: readonly SalesStatus[] = ["ISSUED", "P
 
 export const creditableAmount = (invoiceGrossMinor: number, alreadyCreditedMinor: number) => Math.max(0, invoiceGrossMinor - alreadyCreditedMinor);
 
-export const validateCreditAmount = (input: { readonly invoiceGrossMinor: number; readonly alreadyCreditedMinor: number; readonly requestedMinor: number }) =>
+export const validateCreditAmount = (input: { readonly invoiceGrossMinor: number; readonly alreadyCreditedMinor: number; readonly requestedMinor: number }): Effect.Effect<number, CreditExceedsInvoiceError> =>
   input.requestedMinor > 0 && input.requestedMinor <= creditableAmount(input.invoiceGrossMinor, input.alreadyCreditedMinor)
     ? Effect.succeed(input.requestedMinor)
     : Effect.fail(new CreditExceedsInvoiceError(input));

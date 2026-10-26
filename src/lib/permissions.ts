@@ -41,6 +41,7 @@ export const statement = {
   payment: ["read", "refund"],
   shop: ["create", "read", "update", "delete", "publish"],
   tax: ["create", "read", "update", "delete", "publish"],
+  sales: ["create", "read", "update", "delete", "issue", "payment"],
   courses: ["create", "read", "update", "delete", "publish"],
   formations: ["create", "read", "update", "delete", "publish"],
   events: ["create", "read", "update", "delete", "publish"],
@@ -115,6 +116,9 @@ const cmsReadOnlyShop = { shop: ["read"] } as const;
 /** Module tax (taux de TVA par pays / catégorie, exports comptables). */
 const cmsAdminTax = { tax: ["create", "read", "update", "delete", "publish"] } as const;
 const cmsReadOnlyTax = { tax: ["read"] } as const;
+// Ventes : documents commerciaux et comptables — aucun accès pour les rôles éditoriaux/utilisateurs.
+const cmsAdminSales = { sales: ["create", "read", "update", "delete", "issue", "payment"] } as const;
+const cmsReadOnlySales = { sales: ["read"] } as const;
 
 export const adminRole = ac.newRole({
   ...adminAc.statements,
@@ -137,6 +141,7 @@ export const adminRole = ac.newRole({
   ...cmsAdminCourses,
   ...cmsAdminShop,
   ...cmsAdminTax,
+  ...cmsAdminSales,
 });
 
 export const editorRole = ac.newRole({
@@ -188,6 +193,7 @@ export const orgOwnerRole = ac.newRole({
   ...cmsAdminCourses,
   ...cmsAdminShop,
   ...cmsAdminTax,
+  ...cmsAdminSales,
 });
 
 export const orgAdminRole = ac.newRole({
@@ -206,6 +212,7 @@ export const orgAdminRole = ac.newRole({
   ...cmsAdminCourses,
   ...cmsAdminShop,
   ...cmsAdminTax,
+  ...cmsAdminSales,
 });
 
 export const orgMemberRole = ac.newRole({
@@ -219,4 +226,5 @@ export const orgMemberRole = ac.newRole({
   ...cmsReadOnlyCourses,
   ...cmsReadOnlyShop,
   ...cmsReadOnlyTax,
+  ...cmsReadOnlySales,
 });
