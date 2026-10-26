@@ -1,12 +1,12 @@
 
-> polyweb@0.0.1 check /workspace/l-qa
+> polyweb@0.0.1 check /workspace/qa-final
 > astro check
 
-06:18:33 [@astrojs/node] Enabling sessions with filesystem storage
-06:18:34 [content] Syncing content
-06:18:34 [content] Synced content
-06:18:34 [types] Generated 641ms
-06:18:34 [check] Getting diagnostics for Astro files in /workspace/l-qa...
+10:56:31 [@astrojs/node] Enabling sessions with filesystem storage
+10:56:32 [content] Syncing content
+10:56:32 [content] Synced content
+10:56:32 [types] Generated 637ms
+10:56:32 [check] Getting diagnostics for Astro files in /workspace/qa-final...
 [96msrc/actions/admin/pages.ts[0m:[93m4[0m:[93m38[0m - [93mwarning[0m[90m ts(6133): [0m'isNotNull' is declared but its value is never read.
 
 [7m4[0m import { eq, and, asc, desc, isNull, isNotNull, inArray, max } from "drizzle-orm";
