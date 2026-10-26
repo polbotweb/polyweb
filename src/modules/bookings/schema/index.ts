@@ -46,6 +46,8 @@ export const bookings = pgTable("bookings", {
   endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
   customerName: text("customer_name").notNull(),
   customerEmail: text("customer_email"),
+  /** Téléphone facultatif saisi par un visiteur (parcours public). */
+  customerPhone: text("customer_phone"),
   partySize: integer("party_size").default(1).notNull(),
   notes: text("notes"),
   confirmedAt: timestamp("confirmed_at"),
