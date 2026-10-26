@@ -43,3 +43,7 @@ export const salesLoader = {
 /** Adaptateur Promise (pages Astro). */
 export const loadSalesDocument = (id: string, organizationId: string | null): Promise<SalesDocumentDetail | null> =>
   runOrThrow(salesLoader.byId(id, organizationId));
+
+/** Organisation propriétaire d'un document (`null` = plateforme), ou null s'il n'existe pas — garde tenant. */
+export const salesOrganizationOf = (id: string): Promise<{ organizationId: string | null } | null> =>
+  runOrThrow(dbTry("sales.organizationOf", () => getDrizzle().select({ organizationId: sales.organizationId }).from(sales).where(eq(sales.id, id)).limit(1)).pipe(Effect.map(([row]) => row ?? null)));

@@ -58,6 +58,7 @@ const today = new Date().toISOString().slice(0, 10);
           <p class="text-muted-foreground">{doc.title} — <span data-testid="sales-status">{t.statuses[doc.status]}</span></p>
         </div>
         <div class="flex flex-wrap gap-2">
+          <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/${doc.id}/pdf`} download data-testid="sales-pdf">{t.actions.downloadPdf}</a>
           {editable && <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/${doc.id}/edit`}>{t.admin.edit}</a>}
           {targets.map((to) => <Button type="button" variant={to === "CANCELLED" || to === "REJECTED" ? "outline" : "default"} data-sales-op="transition" data-to={to}>{targetLabel[to] ?? t.statuses[to]}</Button>)}
           {canConvert && <Button type="button" data-sales-op="convert">{t.actions.convert}</Button>}
