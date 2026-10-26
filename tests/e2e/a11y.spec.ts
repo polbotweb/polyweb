@@ -168,6 +168,39 @@ test('axe: /fr/admin/logistics (expéditions, entrepôts, articles, stock) sans 
   }
 });
 
+test('axe: /fr/admin/purchasing (commandes, fournisseurs, réceptions) sans violation grave, titres et cibles', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Parcours admin : Chromium');
+  const { getDrizzle } = await import('../../src/database/drizzle');
+  const { logisticsItems, logisticsWarehouses, purchasing, purchasingOrderLines, purchasingSuppliers } = await import('../../src/database/schemas');
+  const { eq } = await import('drizzle-orm');
+  const db = getDrizzle();
+  // Fournisseur, entrepôt, article et commandes (brouillon + envoyée, réceptionnable) insérés directement.
+  const suffix = Date.now().toString(36).toUpperCase().slice(-6);
+  const [wh] = await db.insert(logisticsWarehouses).values({ code: `A11YP${suffix}`, name: `A11y entrepôt achats ${suffix}` }).returning({ id: logisticsWarehouses.id });
+  const [item] = await db.insert(logisticsItems).values({ sku: `A11YP-${suffix}`, name: `A11y article achats ${suffix}` }).returning({ id: logisticsItems.id });
+  const [supplier] = await db.insert(purchasingSuppliers).values({ code: `A11Y${suffix}`, name: `A11y fournisseur ${suffix}`, country: 'FR' }).returning({ id: purchasingSuppliers.id });
+  const [draft] = await db.insert(purchasing).values({ slug: `a11y-po-${suffix.toLowerCase()}`, title: `A11y commande ${suffix}`, status: 'DRAFT', supplierId: supplier!.id, warehouseId: wh!.id, netMinor: 2000 }).returning({ id: purchasing.id });
+  const [sent] = await db.insert(purchasing).values({ slug: `a11y-po2-${suffix.toLowerCase()}`, title: `A11y commande envoyée ${suffix}`, number: `A11Y-BC-${suffix}`, status: 'SENT', supplierId: supplier!.id, warehouseId: wh!.id, netMinor: 2000, sentAt: new Date() }).returning({ id: purchasing.id });
+  for (const order of [draft!, sent!]) await db.insert(purchasingOrderLines).values({ orderId: order.id, position: 0, itemId: item!.id, sku: `A11YP-${suffix}`, quantity: 2, unitPriceMinor: 1000, netMinor: 2000 });
+  try {
+    await signInAsAdmin(page);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const paths = ['/fr/admin/purchasing', '/fr/admin/purchasing/new', `/fr/admin/purchasing/${draft!.id}`, `/fr/admin/purchasing/${draft!.id}/edit`, `/fr/admin/purchasing/${sent!.id}`, '/fr/admin/purchasing/suppliers', `/fr/admin/purchasing/suppliers/${supplier!.id}`, '/fr/admin/purchasing/receipts', `/ar/admin/purchasing/${sent!.id}`];
+    for (const path of paths) {
+      await page.goto(path, { waitUntil: 'networkidle' });
+      const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+      const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${path} ${v.id}: ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(' | ')}`);
+      const structure = await structureViolations(page);
+      expect([...serious, ...structure], [...serious, ...structure].join('\n')).toEqual([]);
+    }
+  } finally {
+    await db.delete(purchasing).where(eq(purchasing.supplierId, supplier!.id));
+    await db.delete(purchasingSuppliers).where(eq(purchasingSuppliers.id, supplier!.id));
+    await db.delete(logisticsItems).where(eq(logisticsItems.id, item!.id));
+    await db.delete(logisticsWarehouses).where(eq(logisticsWarehouses.id, wh!.id));
+  }
+});
+
 /**
  * WCAG 2.5.5 (AAA, approuvé) : les commandes icônes de l'admin navigation font
  * au moins 44 × 44 px (axe ne vérifie que le seuil AA de 24 px).

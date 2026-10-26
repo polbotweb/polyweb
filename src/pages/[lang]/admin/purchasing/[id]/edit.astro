@@ -1,0 +1,32 @@
+---
+/** Back-office plateforme : édition d'une commande fournisseur en brouillon (sinon → fiche). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { requirePermission } from "@lib/auth-guards";
+import PurchaseOrderForm from "@/components/purchasing/admin/PurchaseOrderForm.astro";
+import { isEditable } from "@/modules/purchasing/domain/workflow";
+import { purchaseOrderLabel } from "@/modules/purchasing/domain/order";
+import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
+import { loadPurchaseOrder, loadPurchasingFormOptions, loadSuppliers } from "@/modules/purchasing/loaders";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { purchasing: ["update"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getPurchasingTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/purchasing`;
+const order = await loadPurchaseOrder(Astro.params.id ?? "", null);
+if (!order) return new Response(null, { status: 404 });
+if (!isEditable(order.status)) return Astro.redirect(`${baseAdminUrl}/${order.id}`);
+const [suppliers, options] = await Promise.all([loadSuppliers(null), loadPurchasingFormOptions(null)]);
+---
+<BaseLayout title={t.admin.edit} description={t.meta.description}>
+  <AuthLayout title={t.admin.edit}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="purchasing" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <h1 class="text-2xl font-semibold">{t.admin.edit} — {purchaseOrderLabel(order)}</h1>
+      <PurchaseOrderForm locale={locale} viewBaseUrl={baseAdminUrl} listUrl={baseAdminUrl} suppliers={suppliers} warehouses={options.warehouses} items={options.items} order={order} />
+    </main>
+  </AuthLayout>
+</BaseLayout>

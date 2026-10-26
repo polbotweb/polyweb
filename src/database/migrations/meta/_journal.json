@@ -239,6 +239,20 @@
       "when": 1793032198517,
       "tag": "0033_logistics",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793035527236,
+      "tag": "0034_purchasing",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793035925904,
+      "tag": "0035_purchasing_deferred_fks",
+      "breakpoints": true
     }
   ]
 }

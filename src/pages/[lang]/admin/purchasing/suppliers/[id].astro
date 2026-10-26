@@ -1,0 +1,45 @@
+---
+/** Back-office plateforme : édition / suppression d'un fournisseur (suppression refusée s'il a des commandes). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Button } from "@atoms/button";
+import { requirePermission } from "@lib/auth-guards";
+import SupplierForm from "@/components/purchasing/admin/SupplierForm.astro";
+import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
+import { loadSupplier } from "@/modules/purchasing/loaders";
+import { hasPurchasingPermission } from "@/modules/purchasing/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { purchasing: ["update"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getPurchasingTranslations(locale);
+const listUrl = `/${locale}/admin/purchasing/suppliers`;
+const supplier = await loadSupplier(Astro.params.id ?? "", null);
+if (!supplier) return new Response(null, { status: 404 });
+const canDelete = await hasPurchasingPermission(Astro, ["delete"]);
+---
+<BaseLayout title={supplier.name} description={t.meta.description}>
+  <AuthLayout title={supplier.name}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="purchasing" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8" data-purchasing-record data-kind="supplier" data-id={supplier.id} data-list-url={listUrl}>
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{t.admin.edit} — {supplier.code}</h1>
+        <div class="flex flex-wrap gap-2">
+          {canDelete && <Button type="button" variant="outline" data-purchasing-op="delete" data-confirm={t.admin.confirmDelete}>{t.admin.delete}</Button>}
+          <a class="inline-flex min-h-11 items-center px-3 underline" href={listUrl}>{t.admin.suppliers}</a>
+        </div>
+      </div>
+      <p class="text-sm text-destructive" role="alert" tabindex="-1" data-purchasing-error hidden></p>
+      <SupplierForm locale={locale} supplier={supplier} />
+    </main>
+  </AuthLayout>
+</BaseLayout>
+
+<script>
+  import { initPurchasing } from "@/modules/purchasing/client/init";
+
+  initPurchasing();
+  document.addEventListener("astro:after-swap", initPurchasing);
+</script>

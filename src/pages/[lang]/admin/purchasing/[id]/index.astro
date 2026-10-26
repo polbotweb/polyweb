@@ -1,0 +1,108 @@
+---
+/**
+ * Back-office plateforme : fiche d'une commande fournisseur — fournisseur, lignes (commandé / reçu),
+ * transitions (numéro de BC à l'envoi), réception de marchandises (entrée de stock + n° de BR), historique des réceptions.
+ * Comportements : `modules/purchasing/client` (`[data-purchasing-record]`, `[data-purchasing-form]`).
+ */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Button } from "@atoms/button";
+import { requirePermission } from "@lib/auth-guards";
+import ReceiptForm from "@/components/purchasing/admin/ReceiptForm.astro";
+import { formatMoney, isCurrencyCode } from "@/core/money";
+import { purchaseOrderLabel } from "@/modules/purchasing/domain/order";
+import { FINAL_STATUSES, RECEIPT_DRIVEN_STATUSES, isEditable, isReceivable, nextStatuses } from "@/modules/purchasing/domain/workflow";
+import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
+import { loadPurchaseOrder } from "@/modules/purchasing/loaders";
+import { hasPurchasingPermission } from "@/modules/purchasing/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { purchasing: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getPurchasingTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/purchasing`;
+const o = await loadPurchaseOrder(Astro.params.id ?? "", null);
+if (!o) return new Response(null, { status: 404 });
+const [canUpdate, canDelete] = await Promise.all([hasPurchasingPermission(Astro, ["update"]), hasPurchasingPermission(Astro, ["delete"])]);
+const label = purchaseOrderLabel(o);
+const targets = canUpdate ? nextStatuses(o.status).filter((to) => !RECEIPT_DRIVEN_STATUSES.includes(to)) : [];
+const deletable = canDelete && (o.status === "DRAFT" || o.status === "CANCELLED") && o.receipts.length === 0;
+const receivable = canUpdate && isReceivable(o.status) && o.lines.some((line) => line.receivedQuantity < line.quantity);
+const amount = (minor: number) => (isCurrencyCode(o.currency) ? formatMoney({ amountMinor: minor, currency: o.currency }, locale) : `${minor} ${o.currency}`);
+const date = (value: Date | null) => (value ? new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(value) : t.admin.none);
+const skuOf = new Map(o.lines.map((line) => [line.id, line.sku]));
+---
+<BaseLayout title={label} description={t.meta.description}>
+  <AuthLayout title={label}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="purchasing" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8" data-purchasing-record data-kind="order" data-id={o.id} data-list-url={baseAdminUrl}>
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-semibold" data-testid="purchasing-heading">{label}</h1>
+          <p class="text-muted-foreground">{t.fields.status} : <span data-testid="purchasing-status">{t.statuses[o.status]}</span></p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          {canUpdate && isEditable(o.status) && <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/${o.id}/edit`}>{t.admin.edit}</a>}
+          {deletable && <Button type="button" variant="outline" data-purchasing-op="delete" data-confirm={`${t.admin.delete} — ${label} ?`}>{t.admin.delete}</Button>}
+          <a class="inline-flex min-h-11 items-center px-3 underline" href={baseAdminUrl}>{t.admin.back}</a>
+        </div>
+      </div>
+      <p class="text-sm text-destructive" role="alert" tabindex="-1" data-purchasing-error hidden></p>
+      {!isEditable(o.status) && !FINAL_STATUSES.includes(o.status) && <p class="text-sm">{t.admin.lockedNote}</p>}
+
+      <dl class="grid gap-3 sm:grid-cols-3">
+        <div><dt class="text-sm text-muted-foreground">{t.fields.number}</dt><dd data-testid="purchasing-number">{o.number ?? t.admin.none}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.supplier}</dt><dd>{o.supplier ? <a class="underline" href={`${baseAdminUrl}/suppliers/${o.supplier.id}`}>{o.supplier.code} — {o.supplier.name}</a> : t.admin.none}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.warehouse}</dt><dd>{o.warehouse ? `${o.warehouse.code} — ${o.warehouse.name}` : t.admin.none}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.net}</dt><dd data-testid="purchasing-net">{amount(o.netMinor)}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.expectedDate}</dt><dd>{o.expectedDate ?? t.admin.none}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.sentAt}</dt><dd>{date(o.sentAt)}</dd></div>
+        {o.notes && <div class="sm:col-span-3"><dt class="text-sm text-muted-foreground">{t.fields.notes}</dt><dd class="whitespace-pre-line">{o.notes}</dd></div>}
+      </dl>
+
+      <section class="flex flex-col gap-3" aria-labelledby="po-lines-heading">
+        <h2 id="po-lines-heading" class="text-lg font-semibold">{t.fields.lines}</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm" data-testid="purchasing-lines">
+            <thead><tr class="border-b"><th scope="col" class="py-2 text-start">{t.fields.sku}</th><th scope="col" class="py-2 text-start">{t.fields.description}</th><th scope="col" class="py-2 text-end">{t.fields.quantity}</th><th scope="col" class="py-2 text-end">{t.fields.received}</th><th scope="col" class="py-2 text-end">{t.fields.unitPrice}</th><th scope="col" class="py-2 text-end">{t.fields.net}</th></tr></thead>
+            <tbody>{o.lines.map((line) => <tr class="border-b"><td class="py-2 font-mono">{line.sku}</td><td class="py-2">{line.description ?? ""}</td><td class="py-2 text-end">{line.quantity}</td><td class="py-2 text-end" data-received>{line.receivedQuantity}</td><td class="py-2 text-end">{amount(line.unitPriceMinor)}</td><td class="py-2 text-end">{amount(line.netMinor)}</td></tr>)}</tbody>
+          </table>
+        </div>
+      </section>
+
+      {targets.length > 0 && (
+        <section class="flex flex-col gap-3" aria-labelledby="po-status-heading">
+          <h2 id="po-status-heading" class="text-lg font-semibold">{t.fields.status}</h2>
+          <div class="flex flex-wrap gap-2">
+            {targets.map((to) => <Button type="button" variant={to === "CANCELLED" ? "outline" : "default"} data-purchasing-op="transition" data-to={to} data-testid={`purchasing-to-${to}`}>{t.actions.moveTo} {t.statuses[to]}</Button>)}
+          </div>
+        </section>
+      )}
+
+      {receivable && <ReceiptForm locale={locale} orderId={o.id} lines={o.lines} />}
+
+      <section class="flex flex-col gap-3" aria-labelledby="po-receipts-heading">
+        <h2 id="po-receipts-heading" class="text-lg font-semibold">{t.admin.receipts}</h2>
+        {o.receipts.length === 0 ? <p class="text-sm text-muted-foreground">{t.admin.noReceipts}</p> : (
+          <ul class="flex flex-col gap-2" data-testid="purchasing-receipts">
+            {o.receipts.map((receipt) => (
+              <li class="border px-4 py-3 text-sm">
+                <p><span class="font-medium" data-receipt-number>{receipt.number}</span> · {t.fields.receivedAt} {date(receipt.receivedAt)}{receipt.supplierReference ? ` · ${t.fields.supplierReference} : ${receipt.supplierReference}` : ""}</p>
+                <p class="text-muted-foreground">{receipt.lines.map((line) => `${skuOf.get(line.orderLineId) ?? ""} × ${line.quantity}`).join(", ")}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </main>
+  </AuthLayout>
+</BaseLayout>
+
+<script>
+  import { initPurchasing } from "@/modules/purchasing/client/init";
+
+  initPurchasing();
+  document.addEventListener("astro:after-swap", initPurchasing);
+</script>

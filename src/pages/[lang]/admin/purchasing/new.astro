@@ -1,0 +1,31 @@
+---
+/** Back-office plateforme : nouvelle commande fournisseur (brouillon). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { requirePermission } from "@lib/auth-guards";
+import PurchaseOrderForm from "@/components/purchasing/admin/PurchaseOrderForm.astro";
+import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
+import { loadPurchasingFormOptions, loadSuppliers } from "@/modules/purchasing/loaders";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { purchasing: ["create"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getPurchasingTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/purchasing`;
+const [suppliers, options] = await Promise.all([loadSuppliers(null, { activeOnly: true }), loadPurchasingFormOptions(null)]);
+---
+<BaseLayout title={t.admin.newOrder} description={t.meta.description}>
+  <AuthLayout title={t.admin.newOrder}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="purchasing" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <h1 class="text-2xl font-semibold">{t.admin.newOrder}</h1>
+      {suppliers.length === 0
+        ? <p>{t.admin.noSuppliers} <a class="underline" href={`${baseAdminUrl}/suppliers`}>{t.admin.newSupplier}</a></p>
+        : options.warehouses.length === 0
+          ? <p>{t.admin.noWarehouses} <a class="underline" href={`/${locale}/admin/logistics/warehouses`}>{t.fields.warehouse}</a></p>
+          : <PurchaseOrderForm locale={locale} viewBaseUrl={baseAdminUrl} listUrl={baseAdminUrl} suppliers={suppliers} warehouses={options.warehouses} items={options.items} />}
+    </main>
+  </AuthLayout>
+</BaseLayout>

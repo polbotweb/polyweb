@@ -1,0 +1,78 @@
+---
+/**
+ * Liste back-office des commandes fournisseur : facettes par statut, vues enregistrées
+ * (ressource « purchasing-order »), barre d'actions groupées générique (cancel / close).
+ */
+import AdminFacets from "@organisms/AdminFacets.astro";
+import AdminSavedViews from "@organisms/AdminSavedViews.astro";
+import AdminBulkBar from "@organisms/AdminBulkBar.astro";
+import { canonicalListQuery, facetLinks, type FacetBucket } from "@/core/filters";
+import type { AdminBulkBarOperation } from "@/core/bulk/ui";
+import { formatBulk, getBulkUiTranslations } from "@/core/bulk/i18n";
+import type { Locale } from "@i18n/config";
+import { purchaseOrderAdminResource } from "@/modules/purchasing/admin/resource";
+import { purchaseOrderLabel } from "@/modules/purchasing/domain/order";
+import { formatMoney, isCurrencyCode } from "@/core/money";
+import type { PurchaseOrderStatus } from "@/modules/purchasing/domain/workflow";
+import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
+
+interface Props {
+  items: Array<{ id: string; title: string; number: string | null; status: PurchaseOrderStatus; supplierName: string | null; supplierCode: string | null; currency: string; netMinor: number; expectedDate: string | null }>;
+  locale: Locale;
+  viewBaseUrl?: string;
+  organizationId?: string | null;
+  bulkOperations?: AdminBulkBarOperation[];
+  baseUrl?: URL;
+  facets?: Record<string, readonly FacetBucket[]>;
+  savedViews?: readonly { id: string; name: string; query: string }[];
+}
+
+const { items, locale, viewBaseUrl = "", organizationId = null, bulkOperations = [], baseUrl, facets = {}, savedViews = [] } = Astro.props as Props;
+const t = getPurchasingTranslations(locale);
+const bulkT = getBulkUiTranslations(locale);
+const bulkEnabled = bulkOperations.length > 0;
+const amount = (minor: number, currency: string) => (isCurrencyCode(currency) ? formatMoney({ amountMinor: minor, currency }, locale) : `${minor} ${currency}`);
+const listDefinition = purchaseOrderAdminResource.list!;
+const listBaseUrl = baseUrl?.pathname ?? "";
+const currentQuery = baseUrl ? canonicalListQuery(listDefinition, baseUrl.searchParams) : "";
+const facetGroups = baseUrl ? [{ id: "status", label: t.admin.facetStatus, links: facetLinks(listDefinition, currentQuery, "status", facets.status ?? [], listBaseUrl, (value) => t.statuses[value as PurchaseOrderStatus] ?? value) }] : [];
+const hasFilters = [...new URLSearchParams(currentQuery).keys()].some((key) => key !== "sortBy" && key !== "sortOrder" && key !== "page");
+---
+
+{baseUrl && (
+  <>
+    <AdminFacets locale={locale} groups={facetGroups} clearHref={hasFilters ? listBaseUrl : null} />
+    <AdminSavedViews locale={locale} resource="purchasing-order" organizationId={organizationId} views={savedViews} baseUrl={listBaseUrl} currentQuery={currentQuery} />
+  </>
+)}
+
+<AdminBulkBar action="purchasing.bulk" locale={locale} organizationId={organizationId} operations={bulkOperations}>
+  <div class="flex flex-col gap-4">
+    {items.length === 0 ? (
+      <p class="text-sm text-muted-foreground">{t.admin.empty}</p>
+    ) : (
+      <>
+        {bulkEnabled && <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" class="size-6" data-bulk-page />{bulkT.selectPage}</label>}
+        <ul class="flex flex-col gap-2" aria-label={t.admin.listLabel} data-testid="purchasing-order-list">
+          {items.map((item) => {
+            const label = purchaseOrderLabel(item);
+            return (
+              <li class="flex flex-wrap items-center justify-between gap-3 border px-4 py-3" data-purchasing-order={item.id}>
+                {bulkEnabled ? (
+                  <label class="flex min-h-11 items-center gap-2"><input type="checkbox" class="size-6" data-bulk-item value={item.id} aria-label={formatBulk(bulkT.selectRow, { title: label })} /><span class="font-medium">{label}</span></label>
+                ) : <span class="font-medium">{label}</span>}
+                <dl class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                  <div class="flex gap-1"><dt class="text-muted-foreground">{t.fields.supplier}</dt><dd>{item.supplierCode ? `${item.supplierCode} — ${item.supplierName}` : t.admin.none}</dd></div>
+                  <div class="flex gap-1"><dt class="text-muted-foreground">{t.fields.net}</dt><dd>{amount(item.netMinor, item.currency)}</dd></div>
+                  {item.expectedDate && <div class="flex gap-1"><dt class="text-muted-foreground">{t.fields.expectedDate}</dt><dd>{item.expectedDate}</dd></div>}
+                  <div class="flex gap-1"><dt class="text-muted-foreground">{t.fields.status}</dt><dd data-status>{t.statuses[item.status]}</dd></div>
+                </dl>
+                {viewBaseUrl && <a class="inline-flex min-h-11 items-center px-3 underline" href={`${viewBaseUrl}/${item.id}`} aria-label={`${t.admin.view} — ${label}`}>{t.admin.view}</a>}
+              </li>
+            );
+          })}
+        </ul>
+      </>
+    )}
+  </div>
+</AdminBulkBar>

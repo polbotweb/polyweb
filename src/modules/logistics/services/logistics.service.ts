@@ -203,6 +203,17 @@ const applyStockEffect = (tx: DbTransaction, row: ShipmentRow, effect: "issue" |
     }
   });
 
+/**
+ * Port de stock pour les autres modules (achats) : entrée en stock dans LA transaction de
+ * l'appelant (l'entrepôt est verrouillé `FOR UPDATE`, article résolu par SKU dans le tenant).
+ */
+export const logisticsStockPort = {
+  lockWarehouse: (tx: DbTransaction, id: string, organizationId: string | null) => lockWarehouse(tx, id, organizationId),
+  findItemBySku: (tx: DbTransaction, sku: string, organizationId: string | null) => findItemBySku(tx, sku, organizationId),
+  receive: (tx: DbTransaction, input: { readonly organizationId: string | null; readonly warehouseId: string; readonly item: ItemRow; readonly quantity: number; readonly reference: string }, authorId: string) =>
+    writeMovement(tx, { ...input, kind: "receipt" }, authorId),
+};
+
 export const logisticsService = {
   // ── Entrepôts ───────────────────────────────────────────────────────────
   createWarehouse: (input: WarehouseInput & { readonly organizationId: string | null }) =>

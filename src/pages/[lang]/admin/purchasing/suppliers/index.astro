@@ -1,0 +1,43 @@
+---
+/** Back-office plateforme : fournisseurs (liste + création). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { requirePermission } from "@lib/auth-guards";
+import SupplierForm from "@/components/purchasing/admin/SupplierForm.astro";
+import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
+import { loadSuppliers } from "@/modules/purchasing/loaders";
+import { hasPurchasingPermission } from "@/modules/purchasing/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { purchasing: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getPurchasingTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/purchasing`;
+const [suppliers, canCreate] = await Promise.all([loadSuppliers(null), hasPurchasingPermission(Astro, ["create"])]);
+---
+<BaseLayout title={t.admin.suppliers} description={t.meta.description}>
+  <AuthLayout title={t.admin.suppliers}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="purchasing" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{t.admin.suppliers}</h1>
+        <a class="inline-flex min-h-11 items-center px-3 underline" href={baseAdminUrl}>{t.admin.back}</a>
+      </div>
+      {suppliers.length === 0 ? <p class="text-sm text-muted-foreground">{t.admin.noSuppliers}</p> : (
+        <ul class="flex flex-col gap-2" aria-label={t.admin.suppliers} data-testid="purchasing-supplier-list">
+          {suppliers.map((s) => (
+            <li class="flex flex-wrap items-center justify-between gap-3 border px-4 py-3">
+              <span><span class="font-mono font-medium">{s.code}</span> — {s.name}{s.country ? ` (${s.country})` : ""}{!s.active && <span class="text-muted-foreground"> · {t.fields.active} : {t.admin.none}</span>}</span>
+              <a class="inline-flex min-h-11 items-center px-3 underline" href={`${baseAdminUrl}/suppliers/${s.id}`} aria-label={`${t.admin.edit} — ${s.code}`}>{t.admin.edit}</a>
+            </li>
+          ))}
+        </ul>
+      )}
+      {canCreate && (
+        <section class="flex flex-col gap-3" aria-labelledby="po-new-sup"><h2 id="po-new-sup" class="text-lg font-semibold">{t.admin.newSupplier}</h2><SupplierForm locale={locale} /></section>
+      )}
+    </main>
+  </AuthLayout>
+</BaseLayout>

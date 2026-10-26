@@ -1,0 +1,49 @@
+---
+/** Back-office plateforme : achats — liste des commandes fournisseur (facettes, vues, actions groupées) et accès fournisseurs / réceptions. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import AdminPagination from "@molecules/AdminPagination/AdminPagination.astro";
+import { Effect } from "effect";
+import { requirePermission } from "@lib/auth-guards";
+import { loadSavedViews } from "@/lib/admin/saved-views";
+import { bulkBarOperations } from "@/core/bulk/ui";
+import PurchaseOrderAdminList from "@/components/purchasing/admin/PurchaseOrderAdminList.astro";
+import { purchaseOrderAdminResource } from "@/modules/purchasing/admin/resource";
+import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
+import { purchasingAdminFiltersFromUrl, purchasingAdminList, loadPurchasingAdminFacets } from "@/modules/purchasing/loaders";
+import { hasPurchasingPermission } from "@/modules/purchasing/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { purchasing: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getPurchasingTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/purchasing`;
+const [list, facets, savedViews, canCreate, canUpdate] = await Promise.all([
+  Effect.runPromise(purchasingAdminList(null, Astro.url.searchParams)),
+  loadPurchasingAdminFacets(null, purchasingAdminFiltersFromUrl(Astro.url.searchParams)).catch(() => ({})),
+  Astro.locals.user ? loadSavedViews(Astro.locals.user.id, "purchasing-order", null) : Promise.resolve([]),
+  hasPurchasingPermission(Astro, ["create"]),
+  hasPurchasingPermission(Astro, ["update"]),
+]);
+const bulkOperations = bulkBarOperations(purchaseOrderAdminResource.list?.bulkActions, t.admin.bulk, { cancel: canUpdate, close: canUpdate });
+---
+<BaseLayout title={t.admin.title} description={t.meta.description}>
+  <AuthLayout title={t.admin.title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="purchasing" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{t.admin.title}</h1>
+        <nav class="flex flex-wrap gap-2" aria-label={t.admin.title}>
+          <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/suppliers`}>{t.admin.suppliers}</a>
+          <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/receipts`}>{t.admin.receipts}</a>
+          {canCreate && <a class="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-primary-foreground" href={`${baseAdminUrl}/new`} data-testid="purchasing-new-order">{t.admin.newOrder}</a>}
+        </nav>
+      </div>
+      <h2 class="text-lg font-semibold">{t.admin.orders}</h2>
+      <PurchaseOrderAdminList items={list.items} locale={locale} viewBaseUrl={baseAdminUrl} bulkOperations={bulkOperations} baseUrl={Astro.url} facets={facets} savedViews={savedViews} />
+      {list.totalPages > 1 && <AdminPagination currentPage={list.page} totalPages={list.totalPages} baseUrl={Astro.url} />}
+    </main>
+  </AuthLayout>
+</BaseLayout>
