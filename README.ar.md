@@ -831,6 +831,13 @@ modules/
   index.ts
   module-contract.ts
   module-registry.ts
+money/
+  currency.ts
+  errors.ts
+  index.ts
+  money.ts
+  rounding.ts
+  vat.ts
 notifications/
   index.ts
 permissions/
