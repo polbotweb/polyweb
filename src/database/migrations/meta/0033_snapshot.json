@@ -1,5 +1,5 @@
 {
-  "id": "4123550a-5701-4acc-8335-193f873883ca",
+  "id": "df0c7bc6-dad1-4f1c-9e8f-657c6f23b3a6",
   "prevId": "793a90e4-2c07-4d3c-9f8d-6fae6b4ef057",
   "version": "7",
   "dialect": "postgresql",
@@ -19534,7 +19534,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "no action",
           "onUpdate": "no action"
         },
         "logistics_shipments_sales_document_id_sales_documents_id_fk": {
@@ -19775,7 +19775,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -20108,7 +20108,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "no action",
           "onUpdate": "no action"
         },
         "logistics_stock_movements_item_id_logistics_items_id_fk": {
@@ -20121,7 +20121,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "no action",
           "onUpdate": "no action"
         },
         "logistics_stock_movements_shipment_id_logistics_shipments_id_fk": {

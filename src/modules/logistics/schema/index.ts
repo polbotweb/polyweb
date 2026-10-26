@@ -45,7 +45,7 @@ export const logistics = pgTable("logistics_shipments", {
   /** Numéro de bon de livraison, attribué à READY (core/numbering). */
   number: text("number"),
   status: text("status", { enum: SHIPMENT_STATUSES }).default("DRAFT").notNull(),
-  warehouseId: text("warehouse_id").notNull().references(() => logisticsWarehouses.id, { onDelete: "restrict" }),
+  warehouseId: text("warehouse_id").notNull().references(() => logisticsWarehouses.id, { onDelete: "no action" }),
   /** Facture / devis du module ventes à l'origine de l'expédition. */
   salesDocumentId: text("sales_document_id").references(() => sales.id, { onDelete: "set null" }),
   recipientName: text("recipient_name").notNull(),
@@ -73,7 +73,7 @@ export const logisticsShipmentLines = pgTable("logistics_shipment_lines", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   shipmentId: text("shipment_id").notNull().references(() => logistics.id, { onDelete: "cascade" }),
   position: integer("position").notNull(),
-  itemId: text("item_id").notNull().references(() => logisticsItems.id, { onDelete: "restrict" }),
+  itemId: text("item_id").notNull().references(() => logisticsItems.id, { onDelete: "no action" }),
   sku: text("sku").notNull(),
   description: text("description"),
   quantity: integer("quantity").notNull(),
@@ -86,8 +86,8 @@ export const logisticsShipmentLines = pgTable("logistics_shipment_lines", {
 export const logisticsStockMovements = pgTable("logistics_stock_movements", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   organizationId: text("organization_id").references(() => organization.id, { onDelete: "cascade" }),
-  warehouseId: text("warehouse_id").notNull().references(() => logisticsWarehouses.id, { onDelete: "restrict" }),
-  itemId: text("item_id").notNull().references(() => logisticsItems.id, { onDelete: "restrict" }),
+  warehouseId: text("warehouse_id").notNull().references(() => logisticsWarehouses.id, { onDelete: "no action" }),
+  itemId: text("item_id").notNull().references(() => logisticsItems.id, { onDelete: "no action" }),
   kind: text("kind", { enum: MOVEMENT_KINDS }).notNull(),
   delta: integer("delta").notNull(),
   shipmentId: text("shipment_id").references(() => logistics.id, { onDelete: "set null" }),
