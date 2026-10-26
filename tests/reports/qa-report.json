@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-26 11:22:00",
+  "generatedAt": "2026-10-26 22:32:37",
   "overall": "green",
   "reportsAvailable": 6,
   "sections": [
@@ -28,10 +28,10 @@
       "key": "vitest",
       "title": "Unit & Integration Tests (Vitest)",
       "ok": true,
-      "summary": "1697/1698 passed, 1 skipped",
+      "summary": "1864/1865 passed, 1 skipped",
       "metrics": {
-        "total": 1698,
-        "passed": 1697,
+        "total": 1865,
+        "passed": 1864,
         "failed": 0,
         "skipped": 1
       }
@@ -40,12 +40,12 @@
       "key": "playwright",
       "title": "End-to-End Tests (Playwright)",
       "ok": true,
-      "summary": "270/300 passed, 30 skipped",
+      "summary": "284/342 passed, 58 skipped",
       "metrics": {
-        "total": 300,
-        "passed": 270,
+        "total": 342,
+        "passed": 284,
         "failed": 0,
-        "skipped": 30
+        "skipped": 58
       }
     },
     {
