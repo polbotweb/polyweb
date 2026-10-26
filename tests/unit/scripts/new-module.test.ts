@@ -25,20 +25,24 @@ describe('scripts/new-module.ts', () => {
     expect(existsSync(join(dir, 'components/event-tickets/EventTicketsCard.astro'))).toBe(true);
   });
 
-  it("names SQL tables after the pluralized entity (not the domain), with --table override and collision guard", () => {
+  it("names the main SQL table after the pluralized entity (not the domain) and auxiliary tables after the singular entity, with --table override and collision guard", () => {
     const schema = (m: string) => readFileSync(join(dir, `modules/${m}/schema/index.ts`), 'utf8');
     expect(schema('event-tickets')).toContain('pgTable("tickets", {');
-    expect(schema('event-tickets')).toContain('pgTable("tickets_revisions", {');
-    expect(schema('event-tickets')).toContain('pgTable("tickets_locks", {');
+    expect(schema('event-tickets')).toContain('pgTable("ticket_revisions", {');
+    expect(schema('event-tickets')).toContain('pgTable("ticket_locks", {');
     expect(schema('event-tickets')).toContain('uniqueIndex("tickets_org_slug_uidx")');
     expect(schema('event-tickets')).not.toContain('pgTable("event_tickets"');
+    expect(schema('event-tickets')).toContain('index("ticket_revisions_resource_idx")');
+    expect(schema('event-tickets')).not.toContain('tickets_revisions');
     run(['catalog', '--entity=category']);
     expect(schema('catalog')).toContain('pgTable("categories", {');
-    expect(readFileSync(join(dir, 'modules/catalog/capabilities.ts'), 'utf8')).toContain('revisions: "categories_revisions"');
+    expect(readFileSync(join(dir, 'modules/catalog/capabilities.ts'), 'utf8')).toContain('revisions: "category_revisions"');
     run(['boxes-shop', '--entity=box']);
     expect(schema('boxes-shop')).toContain('pgTable("boxes", {');
     run(['news', '--entity=news-item', '--table=news_entries']);
     expect(schema('news')).toContain('pgTable("news_entries", {');
+    expect(schema('news')).toContain('pgTable("news_item_revisions", {');
+    expect(schema('news')).toContain('pgTable("news_item_locks", {');
     // Table déjà déclarée par un autre module → refus, rien n'est écrit.
     expect(() => run(['other-tickets', '--entity=ticket'])).toThrow(/tickets/);
     expect(existsSync(join(dir, 'modules/other-tickets'))).toBe(false);
@@ -83,7 +87,7 @@ describe('scripts/new-module.ts', () => {
   it('scaffolds the core Effect stack: schema, workflow, lock, permission guard, service, loader, actions', () => {
     const base = join(dir, 'modules/event-tickets');
     const read = (file: string) => readFileSync(join(base, file), 'utf8');
-    expect(read('locks.ts')).toContain('defineLockResource("event-tickets", drizzleLockStore("event-tickets", eventTicketsLocks, "resourceId"), {');
+    expect(read('locks.ts')).toContain('defineLockResource("event-tickets", drizzleLockStore("event-tickets", ticketLocks, "resourceId"), {');
     expect(read('locks.ts')).toContain('tenantOf: (id) =>');
     expect(readFileSync(join(dir, 'components/event-tickets/admin/EventTicketsAdminList.astro'), 'utf8')).toContain('<ForceReleaseLockButton resourceType="event-tickets"');
     expect(read('domain/workflow.ts')).toContain('export const eventTicketsWorkflow: WorkflowDefinition<EventTicketsStatus>');

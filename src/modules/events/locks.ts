@@ -8,9 +8,9 @@ import { eq } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { dbTry } from "@/lib/effect/run";
 import { defineLockResource, drizzleLockStore } from "@/core/locks/service";
-import { events, eventsLocks } from "./schema";
+import { events, eventLocks } from "./schema";
 
-export const eventsLock = defineLockResource("events", drizzleLockStore("events", eventsLocks, "resourceId"), {
+export const eventsLock = defineLockResource("events", drizzleLockStore("events", eventLocks, "resourceId"), {
   // Organisation propriétaire : libération administrative réservée à l'administrateur global
   // ou aux owner/admin de CETTE organisation (action générique `forceReleaseLock`, auditée).
   tenantOf: (id) =>

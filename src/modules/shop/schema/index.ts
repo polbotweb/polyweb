@@ -14,9 +14,10 @@ import { SHOP_STATUSES } from "../domain/workflow";
 /**
  * Produit du CATALOGUE (TODO §19.3). Panier, commande, paiement, stock,
  * expédition et remboursement restent HORS du CMS Core : aucune table ici.
- * La variable garde le nom généré (`shop`) ; la table SQL est `shop_products`.
+ * Tables nommées d'après l'entité au pluriel (`products`, `product_revisions`,
+ * `product_locks`) ; renommées depuis `shop_*` par la migration 0027 (sans perte).
  */
-export const shop = pgTable("shop_products", {
+export const products = pgTable("products", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   organizationId: text("organization_id").references(() => organization.id, { onDelete: "cascade" }),
   slug: text("slug").notNull(),
@@ -28,15 +29,15 @@ export const shop = pgTable("shop_products", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
 }, (table) => [
-  uniqueIndex("shop_org_slug_uidx").on(table.organizationId, table.slug),
-  index("shop_products_org_idx").on(table.organizationId),
-  index("shop_products_status_idx").on(table.status),
+  uniqueIndex("products_org_slug_uidx").on(table.organizationId, table.slug),
+  index("products_org_idx").on(table.organizationId),
+  index("products_status_idx").on(table.status),
 ]);
 
 /** Localisation relationnelle (pas de JSONB) : une ligne par locale. */
 export const productTranslations = pgTable("product_translations", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  productId: text("product_id").notNull().references(() => shop.id, { onDelete: "cascade" }),
+  productId: text("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   organizationId: text("organization_id").references(() => organization.id, { onDelete: "cascade" }),
   locale: text("locale", { enum: LOCALES }).notNull(),
   title: text("title").notNull(),
@@ -60,7 +61,7 @@ export const productTranslations = pgTable("product_translations", {
  */
 export const productOptions = pgTable("product_options", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  productId: text("product_id").notNull().references(() => shop.id, { onDelete: "cascade" }),
+  productId: text("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   code: varchar("code", { length: 64 }).notNull(),
   position: integer("position").notNull(),
 }, (table) => [
@@ -98,7 +99,7 @@ export const productOptionValueTranslations = pgTable("product_option_value_tran
  */
 export const productVariants = pgTable("product_variants", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  productId: text("product_id").notNull().references(() => shop.id, { onDelete: "cascade" }),
+  productId: text("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   sku: varchar("sku", { length: 64 }).notNull(),
   position: integer("position").notNull(),
   priceMinor: integer("price_minor").notNull(),
@@ -123,21 +124,21 @@ export const productVariantOptionValues = pgTable("product_variant_option_values
 ]);
 
 /** Révisions (core/revision) : une ligne par écriture, pour l'historique et la restauration. */
-export const shopRevisions = pgTable("shop_revisions", {
+export const productRevisions = pgTable("product_revisions", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  resourceId: text("resource_id").notNull().references(() => shop.id, { onDelete: "cascade" }),
+  resourceId: text("resource_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   authorId: text("author_id").notNull().references(() => user.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   slug: text("slug").notNull(),
   status: text("status", { enum: SHOP_STATUSES }).notNull(),
   note: text("note"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => [index("shop_revisions_resource_idx").on(table.resourceId)]);
+}, (table) => [index("product_revisions_resource_idx").on(table.resourceId)]);
 
 /** Verrous d'édition (core/locks) : une ligne par ressource, propriétaire utilisateur + session. */
-export const shopLocks = pgTable("shop_locks", {
+export const productLocks = pgTable("product_locks", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  resourceId: text("resource_id").notNull().unique().references(() => shop.id, { onDelete: "cascade" }),
+  resourceId: text("resource_id").notNull().unique().references(() => products.id, { onDelete: "cascade" }),
   userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
   sessionId: text("session_id").notNull(),
   lockedAt: timestamp("locked_at").defaultNow().notNull(),
@@ -185,7 +186,7 @@ export const productCategoryTranslations = pgTable("product_category_translation
 
 /** Liaison explicite product ↔ catégorie. */
 export const productCategoryLinks = pgTable("product_category_links", {
-  productId: text("product_id").notNull().references(() => shop.id, { onDelete: "cascade" }),
+  productId: text("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   categoryId: text("category_id").notNull().references(() => productCategories.id, { onDelete: "cascade" }),
 }, (table) => [
   primaryKey({ columns: [table.productId, table.categoryId] }),
