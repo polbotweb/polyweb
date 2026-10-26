@@ -1,0 +1,60 @@
+---
+/**
+ * Formulaire de réservation (création / édition) : ressource, date et heure locales de la ressource,
+ * durée, client ; liste des créneaux libres à la demande. Soumission : `modules/bookings/client`.
+ */
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import { durationMinutes, localDate, localTime } from "@/core/scheduling";
+import type { Locale } from "@i18n/config";
+import { getBookingsTranslations } from "@/modules/bookings/i18n";
+
+interface Props {
+  locale: Locale;
+  organizationId?: string | null;
+  viewBaseUrl?: string;
+  resources: Array<{ id: string; code: string; name: string; timezone: string; slotMinutes: number; capacity: number; active: boolean }>;
+  booking?: { id: string; resourceId: string; startsAt: Date; endsAt: Date; customerName: string; customerEmail: string | null; partySize: number; notes: string | null };
+}
+const { locale, organizationId = null, viewBaseUrl = "", resources, booking: b } = Astro.props as Props;
+const t = getBookingsTranslations(locale);
+const p = b ? "bk-edit" : "bk-new";
+const choosable = resources.filter((r) => r.active || r.id === b?.resourceId);
+const current = choosable.find((r) => r.id === b?.resourceId) ?? choosable[0];
+const zone = current?.timezone ?? "UTC";
+const date = b ? localDate(b.startsAt, zone) : "";
+const time = b ? localTime(b.startsAt, zone) : "";
+const duration = b ? durationMinutes({ start: b.startsAt, end: b.endsAt }) : (current?.slotMinutes ?? 30);
+---
+<form class="flex max-w-3xl flex-col gap-4" data-bookings-form="booking" data-id={b?.id ?? ""} data-organization-id={organizationId ?? ""} data-view-base-url={viewBaseUrl} data-done={b ? t.admin.saved : t.admin.created} novalidate>
+  <div class="grid gap-4 sm:grid-cols-3">
+    <div class="grid gap-2 sm:col-span-3">
+      <Label for={`${p}-resource`}>{t.fields.resource}</Label>
+      <NativeSelect id={`${p}-resource`} name="resourceId" required>{choosable.map((r) => <NativeSelectOption value={r.id} data-timezone={r.timezone} selected={r.id === current?.id}>{r.code} — {r.name} ({r.timezone})</NativeSelectOption>)}</NativeSelect>
+    </div>
+    <div class="grid gap-2"><Label for={`${p}-date`}>{t.fields.date}</Label><Input id={`${p}-date`} name="date" type="date" required value={date} /></div>
+    <div class="grid gap-2"><Label for={`${p}-time`}>{t.fields.time}</Label><Input id={`${p}-time`} name="time" type="time" required value={time} aria-describedby={`${p}-tz`} /></div>
+    <div class="grid gap-2"><Label for={`${p}-duration`}>{t.fields.duration}</Label><Input id={`${p}-duration`} name="durationMinutes" type="number" min={5} max={10080} required value={String(duration)} /></div>
+    <p id={`${p}-tz`} class="text-sm text-muted-foreground sm:col-span-3">{t.admin.timesIn}</p>
+    <div class="flex flex-col gap-2 sm:col-span-3" data-bookings-slots data-empty={t.admin.noSlots}>
+      <div><Button type="button" variant="outline" data-show-slots>{t.admin.showSlots}</Button></div>
+      <p class="text-sm text-muted-foreground" role="status" data-slot-status></p>
+      <ul class="flex flex-wrap gap-2" aria-label={t.admin.availability} data-slot-list data-testid="bookings-slots"></ul>
+    </div>
+    <div class="grid gap-2"><Label for={`${p}-customer`}>{t.fields.customerName}</Label><Input id={`${p}-customer`} name="customerName" required maxlength={200} autocomplete="name" value={b?.customerName ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${p}-email`}>{t.fields.customerEmail}</Label><Input id={`${p}-email`} name="customerEmail" type="email" maxlength={254} autocomplete="email" value={b?.customerEmail ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${p}-party`}>{t.fields.partySize}</Label><Input id={`${p}-party`} name="partySize" type="number" min={1} max={10000} value={String(b?.partySize ?? 1)} /></div>
+    <div class="grid gap-2 sm:col-span-3"><Label for={`${p}-notes`}>{t.fields.notes}</Label><textarea id={`${p}-notes`} name="notes" rows="3" maxlength="5000" class="rounded-md border bg-transparent px-3 py-2 text-sm">{b?.notes ?? ""}</textarea></div>
+  </div>
+  <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+  <div><Button type="submit">{b ? t.admin.save : t.admin.create}</Button></div>
+</form>
+
+<script>
+  import { initBookings } from "@/modules/bookings/client/init";
+
+  initBookings();
+  document.addEventListener("astro:after-swap", initBookings);
+</script>

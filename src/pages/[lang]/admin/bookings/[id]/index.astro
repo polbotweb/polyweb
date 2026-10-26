@@ -1,0 +1,79 @@
+---
+/**
+ * Back-office plateforme : fiche d'une réservation — ressource, créneau (heure locale de la ressource),
+ * client, transitions (numéro RES à la confirmation). Comportements : `modules/bookings/client` (`[data-bookings-record]`).
+ */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Button } from "@atoms/button";
+import { requirePermission } from "@lib/auth-guards";
+import { formatZoned, localTime } from "@/core/scheduling";
+import { bookingLabel } from "@/modules/bookings/domain/booking";
+import { FINAL_STATUSES, isEditable, nextStatuses } from "@/modules/bookings/domain/workflow";
+import { getBookingsTranslations } from "@/modules/bookings/i18n";
+import { loadBooking } from "@/modules/bookings/loaders";
+import { hasBookingsPermission } from "@/modules/bookings/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { bookings: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getBookingsTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/bookings`;
+const b = await loadBooking(Astro.params.id ?? "", null);
+if (!b) return new Response(null, { status: 404 });
+const [canUpdate, canDelete] = await Promise.all([hasBookingsPermission(Astro, ["update"]), hasBookingsPermission(Astro, ["delete"])]);
+const label = bookingLabel(b);
+const zone = b.resource?.timezone ?? "UTC";
+const targets = canUpdate ? nextStatuses(b.status) : [];
+const deletable = canDelete && (b.status === "REQUESTED" || b.status === "CANCELLED");
+const when = `${formatZoned(b.startsAt, zone, locale)} – ${localTime(b.endsAt, zone)} (${zone})`;
+---
+<BaseLayout title={label} description={t.meta.description}>
+  <AuthLayout title={label}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="bookings" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8" data-bookings-record data-kind="booking" data-id={b.id} data-list-url={baseAdminUrl}>
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-semibold" data-testid="bookings-heading">{label}</h1>
+          <p class="text-muted-foreground">{t.fields.status} : <span data-testid="bookings-status">{t.statuses[b.status]}</span></p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          {canUpdate && isEditable(b.status) && <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/${b.id}/edit`}>{t.admin.edit}</a>}
+          {deletable && <Button type="button" variant="outline" data-bookings-op="delete" data-confirm={t.admin.confirmDelete}>{t.admin.delete}</Button>}
+          <a class="inline-flex min-h-11 items-center px-3 underline" href={baseAdminUrl}>{t.admin.back}</a>
+        </div>
+      </div>
+      <p class="text-sm text-destructive" role="alert" tabindex="-1" data-bookings-error hidden></p>
+      {!isEditable(b.status) && !FINAL_STATUSES.includes(b.status) && <p class="text-sm">{t.admin.lockedNote}</p>}
+
+      <dl class="grid gap-3 sm:grid-cols-3">
+        <div><dt class="text-sm text-muted-foreground">{t.fields.number}</dt><dd data-testid="bookings-number">{b.number ?? t.admin.none}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.resource}</dt><dd>{b.resource ? <a class="underline" href={`${baseAdminUrl}/resources/${b.resource.id}`}>{b.resource.code} — {b.resource.name}</a> : t.admin.none}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.startsAt}</dt><dd data-testid="bookings-when">{when}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.customerName}</dt><dd>{b.customerName}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.customerEmail}</dt><dd>{b.customerEmail ?? t.admin.none}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.partySize}</dt><dd>{b.partySize}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.confirmedAt}</dt><dd>{b.confirmedAt ? formatZoned(b.confirmedAt, zone, locale) : t.admin.none}</dd></div>
+        {b.notes && <div class="sm:col-span-3"><dt class="text-sm text-muted-foreground">{t.fields.notes}</dt><dd class="whitespace-pre-line">{b.notes}</dd></div>}
+      </dl>
+
+      {targets.length > 0 && (
+        <section class="flex flex-col gap-3" aria-labelledby="bk-status-heading">
+          <h2 id="bk-status-heading" class="text-lg font-semibold">{t.fields.status}</h2>
+          <div class="flex flex-wrap gap-2">
+            {targets.map((to) => <Button type="button" variant={to === "CANCELLED" || to === "NO_SHOW" ? "outline" : "default"} data-bookings-op="transition" data-to={to} data-testid={`bookings-to-${to}`}>{t.actions.moveTo} {t.statuses[to]}</Button>)}
+          </div>
+        </section>
+      )}
+    </main>
+  </AuthLayout>
+</BaseLayout>
+
+<script>
+  import { initBookings } from "@/modules/bookings/client/init";
+
+  initBookings();
+  document.addEventListener("astro:after-swap", initBookings);
+</script>

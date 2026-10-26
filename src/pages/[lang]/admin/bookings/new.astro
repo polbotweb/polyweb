@@ -1,0 +1,29 @@
+---
+/** Back-office plateforme : nouvelle réservation (statut « Demandée »). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { requirePermission } from "@lib/auth-guards";
+import BookingForm from "@/components/bookings/admin/BookingForm.astro";
+import { getBookingsTranslations } from "@/modules/bookings/i18n";
+import { loadBookingResources } from "@/modules/bookings/loaders";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { bookings: ["create"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getBookingsTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/bookings`;
+const resources = await loadBookingResources(null, { activeOnly: true });
+---
+<BaseLayout title={t.admin.newBooking} description={t.meta.description}>
+  <AuthLayout title={t.admin.newBooking}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="bookings" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <h1 class="text-2xl font-semibold">{t.admin.newBooking}</h1>
+      {resources.length === 0
+        ? <p>{t.admin.noResources} <a class="underline" href={`${baseAdminUrl}/resources`}>{t.admin.newResource}</a></p>
+        : <BookingForm locale={locale} viewBaseUrl={baseAdminUrl} resources={resources} />}
+    </main>
+  </AuthLayout>
+</BaseLayout>

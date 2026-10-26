@@ -1,0 +1,82 @@
+---
+/**
+ * Liste back-office des réservations : facettes par statut, vues enregistrées
+ * (ressource « bookings-booking »), barre d'actions groupées générique (cancel / noShow / complete).
+ */
+import AdminFacets from "@organisms/AdminFacets.astro";
+import AdminSavedViews from "@organisms/AdminSavedViews.astro";
+import AdminBulkBar from "@organisms/AdminBulkBar.astro";
+import { canonicalListQuery, facetLinks, type FacetBucket } from "@/core/filters";
+import type { AdminBulkBarOperation } from "@/core/bulk/ui";
+import { formatBulk, getBulkUiTranslations } from "@/core/bulk/i18n";
+import { formatZoned, localTime } from "@/core/scheduling";
+import type { Locale } from "@i18n/config";
+import { bookingAdminResource } from "@/modules/bookings/admin/resource";
+import { bookingLabel } from "@/modules/bookings/domain/booking";
+import type { BookingStatus } from "@/modules/bookings/domain/workflow";
+import { getBookingsTranslations } from "@/modules/bookings/i18n";
+
+interface Props {
+  items: Array<{ id: string; number: string | null; status: BookingStatus; customerName: string; partySize: number; startsAt: Date; endsAt: Date; resourceName: string | null; resourceCode: string | null; resourceTimezone: string | null }>;
+  locale: Locale;
+  viewBaseUrl?: string;
+  organizationId?: string | null;
+  bulkOperations?: AdminBulkBarOperation[];
+  baseUrl?: URL;
+  facets?: Record<string, readonly FacetBucket[]>;
+  savedViews?: readonly { id: string; name: string; query: string }[];
+}
+
+const { items, locale, viewBaseUrl = "", organizationId = null, bulkOperations = [], baseUrl, facets = {}, savedViews = [] } = Astro.props as Props;
+const t = getBookingsTranslations(locale);
+const bulkT = getBulkUiTranslations(locale);
+const bulkEnabled = bulkOperations.length > 0;
+const listDefinition = bookingAdminResource.list!;
+const listBaseUrl = baseUrl?.pathname ?? "";
+const currentQuery = baseUrl ? canonicalListQuery(listDefinition, baseUrl.searchParams) : "";
+const facetGroups = baseUrl ? [{ id: "status", label: t.admin.facetStatus, links: facetLinks(listDefinition, currentQuery, "status", facets.status ?? [], listBaseUrl, (value) => t.statuses[value as BookingStatus] ?? value) }] : [];
+const hasFilters = [...new URLSearchParams(currentQuery).keys()].some((key) => key !== "sortBy" && key !== "sortOrder" && key !== "page");
+const when = (item: Props["items"][number]) => {
+  const zone = item.resourceTimezone ?? "UTC";
+  return `${formatZoned(item.startsAt, zone, locale)} – ${localTime(item.endsAt, zone)}`;
+};
+---
+
+{baseUrl && (
+  <>
+    <AdminFacets locale={locale} groups={facetGroups} clearHref={hasFilters ? listBaseUrl : null} />
+    <AdminSavedViews locale={locale} resource="bookings-booking" organizationId={organizationId} views={savedViews} baseUrl={listBaseUrl} currentQuery={currentQuery} />
+  </>
+)}
+
+<AdminBulkBar action="bookings.bulk" locale={locale} organizationId={organizationId} operations={bulkOperations}>
+  <div class="flex flex-col gap-4">
+    {items.length === 0 ? (
+      <p class="text-sm text-muted-foreground">{t.admin.empty}</p>
+    ) : (
+      <>
+        {bulkEnabled && <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" class="size-6" data-bulk-page />{bulkT.selectPage}</label>}
+        <ul class="flex flex-col gap-2" aria-label={t.admin.listLabel} data-testid="bookings-list">
+          {items.map((item) => {
+            const label = bookingLabel(item);
+            return (
+              <li class="flex flex-wrap items-center justify-between gap-3 border px-4 py-3" data-booking={item.id}>
+                {bulkEnabled ? (
+                  <label class="flex min-h-11 items-center gap-2"><input type="checkbox" class="size-6" data-bulk-item value={item.id} aria-label={formatBulk(bulkT.selectRow, { title: label })} /><span class="font-medium">{label}</span></label>
+                ) : <span class="font-medium">{label}</span>}
+                <dl class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                  <div class="flex gap-1"><dt class="text-muted-foreground">{t.fields.customerName}</dt><dd>{item.customerName}</dd></div>
+                  <div class="flex gap-1"><dt class="text-muted-foreground">{t.fields.resource}</dt><dd>{item.resourceCode ? `${item.resourceCode} — ${item.resourceName}` : t.admin.none}</dd></div>
+                  <div class="flex gap-1"><dt class="text-muted-foreground">{t.fields.startsAt}</dt><dd>{when(item)}</dd></div>
+                  <div class="flex gap-1"><dt class="text-muted-foreground">{t.fields.partySize}</dt><dd>{item.partySize}</dd></div>
+                  <div class="flex gap-1"><dt class="text-muted-foreground">{t.fields.status}</dt><dd data-status>{t.statuses[item.status]}</dd></div>
+                </dl>
+                {viewBaseUrl && <a class="inline-flex min-h-11 items-center px-3 underline" href={`${viewBaseUrl}/${item.id}`} aria-label={`${t.admin.view} — ${label}`}>{t.admin.view}</a>}
+              </li>
+            );
+          })}
+        </ul>
+      </>
+    )}
+  </div>
+</AdminBulkBar>
