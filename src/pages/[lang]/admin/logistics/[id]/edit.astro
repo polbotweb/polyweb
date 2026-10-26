@@ -1,0 +1,32 @@
+---
+/** Back-office plateforme : édition d'une expédition en brouillon (sinon → fiche). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { requirePermission } from "@lib/auth-guards";
+import ShipmentForm from "@/components/logistics/admin/ShipmentForm.astro";
+import { isEditable } from "@/modules/logistics/domain/workflow";
+import { shipmentLabel } from "@/modules/logistics/domain/shipment";
+import { getLogisticsTranslations } from "@/modules/logistics/i18n";
+import { loadSalesDocumentOptions, loadShipment, loadWarehouses } from "@/modules/logistics/loaders";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { logistics: ["update"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getLogisticsTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/logistics`;
+const shipment = await loadShipment(Astro.params.id ?? "", null);
+if (!shipment) return new Response(null, { status: 404 });
+if (!isEditable(shipment.status)) return Astro.redirect(`${baseAdminUrl}/${shipment.id}`);
+const [warehouses, salesDocuments] = await Promise.all([loadWarehouses(null), loadSalesDocumentOptions(null)]);
+---
+<BaseLayout title={t.admin.edit} description={t.meta.description}>
+  <AuthLayout title={t.admin.edit}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="logistics" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <h1 class="text-2xl font-semibold">{t.admin.edit} — {shipmentLabel(shipment)}</h1>
+      <ShipmentForm locale={locale} viewBaseUrl={baseAdminUrl} listUrl={baseAdminUrl} warehouses={warehouses} salesDocuments={salesDocuments} shipment={shipment} />
+    </main>
+  </AuthLayout>
+</BaseLayout>

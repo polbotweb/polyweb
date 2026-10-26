@@ -1,0 +1,55 @@
+---
+/** Back-office plateforme : niveaux de stock par entrepôt, saisie de mouvements / transferts, journal récent. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { requirePermission } from "@lib/auth-guards";
+import StockForms from "@/components/logistics/admin/StockForms.astro";
+import { getLogisticsTranslations } from "@/modules/logistics/i18n";
+import { loadItems, loadMovements, loadStockLevels, loadWarehouses } from "@/modules/logistics/loaders";
+import { hasLogisticsPermission } from "@/modules/logistics/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { logistics: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getLogisticsTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/logistics`;
+const [levels, movements, warehouses, items, canUpdate] = await Promise.all([
+  loadStockLevels(null), loadMovements(null, 50), loadWarehouses(null), loadItems(null), hasLogisticsPermission(Astro, ["update"]),
+]);
+const activeWarehouses = warehouses.filter((w) => w.active);
+const when = (value: Date) => new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" }).format(value);
+---
+<BaseLayout title={t.admin.stock} description={t.meta.description}>
+  <AuthLayout title={t.admin.stock}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="logistics" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{t.admin.stock}</h1>
+        <a class="inline-flex min-h-11 items-center px-3 underline" href={baseAdminUrl}>{t.admin.back}</a>
+      </div>
+      {levels.length === 0 ? <p class="text-sm text-muted-foreground">{t.admin.noStock}</p> : (
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm" data-testid="logistics-stock-levels">
+            <caption class="sr-only">{t.admin.stock}</caption>
+            <thead><tr class="border-b"><th scope="col" class="py-2 text-start">{t.fields.warehouse}</th><th scope="col" class="py-2 text-start">{t.fields.sku}</th><th scope="col" class="py-2 text-start">{t.fields.name}</th><th scope="col" class="py-2 text-end">{t.fields.level}</th></tr></thead>
+            <tbody>{levels.map((row) => <tr class="border-b" data-stock-row={`${row.warehouseCode}:${row.sku}`}><td class="py-2 font-mono">{row.warehouseCode}</td><td class="py-2 font-mono">{row.sku}</td><td class="py-2">{row.name}</td><td class="py-2 text-end" data-level>{row.level}</td></tr>)}</tbody>
+          </table>
+        </div>
+      )}
+      {canUpdate && activeWarehouses.length > 0 && items.length > 0 && <StockForms locale={locale} warehouses={activeWarehouses} items={items} />}
+      <section class="flex flex-col gap-3" aria-labelledby="lg-mv-journal">
+        <h2 id="lg-mv-journal" class="text-lg font-semibold">{t.admin.movements}</h2>
+        {movements.length === 0 ? <p class="text-sm text-muted-foreground">{t.admin.none}</p> : (
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="border-b"><th scope="col" class="py-2 text-start">{t.fields.kind}</th><th scope="col" class="py-2 text-start">{t.fields.warehouse}</th><th scope="col" class="py-2 text-start">{t.fields.sku}</th><th scope="col" class="py-2 text-end">{t.fields.quantity}</th><th scope="col" class="py-2 text-start">{t.fields.reference}</th><th scope="col" class="py-2 text-start"><span class="sr-only">{t.fields.shippedAt}</span></th></tr></thead>
+              <tbody>{movements.map((m) => <tr class="border-b"><td class="py-2">{t.movementKinds[m.kind]}</td><td class="py-2 font-mono">{m.warehouseCode}</td><td class="py-2 font-mono">{m.sku}</td><td class="py-2 text-end">{m.delta > 0 ? `+${m.delta}` : m.delta}</td><td class="py-2">{m.reference ?? ""}</td><td class="py-2">{when(m.createdAt)}</td></tr>)}</tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </main>
+  </AuthLayout>
+</BaseLayout>

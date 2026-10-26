@@ -47,6 +47,9 @@ export const logisticsLoader = {
   warehouses: (organizationId: string | null) =>
     dbTry("logistics.warehouses", () => getDrizzle().select().from(logisticsWarehouses).where(tenant(logisticsWarehouses.organizationId, organizationId)).orderBy(asc(logisticsWarehouses.code))),
 
+  item: (id: string, organizationId: string | null) =>
+    dbTry("logistics.item", () => getDrizzle().select().from(logisticsItems).where(and(eq(logisticsItems.id, id), tenant(logisticsItems.organizationId, organizationId))).limit(1)).pipe(Effect.map(first)),
+
   items: (organizationId: string | null) =>
     dbTry("logistics.items", () => getDrizzle().select().from(logisticsItems).where(tenant(logisticsItems.organizationId, organizationId)).orderBy(asc(logisticsItems.sku))),
 
@@ -82,6 +85,7 @@ export const logisticsLoader = {
 export const loadShipment = (id: string, organizationId: string | null) => runOrThrow(logisticsLoader.shipment(id, organizationId));
 export const loadWarehouse = (id: string, organizationId: string | null) => runOrThrow(logisticsLoader.warehouse(id, organizationId));
 export const loadWarehouses = (organizationId: string | null) => runOrThrow(logisticsLoader.warehouses(organizationId));
+export const loadItem = (id: string, organizationId: string | null) => runOrThrow(logisticsLoader.item(id, organizationId));
 export const loadItems = (organizationId: string | null) => runOrThrow(logisticsLoader.items(organizationId));
 export const loadStockLevels = (organizationId: string | null, warehouseId?: string) => runOrThrow(logisticsLoader.stockLevels(organizationId, warehouseId));
 export const loadMovements = (organizationId: string | null, limit?: number) => runOrThrow(logisticsLoader.movements(organizationId, limit));

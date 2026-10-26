@@ -1,0 +1,38 @@
+---
+/** Back-office plateforme : édition / suppression d'un entrepôt (suppression refusée s'il est utilisé). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Button } from "@atoms/button";
+import { requirePermission } from "@lib/auth-guards";
+import WarehouseForm from "@/components/logistics/admin/WarehouseForm.astro";
+import { getLogisticsTranslations } from "@/modules/logistics/i18n";
+import { loadWarehouse } from "@/modules/logistics/loaders";
+import { hasLogisticsPermission } from "@/modules/logistics/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { logistics: ["update"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getLogisticsTranslations(locale);
+const listUrl = `/${locale}/admin/logistics/warehouses`;
+const warehouse = await loadWarehouse(Astro.params.id ?? "", null);
+if (!warehouse) return new Response(null, { status: 404 });
+const canDelete = await hasLogisticsPermission(Astro, ["delete"]);
+---
+<BaseLayout title={warehouse.name} description={t.meta.description}>
+  <AuthLayout title={warehouse.name}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="logistics" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8" data-logistics-record data-kind="warehouse" data-id={warehouse.id} data-list-url={listUrl}>
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{t.admin.edit} — {warehouse.code}</h1>
+        <div class="flex flex-wrap gap-2">
+          {canDelete && <Button type="button" variant="outline" data-logistics-op="delete" data-confirm={t.admin.confirmDelete}>{t.admin.delete}</Button>}
+          <a class="inline-flex min-h-11 items-center px-3 underline" href={listUrl}>{t.admin.warehouses}</a>
+        </div>
+      </div>
+      <p class="text-sm text-destructive" role="alert" tabindex="-1" data-logistics-error hidden></p>
+      <WarehouseForm locale={locale} warehouse={warehouse} />
+    </main>
+  </AuthLayout>
+</BaseLayout>

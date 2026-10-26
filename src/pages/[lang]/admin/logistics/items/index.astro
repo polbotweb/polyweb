@@ -1,0 +1,43 @@
+---
+/** Back-office plateforme : articles stockés (liste + création). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { requirePermission } from "@lib/auth-guards";
+import ItemForm from "@/components/logistics/admin/ItemForm.astro";
+import { getLogisticsTranslations } from "@/modules/logistics/i18n";
+import { loadItems } from "@/modules/logistics/loaders";
+import { hasLogisticsPermission } from "@/modules/logistics/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { logistics: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getLogisticsTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/logistics`;
+const [items, canCreate] = await Promise.all([loadItems(null), hasLogisticsPermission(Astro, ["create"])]);
+---
+<BaseLayout title={t.admin.items} description={t.meta.description}>
+  <AuthLayout title={t.admin.items}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="logistics" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{t.admin.items}</h1>
+        <a class="inline-flex min-h-11 items-center px-3 underline" href={baseAdminUrl}>{t.admin.back}</a>
+      </div>
+      {items.length === 0 ? <p class="text-sm text-muted-foreground">{t.admin.noItems}</p> : (
+        <ul class="flex flex-col gap-2" aria-label={t.admin.items} data-testid="logistics-item-list">
+          {items.map((i) => (
+            <li class="flex flex-wrap items-center justify-between gap-3 border px-4 py-3">
+              <span><span class="font-mono font-medium">{i.sku}</span> — {i.name}</span>
+              <a class="inline-flex min-h-11 items-center px-3 underline" href={`${baseAdminUrl}/items/${i.id}`} aria-label={`${t.admin.edit} — ${i.sku}`}>{t.admin.edit}</a>
+            </li>
+          ))}
+        </ul>
+      )}
+      {canCreate && (
+        <section class="flex flex-col gap-3" aria-labelledby="lg-new-item"><h2 id="lg-new-item" class="text-lg font-semibold">{t.admin.newItem}</h2><ItemForm locale={locale} /></section>
+      )}
+    </main>
+  </AuthLayout>
+</BaseLayout>

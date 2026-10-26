@@ -1,0 +1,38 @@
+---
+/** Back-office plateforme : édition / suppression d'un article (SKU figé dès le premier mouvement). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Button } from "@atoms/button";
+import { requirePermission } from "@lib/auth-guards";
+import ItemForm from "@/components/logistics/admin/ItemForm.astro";
+import { getLogisticsTranslations } from "@/modules/logistics/i18n";
+import { loadItem } from "@/modules/logistics/loaders";
+import { hasLogisticsPermission } from "@/modules/logistics/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { logistics: ["update"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getLogisticsTranslations(locale);
+const listUrl = `/${locale}/admin/logistics/items`;
+const item = await loadItem(Astro.params.id ?? "", null);
+if (!item) return new Response(null, { status: 404 });
+const canDelete = await hasLogisticsPermission(Astro, ["delete"]);
+---
+<BaseLayout title={item.name} description={t.meta.description}>
+  <AuthLayout title={item.name}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="logistics" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8" data-logistics-record data-kind="item" data-id={item.id} data-list-url={listUrl}>
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{t.admin.edit} — {item.sku}</h1>
+        <div class="flex flex-wrap gap-2">
+          {canDelete && <Button type="button" variant="outline" data-logistics-op="delete" data-confirm={t.admin.confirmDelete}>{t.admin.delete}</Button>}
+          <a class="inline-flex min-h-11 items-center px-3 underline" href={listUrl}>{t.admin.items}</a>
+        </div>
+      </div>
+      <p class="text-sm text-destructive" role="alert" tabindex="-1" data-logistics-error hidden></p>
+      <ItemForm locale={locale} item={item} />
+    </main>
+  </AuthLayout>
+</BaseLayout>
