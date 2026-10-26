@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-25 20:47:50",
+  "generatedAt": "2026-10-26 00:54:58",
   "overall": "green",
   "reportsAvailable": 6,
   "sections": [
@@ -28,10 +28,10 @@
       "key": "vitest",
       "title": "Unit & Integration Tests (Vitest)",
       "ok": true,
-      "summary": "1656/1657 passed, 1 skipped",
+      "summary": "1697/1698 passed, 1 skipped",
       "metrics": {
-        "total": 1657,
-        "passed": 1656,
+        "total": 1698,
+        "passed": 1697,
         "failed": 0,
         "skipped": 1
       }

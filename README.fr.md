@@ -451,6 +451,7 @@ migrations/
   0023_formations_module.sql
   0024_courses_module.sql
   0025_shop_module.sql
+  0026_categories_taxonomy.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -474,6 +475,7 @@ migrations/
     0023_snapshot.json
     0024_snapshot.json
     0025_snapshot.json
+    0026_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -653,6 +655,7 @@ schemas.ts
 - `0023_formations_module.sql`
 - `0024_courses_module.sql`
 - `0025_shop_module.sql`
+- `0026_categories_taxonomy.sql`
 
 ### Commandes
 
@@ -844,6 +847,8 @@ search/
 seo/
   index.ts
 taxonomy/
+  actions.ts
+  categories.ts
   index.ts
 workflow/
   index.ts
@@ -886,6 +891,7 @@ blog/
     index.ts
   seo/
     index.ts
+  taxonomy.ts
   utils/
     index.ts
   validation/
@@ -923,6 +929,7 @@ courses/
     index.ts
   services/
     course.service.ts
+  taxonomy.ts
 events/
   actions/
     bulk.ts
@@ -948,6 +955,7 @@ events/
     index.ts
   services/
     event.service.ts
+  taxonomy.ts
 formations/
   actions/
     bulk.ts
@@ -973,6 +981,7 @@ formations/
     index.ts
   services/
     formation.service.ts
+  taxonomy.ts
 forms/
   domain/
     forms.ts
@@ -1028,6 +1037,7 @@ services/
     index.ts
   seo/
     index.ts
+  taxonomy.ts
   utils/
     index.ts
     urls.ts
@@ -1059,6 +1069,7 @@ shop/
     index.ts
   services/
     product.service.ts
+  taxonomy.ts
 sites/
   domain/
     sites.effect.ts
@@ -1407,6 +1418,8 @@ tests/
   unit/
 .github/
 dependabot.yml
+scripts/
+  playwright-install.sh
 workflows/
   ci.yml
   codeql.yml

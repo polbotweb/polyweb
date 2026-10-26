@@ -1,12 +1,12 @@
 
-> polyweb@0.0.1 check /workspace/mod-shop
+> polyweb@0.0.1 check /workspace/h-qa
 > astro check
 
-20:22:58 [@astrojs/node] Enabling sessions with filesystem storage
-20:22:59 [content] Syncing content
-20:22:59 [content] Synced content
-20:22:59 [types] Generated 128ms
-20:22:59 [check] Getting diagnostics for Astro files in /workspace/mod-shop...
+00:18:35 [@astrojs/node] Enabling sessions with filesystem storage
+00:18:35 [content] Syncing content
+00:18:35 [content] Synced content
+00:18:35 [types] Generated 121ms
+00:18:35 [check] Getting diagnostics for Astro files in /workspace/h-qa...
 [96msrc/actions/admin/pages.ts[0m:[93m4[0m:[93m38[0m - [93mwarning[0m[90m ts(6133): [0m'isNotNull' is declared but its value is never read.
 
 [7m4[0m import { eq, and, asc, desc, isNull, isNotNull, inArray, max } from "drizzle-orm";
@@ -253,7 +253,7 @@
 [7m42[0m     await expect(auth.api.signInEmail({ body: { email: target.email, password: target.password } })).rejects.toThrowError(APIError);
 [7m  [0m [93m                                                                                                             ~~~~~~~~~~~~[0m
 
-Result (1268 files): 
+Result (1280 files): 
 - 0 errors
 - 0 warnings
 - 56 hints
