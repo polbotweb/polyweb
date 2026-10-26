@@ -22,9 +22,15 @@ import AdminBulkBar from "@organisms/AdminBulkBar.astro";
 import type { AdminBulkBarOperation } from "@/core/bulk/ui";
 import { formatBulk, getBulkUiTranslations } from "@/core/bulk/i18n";
 import type { Locale } from "@i18n/config";
+import { getTaxTranslations } from "@/modules/tax/i18n";
+import type { CustomerType, TaxCategory } from "@/modules/tax/domain/rules";
+import type { TaxStatus } from "@/modules/tax/domain/workflow";
 
 interface Props {
-  items: Array<{ id: string; title: string; lockedByOther?: boolean }>;
+  items: Array<{ id: string; title: string; countryCode: string; category: TaxCategory; customerType: CustomerType | null; ratePercent: string; validFrom: string | null; validTo: string | null; status: TaxStatus; lockedByOther?: boolean }>;
+  /** Base des liens d'édition (`<base>/<id>/edit`). */
+  editBaseUrl?: string;
+  canUpdate?: boolean;
   locale: Locale;
   organizationId?: string | null;
   /** Opérations groupées autorisées (dérivées de `taxRateAdminResource.list.bulkActions`). */
@@ -39,14 +45,22 @@ interface Props {
   savedViews?: readonly { id: string; name: string; query: string }[];
 }
 
-const { items, locale, organizationId = null, bulkOperations = [], canForceReleaseLock = false, baseUrl, facets = {}, savedViews = [] } = Astro.props as Props;
+const { items, locale, editBaseUrl = "", canUpdate = false, organizationId = null, bulkOperations = [], canForceReleaseLock = false, baseUrl, facets = {}, savedViews = [] } = Astro.props as Props;
 const bulkT = getBulkUiTranslations(locale);
 const bulkEnabled = bulkOperations.length > 0;
 const listDefinition = taxRateAdminResource.list!;
 const listBaseUrl = baseUrl?.pathname ?? "";
 const currentQuery = baseUrl ? canonicalListQuery(listDefinition, baseUrl.searchParams) : "";
-// Libellés à traduire avec les autres libellés du module (modules/tax/i18n/).
-const facetGroups = baseUrl ? [{ id: "status", label: "Statut", links: facetLinks(listDefinition, currentQuery, "status", facets.status ?? [], listBaseUrl) }] : [];
+const t = getTaxTranslations(locale);
+const facetGroups = baseUrl
+  ? [
+      { id: "status", label: t.admin.facetStatus, links: facetLinks(listDefinition, currentQuery, "status", facets.status ?? [], listBaseUrl, (value) => t.statuses[value as TaxStatus] ?? value) },
+      { id: "country", label: t.admin.facetCountry, links: facetLinks(listDefinition, currentQuery, "country", facets.country ?? [], listBaseUrl) },
+      { id: "category", label: t.admin.facetCategory, links: facetLinks(listDefinition, currentQuery, "category", facets.category ?? [], listBaseUrl, (value) => t.categories[value as TaxCategory] ?? value) },
+    ]
+  : [];
+const rate = (value: string) => new Intl.NumberFormat(locale, { maximumFractionDigits: 4 }).format(Number(value));
+const validity = (from: string | null, to: string | null) => (from || to ? `${from ?? "…"} → ${to ?? "…"}` : t.fields.always);
 const hasFilters = [...new URLSearchParams(currentQuery).keys()].some((key) => key !== "sortBy" && key !== "sortOrder" && key !== "page");
 ---
 
@@ -60,17 +74,28 @@ const hasFilters = [...new URLSearchParams(currentQuery).keys()].some((key) => k
 <AdminBulkBar action="tax.bulk" locale={locale} organizationId={organizationId} operations={bulkOperations}>
   <div class="flex flex-col gap-4">
     {items.length === 0 ? (
-      <p class="text-sm text-muted-foreground">Aucun élément.</p>
+      <p class="text-sm text-muted-foreground">{t.admin.empty}</p>
     ) : (
       <>
         {bulkEnabled && <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" class="size-6" data-bulk-page />{bulkT.selectPage}</label>}
-        <ul class="flex flex-col gap-2">
+        <ul class="flex flex-col gap-2" aria-label={t.admin.listLabel} data-testid="tax-rate-list">
           {items.map((item) => (
-            <li class="flex items-center justify-between gap-3 border px-4 py-3">
+            <li class="flex flex-wrap items-center justify-between gap-3 border px-4 py-3" data-tax-rate={item.id}>
               {bulkEnabled ? (
-                <label class="flex min-h-11 items-center gap-2"><input type="checkbox" class="size-6" data-bulk-item value={item.id} aria-label={formatBulk(bulkT.selectRow, { title: item.title })} />{item.title}</label>
-              ) : item.title}
-              {canForceReleaseLock && item.lockedByOther && <ForceReleaseLockButton resourceType="tax" resourceId={item.id} locale={locale} />}
+                <label class="flex min-h-11 items-center gap-2"><input type="checkbox" class="size-6" data-bulk-item value={item.id} aria-label={formatBulk(bulkT.selectRow, { title: item.title })} /><span class="font-medium">{item.title}</span></label>
+              ) : <span class="font-medium">{item.title}</span>}
+              <dl class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                <div class="flex gap-1"><dt class="text-muted-foreground">{t.fields.countryCode}</dt><dd>{item.countryCode}</dd></div>
+                <div class="flex gap-1"><dt class="text-muted-foreground">{t.fields.category}</dt><dd>{t.categories[item.category]}</dd></div>
+                <div class="flex gap-1"><dt class="text-muted-foreground">{t.fields.customerType}</dt><dd>{t.customerTypes[item.customerType ?? "all"]}</dd></div>
+                <div class="flex gap-1"><dt class="text-muted-foreground">{t.fields.ratePercent}</dt><dd data-rate>{rate(item.ratePercent)}</dd></div>
+                <div class="flex gap-1"><dt class="text-muted-foreground">{t.fields.validity}</dt><dd>{validity(item.validFrom, item.validTo)}</dd></div>
+                <div class="flex gap-1"><dt class="text-muted-foreground">{t.fields.status}</dt><dd>{t.statuses[item.status]}</dd></div>
+              </dl>
+              <div class="flex items-center gap-2">
+                {canUpdate && editBaseUrl && <a class="inline-flex min-h-11 items-center px-3 underline" href={`${editBaseUrl}/${item.id}/edit`} aria-label={`${t.admin.edit} — ${item.title}`}>{t.admin.edit}</a>}
+                {canForceReleaseLock && item.lockedByOther && <ForceReleaseLockButton resourceType="tax" resourceId={item.id} locale={locale} />}
+              </div>
             </li>
           ))}
         </ul>

@@ -6,11 +6,12 @@
  * actions restent regroupés et testables hors rendu.
  */
 
+import { initTaxRateForm } from "./rate-form";
+
 /**
  * Branche les comportements d'une page. Idempotent : appelé au premier rendu
  * puis à chaque `astro:after-swap`.
  */
 export function initTax(): void {
-  // TODO: appeler les modules client du domaine, par exemple
-  //   initTaxEngagementBar();
+  initTaxRateForm();
 }

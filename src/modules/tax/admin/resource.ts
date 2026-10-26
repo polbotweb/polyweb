@@ -2,6 +2,7 @@ import { assertAdminResourceListDefinition } from "@/core/admin/filter-contract"
 import { assertResourceCompatibility, type AdminResourceDefinition } from "@/lib/cms/resource-contract";
 import { taxModule } from "@/modules/tax/module";
 import { TAX_STATUSES } from "@/modules/tax/domain/workflow";
+import { EU_COUNTRIES, TAX_CATEGORIES } from "@/modules/tax/domain/rules";
 
 /**
  * Définition de la liste back-office.
@@ -11,7 +12,7 @@ import { TAX_STATUSES } from "@/modules/tax/domain/workflow";
  * `assertAdminResourceListDefinition` valide qu'aucun identifiant n'est
  * dupliqué et que `defaultSort` désigne un tri déclaré.
  *
- * Facettes et vues enregistrées (core/filters) : le filtre `status` est compté par
+ * Facettes et vues enregistrées (core/filters) : les filtres `status`, `country` et `category` sont comptés par
  * `taxAdminFacets` (loaders/tax-rate-admin.loader.ts) ; les vues enregistrées
  * exigent l'inscription de la ressource dans `src/lib/admin/list-registry.ts`.
  */
@@ -19,8 +20,13 @@ const taxRateListDefinition = {
   filters: [
     { id: "search", kind: "search", queryParam: "search" },
     { id: "status", kind: "select", queryParam: "status", options: [...TAX_STATUSES], facet: true },
+    { id: "country", kind: "select", queryParam: "country", options: [...EU_COUNTRIES], facet: true },
+    { id: "category", kind: "select", queryParam: "category", options: [...TAX_CATEGORIES], facet: true },
   ],
-  sorts: [{ id: "createdAt", queryParam: "sortBy", directions: ["asc", "desc"] }],
+  sorts: [
+    { id: "createdAt", queryParam: "sortBy", directions: ["asc", "desc"] },
+    { id: "countryCode", queryParam: "sortBy", directions: ["asc", "desc"] },
+  ],
   defaultSort: "createdAt",
   // Actions groupées (core/bulk, `actions/bulk.ts`) : ids = opérations du moteur ;
   // la barre générique `AdminBulkBar` les affiche (confirmation si archive).

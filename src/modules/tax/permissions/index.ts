@@ -6,6 +6,7 @@
  */
 import type { ActionAPIContext } from "astro:actions";
 import { eq } from "drizzle-orm";
+import { Effect } from "effect";
 import { getDrizzle } from "@database/drizzle";
 import { requireTenantPermission, requireTenantResourcePermission } from "@/lib/effect/action";
 import { tax } from "../schema";
@@ -21,3 +22,16 @@ export const requireTaxResourcePermission = (context: ActionAPIContext, permissi
   requireTenantResourcePermission(context, { "tax": [...permissions] }, () =>
     getDrizzle().select({ organizationId: tax.organizationId }).from(tax).where(eq(tax.id, id)).limit(1),
   );
+
+/** Page back-office plateforme : RBAC global (`userHasPermission`) ; toute erreur → refus. */
+export const hasTaxPermissionEffect = (context: Pick<ActionAPIContext, "locals">, permissions: readonly TaxPermission[]): Effect.Effect<boolean> => {
+  const currentUser = context.locals.user;
+  if (!currentUser || currentUser.banned) return Effect.succeed(false);
+  return Effect.tryPromise(async () => {
+    const { auth } = await import("@/lib/auth");
+    const result = await auth.api.userHasPermission({ body: { userId: currentUser.id, permissions: { tax: [...permissions] } } });
+    return result.success;
+  }).pipe(Effect.orElseSucceed(() => false));
+};
+export const hasTaxPermission = (context: Pick<ActionAPIContext, "locals">, permissions: readonly TaxPermission[]): Promise<boolean> =>
+  Effect.runPromise(hasTaxPermissionEffect(context, permissions));

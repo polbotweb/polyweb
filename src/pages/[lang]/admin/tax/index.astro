@@ -1,0 +1,48 @@
+---
+/** Back-office plateforme : taux de TVA (facettes, vues enregistrées, actions groupées). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import AdminPagination from "@molecules/AdminPagination/AdminPagination.astro";
+import { Effect } from "effect";
+import { requirePermission } from "@lib/auth-guards";
+import { loadSavedViews } from "@/lib/admin/saved-views";
+import { bulkBarOperations } from "@/core/bulk/ui";
+import { canAdministerTenant } from "@/core/permissions/tenant";
+import TaxAdminList from "@/components/tax/admin/TaxAdminList.astro";
+import { taxRateAdminResource } from "@/modules/tax/admin/resource";
+import { getTaxTranslations } from "@/modules/tax/i18n";
+import { loadTaxAdminFacets, taxAdminFiltersFromUrl, taxAdminList } from "@/modules/tax/loaders";
+import { hasTaxPermission } from "@/modules/tax/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { tax: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getTaxTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/tax`;
+const [list, facets, savedViews, canCreate, canUpdate, canPublish, canForceReleaseLock] = await Promise.all([
+  Effect.runPromise(taxAdminList(null, Astro.url.searchParams)),
+  loadTaxAdminFacets(null, taxAdminFiltersFromUrl(Astro.url.searchParams)).catch(() => ({})),
+  Astro.locals.user ? loadSavedViews(Astro.locals.user.id, "tax-rate", null) : Promise.resolve([]),
+  hasTaxPermission(Astro, ["create"]),
+  hasTaxPermission(Astro, ["update"]),
+  hasTaxPermission(Astro, ["publish"]),
+  Effect.runPromise(canAdministerTenant(Astro.locals.user, null)).catch(() => false),
+]);
+const bulkOperations = bulkBarOperations(taxRateAdminResource.list?.bulkActions, t.admin.bulk, { publish: canPublish, unpublish: canPublish, archive: canUpdate, restore: canUpdate });
+---
+<BaseLayout title={t.admin.title} description={t.meta.description}>
+  <AuthLayout title={t.admin.title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="tax" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{t.admin.title}</h1>
+        {canCreate && <a class="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-primary-foreground" href={`${baseAdminUrl}/new`} data-testid="tax-new">{t.admin.newRate}</a>}
+      </div>
+      <p class="text-sm text-muted-foreground">{t.admin.defaultsNote}</p>
+      <TaxAdminList items={list.items} locale={locale} editBaseUrl={baseAdminUrl} canUpdate={canUpdate} bulkOperations={bulkOperations} canForceReleaseLock={canForceReleaseLock} baseUrl={Astro.url} facets={facets} savedViews={savedViews} />
+      {list.totalPages > 1 && <AdminPagination currentPage={list.page} totalPages={list.totalPages} baseUrl={Astro.url} />}
+    </main>
+  </AuthLayout>
+</BaseLayout>
