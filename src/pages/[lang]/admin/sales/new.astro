@@ -1,0 +1,27 @@
+---
+/** Back-office plateforme : nouveau devis ou nouvelle facture brouillon (`?kind=quote|invoice`). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { requirePermission } from "@lib/auth-guards";
+import SalesDocumentForm from "@/components/sales/admin/SalesDocumentForm.astro";
+import { getSalesTranslations } from "@/modules/sales/i18n";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { sales: ["create"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getSalesTranslations(locale);
+const kind = Astro.url.searchParams.get("kind") === "quote" ? "quote" : "invoice";
+const title = kind === "quote" ? t.admin.newQuote : t.admin.newInvoice;
+const baseAdminUrl = `/${locale}/admin/sales`;
+---
+<BaseLayout title={title} description={t.meta.description}>
+  <AuthLayout title={title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="sales" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <h1 class="text-2xl font-semibold">{title}</h1>
+      <SalesDocumentForm locale={locale} kind={kind} viewBaseUrl={baseAdminUrl} listUrl={baseAdminUrl} />
+    </main>
+  </AuthLayout>
+</BaseLayout>
