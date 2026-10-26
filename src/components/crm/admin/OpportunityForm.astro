@@ -1,0 +1,51 @@
+---
+/** Formulaire d'opportunité (création / édition). Soumission par `modules/crm/client/forms.ts` (`crm.create` / `crm.update`). */
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import type { Locale } from "@i18n/config";
+import { currencyExponent, isCurrencyCode } from "@/core/money";
+import { contactDisplayName } from "@/modules/crm/domain/contacts";
+import { getCrmTranslations } from "@/modules/crm/i18n";
+
+interface Props {
+  locale: Locale;
+  organizationId?: string | null;
+  viewBaseUrl: string;
+  listUrl: string;
+  companies: readonly { id: string; name: string }[];
+  contacts: readonly { id: string; firstName: string | null; lastName: string }[];
+  opportunity?: { id: string; title: string; companyId: string | null; contactId: string | null; amountMinor: number; currency: string; probability: number | null; expectedCloseDate: string | null; notes: string | null };
+}
+const { locale, organizationId = null, viewBaseUrl, listUrl, companies, contacts, opportunity: o } = Astro.props as Props;
+const t = getCrmTranslations(locale);
+const currency = o?.currency ?? "EUR";
+const exponent = isCurrencyCode(currency) ? currencyExponent(currency) : 2;
+const amount = o ? (o.amountMinor / 10 ** exponent).toFixed(exponent) : "";
+---
+<form class="flex max-w-3xl flex-col gap-6" data-crm-form="opportunity" data-id={o?.id ?? ""} data-organization-id={organizationId ?? ""} data-view-base-url={viewBaseUrl} data-done={o ? t.admin.saved : t.admin.created} novalidate>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div class="grid gap-2 sm:col-span-2"><Label for="crm-title">{t.fields.title}</Label><Input id="crm-title" name="title" required maxlength={200} value={o?.title ?? ""} /></div>
+    <div class="grid gap-2"><Label for="crm-company">{t.fields.company}</Label>
+      <NativeSelect id="crm-company" name="companyId"><NativeSelectOption value="">{t.admin.none}</NativeSelectOption>{companies.map((c) => <NativeSelectOption value={c.id} selected={o?.companyId === c.id}>{c.name}</NativeSelectOption>)}</NativeSelect>
+    </div>
+    <div class="grid gap-2"><Label for="crm-contact">{t.fields.contact}</Label>
+      <NativeSelect id="crm-contact" name="contactId"><NativeSelectOption value="">{t.admin.none}</NativeSelectOption>{contacts.map((c) => <NativeSelectOption value={c.id} selected={o?.contactId === c.id}>{contactDisplayName(c)}</NativeSelectOption>)}</NativeSelect>
+    </div>
+    <div class="grid gap-2"><Label for="crm-amount">{t.fields.amount}</Label><Input id="crm-amount" name="amount" inputmode="decimal" value={amount} /></div>
+    <div class="grid gap-2"><Label for="crm-currency">{t.fields.currency}</Label><Input id="crm-currency" name="currency" required maxlength={3} pattern="[A-Za-z]{3}" autocomplete="off" value={currency} /></div>
+    <div class="grid gap-2"><Label for="crm-probability">{t.fields.probability}</Label><Input id="crm-probability" name="probability" type="number" min={0} max={100} value={o?.probability === null || o?.probability === undefined ? "" : String(o.probability)} /></div>
+    <div class="grid gap-2"><Label for="crm-close">{t.fields.expectedCloseDate}</Label><Input id="crm-close" name="expectedCloseDate" type="date" value={o?.expectedCloseDate ?? ""} /></div>
+    <div class="grid gap-2 sm:col-span-2"><Label for="crm-notes">{t.fields.notes}</Label><textarea id="crm-notes" name="notes" rows="3" maxlength="5000" class="rounded-md border bg-transparent px-3 py-2 text-sm">{o?.notes ?? ""}</textarea></div>
+  </div>
+  <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+  <div class="flex gap-3"><Button type="submit">{o ? t.admin.save : t.admin.create}</Button><a class="inline-flex min-h-11 items-center px-3 underline" href={listUrl}>{t.admin.back}</a></div>
+</form>
+
+<script>
+  import { initCrm } from "@/modules/crm/client/init";
+
+  initCrm();
+  document.addEventListener("astro:after-swap", initCrm);
+</script>

@@ -1,0 +1,61 @@
+---
+/** Activités d'une fiche CRM (opportunité, société ou contact) + formulaire d'ajout. Comportements : `modules/crm/client`. */
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import type { Locale } from "@i18n/config";
+import { ACTIVITY_KINDS, isOverdue } from "@/modules/crm/domain/activities";
+import { getCrmTranslations } from "@/modules/crm/i18n";
+
+interface Props {
+  locale: Locale;
+  activities: readonly { id: string; kind: (typeof ACTIVITY_KINDS)[number]; subject: string; body: string | null; dueAt: Date | null; doneAt: Date | null }[];
+  target: { opportunityId?: string; contactId?: string; companyId?: string };
+  organizationId?: string | null;
+  canUpdate: boolean;
+  canDelete: boolean;
+}
+const { locale, activities, target, organizationId = null, canUpdate, canDelete } = Astro.props as Props;
+const t = getCrmTranslations(locale);
+const now = new Date();
+const when = (date: Date) => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(date);
+---
+<section class="flex flex-col gap-4" aria-labelledby="crm-activities-heading">
+  <h2 id="crm-activities-heading" class="text-lg font-semibold">{t.activities.title}</h2>
+  {activities.length === 0 ? <p class="text-sm text-muted-foreground">{t.activities.empty}</p> : (
+    <ul class="flex flex-col gap-2" data-testid="crm-activities">
+      {activities.map((a) => (
+        <li class="flex flex-wrap items-center justify-between gap-3 border px-4 py-3" data-crm-activity={a.id}>
+          <div class="flex flex-col">
+            <span class="font-medium">{t.activities.kinds[a.kind]} — {a.subject}</span>
+            {a.body && <span class="text-sm">{a.body}</span>}
+            {a.dueAt && <span class="text-sm text-muted-foreground">{t.activities.dueAt} : {when(a.dueAt)}{isOverdue(a, now) && <strong class="ms-2 text-destructive">{t.activities.overdue}</strong>}</span>}
+          </div>
+          <div class="flex gap-2">
+            {canUpdate && <button type="button" class="inline-flex min-h-11 items-center gap-2 px-3 text-sm underline" data-crm-op="activity-done" data-target={a.id} data-done={a.doneAt ? "true" : "false"} aria-pressed={a.doneAt ? "true" : "false"}>{t.activities.done}</button>}
+            {canDelete && <button type="button" class="inline-flex min-h-11 items-center px-3 text-sm underline" data-crm-op="activity-delete" data-target={a.id} aria-label={`${t.admin.delete} — ${a.subject}`}>{t.admin.delete}</button>}
+          </div>
+        </li>
+      ))}
+    </ul>
+  )}
+  {canUpdate && (
+    <form class="grid gap-3 border p-4 sm:grid-cols-2" data-crm-form="activity" data-organization-id={organizationId ?? ""} data-opportunity-id={target.opportunityId ?? ""} data-contact-id={target.contactId ?? ""} data-company-id={target.companyId ?? ""} data-done={t.admin.created} novalidate>
+      <h3 class="font-semibold sm:col-span-2">{t.activities.add}</h3>
+      <div class="grid gap-2"><Label for="crm-activity-kind">{t.activities.kind}</Label><NativeSelect id="crm-activity-kind" name="kind">{ACTIVITY_KINDS.map((k) => <NativeSelectOption value={k}>{t.activities.kinds[k]}</NativeSelectOption>)}</NativeSelect></div>
+      <div class="grid gap-2"><Label for="crm-activity-due">{t.activities.dueAt}</Label><Input id="crm-activity-due" name="dueAt" type="datetime-local" /></div>
+      <div class="grid gap-2 sm:col-span-2"><Label for="crm-activity-subject">{t.activities.subject}</Label><Input id="crm-activity-subject" name="subject" required maxlength={200} /></div>
+      <div class="grid gap-2 sm:col-span-2"><Label for="crm-activity-body">{t.activities.body}</Label><textarea id="crm-activity-body" name="body" rows="2" maxlength="5000" class="rounded-md border bg-transparent px-3 py-2 text-sm"></textarea></div>
+      <p class="text-sm text-destructive sm:col-span-2" role="alert" tabindex="-1" data-form-error hidden></p>
+      <div><Button type="submit">{t.activities.add}</Button></div>
+    </form>
+  )}
+</section>
+
+<script>
+  import { initCrm } from "@/modules/crm/client/init";
+
+  initCrm();
+  document.addEventListener("astro:after-swap", initCrm);
+</script>

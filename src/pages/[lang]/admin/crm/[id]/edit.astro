@@ -1,0 +1,31 @@
+---
+/** Back-office plateforme : édition d'une opportunité ouverte (clôturée → fiche). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { requirePermission } from "@lib/auth-guards";
+import OpportunityForm from "@/components/crm/admin/OpportunityForm.astro";
+import { isOpenStage } from "@/modules/crm/domain/workflow";
+import { getCrmTranslations } from "@/modules/crm/i18n";
+import { loadCompanies, loadContacts, loadOpportunity } from "@/modules/crm/loaders";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { crm: ["update"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getCrmTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/crm`;
+const opportunity = await loadOpportunity(Astro.params.id ?? "", null);
+if (!opportunity) return new Response(null, { status: 404 });
+if (!isOpenStage(opportunity.status)) return Astro.redirect(`${baseAdminUrl}/${opportunity.id}`);
+const [companies, contacts] = await Promise.all([loadCompanies(null), loadContacts(null)]);
+---
+<BaseLayout title={t.admin.edit} description={t.meta.description}>
+  <AuthLayout title={t.admin.edit}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="crm" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <h1 class="text-2xl font-semibold">{t.admin.edit} — {opportunity.title}</h1>
+      <OpportunityForm locale={locale} viewBaseUrl={baseAdminUrl} listUrl={baseAdminUrl} companies={companies} contacts={contacts} opportunity={opportunity} />
+    </main>
+  </AuthLayout>
+</BaseLayout>
