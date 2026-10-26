@@ -19,6 +19,7 @@ Un module fournit un gabarit pur (HTML) puis passe par le port, par exemple les 
 ## Adaptateur Puppeteer
 
 - **Navigateur paresseux et réutilisé** : lancé à la première demande, partagé, relancé s'il se déconnecte.
+- **Pas de Chromium orphelin** : connexion par pipe (`pipe: true`), pas par WebSocket. Puppeteer lance Chromium détaché ; avec le pipe, Chromium se termine dès que le processus Node meurt, même par SIGKILL (arrêt du `webServer` Playwright, crash). `closePdfBrowser()` reste l'arrêt propre (tests). Test de non-régression : `tests/integration/sales-pdf.test.ts`.
 - **Une page par rendu**, fermée ensuite ; JavaScript désactivé.
 - **Aucune ressource distante** : interception réseau (seuls `data:` et `about:` passent) en plus de la CSP. Les polices sont celles installées sur la machine (aucun webfont distant).
 - **Délai borné** : `setContent` / `page.pdf` limités à `PDF_RENDER_TIMEOUT_MS` (défaut 15 000), et `Effect.timeoutOrElse` au-dessus → `DocumentRenderError{ reason: "timeout" }`.
