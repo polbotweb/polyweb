@@ -1,0 +1,74 @@
+---
+/** Formulaire de ressource réservable (création / édition) avec éditeur de plages d'ouverture hebdomadaires. Soumission : `modules/bookings/client`. */
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import type { WeeklyWindow } from "@/core/scheduling";
+import type { Locale } from "@i18n/config";
+import { RESOURCE_KINDS, type ResourceKind } from "@/modules/bookings/domain/resource";
+import { getBookingsTranslations } from "@/modules/bookings/i18n";
+
+interface Props {
+  locale: Locale;
+  organizationId?: string | null;
+  viewBaseUrl?: string;
+  resource?: { id: string; code: string; name: string; kind: ResourceKind; capacity: number; timezone: string; slotMinutes: number; windows: readonly WeeklyWindow[]; active: boolean };
+}
+const { locale, organizationId = null, viewBaseUrl = "", resource: r } = Astro.props as Props;
+const t = getBookingsTranslations(locale);
+const p = r ? "bk-res-edit" : "bk-res-new";
+const SLOT_STEPS = [5, 10, 15, 20, 30, 45, 60, 90, 120, 240, 480];
+const windows: readonly (WeeklyWindow | null)[] = r?.windows.length ? r.windows : [null];
+const ORDER = [1, 2, 3, 4, 5, 6, 0];
+---
+<form class="flex max-w-3xl flex-col gap-4" data-bookings-form="resource" data-id={r?.id ?? ""} data-organization-id={organizationId ?? ""} data-view-base-url={viewBaseUrl} data-done={r ? t.admin.saved : t.admin.created} novalidate>
+  <div class="grid gap-4 sm:grid-cols-3">
+    <div class="grid gap-2"><Label for={`${p}-code`}>{t.fields.code}</Label><Input id={`${p}-code`} name="code" required maxlength={16} value={r?.code ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${p}-name`}>{t.fields.name}</Label><Input id={`${p}-name`} name="name" required maxlength={200} value={r?.name ?? ""} /></div>
+    <div class="grid gap-2">
+      <Label for={`${p}-kind`}>{t.fields.kind}</Label>
+      <NativeSelect id={`${p}-kind`} name="kind">{RESOURCE_KINDS.map((kind) => <NativeSelectOption value={kind} selected={(r?.kind ?? "room") === kind}>{t.kinds[kind]}</NativeSelectOption>)}</NativeSelect>
+    </div>
+    <div class="grid gap-2"><Label for={`${p}-capacity`}>{t.fields.capacity}</Label><Input id={`${p}-capacity`} name="capacity" type="number" min={1} max={10000} value={String(r?.capacity ?? 1)} /></div>
+    <div class="grid gap-2"><Label for={`${p}-tz`}>{t.fields.timezone}</Label><Input id={`${p}-tz`} name="timezone" maxlength={64} placeholder="Europe/Paris" value={r?.timezone ?? "UTC"} /></div>
+    <div class="grid gap-2">
+      <Label for={`${p}-step`}>{t.fields.slotMinutes}</Label>
+      <NativeSelect id={`${p}-step`} name="slotMinutes">{SLOT_STEPS.map((step) => <NativeSelectOption value={String(step)} selected={(r?.slotMinutes ?? 30) === step}>{step}</NativeSelectOption>)}</NativeSelect>
+    </div>
+    <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" class="size-6" name="active" checked={r ? r.active : true} />{t.fields.active}</label>
+  </div>
+
+  <fieldset class="flex flex-col gap-3">
+    <legend class="text-lg font-semibold">{t.fields.windows}</legend>
+    <div class="flex flex-col gap-2" data-windows>
+      {windows.map((w, index) => (
+        <div class="flex flex-wrap items-end gap-2" data-window>
+          <div class="grid gap-1"><Label for={`${p}-wd-${index}`}>{t.fields.weekday}</Label><NativeSelect id={`${p}-wd-${index}`} name="weekday">{ORDER.map((day) => <NativeSelectOption value={String(day)} selected={(w?.weekday ?? 1) === day}>{t.weekdays[day]}</NativeSelectOption>)}</NativeSelect></div>
+          <div class="grid gap-1"><Label for={`${p}-ws-${index}`}>{t.fields.start}</Label><Input id={`${p}-ws-${index}`} name="start" type="time" value={w?.start ?? "09:00"} /></div>
+          <div class="grid gap-1"><Label for={`${p}-we-${index}`}>{t.fields.end}</Label><Input id={`${p}-we-${index}`} name="end" type="time" value={w?.end ?? "17:00"} /></div>
+          <Button type="button" variant="outline" data-remove-window>{t.admin.removeWindow}</Button>
+        </div>
+      ))}
+    </div>
+    <template data-window-template>
+      <div class="flex flex-wrap items-end gap-2" data-window>
+        <label class="grid gap-1 text-sm">{t.fields.weekday}<select name="weekday" class="h-11 rounded-md border bg-transparent px-3 text-sm">{ORDER.map((day) => <option value={String(day)}>{t.weekdays[day]}</option>)}</select></label>
+        <label class="grid gap-1 text-sm">{t.fields.start}<input name="start" type="time" value="09:00" class="h-11 rounded-md border bg-transparent px-3 text-sm" /></label>
+        <label class="grid gap-1 text-sm">{t.fields.end}<input name="end" type="time" value="17:00" class="h-11 rounded-md border bg-transparent px-3 text-sm" /></label>
+        <button type="button" class="inline-flex min-h-11 items-center rounded-md border px-4 text-sm" data-remove-window>{t.admin.removeWindow}</button>
+      </div>
+    </template>
+    <div><Button type="button" variant="outline" data-add-window>{t.admin.addWindow}</Button></div>
+  </fieldset>
+
+  <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+  <div><Button type="submit">{r ? t.admin.save : t.admin.create}</Button></div>
+</form>
+
+<script>
+  import { initBookings } from "@/modules/bookings/client/init";
+
+  initBookings();
+  document.addEventListener("astro:after-swap", initBookings);
+</script>

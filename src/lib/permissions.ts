@@ -45,6 +45,7 @@ export const statement = {
   crm: ["create", "read", "update", "delete"],
   logistics: ["create", "read", "update", "delete"],
   purchasing: ["create", "read", "update", "delete"],
+  bookings: ["create", "read", "update", "delete"],
   courses: ["create", "read", "update", "delete", "publish"],
   formations: ["create", "read", "update", "delete", "publish"],
   events: ["create", "read", "update", "delete", "publish"],
@@ -131,6 +132,8 @@ const cmsReadOnlyLogistics = { logistics: ["read"] } as const;
 // Achats : fournisseurs, commandes, réceptions — mêmes rôles que la logistique.
 const cmsAdminPurchasing = { purchasing: ["create", "read", "update", "delete"] } as const;
 const cmsReadOnlyPurchasing = { purchasing: ["read"] } as const;
+const cmsAdminBookings = { bookings: ["create", "read", "update", "delete"] } as const;
+const cmsReadOnlyBookings = { bookings: ["read"] } as const;
 
 export const adminRole = ac.newRole({
   ...adminAc.statements,
@@ -157,6 +160,7 @@ export const adminRole = ac.newRole({
   ...cmsAdminCrm,
   ...cmsAdminLogistics,
   ...cmsAdminPurchasing,
+  ...cmsAdminBookings,
 });
 
 export const editorRole = ac.newRole({
@@ -212,6 +216,7 @@ export const orgOwnerRole = ac.newRole({
   ...cmsAdminCrm,
   ...cmsAdminLogistics,
   ...cmsAdminPurchasing,
+  ...cmsAdminBookings,
 });
 
 export const orgAdminRole = ac.newRole({
@@ -234,6 +239,7 @@ export const orgAdminRole = ac.newRole({
   ...cmsAdminCrm,
   ...cmsAdminLogistics,
   ...cmsAdminPurchasing,
+  ...cmsAdminBookings,
 });
 
 export const orgMemberRole = ac.newRole({
@@ -251,4 +257,5 @@ export const orgMemberRole = ac.newRole({
   ...cmsReadOnlyCrm,
   ...cmsReadOnlyLogistics,
   ...cmsReadOnlyPurchasing,
+  ...cmsReadOnlyBookings,
 });

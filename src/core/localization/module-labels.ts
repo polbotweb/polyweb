@@ -1,6 +1,6 @@
 import type { Locale } from "@i18n/config";
 
-export type ModuleId = "blog" | "services" | "tax" | "sales" | "crm" | "logistics" | "purchasing";
+export type ModuleId = "blog" | "services" | "tax" | "sales" | "crm" | "logistics" | "purchasing" | "bookings";
 
 const labels: Record<ModuleId, Record<Locale, string>> = {
   blog: { fr: "Blog", en: "Blog", es: "Blog", ar: "المدونة" },
@@ -10,6 +10,7 @@ const labels: Record<ModuleId, Record<Locale, string>> = {
   crm: { fr: "CRM", en: "CRM", es: "CRM", ar: "إدارة العملاء" },
   logistics: { fr: "Logistique", en: "Logistics", es: "Logística", ar: "الخدمات اللوجستية" },
   purchasing: { fr: "Achats", en: "Purchasing", es: "Compras", ar: "المشتريات" },
+  bookings: { fr: "Réservations", en: "Bookings", es: "Reservas", ar: "الحجوزات" },
 };
 
 export function getModuleLabel(moduleId: ModuleId, locale: Locale): string {

@@ -1,0 +1,78 @@
+---
+/**
+ * Back-office plateforme : ressource réservable — édition (plages d'ouverture) et disponibilités
+ * d'un jour (`?date=YYYY-MM-DD`, aujourd'hui dans le fuseau de la ressource par défaut).
+ */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { requirePermission } from "@lib/auth-guards";
+import ResourceForm from "@/components/bookings/admin/ResourceForm.astro";
+import { localDate, localTime } from "@/core/scheduling";
+import { getBookingsTranslations } from "@/modules/bookings/i18n";
+import { loadAvailability, loadBookingResource } from "@/modules/bookings/loaders";
+import { hasBookingsPermission } from "@/modules/bookings/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { bookings: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getBookingsTranslations(locale);
+const listUrl = `/${locale}/admin/bookings/resources`;
+const resource = await loadBookingResource(Astro.params.id ?? "", null);
+if (!resource) return new Response(null, { status: 404 });
+const requested = Astro.url.searchParams.get("date") ?? "";
+const date = /^\d{4}-\d{2}-\d{2}$/.test(requested) ? requested : localDate(new Date(), resource.timezone);
+const [day, canUpdate, canDelete] = await Promise.all([
+  loadAvailability(resource.id, null, date),
+  hasBookingsPermission(Astro, ["update"]),
+  hasBookingsPermission(Astro, ["delete"]),
+]);
+const range = (start: Date, end: Date) => `${localTime(start, resource.timezone)}–${localTime(end, resource.timezone)}`;
+---
+<BaseLayout title={resource.name} description={t.meta.description}>
+  <AuthLayout title={resource.name}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="bookings" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8" data-bookings-record data-kind="resource" data-id={resource.id} data-list-url={listUrl}>
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{resource.code} — {resource.name}</h1>
+        <div class="flex flex-wrap gap-2">
+          {canDelete && <Button type="button" variant="outline" data-bookings-op="delete" data-confirm={t.admin.confirmDelete}>{t.admin.delete}</Button>}
+          <a class="inline-flex min-h-11 items-center px-3 underline" href={listUrl}>{t.admin.resources}</a>
+        </div>
+      </div>
+      <p class="text-sm text-destructive" role="alert" tabindex="-1" data-bookings-error hidden></p>
+
+      <section class="flex flex-col gap-3" aria-labelledby="bk-avail-heading">
+        <h2 id="bk-avail-heading" class="text-lg font-semibold">{t.admin.availability}</h2>
+        <form method="get" class="flex flex-wrap items-end gap-2">
+          <div class="grid gap-1"><Label for="bk-avail-date">{t.fields.date}</Label><Input id="bk-avail-date" name="date" type="date" value={date} /></div>
+          <Button type="submit" variant="outline">{t.admin.showSlots}</Button>
+        </form>
+        <p class="text-sm text-muted-foreground">{t.admin.timesIn} ({resource.timezone})</p>
+        {(day?.slots.length ?? 0) === 0 ? <p class="text-sm" data-testid="bookings-no-slots">{t.admin.noSlots}</p> : (
+          <ul class="flex flex-wrap gap-2" aria-label={t.admin.availability} data-testid="bookings-free-slots">
+            {day!.slots.map((slot) => <li class="rounded-md border px-3 py-2 text-sm">{range(slot.start, slot.end)}</li>)}
+          </ul>
+        )}
+      </section>
+
+      {canUpdate && (
+        <section class="flex flex-col gap-3" aria-labelledby="bk-res-edit-heading">
+          <h2 id="bk-res-edit-heading" class="text-lg font-semibold">{t.admin.edit}</h2>
+          <ResourceForm locale={locale} resource={resource} />
+        </section>
+      )}
+    </main>
+  </AuthLayout>
+</BaseLayout>
+
+<script>
+  import { initBookings } from "@/modules/bookings/client/init";
+
+  initBookings();
+  document.addEventListener("astro:after-swap", initBookings);
+</script>
