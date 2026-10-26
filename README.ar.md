@@ -260,6 +260,10 @@ shop/
   ShopCard.astro
   ShopDetail.astro
   admin/
+tax/
+  TaxCard.astro
+  TaxDetail.astro
+  admin/
 wow/
   AsyncButton.astro
   FallingParticles.astro
@@ -454,6 +458,7 @@ migrations/
   0026_categories_taxonomy.sql
   0027_rename_shop_tables.sql
   0028_singular_aux_tables.sql
+  0029_tax_rates.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -480,6 +485,7 @@ migrations/
     0026_snapshot.json
     0027_snapshot.json
     0028_snapshot.json
+    0029_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -662,6 +668,7 @@ schemas.ts
 - `0026_categories_taxonomy.sql`
 - `0027_rename_shop_tables.sql`
 - `0028_singular_aux_tables.sql`
+- `0029_tax_rates.sql`
 
 ### الأوامر
 
@@ -1087,6 +1094,35 @@ sites/
   domain/
     sites.effect.ts
     sites.ts
+tax/
+  actions/
+    bulk.ts
+    index.ts
+  admin/
+    resource.ts
+  capabilities.ts
+  client/
+    init.ts
+    rate-form.ts
+  domain/
+    accounting.ts
+    rates.ts
+    rules.ts
+    workflow.ts
+  i18n/
+    index.ts
+  loaders/
+    index.ts
+    tax-rate-admin.loader.ts
+    tax-rate.loader.ts
+  locks.ts
+  module.ts
+  permissions/
+    index.ts
+  schema/
+    index.ts
+  services/
+    tax-rate.service.ts
 webhooks/
   domain/
     dispatcher.ts
@@ -1118,6 +1154,7 @@ src/pages/
     services/
     site.astro
     stats.astro
+    tax/
     theme.astro
     users.astro
   auth/
@@ -1276,6 +1313,7 @@ public/
 favicon.ico
 favicon.svg
 uploads/
+  images/
 ```
 
 ### الرفع والمعالجة
