@@ -3,7 +3,7 @@ import { Effect, Exit } from 'effect';
 import { canTransition } from '@/core/workflow';
 import { assignsNumber, isEditable, nextStatuses, shipmentWorkflow, stockEffect } from '@/modules/logistics/domain/workflow';
 import { aggregateBySku, ensureAvailable, signedQuantity, stockLevel, validateSku } from '@/modules/logistics/domain/stock';
-import { totalUnits, validateShipment, validateWarehouse } from '@/modules/logistics/domain/shipment';
+import { shipmentLabel, totalUnits, validateShipment, validateWarehouse } from '@/modules/logistics/domain/shipment';
 
 const run = <A, E>(effect: Effect.Effect<A, E>) => Effect.runSync(effect);
 const fails = <A, E>(effect: Effect.Effect<A, E>) => Exit.isFailure(Effect.runSyncExit(effect));
@@ -75,5 +75,11 @@ describe('logistics/shipment', () => {
     expect(run(validateWarehouse({ code: ' par-1 ', name: 'Paris', country: 'fr' }))).toEqual({ code: 'PAR-1', name: 'Paris', country: 'FR' });
     expect(fails(validateWarehouse({ code: '', name: 'X', country: null }))).toBe(true);
     expect(fails(validateWarehouse({ code: 'A', name: ' ', country: null }))).toBe(true);
+  });
+
+  it('labels a shipment by number, then title, then recipient', () => {
+    expect(shipmentLabel({ number: 'BL-2026-0001', title: 'T', recipientName: 'R' })).toBe('BL-2026-0001');
+    expect(shipmentLabel({ number: null, title: 'T', recipientName: 'R' })).toBe('T');
+    expect(shipmentLabel({ number: null, title: '', recipientName: 'R' })).toBe('R');
   });
 });

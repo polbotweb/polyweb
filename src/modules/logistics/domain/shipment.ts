@@ -53,3 +53,6 @@ export const validateWarehouse = (input: { code: string; name: string; country: 
     if (country !== null && !isCountry(country)) return yield* new InvalidWarehouseError({ field: "country", value: input.country ?? "" });
     return { code, name, country };
   });
+
+/** Libellé d'une expédition : numéro de BL, sinon titre, sinon destinataire. */
+export const shipmentLabel = (s: { number: string | null; title: string | null; recipientName: string }) => s.number ?? (s.title || s.recipientName);
