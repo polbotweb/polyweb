@@ -65,7 +65,7 @@ export const eventTranslations = pgTable("event_translations", {
 ]);
 
 /** Révisions (core/revision) : une ligne par écriture, pour l'historique et la restauration. */
-export const eventsRevisions = pgTable("events_revisions", {
+export const eventRevisions = pgTable("event_revisions", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   resourceId: text("resource_id").notNull().references(() => events.id, { onDelete: "cascade" }),
   authorId: text("author_id").notNull().references(() => user.id, { onDelete: "cascade" }),
@@ -74,10 +74,10 @@ export const eventsRevisions = pgTable("events_revisions", {
   status: text("status", { enum: EVENTS_STATUSES }).notNull(),
   note: text("note"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => [index("events_revisions_resource_idx").on(table.resourceId)]);
+}, (table) => [index("event_revisions_resource_idx").on(table.resourceId)]);
 
 /** Verrous d'édition (core/locks) : une ligne par ressource, propriétaire utilisateur + session. */
-export const eventsLocks = pgTable("events_locks", {
+export const eventLocks = pgTable("event_locks", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   resourceId: text("resource_id").notNull().unique().references(() => events.id, { onDelete: "cascade" }),
   userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),

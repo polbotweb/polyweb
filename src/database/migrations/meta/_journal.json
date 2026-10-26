@@ -190,6 +190,20 @@
       "when": 1792965179467,
       "tag": "0026_categories_taxonomy",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1792992847056,
+      "tag": "0027_rename_shop_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793001461998,
+      "tag": "0028_singular_aux_tables",
+      "breakpoints": true
     }
   ]
 }

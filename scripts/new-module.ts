@@ -68,9 +68,10 @@ function pluralizeSnake(word: string): string {
 }
 
 /**
- * Tables SQL nommées d'après l'entité au pluriel (`--entity=product` → `products`,
- * `products_revisions`, `products_locks`), pas d'après le domaine. `--table=<snake>`
- * force un autre nom. Les modules existants gardent leurs tables (aucun renommage).
+ * Table principale nommée d'après l'entité au pluriel (`--entity=product` → `products`),
+ * pas d'après le domaine ; `--table=<snake>` force un autre nom. Les tables auxiliaires
+ * portent le préfixe de l'entité au SINGULIER (`product_revisions`, `product_locks`,
+ * `product_categories`…), comme les tables de traduction des modules existants.
  */
 const tableFlag = args.find((a) => a.startsWith("--table="))?.split("=")[1];
 const table = tableFlag ?? pluralizeSnake(entity.replace(/-/g, "_"));
@@ -100,7 +101,7 @@ function tsFiles(dir: string): string[] {
 /** Tables de catégories (core/taxonomy) nommées d'après l'entité : `product_categories`, … */
 const entitySnake = entity.replace(/-/g, "_");
 const categoryTables = [`${entitySnake}_categories`, `${entitySnake}_category_translations`, `${entitySnake}_category_links`];
-const taken = [table, `${table}_revisions`, `${table}_locks`, ...(withTaxonomy ? categoryTables : [])].filter((t) =>
+const taken = [table, `${entitySnake}_revisions`, `${entitySnake}_locks`, ...(withTaxonomy ? categoryTables : [])].filter((t) =>
   tsFiles(join(root, "database")).concat(tsFiles(join(root, "modules"))).some((f) => readFileSync(f, "utf8").includes(`pgTable("${t}"`)),
 );
 if (taken.length) {
@@ -178,8 +179,8 @@ export const ${camel}CapabilityProviders = {
   content: "${name}",
   localization: "${name}Translations",
   publication: "${camel}Workflow",
-  revisions: "${table}_revisions",
-  locks: "${table}_locks",
+  revisions: "${entitySnake}_revisions",
+  locks: "${entitySnake}_locks",
 } as unknown as PolywebModuleCapabilityProviders;
 `,
 
@@ -418,7 +419,7 @@ export const ${camel} = pgTable("${table}", {
 }, (table) => [uniqueIndex("${table}_org_slug_uidx").on(table.organizationId, table.slug)]);
 
 /** Révisions (core/revision) : une ligne par écriture, pour l'historique et la restauration. */
-export const ${camel}Revisions = pgTable("${table}_revisions", {
+export const ${entityCamel}Revisions = pgTable("${entitySnake}_revisions", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   resourceId: text("resource_id").notNull().references(() => ${camel}.id, { onDelete: "cascade" }),
   authorId: text("author_id").notNull().references(() => user.id, { onDelete: "cascade" }),
@@ -427,10 +428,10 @@ export const ${camel}Revisions = pgTable("${table}_revisions", {
   status: text("status", { enum: ${upper}_STATUSES }).notNull(),
   note: text("note"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => [index("${table}_revisions_resource_idx").on(table.resourceId)]);
+}, (table) => [index("${entitySnake}_revisions_resource_idx").on(table.resourceId)]);
 
 /** Verrous d'édition (core/locks) : une ligne par ressource, propriétaire utilisateur + session. */
-export const ${camel}Locks = pgTable("${table}_locks", {
+export const ${entityCamel}Locks = pgTable("${entitySnake}_locks", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   resourceId: text("resource_id").notNull().unique().references(() => ${camel}.id, { onDelete: "cascade" }),
   userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
@@ -471,9 +472,9 @@ import { eq } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { dbTry } from "@/lib/effect/run";
 import { defineLockResource, drizzleLockStore } from "@/core/locks/service";
-import { ${camel}, ${camel}Locks } from "./schema";
+import { ${camel}, ${entityCamel}Locks } from "./schema";
 
-export const ${camel}Lock = defineLockResource("${name}", drizzleLockStore("${name}", ${camel}Locks, "resourceId"), {
+export const ${camel}Lock = defineLockResource("${name}", drizzleLockStore("${name}", ${entityCamel}Locks, "resourceId"), {
   // Organisation propriétaire : libération administrative réservée à l'administrateur global
   // ou aux owner/admin de CETTE organisation (action générique \`forceReleaseLock\`, auditée).
   tenantOf: (id) =>
@@ -520,7 +521,7 @@ import { dbTry } from "@/lib/effect/run";
 import { fail } from "@/lib/effect/action";
 import { canTransition } from "@/core/workflow";
 import type { LockOwner } from "@/core/locks/policy";
-import { ${camel}, ${camel}Revisions } from "../schema";
+import { ${camel}, ${entityCamel}Revisions } from "../schema";
 import { ${camel}Lock } from "../locks";
 import { ${camel}Workflow, type ${pascal}Status } from "../domain/workflow";
 
@@ -533,7 +534,7 @@ const required = (id: string) =>
   Effect.flatMap(findById(id), (row) => (row ? Effect.succeed(row) : fail("NOT_FOUND", "Élément introuvable.")));
 
 const revision = (row: Row, authorId: string, note: string) =>
-  dbTry("${name}.revision", () => getDrizzle().insert(${camel}Revisions).values({ resourceId: row.id, authorId, title: row.title, slug: row.slug, status: row.status, note }));
+  dbTry("${name}.revision", () => getDrizzle().insert(${entityCamel}Revisions).values({ resourceId: row.id, authorId, title: row.title, slug: row.slug, status: row.status, note }));
 
 export const ${camel}Service = {
   create: (input: { title: string; slug: string; organizationId: string | null }, authorId: string) =>
@@ -646,7 +647,7 @@ import { lockLocaleFrom } from "@/core/locks/errors";
 import { logAuditEvent, extractIp } from "@/lib/audit";
 import { ActionFailure, actionTry, effectHandler } from "@/lib/effect/action";
 import { require${pascal}Permission, type ${pascal}Permission } from "../permissions";
-import { ${camel}, ${camel}Revisions } from "../schema";
+import { ${camel}, ${entityCamel}Revisions } from "../schema";
 import { ${camel}Lock } from "../locks";
 import { ${camel}Workflow, type ${pascal}Status } from "../domain/workflow";
 
@@ -665,7 +666,7 @@ const transition = (op: ${pascal}BulkOperation): BulkOperationDefinition<Row, Tx
   validate: (row) => (canTransition(${camel}Workflow, row.status, TARGET[op]) ? null : "Transition de statut invalide : " + row.status + " → " + TARGET[op] + "."),
   apply: async (tx, row, actor) => {
     await tx.update(${camel}).set({ status: TARGET[op] }).where(eq(${camel}.id, row.id));
-    await tx.insert(${camel}Revisions).values({ resourceId: row.id, authorId: actor.id, title: row.title, slug: row.slug, status: TARGET[op], note: "Action groupée : " + op });
+    await tx.insert(${entityCamel}Revisions).values({ resourceId: row.id, authorId: actor.id, title: row.title, slug: row.slug, status: TARGET[op], note: "Action groupée : " + op });
   },
   auditAction: "BULK_ACTION",
   auditMetadata: (row) => ({ operation: op, from: row.status, to: TARGET[op] }),
@@ -916,7 +917,7 @@ export const ${taxo} = registerCategoryTaxonomy(defineCategoryTaxonomy({
 }));
 `;
   edit(`${moduleDir}/module.ts`, "    taxonomy: false,\n", "    taxonomy: true,\n");
-  edit(`${moduleDir}/capabilities.ts`, `  locks: "${table}_locks",\n`, `  locks: "${table}_locks",\n  taxonomy: "${categoryTables[0]} (core/taxonomy, ${taxo})",\n`);
+  edit(`${moduleDir}/capabilities.ts`, `  locks: "${entitySnake}_locks",\n`, `  locks: "${entitySnake}_locks",\n  taxonomy: "${categoryTables[0]} (core/taxonomy, ${taxo})",\n`);
   const actionsFile = `${moduleDir}/actions/index.ts`;
   edit(actionsFile, `import { bulk${pascal}Lifecycle } from "./bulk";\n`, `import { bulk${pascal}Lifecycle } from "./bulk";\nimport { defineCategoryActions } from "@/core/taxonomy/actions";\nimport { ${taxo} } from "../taxonomy";\n`);
   edit(actionsFile, `  bulk: bulk${pascal}Lifecycle,\n`, `  bulk: bulk${pascal}Lifecycle,\n  // Catégories (core/taxonomy) — voir ../taxonomy.ts.\n  categories: defineCategoryActions(${taxo}, "${name}"),\n`);
