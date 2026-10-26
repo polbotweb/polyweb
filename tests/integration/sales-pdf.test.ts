@@ -2,12 +2,13 @@
  * Rendu PDF réel (Puppeteer + Chromium) des documents de vente en fr / en / ar, avec extraction
  * du texte. Chromium : `PDF_CHROMIUM_PATH`, sinon celui de Playwright (installé en CI).
  */
+import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { Effect, Exit } from 'effect';
 import { afterAll, describe, expect, it } from 'vitest';
 import { PdfRenderer } from '@/core/documents';
-import { closePdfBrowser, makePuppeteerPdfRenderer } from '@/lib/pdf/puppeteer';
+import { closePdfBrowser, makePuppeteerPdfRenderer, pdfLaunchOptions } from '@/lib/pdf/puppeteer';
 import { renderSalesDocumentPdf, type PrintableSalesDocument } from '@/modules/sales/documents';
 import { arabicCharCount, extractPdfText, pdfTextIncludes } from '../helpers/pdf-text';
 
@@ -87,6 +88,23 @@ describe.skipIf(!available)('PDF des documents de vente (Puppeteer)', () => {
     const exit = await Effect.runPromiseExit(renderer.render('<p>x</p>', { timeoutMs: 1 }));
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) expect(String(exit.cause)).toMatch(/timeout|render/);
+  }, 60_000);
+
+  it('Chromium ne survit pas au processus Node tué (SIGKILL, ex. arrêt du webServer Playwright)', async () => {
+    const script = `import('puppeteer-core').then(async ({ launch }) => { const b = await launch(JSON.parse(process.env.OPTS)); console.log('PID ' + b.process().pid); setInterval(() => {}, 1000); });`;
+    const child = spawn(process.execPath, ['-e', script], { env: { ...process.env, OPTS: JSON.stringify(pdfLaunchOptions(chromium)) }, stdio: ['ignore', 'pipe', 'inherit'] });
+    const chromePid = await new Promise<number>((resolve, reject) => {
+      child.stdout.on('data', (chunk: Buffer) => { const match = /PID (\d+)/.exec(String(chunk)); if (match) resolve(Number(match[1])); });
+      child.once('exit', () => reject(new Error('processus enfant terminé avant le lancement de Chromium')));
+    });
+    const alive = () => { try { process.kill(chromePid, 0); return true; } catch { return false; } };
+    expect(alive()).toBe(true);
+    child.kill('SIGKILL');
+    try {
+      await expect.poll(alive, { timeout: 10_000 }).toBe(false);
+    } finally {
+      if (alive()) process.kill(chromePid, 'SIGKILL');
+    }
   }, 60_000);
 
   it('aucune ressource distante chargée', async () => {

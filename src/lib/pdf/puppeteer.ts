@@ -4,6 +4,9 @@
  * - Chromium fourni par l'environnement (`PDF_CHROMIUM_PATH`, ou `PUPPETEER_EXECUTABLE_PATH`) :
  *   `puppeteer-core` ne télécharge rien. Absent → `DocumentRenderError{reason:"unavailable"}`.
  * - Navigateur lancé à la première demande puis réutilisé (relancé s'il se déconnecte).
+ * - Connexion par pipe (`pipe: true`) et non WebSocket : Chromium (lancé détaché par Puppeteer)
+ *   se termine dès que le processus Node meurt, même tué par SIGKILL (ex. arrêt du `webServer`
+ *   Playwright), au lieu de rester orphelin.
  * - Une page par rendu : JavaScript désactivé, toute requête réseau bloquée (seuls `data:` et
  *   `about:` passent), délai borné (`PDF_RENDER_TIMEOUT_MS`, défaut 15 s).
  * - `--no-sandbox` par défaut (CI / conteneurs sans espaces de noms) ; `PDF_CHROMIUM_SANDBOX=1`
@@ -27,11 +30,16 @@ const isTimeout = (cause: unknown) => cause instanceof Error && cause.name === "
 
 let browserPromise: Promise<Browser> | null = null;
 
+/** Options de lancement (exportées pour les tests). */
+export const pdfLaunchOptions = (executablePath: string, env: Record<string, string | undefined> = process.env) => {
+  const args = ["--disable-gpu", "--disable-dev-shm-usage", "--font-render-hinting=none"];
+  if (env.PDF_CHROMIUM_SANDBOX !== "1") args.push("--no-sandbox", "--disable-setuid-sandbox");
+  return { executablePath, headless: true, pipe: true, args } as const;
+};
+
 const launch = async (executablePath: string): Promise<Browser> => {
   const { launch: launchBrowser } = await import("puppeteer-core");
-  const args = ["--disable-gpu", "--disable-dev-shm-usage", "--font-render-hinting=none"];
-  if (process.env.PDF_CHROMIUM_SANDBOX !== "1") args.push("--no-sandbox", "--disable-setuid-sandbox");
-  const browser = await launchBrowser({ executablePath, headless: true, args });
+  const browser = await launchBrowser(pdfLaunchOptions(executablePath));
   browser.on("disconnected", () => { browserPromise = null; });
   return browser;
 };
