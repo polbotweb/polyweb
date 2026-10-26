@@ -12,7 +12,7 @@ import { categoryFilterFromUrl } from "@/core/taxonomy";
 import { runOrThrow } from "@/lib/effect/run";
 import { productAdminResource } from "../admin/resource";
 import { SHOP_STATUSES, type ShopStatus } from "../domain/workflow";
-import { shop } from "../schema";
+import { products } from "../schema";
 import { shopCategoryTaxonomy } from "../taxonomy";
 
 export interface ShopAdminFilters {
@@ -36,9 +36,9 @@ const escapeLike = (value: string) => value.replace(/[\\%_]/g, (c) => "\\" + c);
 
 /** Conditions SQL (tenant + filtres) partagées par la liste, le total et les facettes. */
 export function shopAdminConditions(organizationId: string | null, filters: ShopAdminFilters): SQL[] {
-  const conditions: SQL[] = [organizationId === null ? isNull(shop.organizationId) : eq(shop.organizationId, organizationId)];
-  if (filters.search) conditions.push(ilike(shop.title, "%" + escapeLike(filters.search) + "%"));
-  if (filters.status) conditions.push(eq(shop.status, filters.status));
+  const conditions: SQL[] = [organizationId === null ? isNull(products.organizationId) : eq(products.organizationId, organizationId)];
+  if (filters.search) conditions.push(ilike(products.title, "%" + escapeLike(filters.search) + "%"));
+  if (filters.status) conditions.push(eq(products.status, filters.status));
   if (filters.categoryId) conditions.push(shopCategoryTaxonomy.filterCondition(organizationId, filters.categoryId));
   return conditions;
 }
@@ -51,10 +51,10 @@ export const shopAdminFacets = (organizationId: string | null, filters: ShopAdmi
       filterKey: "status",
       count: async (without) => {
         const rows = await getDrizzle()
-          .select({ value: shop.status, count: count() })
-          .from(shop)
+          .select({ value: products.status, count: count() })
+          .from(products)
           .where(and(...shopAdminConditions(organizationId, without)))
-          .groupBy(shop.status);
+          .groupBy(products.status);
         return rows.map((row) => ({ value: String(row.value), count: Number(row.count) }));
       },
     },

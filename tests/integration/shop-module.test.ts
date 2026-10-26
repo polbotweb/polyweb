@@ -4,7 +4,7 @@ import { inArray } from 'drizzle-orm';
 import { getDrizzle } from '@database/drizzle';
 import {
   productOptions, productOptionTranslations, productOptionValues, productOptionValueTranslations,
-  productTranslations, productVariantOptionValues, productVariants, shop,
+  productTranslations, productVariantOptionValues, productVariants, products,
 } from '@database/schemas';
 import { loadProductOptions, loadProductVariants, loadPublishedProductBySlug, loadPublishedProducts } from '@/modules/shop/loaders';
 import { shopModule } from '@/modules/shop/module';
@@ -14,10 +14,10 @@ const ids: string[] = [];
 
 beforeAll(async () => {
   const db = getDrizzle();
-  const rows = await db.insert(shop).values([
+  const rows = await db.insert(products).values([
     { slug: `${tag}-pub`, title: 'Pub', status: 'PUBLISHED', publishedAt: new Date() },
     { slug: `${tag}-draft`, title: 'Draft', status: 'DRAFT' },
-  ]).returning({ id: shop.id });
+  ]).returning({ id: products.id });
   ids.push(...rows.map((r) => r.id));
   await db.insert(productTranslations).values([
     { productId: ids[0], locale: 'fr', title: 'T-shirt', slug: `${tag}-tshirt`, content: 'Coton' },
@@ -26,7 +26,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  if (ids.length) await getDrizzle().delete(shop).where(inArray(shop.id, ids));
+  if (ids.length) await getDrizzle().delete(products).where(inArray(products.id, ids));
 });
 
 describe('module shop', () => {

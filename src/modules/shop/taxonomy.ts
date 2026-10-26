@@ -4,7 +4,7 @@
  * Actions : `shop.categories.*` (gardes tenant-aware, permission `shop:update`).
  */
 import { defineCategoryTaxonomy, registerCategoryTaxonomy } from "@/core/taxonomy/categories";
-import { shop, productCategories, productCategoryLinks, productCategoryTranslations } from "./schema";
+import { products, productCategories, productCategoryLinks, productCategoryTranslations } from "./schema";
 
 export const shopCategoryTaxonomy = registerCategoryTaxonomy(defineCategoryTaxonomy({
   resourceType: "shop",
@@ -13,5 +13,5 @@ export const shopCategoryTaxonomy = registerCategoryTaxonomy(defineCategoryTaxon
   links: productCategoryLinks,
   linkResourceKey: "productId",
   linkCategoryKey: "categoryId",
-  content: shop,
+  content: products,
 }));

@@ -8,7 +8,7 @@ import type { ActionAPIContext } from "astro:actions";
 import { eq } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { requireTenantPermission, requireTenantResourcePermission } from "@/lib/effect/action";
-import { shop } from "../schema";
+import { products } from "../schema";
 
 export type ShopPermission = "create" | "read" | "update" | "publish" | "delete";
 
@@ -19,5 +19,5 @@ export const requireShopPermission = (context: ActionAPIContext, permissions: re
 /** Élément existant : son organisation est lue en base (introuvable → NOT_FOUND) avant la garde tenant. */
 export const requireShopResourcePermission = (context: ActionAPIContext, permissions: readonly ShopPermission[], id: string) =>
   requireTenantResourcePermission(context, { "shop": [...permissions] }, () =>
-    getDrizzle().select({ organizationId: shop.organizationId }).from(shop).where(eq(shop.id, id)).limit(1),
+    getDrizzle().select({ organizationId: products.organizationId }).from(products).where(eq(products.id, id)).limit(1),
   );
