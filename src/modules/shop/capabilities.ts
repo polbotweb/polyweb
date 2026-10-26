@@ -9,10 +9,10 @@ import type { PolywebModuleCapabilityProviders } from "@/core/modules/module-con
  */
 export const shopCapabilityProviders = {
   content: "shop",
-  media: "media_files (shop_products.cover_image_id)",
+  media: "media_files (products.cover_image_id)",
   localization: "product_translations",
   taxonomy: "product_categories (core/taxonomy, shopCategoryTaxonomy)",
   publication: "shopWorkflow",
-  revisions: "shop_revisions",
-  locks: "shop_locks",
+  revisions: "product_revisions",
+  locks: "product_locks",
 } as unknown as PolywebModuleCapabilityProviders;

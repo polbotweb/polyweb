@@ -201,9 +201,12 @@ Every admin list above exposes a "category" facet (`categoryId` query parameter,
 `pnpm module:new <domain> --taxonomy` scaffolds the three tables, `taxonomy.ts`, the `taxonomy` capability, the
 `categories` actions, the resource filter and the loader filter/condition/facet; without the flag nothing is generated.
 
-Existing modules keep their table names (no rename): `events`, `formations` and `courses` already match their
-pluralized entity; renaming the Shop tables (`shop_products` / `shop_revisions` / `shop_locks`, Drizzle const `shop`, → `products` / `product_revisions` / `product_locks`) is only a proposal
-(foreign keys, lock store and migrations involved — not trivially safe).
+`events`, `formations` and `courses` already match their pluralized entity. The Shop tables were renamed by
+migration `0027_rename_shop_tables.sql` (non-destructive `ALTER TABLE … RENAME`, primary keys, indexes, unique and
+foreign-key constraints renamed, no data copied or dropped): `shop_products` / `shop_revisions` / `shop_locks` →
+`products` / `product_revisions` / `product_locks` (Drizzle consts `products` / `productRevisions` / `productLocks`).
+Revisions and locks use the `product_` prefix like the other Shop tables (`product_translations`, `product_variants`,
+`product_categories`…); the module id, permission namespace, lock resource and i18n keys stay `shop`.
 
 `tests/unit/scripts/new-module.test.ts` generates a module inside the repository (ignored `tmp*` folder), runs
 `tsc --noEmit` on every generated TypeScript file against the real core code, and imports `module.ts` so the

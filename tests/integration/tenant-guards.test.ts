@@ -21,7 +21,7 @@ import { member, organization, user } from '@database/schemas';
 import { events } from '@/modules/events/schema';
 import { formations } from '@/modules/formations/schema';
 import { courses } from '@/modules/courses/schema';
-import { shop } from '@/modules/shop/schema';
+import { products } from '@/modules/shop/schema';
 import { eventsActions } from '@/modules/events/actions';
 import { formationsActions } from '@/modules/formations/actions';
 import { coursesActions } from '@/modules/courses/actions';
@@ -45,7 +45,7 @@ const modules = [
   { name: 'events', table: events, actions: eventsActions },
   { name: 'formations', table: formations, actions: formationsActions },
   { name: 'courses', table: courses, actions: coursesActions },
-  { name: 'shop', table: shop, actions: shopActions },
+  { name: 'shop', table: products, actions: shopActions },
 ] as const;
 
 beforeAll(async () => {
