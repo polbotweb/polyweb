@@ -24,7 +24,8 @@ export const taxModule: PolywebModuleDefinition = {
   entity: "tax-rate",
   capabilities: defineModuleCapabilities({
     content: true,
-    localization: true,
+    // Pas de contenu traduisible : les libellés et mentions légales sont en i18n (code).
+    localization: false,
     media: false,
     seo: false,
     taxonomy: false,

@@ -19,6 +19,7 @@ import { ActionFailure, actionTry, effectHandler } from "@/lib/effect/action";
 import { requireTaxPermission, type TaxPermission } from "../permissions";
 import { tax, taxRateRevisions } from "../schema";
 import { taxLock } from "../locks";
+import { taxRevisionValues } from "../services/tax-rate.service";
 import { taxWorkflow, type TaxStatus } from "../domain/workflow";
 
 type Row = typeof tax.$inferSelect;
@@ -36,7 +37,7 @@ const transition = (op: TaxBulkOperation): BulkOperationDefinition<Row, Tx, Acto
   validate: (row) => (canTransition(taxWorkflow, row.status, TARGET[op]) ? null : "Transition de statut invalide : " + row.status + " → " + TARGET[op] + "."),
   apply: async (tx, row, actor) => {
     await tx.update(tax).set({ status: TARGET[op] }).where(eq(tax.id, row.id));
-    await tx.insert(taxRateRevisions).values({ resourceId: row.id, authorId: actor.id, title: row.title, slug: row.slug, status: TARGET[op], note: "Action groupée : " + op });
+    await tx.insert(taxRateRevisions).values(taxRevisionValues(row, actor.id, "Action groupée : " + op, TARGET[op]));
   },
   auditAction: "BULK_ACTION",
   auditMetadata: (row) => ({ operation: op, from: row.status, to: TARGET[op] }),

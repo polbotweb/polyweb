@@ -204,6 +204,13 @@
       "when": 1793001461998,
       "tag": "0028_singular_aux_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793017644823,
+      "tag": "0029_tax_rates",
+      "breakpoints": true
     }
   ]
 }
