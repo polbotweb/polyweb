@@ -459,6 +459,7 @@ migrations/
   0027_rename_shop_tables.sql
   0028_singular_aux_tables.sql
   0029_tax_rates.sql
+  0030_document_sequences.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -486,6 +487,7 @@ migrations/
     0027_snapshot.json
     0028_snapshot.json
     0029_snapshot.json
+    0030_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -497,6 +499,7 @@ schemas/
   forms.schema.ts
   media.schema.ts
   navigation.schema.ts
+  numbering.schema.ts
   page-version.schema.ts
   page.schema.ts
   payments.schema.ts
@@ -637,6 +640,9 @@ schemas.ts
 **saved-views.schema.ts**
 - `admin_saved_views`: `id`, `userId`, `organizationId`, `resource`, `name`, `query`, `createdAt`, `updatedAt`
 
+**numbering.schema.ts**
+- `document_sequences`: `id`, `organizationId`, `key`, `period`, `lastValue`, `updatedAt`
+
 ### Migraciones
 
 - `0000_plain_old_lace.sql`
@@ -669,6 +675,7 @@ schemas.ts
 - `0027_rename_shop_tables.sql`
 - `0028_singular_aux_tables.sql`
 - `0029_tax_rates.sql`
+- `0030_document_sequences.sql`
 
 ### Comandos
 
@@ -847,6 +854,11 @@ money/
   vat.ts
 notifications/
   index.ts
+numbering/
+  errors.ts
+  format.ts
+  index.ts
+  service.ts
 permissions/
   tenant.ts
 plugins/
@@ -1313,7 +1325,6 @@ public/
 favicon.ico
 favicon.svg
 uploads/
-  images/
 ```
 
 ### Carga y procesamiento
