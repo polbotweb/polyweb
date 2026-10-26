@@ -25,7 +25,7 @@ export interface PrintDocumentShell {
 
 /** Retire les `url()` non `data:` (et les `@import`) du CSS injecté : aucune requête réseau possible. */
 export const sanitizePrintCss = (css: string) =>
-  css.replace(/@import[^;]*;/gi, "").replace(/url\(\s*(['"]?)(?!data:)[^)]*\)/gi, "none");
+  css.replace(/@import[^;]*;/gi, "").replace(/url\(\s*(?!['"]?data:)[^)]*\)/gi, "none");
 
 export const BASE_PRINT_CSS = `
 @page { size: A4; margin: 16mm 14mm; }
