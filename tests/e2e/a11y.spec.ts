@@ -201,6 +201,37 @@ test('axe: /fr/admin/purchasing (commandes, fournisseurs, réceptions) sans viol
   }
 });
 
+test('axe: /fr/admin/bookings (réservations, ressources, disponibilités) sans violation grave, titres et cibles', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Parcours admin : Chromium');
+  const { getDrizzle } = await import('../../src/database/drizzle');
+  const { bookings, bookingsResources } = await import('../../src/database/schemas');
+  const { eq } = await import('drizzle-orm');
+  const db = getDrizzle();
+  // Ressource (toute la semaine 08–20 UTC) et réservations (demandée + confirmée) insérées directement.
+  const suffix = Date.now().toString(36).toUpperCase().slice(-6);
+  const windows = [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, start: '08:00', end: '20:00' }));
+  const [resource] = await db.insert(bookingsResources).values({ code: `A11Y${suffix}`, name: `A11y salle ${suffix}`, capacity: 4, timezone: 'UTC', slotMinutes: 60, windows }).returning({ id: bookingsResources.id });
+  const start = new Date(Date.UTC(new Date().getUTCFullYear() + 1, 0, 11, 9));
+  const [requested] = await db.insert(bookings).values({ slug: `a11y-bk-${suffix.toLowerCase()}`, title: `A11y réservation ${suffix}`, status: 'REQUESTED', resourceId: resource!.id, startsAt: start, endsAt: new Date(start.getTime() + 3_600_000), customerName: `A11y client ${suffix}` }).returning({ id: bookings.id });
+  const [confirmed] = await db.insert(bookings).values({ slug: `a11y-bk2-${suffix.toLowerCase()}`, title: `A11y réservation confirmée ${suffix}`, number: `A11Y-RES-${suffix}`, status: 'CONFIRMED', resourceId: resource!.id, startsAt: new Date(start.getTime() + 7_200_000), endsAt: new Date(start.getTime() + 10_800_000), customerName: `A11y client 2 ${suffix}`, confirmedAt: new Date() }).returning({ id: bookings.id });
+  try {
+    await signInAsAdmin(page);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const day = start.toISOString().slice(0, 10);
+    const paths = ['/fr/admin/bookings', '/fr/admin/bookings/new', `/fr/admin/bookings/${requested!.id}`, `/fr/admin/bookings/${requested!.id}/edit`, `/fr/admin/bookings/${confirmed!.id}`, '/fr/admin/bookings/resources', `/fr/admin/bookings/resources/${resource!.id}?date=${day}`, `/ar/admin/bookings/${confirmed!.id}`, `/ar/admin/bookings/resources/${resource!.id}?date=${day}`];
+    for (const path of paths) {
+      await page.goto(path, { waitUntil: 'networkidle' });
+      const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+      const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${path} ${v.id}: ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(' | ')}`);
+      const structure = await structureViolations(page);
+      expect([...serious, ...structure], [...serious, ...structure].join('\n')).toEqual([]);
+    }
+  } finally {
+    await db.delete(bookings).where(eq(bookings.resourceId, resource!.id));
+    await db.delete(bookingsResources).where(eq(bookingsResources.id, resource!.id));
+  }
+});
+
 /**
  * WCAG 2.5.5 (AAA, approuvé) : les commandes icônes de l'admin navigation font
  * au moins 44 × 44 px (axe ne vérifie que le seuil AA de 24 px).

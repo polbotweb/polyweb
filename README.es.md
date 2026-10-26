@@ -196,6 +196,8 @@ blog/
   comments/
   grids/
   sidebars/
+bookings/
+  admin/
 content/
   ContentEditor.astro
   RichContent.astro
@@ -475,6 +477,7 @@ migrations/
   0033_logistics.sql
   0034_purchasing.sql
   0035_purchasing_deferred_fks.sql
+  0036_bookings.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -508,6 +511,7 @@ migrations/
     0033_snapshot.json
     0034_snapshot.json
     0035_snapshot.json
+    0036_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -701,6 +705,7 @@ schemas.ts
 - `0033_logistics.sql`
 - `0034_purchasing.sql`
 - `0035_purchasing_deferred_fks.sql`
+- `0036_bookings.sql`
 
 ### Comandos
 
@@ -901,6 +906,8 @@ preview/
   index.ts
 revision/
   index.ts
+scheduling/
+  index.ts
 search/
   contract.ts
   index.ts
@@ -958,6 +965,38 @@ blog/
     index.ts
   validation/
     index.ts
+bookings/
+  actions/
+    bulk.ts
+    index.ts
+  admin/
+    resource.ts
+  capabilities.ts
+  client/
+    forms.ts
+    init.ts
+    record-actions.ts
+    slots.ts
+  domain/
+    booking.ts
+    errors.ts
+    numbering.ts
+    resource.ts
+    workflow.ts
+  i18n/
+    index.ts
+  loaders/
+    booking-admin.loader.ts
+    bookings.loader.ts
+    index.ts
+  locks.ts
+  module.ts
+  permissions/
+    index.ts
+  schema/
+    index.ts
+  services/
+    bookings.service.ts
 content/
   domain/
     content-types.ts
@@ -1316,6 +1355,7 @@ src/pages/
   admin/
     audit.astro
     blog/
+    bookings/
     crm/
     index.astro
     logistics/
