@@ -1,0 +1,57 @@
+---
+/** Back-office plateforme : fiche société — coordonnées, contacts, opportunités, activités. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Button } from "@atoms/button";
+import { requirePermission } from "@lib/auth-guards";
+import { formatMoney, isCurrencyCode } from "@/core/money";
+import CrmActivities from "@/components/crm/admin/CrmActivities.astro";
+import { contactDisplayName } from "@/modules/crm/domain/contacts";
+import { getCrmTranslations } from "@/modules/crm/i18n";
+import { hasCrmPermission } from "@/modules/crm/permissions";
+import { loadCompany } from "@/modules/crm/loaders";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { crm: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getCrmTranslations(locale);
+const crmBase = `/${locale}/admin/crm`;
+const base = `${crmBase}/companies`;
+const r = await loadCompany(Astro.params.id ?? "", null);
+if (!r) return new Response(null, { status: 404 });
+const [canUpdate, canDelete] = await Promise.all([hasCrmPermission(Astro, ["update"]), hasCrmPermission(Astro, ["delete"])]);
+const money = (minor: number, currency: string) => (isCurrencyCode(currency) ? formatMoney({ amountMinor: minor, currency }, locale) : `${minor} ${currency}`);
+const details = (["email", "phone", "website", "country", "vatNumber", "address", "notes"] as const).filter((k) => r[k]);
+---
+<BaseLayout title={r.name} description={t.meta.description}>
+  <AuthLayout title={r.name}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="crm" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8" data-crm-record data-kind="company" data-id={r.id} data-list-url={base}>
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold" data-testid="crm-heading">{r.name}</h1>
+        <div class="flex flex-wrap gap-2">
+          {canUpdate && <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${base}/${r.id}/edit`}>{t.admin.edit}</a>}
+          {canDelete && <Button type="button" variant="outline" data-crm-op="delete" data-confirm={`${t.admin.delete} — ${r.name} ?`}>{t.admin.delete}</Button>}
+          <a class="inline-flex min-h-11 items-center px-3 underline" href={base}>{t.admin.companies}</a>
+        </div>
+      </div>
+      <p class="text-sm text-destructive" role="alert" tabindex="-1" data-crm-error hidden></p>
+      {details.length > 0 && <dl class="grid gap-3 sm:grid-cols-3">{details.map((k) => <div><dt class="text-sm text-muted-foreground">{t.fields[k]}</dt><dd class="whitespace-pre-line">{r[k]}</dd></div>)}</dl>}
+      <section class="flex flex-col gap-3" aria-labelledby="crm-contacts-heading">
+        <h2 id="crm-contacts-heading" class="text-lg font-semibold">{t.admin.contacts}</h2>
+        {r.contacts.length === 0 ? <p class="text-sm text-muted-foreground">{t.admin.noContacts}</p> : (
+          <ul class="flex flex-col gap-1">{r.contacts.map((c) => <li><a class="underline" href={`${crmBase}/contacts/${c.id}`}>{contactDisplayName(c)}</a>{c.jobTitle && <span> — {c.jobTitle}</span>}</li>)}</ul>
+        )}
+      </section>
+      <section class="flex flex-col gap-3" aria-labelledby="crm-opps-heading">
+        <h2 id="crm-opps-heading" class="text-lg font-semibold">{t.admin.list}</h2>
+        {r.opportunities.length === 0 ? <p class="text-sm text-muted-foreground">{t.admin.empty}</p> : (
+          <ul class="flex flex-col gap-1" data-testid="crm-related-opportunities">{r.opportunities.map((o) => <li><a class="underline" href={`${crmBase}/${o.id}`}>{o.title}</a> — {t.stages[o.status]} — {money(o.amountMinor, o.currency)}</li>)}</ul>
+        )}
+      </section>
+      <CrmActivities locale={locale} activities={r.activities} target={{ companyId: r.id }} canUpdate={canUpdate} canDelete={canDelete} />
+    </main>
+  </AuthLayout>
+</BaseLayout>

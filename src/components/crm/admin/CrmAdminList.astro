@@ -1,0 +1,74 @@
+---
+/**
+ * Liste back-office des opportunités : facettes par étape, vues enregistrées
+ * (ressource « crm-opportunity »), barre d'actions groupées générique (qualify / lose).
+ */
+import AdminFacets from "@organisms/AdminFacets.astro";
+import AdminSavedViews from "@organisms/AdminSavedViews.astro";
+import AdminBulkBar from "@organisms/AdminBulkBar.astro";
+import { canonicalListQuery, facetLinks, type FacetBucket } from "@/core/filters";
+import type { AdminBulkBarOperation } from "@/core/bulk/ui";
+import { formatBulk, getBulkUiTranslations } from "@/core/bulk/i18n";
+import type { Locale } from "@i18n/config";
+import { formatMoney, isCurrencyCode } from "@/core/money";
+import { opportunityAdminResource } from "@/modules/crm/admin/resource";
+import type { CrmStage } from "@/modules/crm/domain/workflow";
+import { getCrmTranslations } from "@/modules/crm/i18n";
+
+interface Props {
+  items: Array<{ id: string; title: string; status: CrmStage; companyName: string | null; amountMinor: number; currency: string; probability: number | null; expectedCloseDate: string | null }>;
+  locale: Locale;
+  viewBaseUrl?: string;
+  organizationId?: string | null;
+  bulkOperations?: AdminBulkBarOperation[];
+  baseUrl?: URL;
+  facets?: Record<string, readonly FacetBucket[]>;
+  savedViews?: readonly { id: string; name: string; query: string }[];
+}
+
+const { items, locale, viewBaseUrl = "", organizationId = null, bulkOperations = [], baseUrl, facets = {}, savedViews = [] } = Astro.props as Props;
+const t = getCrmTranslations(locale);
+const bulkT = getBulkUiTranslations(locale);
+const bulkEnabled = bulkOperations.length > 0;
+const listDefinition = opportunityAdminResource.list!;
+const listBaseUrl = baseUrl?.pathname ?? "";
+const currentQuery = baseUrl ? canonicalListQuery(listDefinition, baseUrl.searchParams) : "";
+const facetGroups = baseUrl ? [{ id: "status", label: t.admin.facetStatus, links: facetLinks(listDefinition, currentQuery, "status", facets.status ?? [], listBaseUrl, (value) => t.stages[value as CrmStage] ?? value) }] : [];
+const money = (minor: number, currency: string) => (isCurrencyCode(currency) ? formatMoney({ amountMinor: minor, currency }, locale) : `${minor} ${currency}`);
+const hasFilters = [...new URLSearchParams(currentQuery).keys()].some((key) => key !== "sortBy" && key !== "sortOrder" && key !== "page");
+---
+
+{baseUrl && (
+  <>
+    <AdminFacets locale={locale} groups={facetGroups} clearHref={hasFilters ? listBaseUrl : null} />
+    <AdminSavedViews locale={locale} resource="crm-opportunity" organizationId={organizationId} views={savedViews} baseUrl={listBaseUrl} currentQuery={currentQuery} />
+  </>
+)}
+
+<AdminBulkBar action="crm.bulk" locale={locale} organizationId={organizationId} operations={bulkOperations}>
+  <div class="flex flex-col gap-4">
+    {items.length === 0 ? (
+      <p class="text-sm text-muted-foreground">{t.admin.empty}</p>
+    ) : (
+      <>
+        {bulkEnabled && <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" class="size-6" data-bulk-page />{bulkT.selectPage}</label>}
+        <ul class="flex flex-col gap-2" aria-label={t.admin.listLabel} data-testid="crm-opportunity-list">
+          {items.map((item) => (
+            <li class="flex flex-wrap items-center justify-between gap-3 border px-4 py-3" data-crm-opportunity={item.id}>
+              {bulkEnabled ? (
+                <label class="flex min-h-11 items-center gap-2"><input type="checkbox" class="size-6" data-bulk-item value={item.id} aria-label={formatBulk(bulkT.selectRow, { title: item.title })} /><span class="font-medium">{item.title}</span></label>
+              ) : <span class="font-medium">{item.title}</span>}
+              <dl class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                <div class="flex gap-1"><dt class="text-muted-foreground">{t.fields.company}</dt><dd>{item.companyName ?? t.admin.none}</dd></div>
+                <div class="flex gap-1"><dt class="text-muted-foreground">{t.fields.amount}</dt><dd>{money(item.amountMinor, item.currency)}</dd></div>
+                {item.expectedCloseDate && <div class="flex gap-1"><dt class="text-muted-foreground">{t.fields.expectedCloseDate}</dt><dd>{item.expectedCloseDate}</dd></div>}
+                <div class="flex gap-1"><dt class="text-muted-foreground">{t.fields.status}</dt><dd data-status>{t.stages[item.status]}</dd></div>
+              </dl>
+              {viewBaseUrl && <a class="inline-flex min-h-11 items-center px-3 underline" href={`${viewBaseUrl}/${item.id}`} aria-label={`${t.admin.view} — ${item.title}`}>{t.admin.view}</a>}
+            </li>
+          ))}
+        </ul>
+      </>
+    )}
+  </div>
+</AdminBulkBar>

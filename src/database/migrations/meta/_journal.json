@@ -225,6 +225,13 @@
       "when": 1793022683314,
       "tag": "0031_sales_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793028131787,
+      "tag": "0032_crm",
+      "breakpoints": true
     }
   ]
 }

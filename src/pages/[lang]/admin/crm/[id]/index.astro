@@ -1,0 +1,102 @@
+---
+/**
+ * Back-office plateforme : fiche d'une opportunité — chiffres, transitions d'étape (motif de
+ * perte obligatoire), devis lié, activités. Comportements : `modules/crm/client` (`[data-crm-record]`).
+ */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Button } from "@atoms/button";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import { requirePermission } from "@lib/auth-guards";
+import { formatMoney, isCurrencyCode } from "@/core/money";
+import CrmActivities from "@/components/crm/admin/CrmActivities.astro";
+import { contactDisplayName } from "@/modules/crm/domain/contacts";
+import { effectiveProbability, weightedAmountMinor } from "@/modules/crm/domain/opportunity";
+import { isOpenStage, LOST_REASONS, nextStages } from "@/modules/crm/domain/workflow";
+import { getCrmTranslations } from "@/modules/crm/i18n";
+import { loadOpportunity, loadQuoteOptions } from "@/modules/crm/loaders";
+import { hasCrmPermission } from "@/modules/crm/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { crm: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getCrmTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/crm`;
+const o = await loadOpportunity(Astro.params.id ?? "", null);
+if (!o) return new Response(null, { status: 404 });
+const [canUpdate, canDelete] = await Promise.all([hasCrmPermission(Astro, ["update"]), hasCrmPermission(Astro, ["delete"])]);
+const quotes = canUpdate ? await loadQuoteOptions(null) : [];
+const open = isOpenStage(o.status);
+const targets = canUpdate ? nextStages(o.status) : [];
+const money = (minor: number, currency: string) => (isCurrencyCode(currency) ? formatMoney({ amountMinor: minor, currency }, locale) : `${minor} ${currency}`);
+const figures = { stage: o.status, amountMinor: o.amountMinor, currency: o.currency, probability: o.probability };
+const targetLabel = (to: (typeof targets)[number]) => (to === "WON" ? t.actions.win : to === "LOST" ? t.actions.lose : !open ? t.actions.reopen : `${t.actions.moveTo} ${t.stages[to]}`);
+---
+<BaseLayout title={o.title} description={t.meta.description}>
+  <AuthLayout title={o.title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="crm" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8" data-crm-record data-kind="opportunity" data-id={o.id} data-list-url={baseAdminUrl}>
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-semibold" data-testid="crm-heading">{o.title}</h1>
+          <p class="text-muted-foreground">{t.fields.status} : <span data-testid="crm-status">{t.stages[o.status]}</span></p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          {canUpdate && open && <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/${o.id}/edit`}>{t.admin.edit}</a>}
+          {canDelete && <Button type="button" variant="outline" data-crm-op="delete" data-confirm={`${t.admin.delete} — ${o.title} ?`}>{t.admin.delete}</Button>}
+          <a class="inline-flex min-h-11 items-center px-3 underline" href={baseAdminUrl}>{t.admin.back}</a>
+        </div>
+      </div>
+      <p class="text-sm text-destructive" role="alert" tabindex="-1" data-crm-error hidden></p>
+      {!open && <p class="text-sm">{t.admin.closedNote}</p>}
+
+      <dl class="grid gap-3 sm:grid-cols-3">
+        <div><dt class="text-sm text-muted-foreground">{t.fields.amount}</dt><dd class="font-semibold">{money(o.amountMinor, o.currency)}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.probability}</dt><dd>{effectiveProbability(figures)} %</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.summary.forecast}</dt><dd>{money(weightedAmountMinor(figures), o.currency)}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.company}</dt><dd>{o.company ? <a class="underline" href={`${baseAdminUrl}/companies/${o.company.id}`}>{o.company.name}</a> : t.admin.none}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.contact}</dt><dd>{o.contact ? <a class="underline" href={`${baseAdminUrl}/contacts/${o.contact.id}`}>{contactDisplayName(o.contact)}</a> : t.admin.none}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.fields.expectedCloseDate}</dt><dd>{o.expectedCloseDate ?? t.admin.none}</dd></div>
+        {o.lostReason && <div><dt class="text-sm text-muted-foreground">{t.fields.lostReason}</dt><dd>{t.lostReasons[o.lostReason]}</dd></div>}
+        {o.notes && <div class="sm:col-span-3"><dt class="text-sm text-muted-foreground">{t.fields.notes}</dt><dd class="whitespace-pre-line">{o.notes}</dd></div>}
+      </dl>
+
+      {targets.length > 0 && (
+        <section class="flex flex-col gap-3" aria-labelledby="crm-stage-heading">
+          <h2 id="crm-stage-heading" class="text-lg font-semibold">{t.fields.status}</h2>
+          {targets.includes("LOST") && (
+            <div class="grid max-w-xs gap-2"><Label for="crm-lost-reason">{t.fields.lostReason}</Label>
+              <NativeSelect id="crm-lost-reason" name="lostReason">{LOST_REASONS.map((r) => <NativeSelectOption value={r}>{t.lostReasons[r]}</NativeSelectOption>)}</NativeSelect>
+            </div>
+          )}
+          <div class="flex flex-wrap gap-2">
+            {targets.map((to) => <Button type="button" variant={to === "WON" ? "default" : "outline"} data-crm-op="transition" data-to={to} data-testid={`crm-to-${to}`}>{targetLabel(to)}</Button>)}
+          </div>
+        </section>
+      )}
+
+      <section class="flex flex-col gap-3" aria-labelledby="crm-quote-heading">
+        <h2 id="crm-quote-heading" class="text-lg font-semibold">{t.fields.quote}</h2>
+        {o.quote ? (
+          <p><a class="underline" href={`/${locale}/admin/sales/${o.quote.id}`} data-testid="crm-linked-quote">{o.quote.number ?? o.quote.id}</a> — {money(o.quote.grossMinor, o.quote.currency)}</p>
+        ) : <p class="text-sm text-muted-foreground">{t.admin.none}</p>}
+        {canUpdate && open && (
+          <div class="flex flex-wrap items-end gap-2">
+            {quotes.length > 0 && (
+              <div class="grid gap-2"><Label for="crm-quote">{t.actions.linkQuote}</Label>
+                <NativeSelect id="crm-quote" name="quoteId">{quotes.map((q) => <NativeSelectOption value={q.id} selected={o.quoteId === q.id}>{q.number ?? q.title}</NativeSelectOption>)}</NativeSelect>
+              </div>
+            )}
+            {quotes.length > 0 && <Button type="button" variant="outline" data-crm-op="link-quote">{t.actions.linkQuote}</Button>}
+            {o.quote && <Button type="button" variant="outline" data-crm-op="unlink-quote">{t.actions.unlinkQuote}</Button>}
+          </div>
+        )}
+      </section>
+
+      <CrmActivities locale={locale} activities={o.activities} target={{ opportunityId: o.id }} canUpdate={canUpdate} canDelete={canDelete} />
+    </main>
+  </AuthLayout>
+</BaseLayout>

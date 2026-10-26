@@ -103,6 +103,36 @@ test('axe: /fr/admin/sales (liste, nouveau, détail) sans violation grave, titre
   }
 });
 
+test('axe: /fr/admin/crm (pipeline, fiches, formulaires) sans violation grave, titres et cibles', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Parcours admin : Chromium');
+  const { getDrizzle } = await import('../../src/database/drizzle');
+  const { crm, crmActivities, crmCompanies, crmContacts } = await import('../../src/database/schemas');
+  const { eq } = await import('drizzle-orm');
+  const db = getDrizzle();
+  // Société, contact, opportunité ouverte et activité insérés directement.
+  const suffix = Date.now().toString(36);
+  const [company] = await db.insert(crmCompanies).values({ name: `A11y société ${suffix}`, country: 'FR' }).returning({ id: crmCompanies.id });
+  const [contact] = await db.insert(crmContacts).values({ companyId: company!.id, firstName: 'Ada', lastName: `A11y ${suffix}`, dedupKey: `a11y-${suffix}` }).returning({ id: crmContacts.id });
+  const [opp] = await db.insert(crm).values({ slug: `a11y-${suffix}`, title: `A11y opportunité ${suffix}`, status: 'PROPOSAL', companyId: company!.id, contactId: contact!.id, amountMinor: 250000, currency: 'EUR' }).returning({ id: crm.id });
+  await db.insert(crmActivities).values({ opportunityId: opp!.id, kind: 'call', subject: 'Appel A11y' });
+  try {
+    await signInAsAdmin(page);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const paths = ['/fr/admin/crm', '/fr/admin/crm/new', `/fr/admin/crm/${opp!.id}`, `/fr/admin/crm/${opp!.id}/edit`, '/fr/admin/crm/companies', `/fr/admin/crm/companies/${company!.id}`, '/fr/admin/crm/contacts/new', `/fr/admin/crm/contacts/${contact!.id}`, `/ar/admin/crm/${opp!.id}`, '/ar/admin/crm'];
+    for (const path of paths) {
+      await page.goto(path, { waitUntil: 'networkidle' });
+      const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+      const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${path} ${v.id}: ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(' | ')}`);
+      const structure = await structureViolations(page);
+      expect([...serious, ...structure], [...serious, ...structure].join('\n')).toEqual([]);
+    }
+  } finally {
+    await db.delete(crm).where(eq(crm.id, opp!.id));
+    await db.delete(crmCompanies).where(eq(crmCompanies.id, company!.id));
+    await db.delete(crmContacts).where(eq(crmContacts.id, contact!.id));
+  }
+});
+
 /**
  * WCAG 2.5.5 (AAA, approuvé) : les commandes icônes de l'admin navigation font
  * au moins 44 × 44 px (axe ne vérifie que le seuil AA de 24 px).

@@ -1,0 +1,30 @@
+---
+/** Synthèse du pipeline par devise : en cours, prévision pondérée, gagné, taux de réussite, et compte par étape. */
+import type { Locale } from "@i18n/config";
+import { formatMoney, isCurrencyCode } from "@/core/money";
+import type { PipelineSummary } from "@/modules/crm/domain/opportunity";
+import { getCrmTranslations } from "@/modules/crm/i18n";
+
+interface Props { summaries: readonly PipelineSummary[]; locale: Locale; listUrl: string }
+const { summaries, locale, listUrl } = Astro.props as Props;
+const t = getCrmTranslations(locale);
+const money = (minor: number, currency: string) => (isCurrencyCode(currency) ? formatMoney({ amountMinor: minor, currency }, locale) : `${minor} ${currency}`);
+---
+<section class="flex flex-col gap-4" aria-labelledby="crm-pipeline-heading" data-testid="crm-pipeline">
+  <h2 id="crm-pipeline-heading" class="text-lg font-semibold">{t.admin.pipeline}</h2>
+  {summaries.length === 0 ? <p class="text-sm text-muted-foreground">{t.admin.empty}</p> : summaries.map((summary) => (
+    <div class="flex flex-col gap-3 border p-4" data-currency={summary.currency}>
+      <dl class="grid gap-3 sm:grid-cols-4">
+        <div><dt class="text-sm text-muted-foreground">{t.summary.open} ({summary.currency})</dt><dd class="text-lg font-semibold" data-summary-open>{money(summary.openAmountMinor, summary.currency)}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.summary.forecast}</dt><dd class="text-lg font-semibold" data-summary-forecast>{money(summary.forecastMinor, summary.currency)}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.summary.won}</dt><dd class="text-lg font-semibold">{money(summary.wonAmountMinor, summary.currency)}</dd></div>
+        <div><dt class="text-sm text-muted-foreground">{t.summary.winRate}</dt><dd class="text-lg font-semibold">{summary.winRate === null ? t.admin.none : `${summary.winRate} %`}</dd></div>
+      </dl>
+      <ol class="flex flex-wrap gap-2" aria-label={t.admin.pipeline}>
+        {summary.stages.map((stage) => (
+          <li><a class="inline-flex min-h-11 items-center gap-2 rounded-md border px-3 text-sm" href={`${listUrl}?status=${stage.stage}`}><span>{t.stages[stage.stage]}</span><span class="font-semibold">{stage.count}</span><span class="text-muted-foreground">{money(stage.amountMinor, summary.currency)}</span></a></li>
+        ))}
+      </ol>
+    </div>
+  ))}
+</section>
