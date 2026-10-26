@@ -40,7 +40,7 @@ const duration = b ? durationMinutes({ start: b.startsAt, end: b.endsAt }) : (cu
     <p id={`${p}-tz`} class="text-sm text-muted-foreground sm:col-span-3">{t.admin.timesIn}</p>
     <div class="flex flex-col gap-2 sm:col-span-3" data-bookings-slots data-empty={t.admin.noSlots}>
       <div><Button type="button" variant="outline" data-show-slots>{t.admin.showSlots}</Button></div>
-      <p class="text-sm text-muted-foreground" role="status" data-slot-status></p>
+      <output class="text-sm text-muted-foreground" aria-live="polite" data-slot-status></output>
       <ul class="flex flex-wrap gap-2" aria-label={t.admin.availability} data-slot-list data-testid="bookings-slots"></ul>
     </div>
     <div class="grid gap-2"><Label for={`${p}-customer`}>{t.fields.customerName}</Label><Input id={`${p}-customer`} name="customerName" required maxlength={200} autocomplete="name" value={b?.customerName ?? ""} /></div>
