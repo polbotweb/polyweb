@@ -32,6 +32,7 @@ import { resolveServiceInternalLink } from "./services/internal-link";
 import { eventsActions } from "@/modules/events/actions";
 import { shopActions } from "@/modules/shop/actions";
 import { taxActions } from "@/modules/tax/actions";
+import { salesActions } from "@/modules/sales/actions";
 import { coursesActions } from "@/modules/courses/actions";
 import { formationsActions } from "@/modules/formations/actions";
 
@@ -51,6 +52,7 @@ export const server = {
   events: eventsActions,
   shop: shopActions,
   tax: taxActions,
+  sales: salesActions,
   courses: coursesActions,
   formations: formationsActions,
 };

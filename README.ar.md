@@ -249,6 +249,10 @@ platform/
   EntryView.astro
   FieldInput.astro
   FieldsEditor.astro
+sales/
+  SalesCard.astro
+  SalesDetail.astro
+  admin/
 seo/
   JsonLd.astro
   SEOHead.astro
@@ -460,6 +464,7 @@ migrations/
   0028_singular_aux_tables.sql
   0029_tax_rates.sql
   0030_document_sequences.sql
+  0031_sales_documents.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -488,6 +493,7 @@ migrations/
     0028_snapshot.json
     0029_snapshot.json
     0030_snapshot.json
+    0031_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -676,6 +682,7 @@ schemas.ts
 - `0028_singular_aux_tables.sql`
 - `0029_tax_rates.sql`
 - `0030_document_sequences.sql`
+- `0031_sales_documents.sql`
 
 ### الأوامر
 
@@ -817,6 +824,11 @@ crud/
   contract.ts
   engine.ts
   introspect.ts
+documents/
+  errors.ts
+  html.ts
+  index.ts
+  renderer.ts
 engagement/
   index.ts
 events/
@@ -1024,6 +1036,43 @@ payments/
     transitions.ts
   index.ts
   module.ts
+sales/
+  actions/
+    bulk.ts
+    index.ts
+  admin/
+    resource.ts
+  capabilities.ts
+  client/
+    document-actions.ts
+    document-form.ts
+    init.ts
+  documents/
+    index.ts
+    pdf.ts
+    template.ts
+  domain/
+    credit.ts
+    errors.ts
+    lines.ts
+    numbering.ts
+    payments.ts
+    reminders.ts
+    workflow.ts
+  i18n/
+    index.ts
+  loaders/
+    index.ts
+    salesDocument-admin.loader.ts
+    salesDocument.loader.ts
+  locks.ts
+  module.ts
+  permissions/
+    index.ts
+  schema/
+    index.ts
+  services/
+    salesDocument.service.ts
 services/
   actions/
     index.ts
@@ -1163,6 +1212,7 @@ src/pages/
     pages.astro
     platform/
     roles.astro
+    sales/
     services/
     site.astro
     stats.astro
@@ -1325,6 +1375,7 @@ public/
 favicon.ico
 favicon.svg
 uploads/
+  images/
 ```
 
 ### الرفع والمعالجة
@@ -1474,6 +1525,7 @@ utils.ts
 tests/
   a11y/
   e2e/
+  fixtures/
   helpers/
   integration/
   unit/

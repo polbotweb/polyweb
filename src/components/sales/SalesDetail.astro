@@ -1,0 +1,27 @@
+---
+/**
+ * Page de détail du domaine sales.
+ *
+ * La DTO arrive par props : la page a fait appel au loader. Ce composant se
+ * contente de composer les atomes de `molecules/`.
+ */
+import type { SalesDocumentDetail } from "@/modules/sales/loaders/salesDocument.loader";
+import SalesCard from "@/components/sales/SalesCard.astro";
+
+interface Props {
+  item: SalesDocumentDetail;
+}
+
+const { item } = Astro.props as Props;
+---
+
+<section class="flex flex-col gap-6">
+  <SalesCard id={item.id} title={item.number ?? item.title} href="#" />
+</section>
+
+<script>
+  import { initSales } from "@/modules/sales/client/init";
+
+  initSales();
+  document.addEventListener("astro:after-swap", initSales);
+</script>

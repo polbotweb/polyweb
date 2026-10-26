@@ -26,3 +26,4 @@ export * from "../modules/shop/schema";
 export * from "../modules/tax/schema";
 export * from "../modules/courses/schema";
 export * from "../modules/formations/schema";
+export * from "../modules/sales/schema";

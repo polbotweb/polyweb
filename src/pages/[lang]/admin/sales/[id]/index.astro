@@ -1,0 +1,143 @@
+---
+/**
+ * Back-office plateforme : fiche d'un document de vente — totaux figés, lignes, transitions
+ * manuelles, conversion du devis, avoir, relance, encaissements. Comportements :
+ * `modules/sales/client/document-actions.ts` (`[data-sales-document]`).
+ */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import { requirePermission } from "@lib/auth-guards";
+import { currencyExponent, formatMoney, isCurrencyCode } from "@/core/money";
+import { CREDITABLE_INVOICE_STATUSES } from "@/modules/sales/domain/credit";
+import { amountDue, PAYMENT_METHODS } from "@/modules/sales/domain/payments";
+import { isLocked, manualTargets, type SalesStatus } from "@/modules/sales/domain/workflow";
+import { getSalesTranslations } from "@/modules/sales/i18n";
+import { loadSalesDocument } from "@/modules/sales/loaders";
+import { hasSalesPermission } from "@/modules/sales/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { sales: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getSalesTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/sales`;
+const doc = await loadSalesDocument(Astro.params.id ?? "", null);
+if (!doc) return new Response(null, { status: 404 });
+const [canUpdate, canIssue, canPayment, canCreate] = await Promise.all([
+  hasSalesPermission(Astro, ["update"]),
+  hasSalesPermission(Astro, ["issue"]),
+  hasSalesPermission(Astro, ["payment"]),
+  hasSalesPermission(Astro, ["create"]),
+]);
+const money = (minor: number) => (isCurrencyCode(doc.currency) ? formatMoney({ amountMinor: minor, currency: doc.currency }, locale) : `${minor} ${doc.currency}`);
+const targetLabel: Partial<Record<SalesStatus, string>> = { SENT: t.actions.send, ACCEPTED: t.actions.accept, REJECTED: t.actions.reject, EXPIRED: t.actions.expire, ISSUED: t.actions.issue, CANCELLED: t.actions.cancel };
+const targets = manualTargets(doc.kind, doc.status).filter((to) => (to === "ISSUED" ? canIssue : canUpdate));
+const isInvoice = doc.kind === "invoice";
+const due = amountDue({ grossMinor: doc.grossMinor, paidMinor: doc.paidMinor, creditedMinor: doc.creditedMinor });
+const canRecordPayment = canPayment && isInvoice && (doc.status === "ISSUED" || doc.status === "PARTIALLY_PAID") && due > 0;
+const canRemind = canPayment && isInvoice && (doc.status === "ISSUED" || doc.status === "PARTIALLY_PAID");
+const canCredit = canCreate && isInvoice && CREDITABLE_INVOICE_STATUSES.includes(doc.status) && doc.creditedMinor < doc.grossMinor;
+const canConvert = canCreate && doc.kind === "quote" && doc.status === "ACCEPTED";
+const editable = canUpdate && doc.kind !== "credit_note" && !isLocked(doc.kind, doc.status);
+const heading = `${t.kinds[doc.kind]} ${doc.number ?? t.admin.draftNumber}`;
+const exponent = isCurrencyCode(doc.currency) ? currencyExponent(doc.currency) : 2;
+const today = new Date().toISOString().slice(0, 10);
+---
+<BaseLayout title={heading} description={t.meta.description}>
+  <AuthLayout title={heading}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="sales" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8" data-sales-document data-id={doc.id} data-view-base-url={baseAdminUrl} data-currency={doc.currency}>
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-semibold" data-testid="sales-heading">{heading}</h1>
+          <p class="text-muted-foreground">{doc.title} — <span data-testid="sales-status">{t.statuses[doc.status]}</span></p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/${doc.id}/pdf`} download data-testid="sales-pdf">{t.actions.downloadPdf}</a>
+          {editable && <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/${doc.id}/edit`}>{t.admin.edit}</a>}
+          {targets.map((to) => <Button type="button" variant={to === "CANCELLED" || to === "REJECTED" ? "outline" : "default"} data-sales-op="transition" data-to={to}>{targetLabel[to] ?? t.statuses[to]}</Button>)}
+          {canConvert && <Button type="button" data-sales-op="convert">{t.actions.convert}</Button>}
+          {canCredit && <Button type="button" variant="outline" data-sales-op="credit-note">{t.actions.creditNote}</Button>}
+          {canRemind && <Button type="button" variant="outline" data-sales-op="remind" data-done={t.actions.reminderSent} data-none={t.actions.reminderNone}>{t.actions.remind}</Button>}
+        </div>
+      </div>
+      <p class="text-sm text-destructive" role="alert" data-sales-error hidden></p>
+      {isLocked(doc.kind, doc.status) && <p class="text-sm text-muted-foreground">{t.admin.lockedNote}</p>}
+
+      <section aria-labelledby="sales-summary" class="grid gap-4 sm:grid-cols-2">
+        <h2 id="sales-summary" class="sr-only">{t.fields.customerName}</h2>
+        <dl class="grid gap-1 text-sm">
+          <div class="flex gap-2"><dt class="text-muted-foreground">{t.fields.customerName}</dt><dd>{doc.customerName}</dd></div>
+          {doc.customerVatNumber && <div class="flex gap-2"><dt class="text-muted-foreground">{t.fields.customerVatNumber}</dt><dd>{doc.customerVatNumber}</dd></div>}
+          {doc.customerAddress && <div class="flex gap-2"><dt class="text-muted-foreground">{t.fields.customerAddress}</dt><dd class="whitespace-pre-line">{doc.customerAddress}</dd></div>}
+          {doc.issueDate && <div class="flex gap-2"><dt class="text-muted-foreground">{t.fields.issueDate}</dt><dd>{doc.issueDate}</dd></div>}
+          {doc.dueDate && <div class="flex gap-2"><dt class="text-muted-foreground">{t.fields.dueDate}</dt><dd>{doc.dueDate}</dd></div>}
+          {doc.validUntil && <div class="flex gap-2"><dt class="text-muted-foreground">{t.fields.validUntil}</dt><dd>{doc.validUntil}</dd></div>}
+        </dl>
+        <dl class="grid gap-1 text-sm" data-testid="sales-totals">
+          <div class="flex gap-2"><dt class="text-muted-foreground">{t.fields.net}</dt><dd>{money(doc.netMinor)}</dd></div>
+          <div class="flex gap-2"><dt class="text-muted-foreground">{t.fields.tax}</dt><dd>{money(doc.taxMinor)}</dd></div>
+          <div class="flex gap-2 font-semibold"><dt>{t.fields.gross}</dt><dd data-testid="sales-gross">{money(doc.grossMinor)}</dd></div>
+          {isInvoice && <div class="flex gap-2"><dt class="text-muted-foreground">{t.fields.paid}</dt><dd>{money(doc.paidMinor)}</dd></div>}
+          {isInvoice && doc.creditedMinor > 0 && <div class="flex gap-2"><dt class="text-muted-foreground">{t.fields.credited}</dt><dd>{money(doc.creditedMinor)}</dd></div>}
+          {isInvoice && <div class="flex gap-2"><dt class="text-muted-foreground">{t.fields.due}</dt><dd data-testid="sales-due">{money(due)}</dd></div>}
+          {doc.taxMention && <div class="flex gap-2"><dt class="text-muted-foreground">{t.fields.mention}</dt><dd>{doc.taxMention}</dd></div>}
+        </dl>
+      </section>
+
+      <section aria-labelledby="sales-lines" class="overflow-x-auto">
+        <h2 id="sales-lines" class="mb-2 text-lg font-semibold">{t.lines.title}</h2>
+        <table class="w-full text-sm">
+          <thead><tr><th scope="col" class="text-start">{t.lines.description}</th><th scope="col" class="text-end">{t.lines.quantity}</th><th scope="col" class="text-end">{t.lines.unitPrice}</th><th scope="col" class="text-end">{t.lines.discount}</th><th scope="col" class="text-end">{t.lines.rate}</th><th scope="col" class="text-end">{t.lines.net}</th></tr></thead>
+          <tbody>
+            {doc.lines.map((line) => (
+              <tr class="border-t"><td>{line.description}</td><td class="text-end">{Number(line.quantity)}</td><td class="text-end">{money(line.unitPriceMinor)}</td><td class="text-end">{Number(line.discountPercent)} %</td><td class="text-end">{Number(line.ratePercent)} %</td><td class="text-end">{money(line.netMinor)}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+      {isInvoice && (
+        <section aria-labelledby="sales-payments" class="flex flex-col gap-3">
+          <h2 id="sales-payments" class="text-lg font-semibold">{t.payments.title}</h2>
+          {doc.payments.length === 0 ? <p class="text-sm text-muted-foreground">{t.payments.empty}</p> : (
+            <ul class="text-sm">{doc.payments.map((p) => <li>{p.paidAt} — {money(p.amountMinor)} — {t.payments.methods[p.method]}{p.reference ? ` (${p.reference})` : ""}</li>)}</ul>
+          )}
+          {canRecordPayment && (
+            <form class="grid max-w-3xl gap-3 sm:grid-cols-5 sm:items-end" data-sales-payment-form novalidate>
+              <div class="grid gap-1"><Label for="payment-amount">{t.payments.amount}</Label><Input id="payment-amount" name="amount" required inputmode="decimal" value={(due / 10 ** exponent).toFixed(exponent)} /></div>
+              <div class="grid gap-1"><Label for="payment-method">{t.payments.method}</Label><NativeSelect id="payment-method" name="method">{PAYMENT_METHODS.map((m) => <NativeSelectOption value={m}>{t.payments.methods[m]}</NativeSelectOption>)}</NativeSelect></div>
+              <div class="grid gap-1"><Label for="payment-date">{t.payments.paidAt}</Label><Input id="payment-date" name="paidAt" type="date" required value={today} /></div>
+              <div class="grid gap-1"><Label for="payment-reference">{t.payments.reference}</Label><Input id="payment-reference" name="reference" maxlength={200} /></div>
+              <Button type="submit">{t.actions.recordPayment}</Button>
+            </form>
+          )}
+          <h2 class="text-lg font-semibold">{t.reminders.title}</h2>
+          {doc.reminders.length === 0 ? <p class="text-sm text-muted-foreground">{t.reminders.empty}</p> : (
+            <ul class="text-sm">{doc.reminders.map((r) => <li>{t.reminders.level} {r.level} — {r.daysOverdue} {t.reminders.daysOverdue} — {r.sentAt.toISOString().slice(0, 10)}</li>)}</ul>
+          )}
+        </section>
+      )}
+
+      {doc.related.length > 0 && (
+        <section aria-labelledby="sales-related">
+          <h2 id="sales-related" class="mb-2 text-lg font-semibold">{t.related}</h2>
+          <ul class="text-sm">{doc.related.map((r) => <li><a class="inline-flex min-h-11 items-center underline" href={`${baseAdminUrl}/${r.id}`}>{t.kinds[r.kind as keyof typeof t.kinds] ?? r.kind} {r.number ?? t.admin.draftNumber} — {t.statuses[r.status as SalesStatus] ?? r.status} — {money(r.grossMinor)}</a></li>)}</ul>
+        </section>
+      )}
+      <a class="inline-flex min-h-11 items-center underline" href={baseAdminUrl}>{t.admin.back}</a>
+    </main>
+  </AuthLayout>
+</BaseLayout>
+
+<script>
+  import { initSales } from "@/modules/sales/client/init";
+
+  initSales();
+  document.addEventListener("astro:after-swap", initSales);
+</script>
