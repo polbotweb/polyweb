@@ -10,7 +10,7 @@ import { dbTry } from "@/lib/effect/run";
 import { fail } from "@/lib/effect/action";
 import { canTransition } from "@/core/workflow";
 import type { LockOwner } from "@/core/locks/policy";
-import { events, eventsRevisions } from "../schema";
+import { events, eventRevisions } from "../schema";
 import { eventsLock } from "../locks";
 import { eventsWorkflow, type EventsStatus } from "../domain/workflow";
 
@@ -23,7 +23,7 @@ const required = (id: string) =>
   Effect.flatMap(findById(id), (row) => (row ? Effect.succeed(row) : fail("NOT_FOUND", "Élément introuvable.")));
 
 const revision = (row: Row, authorId: string, note: string) =>
-  dbTry("events.revision", () => getDrizzle().insert(eventsRevisions).values({ resourceId: row.id, authorId, title: row.title, slug: row.slug, status: row.status, note }));
+  dbTry("events.revision", () => getDrizzle().insert(eventRevisions).values({ resourceId: row.id, authorId, title: row.title, slug: row.slug, status: row.status, note }));
 
 export const eventsService = {
   create: (input: { title: string; slug: string; organizationId: string | null }, authorId: string) =>

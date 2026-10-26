@@ -13,6 +13,6 @@ export const coursesCapabilityProviders = {
   localization: "course_translations",
   taxonomy: "course_categories (core/taxonomy, coursesCategoryTaxonomy)",
   publication: "coursesWorkflow",
-  revisions: "courses_revisions",
-  locks: "courses_locks",
+  revisions: "course_revisions",
+  locks: "course_locks",
 } as unknown as PolywebModuleCapabilityProviders;
