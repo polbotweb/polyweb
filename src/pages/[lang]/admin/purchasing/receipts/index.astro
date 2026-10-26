@@ -1,0 +1,37 @@
+---
+/** Back-office plateforme : dernières réceptions de marchandises (bons de réception). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { requirePermission } from "@lib/auth-guards";
+import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
+import { loadReceipts } from "@/modules/purchasing/loaders";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { purchasing: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getPurchasingTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/purchasing`;
+const receipts = await loadReceipts(null);
+const date = (value: Date) => new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(value);
+---
+<BaseLayout title={t.admin.receipts} description={t.meta.description}>
+  <AuthLayout title={t.admin.receipts}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="purchasing" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{t.admin.receipts}</h1>
+        <a class="inline-flex min-h-11 items-center px-3 underline" href={baseAdminUrl}>{t.admin.back}</a>
+      </div>
+      {receipts.length === 0 ? <p class="text-sm text-muted-foreground">{t.admin.noReceipts}</p> : (
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm" data-testid="purchasing-receipt-list">
+            <thead><tr class="border-b"><th scope="col" class="py-2 text-start">{t.fields.number}</th><th scope="col" class="py-2 text-start">{t.admin.orders}</th><th scope="col" class="py-2 text-start">{t.fields.receivedAt}</th><th scope="col" class="py-2 text-start">{t.fields.supplierReference}</th></tr></thead>
+            <tbody>{receipts.map((r) => <tr class="border-b"><td class="py-2 font-mono">{r.number}</td><td class="py-2"><a class="underline" href={`${baseAdminUrl}/${r.orderId}`}>{r.orderNumber ?? r.orderTitle}</a></td><td class="py-2">{date(r.receivedAt)}</td><td class="py-2">{r.supplierReference ?? ""}</td></tr>)}</tbody>
+          </table>
+        </div>
+      )}
+    </main>
+  </AuthLayout>
+</BaseLayout>
