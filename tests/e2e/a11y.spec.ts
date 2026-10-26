@@ -133,6 +133,41 @@ test('axe: /fr/admin/crm (pipeline, fiches, formulaires) sans violation grave, t
   }
 });
 
+test('axe: /fr/admin/logistics (expéditions, entrepôts, articles, stock) sans violation grave, titres et cibles', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Parcours admin : Chromium');
+  const { getDrizzle } = await import('../../src/database/drizzle');
+  const { logistics, logisticsItems, logisticsShipmentLines, logisticsStockMovements, logisticsWarehouses } = await import('../../src/database/schemas');
+  const { eq } = await import('drizzle-orm');
+  const db = getDrizzle();
+  // Entrepôts, article, stock et expédition brouillon insérés directement.
+  const suffix = Date.now().toString(36).toUpperCase().slice(-6);
+  const [wh] = await db.insert(logisticsWarehouses).values({ code: `A11Y${suffix}`, name: `A11y entrepôt ${suffix}`, country: 'FR' }).returning({ id: logisticsWarehouses.id });
+  const [wh2] = await db.insert(logisticsWarehouses).values({ code: `A11YB${suffix}`, name: `A11y entrepôt B ${suffix}` }).returning({ id: logisticsWarehouses.id });
+  const [item] = await db.insert(logisticsItems).values({ sku: `A11Y-${suffix}`, name: `A11y article ${suffix}` }).returning({ id: logisticsItems.id });
+  await db.insert(logisticsStockMovements).values({ warehouseId: wh!.id, itemId: item!.id, kind: 'receipt', delta: 5 });
+  const [shipment] = await db.insert(logistics).values({ slug: `a11y-${suffix.toLowerCase()}`, title: `A11y expédition ${suffix}`, status: 'DRAFT', warehouseId: wh!.id, recipientName: 'Ada A11y', country: 'FR' }).returning({ id: logistics.id });
+  await db.insert(logisticsShipmentLines).values({ shipmentId: shipment!.id, position: 0, itemId: item!.id, sku: `A11Y-${suffix}`, quantity: 2 });
+  try {
+    await signInAsAdmin(page);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const paths = ['/fr/admin/logistics', '/fr/admin/logistics/new', `/fr/admin/logistics/${shipment!.id}`, `/fr/admin/logistics/${shipment!.id}/edit`, '/fr/admin/logistics/warehouses', `/fr/admin/logistics/warehouses/${wh!.id}`, '/fr/admin/logistics/items', `/fr/admin/logistics/items/${item!.id}`, '/fr/admin/logistics/stock', `/ar/admin/logistics/${shipment!.id}`, '/ar/admin/logistics/stock'];
+    for (const path of paths) {
+      await page.goto(path, { waitUntil: 'networkidle' });
+      const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+      const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${path} ${v.id}: ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(' | ')}`);
+      const structure = await structureViolations(page);
+      expect([...serious, ...structure], [...serious, ...structure].join('\n')).toEqual([]);
+    }
+  } finally {
+    await db.delete(logisticsShipmentLines).where(eq(logisticsShipmentLines.shipmentId, shipment!.id));
+    await db.delete(logistics).where(eq(logistics.id, shipment!.id));
+    await db.delete(logisticsStockMovements).where(eq(logisticsStockMovements.itemId, item!.id));
+    await db.delete(logisticsItems).where(eq(logisticsItems.id, item!.id));
+    await db.delete(logisticsWarehouses).where(eq(logisticsWarehouses.id, wh!.id));
+    await db.delete(logisticsWarehouses).where(eq(logisticsWarehouses.id, wh2!.id));
+  }
+});
+
 /**
  * WCAG 2.5.5 (AAA, approuvé) : les commandes icônes de l'admin navigation font
  * au moins 44 × 44 px (axe ne vérifie que le seuil AA de 24 px).

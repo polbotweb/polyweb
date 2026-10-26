@@ -215,6 +215,8 @@ formations/
   admin/
 forms/
   PolywebForm.astro
+logistics/
+  admin/
 molecules/
   AdminPagination/
   AdminResourceStats.astro
@@ -468,6 +470,7 @@ migrations/
   0030_document_sequences.sql
   0031_sales_documents.sql
   0032_crm.sql
+  0033_logistics.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -498,6 +501,7 @@ migrations/
     0030_snapshot.json
     0031_snapshot.json
     0032_snapshot.json
+    0033_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -688,6 +692,7 @@ schemas.ts
 - `0030_document_sequences.sql`
 - `0031_sales_documents.sql`
 - `0032_crm.sql`
+- `0033_logistics.sql`
 
 ### الأوامر
 
@@ -1065,6 +1070,37 @@ formations/
 forms/
   domain/
     forms.ts
+logistics/
+  actions/
+    bulk.ts
+    index.ts
+  admin/
+    resource.ts
+  capabilities.ts
+  client/
+    forms.ts
+    init.ts
+    record-actions.ts
+  domain/
+    errors.ts
+    numbering.ts
+    shipment.ts
+    stock.ts
+    workflow.ts
+  i18n/
+    index.ts
+  loaders/
+    index.ts
+    logistics.loader.ts
+    shipment-admin.loader.ts
+  locks.ts
+  module.ts
+  permissions/
+    index.ts
+  schema/
+    index.ts
+  services/
+    logistics.service.ts
 payments/
   domain/
     payment-service.ts
@@ -1243,6 +1279,7 @@ src/pages/
     blog/
     crm/
     index.astro
+    logistics/
     media.astro
     navigation.astro
     organizations.astro
