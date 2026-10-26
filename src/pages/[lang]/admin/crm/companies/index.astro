@@ -1,0 +1,39 @@
+---
+/** Back-office plateforme : sociétés CRM. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { requirePermission } from "@lib/auth-guards";
+import { getCrmTranslations } from "@/modules/crm/i18n";
+import { loadCompanies } from "@/modules/crm/loaders";
+import { hasCrmPermission } from "@/modules/crm/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { crm: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getCrmTranslations(locale);
+const base = `/${locale}/admin/crm/companies`;
+const [companies, canCreate] = await Promise.all([loadCompanies(null), hasCrmPermission(Astro, ["create"])]);
+---
+<BaseLayout title={t.admin.companies} description={t.meta.description}>
+  <AuthLayout title={t.admin.companies}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="crm" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{t.admin.companies}</h1>
+        <div class="flex gap-2">
+          {canCreate && <a class="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-primary-foreground" href={`${base}/new`} data-testid="crm-new-company">{t.admin.newCompany}</a>}
+          <a class="inline-flex min-h-11 items-center px-3 underline" href={`/${locale}/admin/crm`}>{t.admin.back}</a>
+        </div>
+      </div>
+      {companies.length === 0 ? <p class="text-muted-foreground">{t.admin.noCompanies}</p> : (
+        <table class="w-full text-sm" data-testid="crm-companies">
+          <caption class="sr-only">{t.admin.companies}</caption>
+          <thead><tr class="border-b text-start"><th scope="col" class="py-2 text-start">{t.fields.name}</th><th scope="col" class="py-2 text-start">{t.fields.email}</th><th scope="col" class="py-2 text-start">{t.fields.country}</th></tr></thead>
+          <tbody>{companies.map((c) => <tr class="border-b"><td class="py-2"><a class="underline" href={`${base}/${c.id}`}>{c.name}</a></td><td class="py-2">{c.email ?? t.admin.none}</td><td class="py-2">{c.country ?? t.admin.none}</td></tr>)}</tbody>
+        </table>
+      )}
+    </main>
+  </AuthLayout>
+</BaseLayout>

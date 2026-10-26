@@ -1,0 +1,27 @@
+---
+/** Back-office plateforme : nouvelle fiche (contact). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { requirePermission } from "@lib/auth-guards";
+import ContactForm from "@/components/crm/admin/ContactForm.astro";
+import { getCrmTranslations } from "@/modules/crm/i18n";
+import { loadCompanies } from "@/modules/crm/loaders";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { crm: ["create"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getCrmTranslations(locale);
+const base = `/${locale}/admin/crm/contacts`;
+const companies = await loadCompanies(null);
+---
+<BaseLayout title={t.admin.newContact} description={t.meta.description}>
+  <AuthLayout title={t.admin.newContact}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="crm" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <h1 class="text-2xl font-semibold">{t.admin.newContact}</h1>
+      <ContactForm locale={locale} viewBaseUrl={base} listUrl={base} companies={companies} />
+    </main>
+  </AuthLayout>
+</BaseLayout>

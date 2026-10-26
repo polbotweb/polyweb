@@ -1,0 +1,41 @@
+---
+/** Back-office plateforme : contacts CRM. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { requirePermission } from "@lib/auth-guards";
+import { contactDisplayName } from "@/modules/crm/domain/contacts";
+import { getCrmTranslations } from "@/modules/crm/i18n";
+import { loadCompanies, loadContacts } from "@/modules/crm/loaders";
+import { hasCrmPermission } from "@/modules/crm/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { crm: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getCrmTranslations(locale);
+const base = `/${locale}/admin/crm/contacts`;
+const [contacts, companies, canCreate] = await Promise.all([loadContacts(null), loadCompanies(null), hasCrmPermission(Astro, ["create"])]);
+const companyName = new Map(companies.map((c) => [c.id, c.name]));
+---
+<BaseLayout title={t.admin.contacts} description={t.meta.description}>
+  <AuthLayout title={t.admin.contacts}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="crm" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{t.admin.contacts}</h1>
+        <div class="flex gap-2">
+          {canCreate && <a class="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-primary-foreground" href={`${base}/new`} data-testid="crm-new-contact">{t.admin.newContact}</a>}
+          <a class="inline-flex min-h-11 items-center px-3 underline" href={`/${locale}/admin/crm`}>{t.admin.back}</a>
+        </div>
+      </div>
+      {contacts.length === 0 ? <p class="text-muted-foreground">{t.admin.noContacts}</p> : (
+        <table class="w-full text-sm" data-testid="crm-contacts">
+          <caption class="sr-only">{t.admin.contacts}</caption>
+          <thead><tr class="border-b"><th scope="col" class="py-2 text-start">{t.fields.name}</th><th scope="col" class="py-2 text-start">{t.fields.company}</th><th scope="col" class="py-2 text-start">{t.fields.email}</th></tr></thead>
+          <tbody>{contacts.map((c) => <tr class="border-b"><td class="py-2"><a class="underline" href={`${base}/${c.id}`}>{contactDisplayName(c)}</a></td><td class="py-2">{(c.companyId && companyName.get(c.companyId)) ?? t.admin.none}</td><td class="py-2">{c.email ?? t.admin.none}</td></tr>)}</tbody>
+        </table>
+      )}
+    </main>
+  </AuthLayout>
+</BaseLayout>
