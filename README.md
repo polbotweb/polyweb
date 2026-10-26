@@ -253,6 +253,8 @@ platform/
   EntryView.astro
   FieldInput.astro
   FieldsEditor.astro
+purchasing/
+  admin/
 sales/
   SalesCard.astro
   SalesDetail.astro
@@ -471,6 +473,8 @@ migrations/
   0031_sales_documents.sql
   0032_crm.sql
   0033_logistics.sql
+  0034_purchasing.sql
+  0035_purchasing_deferred_fks.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -502,6 +506,8 @@ migrations/
     0031_snapshot.json
     0032_snapshot.json
     0033_snapshot.json
+    0034_snapshot.json
+    0035_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -693,6 +699,8 @@ schemas.ts
 - `0031_sales_documents.sql`
 - `0032_crm.sql`
 - `0033_logistics.sql`
+- `0034_purchasing.sql`
+- `0035_purchasing_deferred_fks.sql`
 
 ### Commands
 
@@ -1108,6 +1116,37 @@ payments/
     transitions.ts
   index.ts
   module.ts
+purchasing/
+  actions/
+    bulk.ts
+    index.ts
+  admin/
+    resource.ts
+  capabilities.ts
+  client/
+    forms.ts
+    init.ts
+    record-actions.ts
+  domain/
+    errors.ts
+    numbering.ts
+    order.ts
+    receipt.ts
+    workflow.ts
+  i18n/
+    index.ts
+  loaders/
+    index.ts
+    order-admin.loader.ts
+    purchasing.loader.ts
+  locks.ts
+  module.ts
+  permissions/
+    index.ts
+  schema/
+    index.ts
+  services/
+    purchasing.service.ts
 sales/
   actions/
     bulk.ts
@@ -1285,6 +1324,7 @@ src/pages/
     organizations.astro
     pages.astro
     platform/
+    purchasing/
     roles.astro
     sales/
     services/
