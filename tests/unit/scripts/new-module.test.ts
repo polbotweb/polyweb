@@ -149,10 +149,10 @@ describe('scripts/new-module.ts — module généré compilable', () => {
     }
     execFileSync(tsx, [script, 'demo-items', '--entity=demo-item', '--taxonomy', `--root=${join(genDir, 'src')}`], { encoding: 'utf8', stdio: 'pipe' });
     const rootConfig = JSON.parse(readFileSync(join(repo, 'tsconfig.json'), 'utf8')) as { compilerOptions: { paths: Record<string, string[]> } };
-    const rel = genDir.slice(repo.length + 1);
     const tsconfig = {
       extends: '../tsconfig.json',
-      compilerOptions: { noEmit: true, baseUrl: '..', paths: { '@/modules/demo-items/*': [`${rel}/src/modules/demo-items/*`], ...rootConfig.compilerOptions.paths } },
+      // TS 6 : `baseUrl` est déprécié (TS5101) — les `paths` sont résolus relativement à ce tsconfig.
+      compilerOptions: { noEmit: true, paths: { '@/modules/demo-items/*': ['./src/modules/demo-items/*'], ...Object.fromEntries(Object.entries(rootConfig.compilerOptions.paths).map(([k, v]) => [k, v.map((p) => `../${p}`)])) } },
       include: ['src/modules/**/*.ts', '../src/env.d.ts', '../.astro/types.d.ts'],
     };
     writeFileSync(join(genDir, 'tsconfig.json'), JSON.stringify(tsconfig));
