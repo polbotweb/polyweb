@@ -203,6 +203,8 @@ courses/
   CoursesCard.astro
   CoursesDetail.astro
   admin/
+crm/
+  admin/
 events/
   EventsCard.astro
   EventsDetail.astro
@@ -465,6 +467,7 @@ migrations/
   0029_tax_rates.sql
   0030_document_sequences.sql
   0031_sales_documents.sql
+  0032_crm.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -494,6 +497,7 @@ migrations/
     0029_snapshot.json
     0030_snapshot.json
     0031_snapshot.json
+    0032_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -683,6 +687,7 @@ schemas.ts
 - `0029_tax_rates.sql`
 - `0030_document_sequences.sql`
 - `0031_sales_documents.sql`
+- `0032_crm.sql`
 
 ### Commands
 
@@ -974,6 +979,37 @@ courses/
   services/
     course.service.ts
   taxonomy.ts
+crm/
+  actions/
+    bulk.ts
+    index.ts
+  admin/
+    resource.ts
+  capabilities.ts
+  client/
+    forms.ts
+    init.ts
+    record-actions.ts
+  domain/
+    activities.ts
+    contacts.ts
+    errors.ts
+    opportunity.ts
+    workflow.ts
+  i18n/
+    index.ts
+  loaders/
+    crm.loader.ts
+    index.ts
+    opportunity-admin.loader.ts
+  locks.ts
+  module.ts
+  permissions/
+    index.ts
+  schema/
+    index.ts
+  services/
+    crm.service.ts
 events/
   actions/
     bulk.ts
@@ -1205,6 +1241,7 @@ src/pages/
   admin/
     audit.astro
     blog/
+    crm/
     index.astro
     media.astro
     navigation.astro
@@ -1525,7 +1562,6 @@ All routes are prefixed with the locale: `/fr/`, `/en/`, `/es/`, `/ar/`. Default
 tests/
   a11y/
   e2e/
-  fixtures/
   helpers/
   integration/
   unit/
