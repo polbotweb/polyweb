@@ -160,7 +160,7 @@ resource and components, a module wired to the core Effect abstractions:
 
 | File | Core abstraction |
 | --- | --- |
-| `schema/index.ts` | content table named after the **pluralized entity** (`--entity=product` → `products`; `--table` overrides), `<table>_revisions`, `<table>_locks` (lock columns expected by `core/locks`); the generator refuses a table name already declared under `src/database` or `src/modules` |
+| `schema/index.ts` | content table named after the **pluralized entity** (`--entity=product` → `products`; `--table` overrides); auxiliary tables use the **singular entity** prefix: `<entity>_revisions`, `<entity>_locks` (lock columns expected by `core/locks`), Drizzle consts `<entity>Revisions` / `<entity>Locks`; the generator refuses a table name already declared under `src/database` or `src/modules` |
 | `domain/workflow.ts` | `WorkflowDefinition` (`core/workflow`): `DRAFT` / `PUBLISHED` / `ARCHIVED` transitions |
 | `locks.ts` | `defineLockResource` + `drizzleLockStore` (`core/locks`): user + session owner, same-user takeover, TTL, purge |
 | `locks.ts` (`tenantOf`) | owning organization for the generic, audited `forceReleaseLock` admin action (global admins anywhere, org owners/admins in their own organization only); auto-registered via `src/modules/*/locks.ts` |
@@ -201,7 +201,11 @@ Every admin list above exposes a "category" facet (`categoryId` query parameter,
 `pnpm module:new <domain> --taxonomy` scaffolds the three tables, `taxonomy.ts`, the `taxonomy` capability, the
 `categories` actions, the resource filter and the loader filter/condition/facet; without the flag nothing is generated.
 
-`events`, `formations` and `courses` already match their pluralized entity. The Shop tables were renamed by
+Naming rule: main table = pluralized entity (`products`, `events`), auxiliary tables = singular entity prefix
+(`product_revisions`, `product_locks`, `product_translations`, `product_categories`). Migration
+`0028_singular_aux_tables.sql` (RENAME-only, primary keys, indexes, unique and foreign-key constraints renamed, no data
+copied or dropped) aligned the generated modules: `events_revisions` / `events_locks` → `event_revisions` /
+`event_locks`, and likewise `formation_*` and `course_*` (Drizzle consts `eventRevisions`, `eventLocks`, …). The Shop tables were renamed by
 migration `0027_rename_shop_tables.sql` (non-destructive `ALTER TABLE … RENAME`, primary keys, indexes, unique and
 foreign-key constraints renamed, no data copied or dropped): `shop_products` / `shop_revisions` / `shop_locks` →
 `products` / `product_revisions` / `product_locks` (Drizzle consts `products` / `productRevisions` / `productLocks`).
