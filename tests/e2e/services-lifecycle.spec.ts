@@ -6,14 +6,22 @@ const BASE_URL = "http://localhost:4322";
 
 async function authState(browser: import("@playwright/test").Browser) {
   const context = await browser.newContext();
-  const response = await fetch(`${BASE_URL}/api/auth/sign-in/email`, {
-    method: "POST",
-    headers: { "content-type": "application/json", Origin: BASE_URL },
-    body: JSON.stringify({ email: SEED_EMAIL, password: SEED_PASSWORD }),
-    redirect: "manual",
-  });
-  const cookies = response.headers.getSetCookie();
-  if (!cookies.length) throw new Error(`Seed admin login failed (${response.status})`);
+  // better-auth limite /sign-in/email (5 req / 10 s) : en cas de 429, on attend
+  // la fenêtre indiquée puis on réessaie (même stratégie que helpers/admin.ts).
+  let response: Response | undefined;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    response = await fetch(`${BASE_URL}/api/auth/sign-in/email`, {
+      method: "POST",
+      headers: { "content-type": "application/json", Origin: BASE_URL },
+      body: JSON.stringify({ email: SEED_EMAIL, password: SEED_PASSWORD }),
+      redirect: "manual",
+    });
+    if (response.status !== 429) break;
+    const retryAfter = Number(response.headers.get("x-retry-after") ?? response.headers.get("retry-after") ?? 10);
+    await new Promise((resolve) => setTimeout(resolve, Math.min(Math.max(retryAfter, 1), 10) * 1000));
+  }
+  const cookies = response?.headers.getSetCookie() ?? [];
+  if (!cookies.length) throw new Error(`Seed admin login failed (${response?.status})`);
   await context.addCookies(cookies.map((cookie) => {
     const [pair] = cookie.split(";");
     const separator = pair.indexOf("=");
