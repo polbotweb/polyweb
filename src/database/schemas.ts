@@ -30,3 +30,4 @@ export * from "../modules/sales/schema";
 export * from "../modules/crm/schema";
 export * from "../modules/logistics/schema";
 export * from "../modules/purchasing/schema";
+export * from "../modules/bookings/schema";

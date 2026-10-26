@@ -253,6 +253,13 @@
       "when": 1793035925904,
       "tag": "0035_purchasing_deferred_fks",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793039306811,
+      "tag": "0036_bookings",
+      "breakpoints": true
     }
   ]
 }
