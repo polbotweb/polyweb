@@ -1,0 +1,80 @@
+---
+/** Formulaire de commande fournisseur (création / édition d'un brouillon) avec lignes dynamiques. Soumission : `modules/purchasing/client/forms.ts`. */
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import type { Locale } from "@i18n/config";
+import { toDecimalString, isCurrencyCode } from "@/core/money";
+import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
+
+interface Props {
+  locale: Locale;
+  organizationId?: string | null;
+  viewBaseUrl: string;
+  listUrl: string;
+  suppliers: readonly { id: string; code: string; name: string; active: boolean }[];
+  warehouses: readonly { id: string; code: string; name: string }[];
+  items: readonly { sku: string; name: string }[];
+  order?: {
+    id: string; title: string; supplierId: string; warehouseId: string; currency: string; expectedDate: string | null; notes: string | null;
+    lines: readonly { sku: string; description: string | null; quantity: number; unitPriceMinor: number }[];
+  };
+}
+const { locale, organizationId = null, viewBaseUrl, listUrl, suppliers, warehouses, items, order: o } = Astro.props as Props;
+const t = getPurchasingTranslations(locale);
+const currency = o?.currency ?? "EUR";
+const price = (minor: number) => (isCurrencyCode(currency) ? toDecimalString({ amountMinor: minor, currency }) : String(minor));
+const lines = o?.lines.length ? o.lines.map((l) => ({ ...l, unitPrice: price(l.unitPriceMinor) })) : [{ sku: "", description: null, quantity: 1, unitPrice: "" }];
+const choosable = suppliers.filter((s) => s.active || s.id === o?.supplierId);
+---
+<form class="flex max-w-4xl flex-col gap-6" data-purchasing-form="order" data-id={o?.id ?? ""} data-organization-id={organizationId ?? ""} data-view-base-url={viewBaseUrl} data-done={o ? t.admin.saved : t.admin.created} novalidate>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div class="grid gap-2"><Label for="po-title">{t.fields.title}</Label><Input id="po-title" name="title" maxlength={200} value={o?.title ?? ""} /></div>
+    <div class="grid gap-2"><Label for="po-supplier">{t.fields.supplier}</Label>
+      <NativeSelect id="po-supplier" name="supplierId" required>{choosable.map((s) => <NativeSelectOption value={s.id} selected={o?.supplierId === s.id}>{s.code} — {s.name}</NativeSelectOption>)}</NativeSelect>
+    </div>
+    <div class="grid gap-2"><Label for="po-warehouse">{t.fields.warehouse}</Label>
+      <NativeSelect id="po-warehouse" name="warehouseId" required>{warehouses.map((w) => <NativeSelectOption value={w.id} selected={o?.warehouseId === w.id}>{w.code} — {w.name}</NativeSelectOption>)}</NativeSelect>
+    </div>
+    <div class="grid gap-2"><Label for="po-currency">{t.fields.currency}</Label><Input id="po-currency" name="currency" required maxlength={3} pattern="[A-Za-z]{3}" value={currency} /></div>
+    <div class="grid gap-2"><Label for="po-expected">{t.fields.expectedDate}</Label><Input id="po-expected" name="expectedDate" type="date" value={o?.expectedDate ?? ""} /></div>
+    <div class="grid gap-2 sm:col-span-2"><Label for="po-notes">{t.fields.notes}</Label><textarea id="po-notes" name="notes" rows="3" maxlength="5000" class="rounded-md border bg-transparent px-3 py-2 text-sm">{o?.notes ?? ""}</textarea></div>
+  </div>
+
+  <datalist id="po-skus">{items.map((item) => <option value={item.sku}>{item.name}</option>)}</datalist>
+  <fieldset class="flex flex-col gap-3">
+    <legend class="text-lg font-semibold">{t.fields.lines}</legend>
+    <div class="flex flex-col gap-3" data-lines>
+      {lines.map((line, index) => (
+        <div class="grid gap-2 sm:grid-cols-[10rem_1fr_6rem_8rem_auto] sm:items-end" data-line>
+          <div class="grid gap-1"><Label for={`po-sku-${index}`}>{t.fields.sku}</Label><Input id={`po-sku-${index}`} name="sku" maxlength={64} list="po-skus" value={line.sku} /></div>
+          <div class="grid gap-1"><Label for={`po-desc-${index}`}>{t.fields.description}</Label><Input id={`po-desc-${index}`} name="description" maxlength={500} value={line.description ?? ""} /></div>
+          <div class="grid gap-1"><Label for={`po-qty-${index}`}>{t.fields.quantity}</Label><Input id={`po-qty-${index}`} name="quantity" type="number" min={1} value={String(line.quantity)} /></div>
+          <div class="grid gap-1"><Label for={`po-price-${index}`}>{t.fields.unitPrice}</Label><Input id={`po-price-${index}`} name="unitPrice" inputmode="decimal" maxlength={24} value={line.unitPrice} /></div>
+          <Button type="button" variant="outline" data-remove-line>{t.admin.removeLine}</Button>
+        </div>
+      ))}
+    </div>
+    <template data-line-template>
+      <div class="grid gap-2 sm:grid-cols-[10rem_1fr_6rem_8rem_auto] sm:items-end" data-line>
+        <label class="grid gap-1 text-sm font-medium">{t.fields.sku}<Input name="sku" maxlength={64} list="po-skus" /></label>
+        <label class="grid gap-1 text-sm font-medium">{t.fields.description}<Input name="description" maxlength={500} /></label>
+        <label class="grid gap-1 text-sm font-medium">{t.fields.quantity}<Input name="quantity" type="number" min={1} value="1" /></label>
+        <label class="grid gap-1 text-sm font-medium">{t.fields.unitPrice}<Input name="unitPrice" inputmode="decimal" maxlength={24} /></label>
+        <Button type="button" variant="outline" data-remove-line>{t.admin.removeLine}</Button>
+      </div>
+    </template>
+    <div><Button type="button" variant="outline" data-add-line>{t.admin.addLine}</Button></div>
+  </fieldset>
+
+  <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+  <div class="flex gap-3"><Button type="submit">{o ? t.admin.save : t.admin.create}</Button><a class="inline-flex min-h-11 items-center px-3 underline" href={listUrl}>{t.admin.back}</a></div>
+</form>
+
+<script>
+  import { initPurchasing } from "@/modules/purchasing/client/init";
+
+  initPurchasing();
+  document.addEventListener("astro:after-swap", initPurchasing);
+</script>

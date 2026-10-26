@@ -1,0 +1,42 @@
+---
+/** Formulaire de réception de marchandises : une quantité par ligne au reliquat (0 = non reçue). Soumission : `modules/purchasing/client/forms.ts`. */
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import type { Locale } from "@i18n/config";
+import { outstanding } from "@/modules/purchasing/domain/receipt";
+import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
+
+interface Props {
+  locale: Locale;
+  orderId: string;
+  lines: readonly { id: string; sku: string; description: string | null; quantity: number; receivedQuantity: number }[];
+}
+const { locale, orderId, lines } = Astro.props as Props;
+const t = getPurchasingTranslations(locale);
+const open = lines.filter((line) => outstanding(line) > 0);
+---
+<form class="flex flex-col gap-4" data-purchasing-form="receipt" data-id={orderId} data-done={t.admin.saved} novalidate aria-labelledby="po-receipt-title">
+  <h2 id="po-receipt-title" class="text-xl font-semibold">{t.admin.receiveTitle}</h2>
+  <div class="flex flex-col gap-3">
+    {open.map((line) => (
+      <div class="grid gap-2 sm:grid-cols-[1fr_10rem] sm:items-end" data-receipt-line data-line-id={line.id}>
+        <p class="text-sm"><span class="font-medium">{line.sku}</span>{line.description ? ` — ${line.description}` : ""} · {t.admin.outstanding} : {outstanding(line)}</p>
+        <div class="grid gap-1"><Label for={`po-rcv-${line.id}`}>{t.fields.quantity} ({line.sku})</Label><Input id={`po-rcv-${line.id}`} name="quantity" type="number" min={0} max={outstanding(line)} value={String(outstanding(line))} /></div>
+      </div>
+    ))}
+  </div>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div class="grid gap-2"><Label for="po-rcv-ref">{t.fields.supplierReference}</Label><Input id="po-rcv-ref" name="supplierReference" maxlength={100} /></div>
+    <div class="grid gap-2"><Label for="po-rcv-notes">{t.fields.notes}</Label><Input id="po-rcv-notes" name="notes" maxlength={5000} /></div>
+  </div>
+  <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+  <div><Button type="submit">{t.admin.receive}</Button></div>
+</form>
+
+<script>
+  import { initPurchasing } from "@/modules/purchasing/client/init";
+
+  initPurchasing();
+  document.addEventListener("astro:after-swap", initPurchasing);
+</script>

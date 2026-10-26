@@ -1,0 +1,39 @@
+---
+/** Formulaire de fournisseur (création / édition). Soumission : `modules/purchasing/client/forms.ts`. */
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import type { Locale } from "@i18n/config";
+import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
+
+interface Props {
+  locale: Locale;
+  organizationId?: string | null;
+  viewBaseUrl?: string;
+  supplier?: { id: string; code: string; name: string; email: string | null; country: string | null; vatNumber: string | null; address: string | null; paymentTermDays: number; active: boolean };
+}
+const { locale, organizationId = null, viewBaseUrl = "", supplier: s } = Astro.props as Props;
+const t = getPurchasingTranslations(locale);
+const p = s ? "po-sup-edit" : "po-sup-new";
+---
+<form class="flex max-w-3xl flex-col gap-4" data-purchasing-form="supplier" data-id={s?.id ?? ""} data-organization-id={organizationId ?? ""} data-view-base-url={viewBaseUrl} data-done={s ? t.admin.saved : t.admin.created} novalidate>
+  <div class="grid gap-4 sm:grid-cols-3">
+    <div class="grid gap-2"><Label for={`${p}-code`}>{t.fields.code}</Label><Input id={`${p}-code`} name="code" required maxlength={16} value={s?.code ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${p}-name`}>{t.fields.name}</Label><Input id={`${p}-name`} name="name" required maxlength={200} autocomplete="organization" value={s?.name ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${p}-email`}>{t.fields.email}</Label><Input id={`${p}-email`} name="email" type="email" maxlength={254} autocomplete="email" value={s?.email ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${p}-country`}>{t.fields.country}</Label><Input id={`${p}-country`} name="country" maxlength={2} pattern="[A-Za-z]{2}" value={s?.country ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${p}-vat`}>{t.fields.vatNumber}</Label><Input id={`${p}-vat`} name="vatNumber" maxlength={32} value={s?.vatNumber ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${p}-terms`}>{t.fields.paymentTermDays}</Label><Input id={`${p}-terms`} name="paymentTermDays" type="number" min={0} max={365} value={String(s?.paymentTermDays ?? 30)} /></div>
+    <div class="grid gap-2 sm:col-span-3"><Label for={`${p}-address`}>{t.fields.address}</Label><textarea id={`${p}-address`} name="address" rows="2" maxlength="1000" class="rounded-md border bg-transparent px-3 py-2 text-sm">{s?.address ?? ""}</textarea></div>
+    <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" class="size-6" name="active" checked={s ? s.active : true} />{t.fields.active}</label>
+  </div>
+  <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+  <div><Button type="submit">{s ? t.admin.save : t.admin.create}</Button></div>
+</form>
+
+<script>
+  import { initPurchasing } from "@/modules/purchasing/client/init";
+
+  initPurchasing();
+  document.addEventListener("astro:after-swap", initPurchasing);
+</script>
