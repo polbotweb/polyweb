@@ -1,6 +1,6 @@
 ════════════════════════════════════════════════════════════════════════════════
   VITEST UNIT & INTEGRATION TEST REPORT
-  Generated: 2026-10-25 20:24:07
+  Generated: 2026-10-26 00:19:45
 ════════════════════════════════════════════════════════════════════════════════
 
   ✅ tests/integration/audit.test.ts  (8/8 passed)
@@ -14,6 +14,7 @@
   ✅ tests/integration/blog-bulk-core.test.ts  (3/3 passed)
   ✅ tests/integration/blog-facets.test.ts  (3/3 passed)
   ✅ tests/integration/blog-internal-link.test.ts  (8/8 passed)
+  ✅ tests/integration/category-taxonomy.test.ts  (10/10 passed)
   ✅ tests/integration/cms-admin.test.ts  (14/14 passed)
   ✅ tests/integration/consent-cms.test.ts  (25/25 passed)
   ✅ tests/integration/contact-api.test.ts  (13/13 passed)
@@ -31,7 +32,7 @@
   ✅ tests/integration/middleware.test.ts  (4/4 passed)
   ✅ tests/integration/navigation-cycle.test.ts  (6/6 passed)
   ✅ tests/integration/pages-bulk-core.test.ts  (4/4 passed)
-  ✅ tests/integration/pages-facets.test.ts  (3/3 passed)
+  ✅ tests/integration/pages-facets.test.ts  (5/5 passed)
   ✅ tests/integration/payments.test.ts  (3/3 passed)
   ✅ tests/integration/saved-views.test.ts  (7/7 passed)
   ✅ tests/integration/seed-demo-login.test.ts  (1/1 passed)
@@ -39,6 +40,7 @@
   ✅ tests/integration/services-bulk-core.test.ts  (5/5 passed)
   ✅ tests/integration/services-facets.test.ts  (2/2 passed)
   ✅ tests/integration/shop-module.test.ts  (3/3 passed)
+  ✅ tests/integration/tenant-guards.test.ts  (20/20 passed)
   ✅ tests/unit/admin-consent.test.ts  (5/5 passed)
   ✅ tests/unit/admin-contact.test.ts  (10/10 passed)
   ✅ tests/unit/admin-helpers.test.ts  (7/7 passed)
@@ -47,7 +49,7 @@
   ✅ tests/unit/admin-menus.test.ts  (13/13 passed)
   ✅ tests/unit/admin-navigation-items.test.ts  (11/11 passed)
   ✅ tests/unit/admin-pages-theme.test.ts  (9/9 passed)
-  ✅ tests/unit/admin-pages.test.ts  (28/28 passed)
+  ✅ tests/unit/admin-pages.test.ts  (30/30 passed)
   ✅ tests/unit/admin-roles.test.ts  (21/21 passed)
   ✅ tests/unit/admin-sections.test.ts  (16/16 passed)
   ✅ tests/unit/admin-site-social-contact-hours.test.ts  (10/10 passed)
@@ -147,6 +149,7 @@
   ✅ tests/integration/loaders/page-loader-effect.test.ts  (4/4 passed)
   ✅ tests/integration/loaders/site-media-admin-effect.test.ts  (3/3 passed)
   ✅ tests/integration/locks/core-locks-pg.test.ts  (8/8 passed)
+  ✅ tests/integration/observability/observability.test.ts  (5/5 passed)
   ✅ tests/integration/platform/api-v1.test.ts  (8/8 passed)
   ✅ tests/integration/platform/blocks-media.test.ts  (2/2 passed)
   ✅ tests/integration/platform/content.test.ts  (5/5 passed)
@@ -155,7 +158,6 @@
   ✅ tests/integration/platform/preview.test.ts  (3/3 passed)
   ✅ tests/integration/platform/sites.test.ts  (5/5 passed)
   ✅ tests/integration/platform/webhooks.test.ts  (6/6 passed)
-  ✅ tests/integration/observability/observability.test.ts  (5/5 passed)
   ✅ tests/integration/search/search.test.ts  (4/5 passed, 1 skipped)
   ✅ tests/integration/storage/s3.test.ts  (4/4 passed)
   ✅ tests/unit/blog/status-transitions.test.ts  (17/17 passed)
@@ -167,16 +169,17 @@
   ✅ tests/unit/cms/module-registry.test.ts  (2/2 passed)
   ✅ tests/unit/cms/resource-contract.test.ts  (6/6 passed)
   ✅ tests/unit/cms/workflow.test.ts  (4/4 passed)
-  ✅ tests/unit/effect/foundation.test.ts  (4/4 passed)
+  ✅ tests/unit/core/category-taxonomy.test.ts  (5/5 passed)
   ✅ tests/unit/database/migration-sql.test.ts  (12/12 passed)
   ✅ tests/unit/database/seed-data-contract.test.ts  (2/2 passed)
   ✅ tests/unit/database/seed-manifest.test.ts  (3/3 passed)
   ✅ tests/unit/database/services-data-invariants.test.ts  (5/5 passed)
   ✅ tests/unit/database/services-data-shape.test.ts  (1/1 passed)
+  ✅ tests/unit/effect/foundation.test.ts  (4/4 passed)
   ✅ tests/unit/payments/providers.test.ts  (5/5 passed)
   ✅ tests/unit/readme-builder/node-requirement.test.ts  (3/3 passed)
   ✅ tests/unit/routing/content-routes.test.ts  (4/4 passed)
-  ✅ tests/unit/scripts/new-module.test.ts  (4/4 passed)
+  ✅ tests/unit/scripts/new-module.test.ts  (6/6 passed)
   ✅ tests/unit/platform/blocks.test.ts  (5/5 passed)
   ✅ tests/unit/platform/fields.test.ts  (5/5 passed)
   ✅ tests/unit/platform/revisions-diff.test.ts  (4/4 passed)
@@ -193,12 +196,12 @@
   SUMMARY
 ════════════════════════════════════════════════════════════════════════════════
 
-  Total tests:   1657
-  Passed:        1656  ✅
+  Total tests:   1698
+  Passed:        1697  ✅
   Failed:        0  
   Skipped:       1
-  Duration:      29s
+  Duration:      32s
 
 ════════════════════════════════════════════════════════════════════════════════
-  END OF REPORT — 1656/1657 passed
+  END OF REPORT — 1697/1698 passed
 ════════════════════════════════════════════════════════════════════════════════

@@ -1,159 +1,160 @@
 
-> polyweb@0.0.1 test /workspace/mod-shop
+> polyweb@0.0.1 test /workspace/h-qa
 > vitest run -- --coverage
 
 
- RUN  v5.0.5 /workspace/mod-shop
+ RUN  v5.0.5 /workspace/h-qa
 
- ✓ tests/integration/audit.test.ts (8 tests) 3326ms
-   ✓ Audit — Hooks integration (6)
-     ✓ logs SIGN_UP when a user signs up 675ms
-     ✓ logs USER_ROLE_CHANGE when admin changes role 523ms
-     ✓ does not log passwords in metadata 651ms
-     ✓ logs SIGN_IN_FAILED for bad credentials 635ms
-     ✓ filters metadata to SAFE_FIELDS only (no password in metadata) 695ms
- ✓ tests/integration/create-polyweb.test.ts (5 tests) 4556ms
+ ✓ tests/integration/create-polyweb.test.ts (5 tests) 4339ms
    ✓ create-polyweb end to end (built CLI, local template) (2)
-     ✓ creates a project with renamed package, fresh secrets and a git commit 2130ms
-     ✓ prints help 357ms
- ✓ tests/unit/media-variants.test.ts (15 tests) 5591ms
+     ✓ creates a project with renamed package, fresh secrets and a git commit 2108ms
+ ✓ tests/unit/media-variants.test.ts (15 tests) 4370ms
    ✓ variantes responsive (11)
-     ✓ produit des variantes strictement plus étroites que la source 380ms
-     ✓ n'émet jamais de largeur au-delà du plafond, l'original restant le choix au-dessus 386ms
-     ✓ préserve le ratio de la source 397ms
-     ✓ assainit les noms de fichier : aucune espace dans les URLs de variante 345ms
-     ✓ assainit les accents et caractères exotiques 308ms
-     ✓ écrit réellement les fichiers sur disque 314ms
-     ✓ réduit fortement le poids servi : une carte de blog ne doit pas coûter 3 Mo 348ms
+     ✓ produit des variantes strictement plus étroites que la source 439ms
+     ✓ n'émet jamais de largeur au-delà du plafond, l'original restant le choix au-dessus 390ms
+     ✓ préserve le ratio de la source 371ms
+     ✓ assainit les noms de fichier : aucune espace dans les URLs de variante 338ms
+     ✓ assainit les accents et caractères exotiques 343ms
+     ✓ écrit réellement les fichiers sur disque 335ms
+     ✓ réduit fortement le poids servi : une carte de blog ne doit pas coûter 3 Mo 304ms
    ✓ decodeAndValidate (4)
-     ✓ rejette une bombe de pixels (décompression vers une image gigantesque) 2875ms
- ✓ tests/integration/create-admin.test.ts (2 tests) 5640ms
+     ✓ rejette une bombe de pixels (décompression vers une image gigantesque) 1644ms
+ ✓ tests/integration/create-admin.test.ts (2 tests) 4818ms
    ✓ admin:create (repris de les-rochers-blancs) (2)
-     ✓ crée un admin vérifié dont le mot de passe fonctionne avec Better Auth 2573ms
-     ✓ réinitialise le mot de passe si le compte existe déjà 3052ms
- ✓ tests/integration/backup/backup.test.ts (6 tests) 2038ms
+     ✓ crée un admin vérifié dont le mot de passe fonctionne avec Better Auth 2398ms
+     ✓ réinitialise le mot de passe si le compte existe déjà 2402ms
+ ✓ tests/integration/backup/backup.test.ts (6 tests) 1936ms
    ✓ backup → verify (brick m) (3)
-     ✓ creates an archive with manifest, checksum, migrations and media 351ms
-     ✓ restores into a scratch database (RESTORE_TEST_DATABASE_URL) with media 1579ms
- ✓ tests/integration/auth-plugins.test.ts (6 tests) 2291ms
+     ✓ creates an archive with manifest, checksum, migrations and media 341ms
+     ✓ restores into a scratch database (RESTORE_TEST_DATABASE_URL) with media 1517ms
+ ✓ tests/integration/audit.test.ts (8 tests) 3270ms
+   ✓ Audit — Hooks integration (6)
+     ✓ logs SIGN_UP when a user signs up 664ms
+     ✓ logs USER_ROLE_CHANGE when admin changes role 536ms
+     ✓ does not log passwords in metadata 631ms
+     ✓ logs SIGN_IN_FAILED for bad credentials 595ms
+     ✓ filters metadata to SAFE_FIELDS only (no password in metadata) 596ms
+ ✓ tests/integration/auth-plugins.test.ts (6 tests) 1927ms
    ✓ Better Auth — admin plugin (4)
-     ✓ admin can set a role and find it via listUsers 518ms
-     ✓ admin can ban and unban a user to control access 541ms
-     ✓ a regular user cannot change roles 338ms
+     ✓ admin can set a role and find it via listUsers 381ms
+     ✓ admin can ban and unban a user to control access 523ms
    ✓ Better Auth — organization plugin (2)
-     ✓ owner can invite a member, and a non-member cannot read the organization 459ms
- ✓ tests/integration/auth-extensions.test.ts (5 tests) 1571ms
-   ✓ 2FA TOTP (2)
-     ✓ active la 2FA, impose l’étape TOTP à la connexion et accepte un code valide 722ms
-     ✓ un code de secours permet de terminer la connexion 467ms
- ✓ tests/unit/database/seed-data-contract.test.ts (2 tests) 1138ms
-   ✓ seed data contract (2)
-     ✓ maps every manifest entry to an existing non-empty dataset and schema table 1136ms
- ✓ tests/integration/auth-advanced.test.ts (10 tests) 1421ms
+     ✓ owner can invite a member, and a non-member cannot read the organization 418ms
+ ✓ tests/integration/seed-idempotent.test.ts (1 test) 9442ms
+   ✓ db:seed idempotent (1)
+     ✓ un second seed ne crée aucune ligne 5455ms
+ ✓ tests/integration/auth-advanced.test.ts (10 tests) 1225ms
    ✓ Auth — Change Password (2)
-     ✓ changePassword updates credentials 395ms
- ✓ tests/integration/pages-bulk-core.test.ts (4 tests) 877ms
-   ✓ pages bulk (core/bulk) (4)
-     ✓ publie tout, un instantané de version par page, audit batchId commun 738ms
- ✓ tests/integration/services-bulk-core.test.ts (5 tests) 888ms
-   ✓ bulkServiceLifecycle (core/bulk) (5)
-     ✓ publie tout et audite avec un batchId commun 770ms
+     ✓ changePassword updates credentials 367ms
 stdout | tests/integration/platform/webhooks.test.ts > webhooks > schedules retries with backoff, then succeeds via the cron processor
-[20:23:49.045] WARN (#19): webhook delivery failed {
-  deliveryId: '8d34e912-cb73-44c2-b2d0-cec129da37c6',
+[00:19:23.300] WARN (#19): webhook delivery failed {
+  deliveryId: 'ddab13e3-61ab-48f1-b904-3b3aef9d3bb5',
   status: 500,
   error: null
 }
 
 stdout | tests/integration/platform/webhooks.test.ts > webhooks > schedules retries with backoff, then succeeds via the cron processor
-[20:23:49.060] WARN (#20): webhook delivery failed {
-  deliveryId: 'fa7bd4b7-9b15-47df-a828-98e6a1195da7',
+[00:19:23.309] WARN (#20): webhook delivery failed {
+  deliveryId: '126f7171-a26d-4091-8d80-ca66ad8505c7',
   status: 500,
   error: null
 }
 
 stdout | tests/integration/platform/webhooks.test.ts > webhooks > marks 410 Gone as dead and disables the webhook; manual redelivery works
-[20:23:49.083] WARN (#35): webhook delivery failed {
-  deliveryId: '4069152b-c9d9-4629-9c2c-e61e08a0b162',
+[00:19:23.337] WARN (#35): webhook delivery failed {
+  deliveryId: '6934d510-abfd-4667-a4c9-8692b90de59b',
   status: 410,
   error: null
 }
 
- ✓ tests/integration/seed-idempotent.test.ts (1 test) 10983ms
-   ✓ db:seed idempotent (1)
-     ✓ un second seed ne crée aucune ligne 6536ms
- ✓ tests/unit/i18n-translations.test.ts (12 tests) 530ms
-   ✓ getHomeTranslations (4)
-     ✓ loads fr and has required keys 502ms
+ ✓ tests/unit/database/seed-data-contract.test.ts (2 tests) 1072ms
+   ✓ seed data contract (2)
+     ✓ maps every manifest entry to an existing non-empty dataset and schema table 1070ms
 stdout | tests/integration/platform/webhooks.test.ts > webhooks > records network failures (connection refused) without throwing
-[20:23:49.719] WARN (#44): webhook delivery failed {
-  deliveryId: 'ca49c908-36a4-4810-940b-b2824718e3be',
+[00:19:23.971] WARN (#44): webhook delivery failed {
+  deliveryId: 'cee657aa-5515-49c3-a032-840d63aeb2aa',
   status: 0,
   error: 'bad port'
 }
 
- ✓ tests/integration/platform/webhooks.test.ts (6 tests) 884ms
+ ✓ tests/integration/platform/webhooks.test.ts (6 tests) 857ms
    ✓ webhooks (6)
-     ✓ records network failures (connection refused) without throwing 629ms
- ✓ tests/unit/export-data.test.ts (4 tests) 551ms
-   ✓ /api/export-data (4)
-     ✓ returns 401 when not authenticated 542ms
- ✓ tests/integration/blog-actions.test.ts (8 tests) 664ms
+     ✓ records network failures (connection refused) without throwing 621ms
+ ✓ tests/integration/auth-extensions.test.ts (5 tests) 1322ms
+   ✓ 2FA TOTP (2)
+     ✓ active la 2FA, impose l’étape TOTP à la connexion et accepte un code valide 498ms
+     ✓ un code de secours permet de terminer la connexion 444ms
+ ✓ tests/integration/blog-actions.test.ts (8 tests) 623ms
    ✓ blog actions — integration (real DB) (8)
-     ✓ listBlogPostRevisions returns revisions for a seeded post 525ms
- ✓ tests/integration/blog-bulk-core.test.ts (3 tests) 763ms
-   ✓ bulkBlogPostLifecycle (core/bulk) (3)
-     ✓ publie tout, crée une révision par article et audite avec un batchId commun 695ms
- ✓ tests/unit/scripts/new-module.test.ts (4 tests) 12399ms
-   ✓ scripts/new-module.ts (3)
-     ✓ refuses invalid names and existing modules 368ms
+     ✓ listBlogPostRevisions returns revisions for a seeded post 521ms
+ ✓ tests/unit/scripts/new-module.test.ts (6 tests) 12293ms
+   ✓ scripts/new-module.ts (5)
+     ✓ names SQL tables after the pluralized entity (not the domain), with --table override and collision guard 1000ms
+     ✓ --taxonomy opts the module into the generic core category taxonomy (tables, store, actions, capability, facet) 346ms
+     ✓ refuses invalid names and existing modules 324ms
    ✓ scripts/new-module.ts — module généré compilable (1)
-     ✓ type-checks against core abstractions and passes the capability contract 11846ms
- ✓ tests/integration/auth-flow.test.ts (5 tests) 591ms
- ✓ tests/integration/saved-views.test.ts (7 tests) 562ms
+     ✓ type-checks against core abstractions (incl. --taxonomy) and passes the capability contract 10441ms
+ ✓ tests/unit/i18n-translations.test.ts (12 tests) 546ms
+   ✓ getHomeTranslations (4)
+     ✓ loads fr and has required keys 507ms
+ ✓ tests/integration/services-bulk-core.test.ts (5 tests) 836ms
+   ✓ bulkServiceLifecycle (core/bulk) (5)
+     ✓ publie tout et audite avec un batchId commun 765ms
+ ✓ tests/integration/pages-bulk-core.test.ts (4 tests) 688ms
+   ✓ pages bulk (core/bulk) (4)
+     ✓ publie tout, un instantané de version par page, audit batchId commun 596ms
+ ✓ tests/unit/export-data.test.ts (4 tests) 519ms
+   ✓ /api/export-data (4)
+     ✓ returns 401 when not authenticated 500ms
+ ✓ tests/integration/blog-bulk-core.test.ts (3 tests) 680ms
+   ✓ bulkBlogPostLifecycle (core/bulk) (3)
+     ✓ publie tout, crée une révision par article et audite avec un batchId commun 617ms
+ ✓ tests/integration/platform/api-v1.test.ts (8 tests) 434ms
+ ✓ tests/integration/auth-flow.test.ts (5 tests) 497ms
+ ✓ tests/integration/auth.test.ts (13 tests) 331ms
+ ✓ tests/integration/saved-views.test.ts (7 tests) 499ms
    ✓ vues enregistrées (7)
-     ✓ crée une vue avec une requête canonique (valeurs invalides retirées) 490ms
- ✓ tests/integration/platform/api-v1.test.ts (8 tests) 456ms
- ✓ tests/unit/port-guard.test.ts (2 tests) 308ms
-   ✓ a11y port guard (2)
-     ✓ detects and kills a stale listener bound only to IPv6 [::1] 304ms
- ✓ tests/integration/auth.test.ts (13 tests) 332ms
- ✓ tests/unit/upload.test.ts (24 tests) 307ms
- ✓ tests/integration/auth-org.test.ts (5 tests) 251ms
- ✓ tests/integration/platform/sites.test.ts (5 tests) 256ms
- ✓ tests/integration/loaders/blog-loader-effect.test.ts (8 tests) 246ms
+     ✓ crée une vue avec une requête canonique (valeurs invalides retirées) 425ms
+ ✓ tests/integration/loaders/blog-loader-effect.test.ts (8 tests) 233ms
+ ✓ tests/unit/upload.test.ts (24 tests) 364ms
+ ✓ tests/integration/category-taxonomy.test.ts (10 tests) 219ms
+ ✓ tests/integration/middleware.test.ts (4 tests) 110ms
+ ✓ tests/integration/search/search.test.ts (5 tests | 1 skipped) 214ms
+ ✓ tests/integration/tenant-guards.test.ts (20 tests) 245ms
+ ✓ tests/integration/auth-org.test.ts (5 tests) 265ms
+ ✓ tests/integration/locks/core-locks-pg.test.ts (8 tests) 167ms
+ ✓ tests/integration/platform/sites.test.ts (5 tests) 304ms
  ✓ tests/integration/platform/content.test.ts (5 tests) 179ms
- ✓ tests/integration/search/search.test.ts (5 tests | 1 skipped) 196ms
- ✓ tests/integration/locks/core-locks-pg.test.ts (8 tests) 202ms
- ✓ tests/integration/loaders/site-media-admin-effect.test.ts (3 tests) 153ms
- ✓ tests/integration/storage/s3.test.ts (4 tests) 310ms
- ✓ tests/integration/platform/forms.test.ts (6 tests) 145ms
- ✓ tests/integration/seed-demo-login.test.ts (1 test) 153ms
- ✓ tests/integration/shop-module.test.ts (3 tests) 108ms
- ✓ tests/integration/formations-module.test.ts (4 tests) 88ms
- ✓ tests/integration/courses-module.test.ts (5 tests) 104ms
- ✓ tests/integration/events-module.test.ts (4 tests) 83ms
- ✓ tests/integration/cms-admin.test.ts (14 tests) 89ms
+ ✓ tests/integration/loaders/site-media-admin-effect.test.ts (3 tests) 173ms
+ ✓ tests/integration/export.test.ts (3 tests) 136ms
+ ✓ tests/unit/port-guard.test.ts (2 tests) 320ms
+   ✓ a11y port guard (2)
+     ✓ detects and kills a stale listener bound only to IPv6 [::1] 317ms
+ ✓ tests/integration/platform/forms.test.ts (6 tests) 131ms
+ ✓ tests/integration/seed-demo-login.test.ts (1 test) 142ms
+ ✓ tests/unit/i18n-urls.test.ts (32 tests) 35ms
+ ✓ tests/integration/blog-facets.test.ts (3 tests) 90ms
+ ✓ tests/integration/cms-admin.test.ts (14 tests) 72ms
+ ✓ tests/integration/platform/blocks-media.test.ts (2 tests) 131ms
 stdout | tests/integration/platform/plugins.test.ts > plugin system (brick i) > a failing setup is recorded, rolled back and isolated
-[20:23:54.604] WARN (#12): [plugins] test-broken non activé : Plugin test-broken: boom
+[00:19:31.181] WARN (#12): [plugins] test-broken non activé : Plugin test-broken: boom
 
- ✓ tests/integration/platform/plugins.test.ts (5 tests) 82ms
- ✓ tests/integration/middleware.test.ts (4 tests) 106ms
- ✓ tests/integration/platform/preview.test.ts (3 tests) 86ms
- ✓ tests/integration/platform/blocks-media.test.ts (2 tests) 120ms
- ✓ tests/integration/services-facets.test.ts (2 tests) 92ms
- ✓ tests/integration/blog-facets.test.ts (3 tests) 97ms
+ ✓ tests/integration/platform/plugins.test.ts (5 tests) 88ms
+ ✓ tests/integration/shop-module.test.ts (3 tests) 118ms
+ ✓ tests/integration/services-facets.test.ts (2 tests) 96ms
+ ✓ tests/integration/courses-module.test.ts (5 tests) 109ms
 stdout | tests/integration/observability/observability.test.ts > Sentry reporter (brick l) > sends to the envelope endpoint, respects sampling, and never fails the caller
-[20:23:55.504] WARN (#3): [sentry] envoi impossible Error: Sentry HTTP 500
-    at /workspace/mod-shop/src/lib/observability/errors.ts:112:52
+[00:19:31.564] WARN (#3): [sentry] envoi impossible Error: Sentry HTTP 500
+    at /workspace/h-qa/src/lib/observability/errors.ts:112:52
     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    at sentry.capture (/workspace/mod-shop/src/lib/observability/errors.ts:118:16)
+    at sentry.capture (/workspace/h-qa/src/lib/observability/errors.ts:118:16)
 
+ ✓ tests/unit/database/services-data-invariants.test.ts (5 tests) 27ms
 stdout | tests/integration/observability/observability.test.ts > Sentry reporter (brick l) > sends to the envelope endpoint, respects sampling, and never fails the caller
-[20:23:55.509] WARN (#4): [sentry] envoi impossible TypeError: fetch failed
+[00:19:31.568] WARN (#4): [sentry] envoi impossible TypeError: fetch failed
     at node:internal/deps/undici/undici:15456:13
     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    at sentry.capture (/workspace/mod-shop/src/lib/observability/errors.ts:118:16) {
+    at sentry.capture (/workspace/h-qa/src/lib/observability/errors.ts:118:16) {
   [cause]: Error: bad port
       at makeNetworkError (node:internal/deps/undici/undici:9725:35)
       at mainFetch (node:internal/deps/undici/undici:10951:20)
@@ -161,255 +162,257 @@ stdout | tests/integration/observability/observability.test.ts > Sentry reporter
       at fetch (node:internal/deps/undici/undici:10806:20)
       at fetch (node:internal/deps/undici/undici:15454:10)
       at fetch (node:internal/bootstrap/web/exposed-window-or-worker:75:12)
-      at try (/workspace/mod-shop/src/lib/observability/errors.ts:103:13)
-      at MixedScheduler.<anonymous> (file:///workspace/mod-shop/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:785:7)
+      at try (/workspace/h-qa/src/lib/observability/errors.ts:103:13)
+      at MixedScheduler.<anonymous> (file:///workspace/h-qa/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:785:7)
 }
 
- ✓ tests/integration/observability/observability.test.ts (5 tests) 72ms
- ✓ tests/unit/i18n-key-completeness.test.ts (7 tests) 44ms
- ✓ tests/integration/blog-internal-link.test.ts (8 tests) 78ms
- ✓ tests/integration/pages-facets.test.ts (3 tests) 54ms
- ✓ tests/integration/payments.test.ts (3 tests) 69ms
- ✓ tests/integration/contact-api.test.ts (13 tests) 78ms
- ✓ tests/integration/loaders/navigation-consent-effect.test.ts (3 tests) 64ms
- ✓ tests/integration/export.test.ts (3 tests) 85ms
- ✓ tests/integration/legal-cms.test.ts (19 tests) 92ms
- ✓ tests/integration/navigation-cycle.test.ts (6 tests) 87ms
- ✓ tests/integration/loaders/page-loader-effect.test.ts (4 tests) 91ms
- ✓ tests/unit/database/services-data-shape.test.ts (1 test) 50ms
- ✓ tests/unit/sanitize.test.ts (44 tests) 57ms
- ✓ tests/integration/consent-cms.test.ts (25 tests) 79ms
- ✓ tests/integration/draft-preview.test.ts (4 tests) 62ms
- ✓ tests/unit/middleware-timeout.test.ts (6 tests) 44ms
- ✓ tests/unit/production-hardening.test.ts (9 tests) 58ms
- ✓ tests/unit/rate-limit.test.ts (9 tests) 39ms
- ✓ tests/unit/smtp-env.test.ts (20 tests) 45ms
-stdout | tests/unit/send-email.test.ts > sendEmail > retries on transient network error and eventually throws
-[20:23:57.674] WARN (#6): [SMTP] Attempt 1 failed, retrying Error: connect failed
-
-stdout | tests/unit/send-email.test.ts > sendEmail > retries on transient network error and eventually throws
-[20:23:58.674] WARN (#6): [SMTP] Attempt 2 failed, retrying Error: connect failed
-
-stdout | tests/unit/send-email.test.ts > sendEmail > retries on HTTP 429 (rate limit)
-[20:23:57.690] WARN (#7): [SMTP] Attempt 1 failed, retrying Error: HTTP 429 Too Many Requests
-
-stdout | tests/unit/send-email.test.ts > sendEmail > retries on HTTP 500/502/503/504 server errors
-[20:23:57.692] WARN (#8): [SMTP] Attempt 1 failed, retrying Error: HTTP 502 Bad Gateway
-
-stdout | tests/unit/send-email.test.ts > sendEmail > retries on HTTP 500/502/503/504 server errors
-[20:23:58.692] WARN (#8): [SMTP] Attempt 2 failed, retrying Error: HTTP 503 Service Unavailable
-
-stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
-[20:23:57.694] WARN (#9): [SMTP] Attempt 1 failed, retrying Error: network
-
-stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
-[20:23:58.694] WARN (#10): [SMTP] Attempt 1 failed, retrying Error: network
-
-stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
-[20:23:59.694] WARN (#11): [SMTP] Attempt 1 failed, retrying Error: network
-
-stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
-[20:24:00.694] WARN (#12): [SMTP] Attempt 1 failed, retrying Error: network
-
-stdout | tests/unit/send-email.test.ts > sendEmail > verifies exponential backoff delay formula: 1000 * 2^(attempt-1)
-[20:23:57.698] WARN (#13): [SMTP] Attempt 1 failed, retrying Error: fail
-
-stdout | tests/unit/send-email.test.ts > sendEmail > verifies exponential backoff delay formula: 1000 * 2^(attempt-1)
-[20:23:58.698] WARN (#13): [SMTP] Attempt 2 failed, retrying Error: fail
-
- ✓ tests/unit/send-email.test.ts (17 tests) 41ms
- ✓ tests/unit/i18n-urls.test.ts (32 tests) 33ms
- ✓ tests/integration/effect/db.test.ts (3 tests) 67ms
- ✓ tests/unit/database/services-data-invariants.test.ts (5 tests) 50ms
- ✓ tests/integration/crud-engine.test.ts (2 tests) 61ms
- ✓ tests/unit/admin-pages.test.ts (28 tests) 48ms
+ ✓ tests/integration/observability/observability.test.ts (5 tests) 75ms
+ ✓ tests/integration/platform/preview.test.ts (3 tests) 93ms
+ ✓ tests/integration/consent-cms.test.ts (25 tests) 66ms
+ ✓ tests/integration/events-module.test.ts (4 tests) 84ms
+ ✓ tests/integration/contact-api.test.ts (13 tests) 86ms
+ ✓ tests/integration/blog-internal-link.test.ts (8 tests) 72ms
+ ✓ tests/integration/formations-module.test.ts (4 tests) 82ms
+ ✓ tests/integration/crud-engine.test.ts (2 tests) 69ms
+ ✓ tests/integration/pages-facets.test.ts (5 tests) 66ms
+ ✓ tests/integration/legal-cms.test.ts (19 tests) 56ms
+ ✓ tests/integration/navigation-cycle.test.ts (6 tests) 80ms
 stdout | tests/unit/request-context.test.ts > request context (middleware) > treats a failing session lookup as anonymous
-[20:23:58.159] ERROR (#5): [middleware] Session check failed {
+[00:19:33.410] ERROR (#5): [middleware] Session check failed {
   message: 'An error occurred in Effect.tryPromise',
   cause: Error: db down
-      at /workspace/mod-shop/tests/unit/request-context.test.ts:14:74
-      at MixedScheduler.<anonymous> (file:///workspace/mod-shop/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:785:7)
-      at ~effect/Effect/evaluate (file:///workspace/mod-shop/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:804:38)
-      at FiberImpl.runLoop (file:///workspace/mod-shop/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:453:97)
-      at FiberImpl.evaluate (file:///workspace/mod-shop/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:402:23)
-      at forkUnsafe (file:///workspace/mod-shop/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2426:11)
-      at MixedScheduler.<anonymous> (file:///workspace/mod-shop/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:1131:21)
-      at ~effect/Effect/evaluate (file:///workspace/mod-shop/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:804:38)
-      at FiberImpl.runLoop (file:///workspace/mod-shop/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:453:97)
-      at FiberImpl.evaluate (file:///workspace/mod-shop/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:402:23),
+      at /workspace/h-qa/tests/unit/request-context.test.ts:14:74
+      at MixedScheduler.<anonymous> (file:///workspace/h-qa/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:785:7)
+      at ~effect/Effect/evaluate (file:///workspace/h-qa/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:804:38)
+      at FiberImpl.runLoop (file:///workspace/h-qa/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:453:97)
+      at FiberImpl.evaluate (file:///workspace/h-qa/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:402:23)
+      at forkUnsafe (file:///workspace/h-qa/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2426:11)
+      at MixedScheduler.<anonymous> (file:///workspace/h-qa/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:1131:21)
+      at ~effect/Effect/evaluate (file:///workspace/h-qa/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:804:38)
+      at FiberImpl.runLoop (file:///workspace/h-qa/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:453:97)
+      at FiberImpl.evaluate (file:///workspace/h-qa/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:402:23),
   _tag: 'UnknownError',
   '~effect/Cause/UnknownError': '~effect/Cause/UnknownError'
 }
 
 stdout | tests/unit/request-context.test.ts > request context (middleware) > times out a slow session lookup
-[20:23:58.183] WARN (#7): [middleware] Session check timed out — returning 503
+[00:19:33.437] WARN (#7): [middleware] Session check timed out — returning 503
 
- ✓ tests/unit/admin-helpers.test.ts (7 tests) 30ms
 stdout | tests/unit/request-context.test.ts > request context (middleware) > falls back to null when site resolution fails
-[20:23:58.190] ERROR (#10): [middleware] Site resolution failed { operation: 'x', cause: 'down', _tag: 'DbError' }
+[00:19:33.441] ERROR (#10): [middleware] Site resolution failed { operation: 'x', cause: 'down', _tag: 'DbError' }
 
- ✓ tests/unit/request-context.test.ts (6 tests) 36ms
- ✓ tests/unit/blog-engagement-actions.test.ts (38 tests) 45ms
- ✓ tests/unit/admin-navigation-items.test.ts (11 tests) 17ms
- ✓ tests/unit/admin-media.test.ts (26 tests) 31ms
- ✓ tests/unit/admin-versions.test.ts (11 tests) 17ms
- ✓ tests/integration/db-health.test.ts (4 tests) 38ms
+ ✓ tests/unit/request-context.test.ts (6 tests) 37ms
+ ✓ tests/unit/cms-seeds.test.ts (12 tests) 22ms
+ ✓ tests/integration/loaders/navigation-consent-effect.test.ts (3 tests) 83ms
+ ✓ tests/unit/sanitize.test.ts (44 tests) 78ms
+ ✓ tests/integration/loaders/page-loader-effect.test.ts (4 tests) 109ms
+ ✓ tests/integration/payments.test.ts (3 tests) 106ms
+ ✓ tests/integration/db-health.test.ts (4 tests) 30ms
+ ✓ tests/integration/effect/db.test.ts (3 tests) 62ms
+ ✓ tests/unit/production-hardening.test.ts (9 tests) 60ms
+ ✓ tests/unit/i18n-key-completeness.test.ts (7 tests) 50ms
+ ✓ tests/integration/draft-preview.test.ts (4 tests) 84ms
+ ✓ tests/unit/middleware-timeout.test.ts (6 tests) 50ms
+ ✓ tests/unit/blog-engagement-actions.test.ts (38 tests) 180ms
+ ✓ tests/unit/smtp-env.test.ts (20 tests) 88ms
+ ✓ tests/unit/rate-limit.test.ts (9 tests) 196ms
+stdout | tests/unit/send-email.test.ts > sendEmail > retries on transient network error and eventually throws
+[00:19:35.809] WARN (#6): [SMTP] Attempt 1 failed, retrying Error: connect failed
+
+stdout | tests/unit/send-email.test.ts > sendEmail > retries on transient network error and eventually throws
+[00:19:36.809] WARN (#6): [SMTP] Attempt 2 failed, retrying Error: connect failed
+
+stdout | tests/unit/send-email.test.ts > sendEmail > retries on HTTP 429 (rate limit)
+[00:19:35.819] WARN (#7): [SMTP] Attempt 1 failed, retrying Error: HTTP 429 Too Many Requests
+
+stdout | tests/unit/send-email.test.ts > sendEmail > retries on HTTP 500/502/503/504 server errors
+[00:19:35.821] WARN (#8): [SMTP] Attempt 1 failed, retrying Error: HTTP 502 Bad Gateway
+
+stdout | tests/unit/send-email.test.ts > sendEmail > retries on HTTP 500/502/503/504 server errors
+[00:19:36.821] WARN (#8): [SMTP] Attempt 2 failed, retrying Error: HTTP 503 Service Unavailable
+
+stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
+[00:19:35.824] WARN (#9): [SMTP] Attempt 1 failed, retrying Error: network
+
+stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
+[00:19:36.824] WARN (#10): [SMTP] Attempt 1 failed, retrying Error: network
+
+stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
+[00:19:37.824] WARN (#11): [SMTP] Attempt 1 failed, retrying Error: network
+
+stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
+[00:19:38.824] WARN (#12): [SMTP] Attempt 1 failed, retrying Error: network
+
+stdout | tests/unit/send-email.test.ts > sendEmail > verifies exponential backoff delay formula: 1000 * 2^(attempt-1)
+[00:19:35.829] WARN (#13): [SMTP] Attempt 1 failed, retrying Error: fail
+
+stdout | tests/unit/send-email.test.ts > sendEmail > verifies exponential backoff delay formula: 1000 * 2^(attempt-1)
+[00:19:36.829] WARN (#13): [SMTP] Attempt 2 failed, retrying Error: fail
+
+ ✓ tests/unit/send-email.test.ts (17 tests) 37ms
+ ✓ tests/unit/database/services-data-shape.test.ts (1 test) 40ms
+ ✓ tests/unit/admin-helpers.test.ts (7 tests) 50ms
+ ✓ tests/unit/admin-pages.test.ts (30 tests) 48ms
+ ✓ tests/unit/cache.test.ts (12 tests) 15ms
+ ✓ tests/unit/blog-post-actions.test.ts (7 tests) 27ms
+ ✓ tests/unit/blog-newsletter-service.test.ts (9 tests) 22ms
+ ✓ tests/unit/blog-loader.test.ts (14 tests) 21ms
  ✓ tests/unit/services-contract.test.ts (16 tests) 31ms
- ✓ tests/unit/admin-contact.test.ts (10 tests) 15ms
- ✓ tests/unit/admin-theme.test.ts (10 tests) 18ms
- ✓ tests/unit/contact-api.test.ts (12 tests) 22ms
- ✓ tests/unit/admin-menus.test.ts (13 tests) 16ms
- ✓ tests/unit/database/migration-sql.test.ts (12 tests) 38ms
- ✓ tests/unit/site-loader.test.ts (13 tests) 18ms
- ✓ tests/unit/admin-sections.test.ts (16 tests) 20ms
- ✓ tests/unit/inline-style.test.ts (7 tests) 22ms
- ✓ tests/unit/origin-check.test.ts (5 tests) 24ms
- ✓ tests/unit/db-env.test.ts (16 tests) 26ms
- ✓ tests/unit/sections-sanitize.test.ts (10 tests) 33ms
- ✓ tests/unit/content-locking.test.ts (7 tests) 29ms
- ✓ tests/unit/cms-seeds.test.ts (12 tests) 20ms
- ✓ tests/unit/admin-pages-theme.test.ts (9 tests) 26ms
- ✓ tests/unit/blog-post-actions.test.ts (7 tests) 40ms
-stdout | tests/unit/blog-newsletter-routes.test.ts > blog newsletter HTTP routes > turns service failures into an operationally visible 503
-[20:24:00.246] ERROR (#11): [newsletter] confirm endpoint failed { name: 'Error' }
-
- ✓ tests/unit/blog-newsletter-routes.test.ts (5 tests) 30ms
- ✓ tests/unit/smtp-providers.test.ts (11 tests) 17ms
- ✓ tests/unit/admin-site-social-contact-hours.test.ts (10 tests) 16ms
- ✓ tests/unit/services/admin-actions.test.ts (4 tests) 21ms
- ✓ tests/unit/admin-roles.test.ts (21 tests) 17ms
- ✓ tests/unit/cms-i18n.test.ts (16 tests) 18ms
- ✓ tests/unit/blog-taxonomy-actions.test.ts (9 tests) 20ms
- ✓ tests/unit/blog-newsletter-service.test.ts (9 tests) 19ms
-stdout | tests/unit/smtp-send-effect.test.ts > sendEmailEffect > retries transient errors then succeeds
-[20:24:00.885] WARN (#3): [SMTP] Attempt 1 failed, retrying Error: conn
-
-stdout | tests/unit/smtp-send-effect.test.ts > sendEmailEffect > gives up after 3 attempts and writes a dead-letter record
-[20:24:00.892] WARN (#4): [SMTP] Attempt 1 failed, retrying Error: HTTP 503
-
- ✓ tests/unit/blog-loader.test.ts (14 tests) 20ms
-stdout | tests/unit/smtp-send-effect.test.ts > sendEmailEffect > gives up after 3 attempts and writes a dead-letter record
-[20:24:00.899] WARN (#4): [SMTP] Attempt 2 failed, retrying Error: HTTP 503
-
- ✓ tests/unit/smtp-send-effect.test.ts (5 tests) 27ms
- ✓ tests/unit/cms-schemas.test.ts (85 tests) 10ms
- ✓ tests/unit/blog-gallery.test.ts (7 tests) 14ms
- ✓ tests/unit/webhooks/signing-ssrf.test.ts (7 tests) 18ms
- ✓ tests/unit/media-loader.test.ts (12 tests) 25ms
- ✓ tests/unit/platform/fields.test.ts (5 tests) 14ms
- ✓ tests/unit/theme-tokens.test.ts (34 tests) 15ms
- ✓ tests/unit/blog-link.test.ts (6 tests) 17ms
- ✓ tests/unit/search-fts.test.ts (20 tests) 18ms
- ✓ tests/unit/cache.test.ts (12 tests) 13ms
- ✓ tests/unit/navigation-menus.test.ts (10 tests) 30ms
+ ✓ tests/integration/storage/s3.test.ts (4 tests) 22603ms
+ ✓ tests/unit/origin-check.test.ts (5 tests) 29ms
+ ✓ tests/unit/platform/revisions-diff.test.ts (4 tests) 7ms
+ ✓ tests/unit/smtp-providers.test.ts (11 tests) 31ms
  ✓ tests/unit/admin-social.test.ts (9 tests) 14ms
- ✓ tests/unit/admin-hours.test.ts (13 tests) 16ms
- ✓ tests/unit/blog-subscription.test.ts (5 tests) 17ms
- ✓ tests/unit/blog-helpers.test.ts (14 tests) 17ms
+ ✓ tests/unit/services-validation.test.ts (7 tests) 11ms
+ ✓ tests/unit/db-env.test.ts (16 tests) 22ms
+ ✓ tests/unit/admin-media.test.ts (26 tests) 33ms
  ✓ tests/unit/admin-site.test.ts (7 tests) 13ms
- ✓ tests/unit/platform/blocks.test.ts (5 tests) 14ms
- ✓ tests/unit/crud-engine.test.ts (8 tests) 17ms
- ✓ tests/unit/database/seed-manifest.test.ts (3 tests) 6ms
- ✓ tests/unit/core-bulk.test.ts (10 tests) 14ms
- ✓ tests/unit/media-list.test.ts (4 tests) 15ms
- ✓ tests/unit/services-validation.test.ts (7 tests) 14ms
+ ✓ tests/unit/admin-versions.test.ts (11 tests) 18ms
+ ✓ tests/unit/blog-gallery.test.ts (7 tests) 14ms
+stdout | tests/unit/blog-newsletter-routes.test.ts > blog newsletter HTTP routes > turns service failures into an operationally visible 503
+[00:19:38.062] ERROR (#11): [newsletter] confirm endpoint failed { name: 'Error' }
+
+ ✓ tests/unit/contact-api.test.ts (12 tests) 20ms
+ ✓ tests/unit/blog-newsletter-routes.test.ts (5 tests) 27ms
+ ✓ tests/unit/content-locking.test.ts (7 tests) 28ms
+ ✓ tests/unit/sections-sanitize.test.ts (10 tests) 29ms
+ ✓ tests/unit/database/migration-sql.test.ts (12 tests) 34ms
+ ✓ tests/unit/inline-style.test.ts (7 tests) 19ms
+ ✓ tests/unit/services/admin-actions.test.ts (4 tests) 25ms
+ ✓ tests/unit/admin-navigation-items.test.ts (11 tests) 18ms
+ ✓ tests/unit/admin-menus.test.ts (13 tests) 17ms
+ ✓ tests/unit/admin-sections.test.ts (16 tests) 40ms
+ ✓ tests/unit/admin-roles.test.ts (21 tests) 20ms
+ ✓ tests/unit/blog-taxonomy-actions.test.ts (9 tests) 28ms
+stdout | tests/unit/smtp-send-effect.test.ts > sendEmailEffect > retries transient errors then succeeds
+[00:19:38.955] WARN (#3): [SMTP] Attempt 1 failed, retrying Error: conn
+
+stdout | tests/unit/smtp-send-effect.test.ts > sendEmailEffect > gives up after 3 attempts and writes a dead-letter record
+[00:19:38.958] WARN (#4): [SMTP] Attempt 1 failed, retrying Error: HTTP 503
+
+stdout | tests/unit/smtp-send-effect.test.ts > sendEmailEffect > gives up after 3 attempts and writes a dead-letter record
+[00:19:38.963] WARN (#4): [SMTP] Attempt 2 failed, retrying Error: HTTP 503
+
+ ✓ tests/unit/smtp-send-effect.test.ts (5 tests) 26ms
+ ✓ tests/unit/cms-i18n.test.ts (16 tests) 23ms
+ ✓ tests/unit/media-list.test.ts (4 tests) 14ms
+ ✓ tests/unit/theme-tokens.test.ts (34 tests) 16ms
+ ✓ tests/unit/admin-site-social-contact-hours.test.ts (10 tests) 21ms
+ ✓ tests/unit/blog-helpers.test.ts (14 tests) 16ms
+ ✓ tests/unit/permissions.test.ts (37 tests) 8ms
+ ✓ tests/unit/navigation-menus.test.ts (10 tests) 15ms
+ ✓ tests/unit/admin-pages-theme.test.ts (9 tests) 15ms
+ ✓ tests/unit/media-loader.test.ts (12 tests) 19ms
+ ✓ tests/unit/admin-theme.test.ts (10 tests) 18ms
+ ✓ tests/unit/section-schemas.test.ts (48 tests) 11ms
+ ✓ tests/unit/admin-hours.test.ts (13 tests) 33ms
+ ✓ tests/unit/blog-link.test.ts (6 tests) 16ms
+ ✓ tests/unit/admin-contact.test.ts (10 tests) 30ms
+ ✓ tests/unit/search-fts.test.ts (20 tests) 14ms
+ ✓ tests/unit/platform/blocks.test.ts (5 tests) 11ms
+ ✓ tests/unit/core-bulk.test.ts (10 tests) 13ms
+ ✓ tests/unit/webhooks/signing-ssrf.test.ts (7 tests) 13ms
+ ✓ tests/unit/site-loader.test.ts (13 tests) 13ms
 stdout | tests/unit/audit-fallback.test.ts > logAuditEvent — JSONL fallback > writes to fallback file when DB insert fails
-[20:24:02.785] ERROR (#1): [audit] Failed to log event {
+[00:19:40.697] ERROR (#1): [audit] Failed to log event {
   message: 'An error occurred in Effect.tryPromise',
   cause: Error: DB connection lost
-      at Object.<anonymous> (/workspace/mod-shop/tests/unit/audit-fallback.test.ts:24:35)
-      at Object.Mock [as values] (file:///workspace/mod-shop/node_modules/.pnpm/vitest@5.0.5_@opentelemetry+api@1.9.1_@types+node@22.20.5_@vitest+coverage-v8@5.0.5_jsd_1318f1b899c87af89f9257dc6507fb2f/node_modules/vitest/dist/chunks/spy.DDMXghXv.js:353:40)
-      at /workspace/mod-shop/src/lib/audit.ts:58:41
-      at MixedScheduler.<anonymous> (file:///workspace/mod-shop/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:785:7)
-      at ~effect/Effect/evaluate (file:///workspace/mod-shop/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:804:38)
-      at FiberImpl.runLoop (file:///workspace/mod-shop/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:453:97)
-      at FiberImpl.evaluate (file:///workspace/mod-shop/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:402:23)
-      at file:///workspace/mod-shop/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2474:9
-      at file:///workspace/mod-shop/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2526:19
-      at Module.<anonymous> (file:///workspace/mod-shop/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2537:31),
+      at Object.<anonymous> (/workspace/h-qa/tests/unit/audit-fallback.test.ts:24:35)
+      at Object.Mock [as values] (file:///workspace/h-qa/node_modules/.pnpm/vitest@5.0.5_@opentelemetry+api@1.9.1_@types+node@22.20.5_@vitest+coverage-v8@5.0.5_jsd_1318f1b899c87af89f9257dc6507fb2f/node_modules/vitest/dist/chunks/spy.DDMXghXv.js:353:40)
+      at /workspace/h-qa/src/lib/audit.ts:58:41
+      at MixedScheduler.<anonymous> (file:///workspace/h-qa/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:785:7)
+      at ~effect/Effect/evaluate (file:///workspace/h-qa/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:804:38)
+      at FiberImpl.runLoop (file:///workspace/h-qa/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:453:97)
+      at FiberImpl.evaluate (file:///workspace/h-qa/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:402:23)
+      at file:///workspace/h-qa/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2474:9
+      at file:///workspace/h-qa/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2526:19
+      at Module.<anonymous> (file:///workspace/h-qa/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2537:31),
   _tag: 'UnknownError',
   '~effect/Cause/UnknownError': '~effect/Cause/UnknownError'
 }
 
- ✓ tests/unit/audit-fallback.test.ts (1 test) 15ms
- ✓ tests/unit/section-schemas.test.ts (48 tests) 12ms
- ✓ tests/unit/content-import-schema.test.ts (10 tests) 11ms
- ✓ tests/unit/admin-consent.test.ts (5 tests) 19ms
- ✓ tests/unit/core-locks.test.ts (8 tests) 12ms
- ✓ tests/unit/navigation-loader.test.ts (7 tests) 12ms
- ✓ tests/unit/permissions.test.ts (37 tests) 16ms
- ✓ tests/unit/extract-ip.test.ts (19 tests) 13ms
- ✓ tests/unit/services/validation.test.ts (6 tests) 11ms
- ✓ tests/unit/internal-link-resolvers-effect.test.ts (4 tests) 8ms
- ✓ tests/unit/effect/foundation.test.ts (4 tests) 11ms
- ✓ tests/unit/auth-guards.test.ts (5 tests) 9ms
- ✓ tests/unit/loaders.test.ts (9 tests) 8ms
- ✓ tests/unit/seo.test.ts (32 tests) 11ms
- ✓ tests/unit/core-filters-facets.test.ts (5 tests) 8ms
- ✓ tests/unit/blog/status-transitions.test.ts (17 tests) 9ms
- ✓ tests/unit/blog-profile.test.ts (3 tests) 8ms
- ✓ tests/unit/lock-admin-release.test.ts (6 tests) 10ms
- ✓ tests/unit/navigation-tree.test.ts (10 tests) 8ms
- ✓ tests/unit/blog-validation.test.ts (3 tests) 7ms
- ✓ tests/unit/effect-action.test.ts (6 tests) 8ms
- ✓ tests/unit/internal-link-effect.test.ts (3 tests) 7ms
- ✓ tests/unit/contact-form-template.test.ts (15 tests) 6ms
- ✓ tests/unit/section-content-xss.test.ts (18 tests) 5ms
- ✓ tests/unit/effect-run.test.ts (4 tests) 7ms
- ✓ tests/unit/seo-meta.test.ts (5 tests) 6ms
- ✓ tests/unit/platform/revisions-diff.test.ts (4 tests) 7ms
- ✓ tests/unit/content-editor-helpers.test.ts (14 tests) 6ms
- ✓ tests/unit/mask-utils.test.ts (10 tests) 5ms
- ✓ tests/unit/services/admin-contract.test.ts (2 tests) 6ms
- ✓ tests/unit/payments/providers.test.ts (5 tests) 6ms
- ✓ tests/unit/core-bulk-ui.test.ts (4 tests) 5ms
- ✓ tests/unit/csp-hash.test.ts (2 tests) 4ms
- ✓ tests/unit/upload-api.test.ts (9 tests) 5ms
- ✓ tests/unit/auth-providers.test.ts (4 tests) 4ms
- ✓ tests/unit/cms/module-contract.test.ts (4 tests) 4ms
- ✓ tests/unit/services/workflow.test.ts (3 tests) 3ms
- ✓ tests/unit/cms/capabilities.test.ts (2 tests) 5ms
- ✓ tests/unit/cli-utils.test.ts (12 tests) 7ms
- ✓ tests/unit/blog-lifecycle.test.ts (2 tests) 4ms
- ✓ tests/unit/editor-dom-safety.test.ts (4 tests) 4ms
- ✓ tests/unit/cms/admin-module-contract.test.ts (3 tests) 4ms
- ✓ tests/unit/core-filters-url-state.test.ts (6 tests) 11ms
- ✓ tests/unit/cms/workflow.test.ts (4 tests) 4ms
- ✓ tests/unit/cms/resource-contract.test.ts (6 tests) 4ms
- ✓ tests/unit/schema-validation.test.ts (12 tests) 4ms
- ✓ tests/unit/routing/content-routes.test.ts (4 tests) 4ms
- ✓ tests/unit/cms/module-registry.test.ts (2 tests) 4ms
- ✓ tests/unit/cms/module-boundaries.test.ts (2 tests) 4ms
- ✓ tests/unit/cms/admin-filter-contract.test.ts (2 tests) 3ms
- ✓ tests/unit/i18n-utils.test.ts (6 tests) 6ms
- ✓ tests/unit/lighthouse-redact.test.ts (3 tests) 4ms
- ✓ tests/unit/services-workflow-restore.test.ts (2 tests) 8ms
- ✓ tests/unit/services/urls.test.ts (3 tests) 3ms
- ✓ tests/unit/blog-public-visibility.test.ts (1 test) 3ms
- ✓ tests/unit/readme-builder/node-requirement.test.ts (3 tests) 3ms
- ✓ tests/unit/cms-audit.test.ts (1 test) 3ms
- ✓ tests/unit/loaders-effect.test.ts (2 tests) 6ms
- ✓ tests/unit/services/module-contract.test.ts (3 tests) 4ms
- ✓ tests/integration/db-commands-effect.test.ts (10 tests) 28442ms
+ ✓ tests/unit/audit-fallback.test.ts (1 test) 28ms
+ ✓ tests/unit/navigation-loader.test.ts (7 tests) 23ms
+ ✓ tests/unit/extract-ip.test.ts (19 tests) 11ms
+ ✓ tests/integration/db-commands-effect.test.ts (10 tests) 27985ms
    ✓ commandes db:* Effect (base jetable) (10)
-     ✓ db:baseline : marque toutes les migrations sur une base existante, puis ne fait plus rien 2491ms
-     ✓ db:reset : « non » annule ; « oui » supprime les tables et l’historique 2752ms
-     ✓ db:migrate : applique toutes les migrations puis ne fait plus rien 3440ms
-     ✓ db:infra : dry run puis application 2233ms
-     ✓ db:seed : insère le manifest, relance idempotente 4399ms
-     ✓ db:seed-media : indexe les uploads puis ignore les déjà indexés 2657ms
-     ✓ db:backfill-variants : rien à traiter sur une base sans média 2983ms
-     ✓ db:sync LOCAL → TEST puis db:compare LOCAL TEST : identiques 4242ms
-     ✓ db:generate : schéma à jour → aucune migration générée 1828ms
-     ✓ db:check : OK sur la base migrée ; URL invalide → échec (code 1) 1152ms
- ✓ tests/unit/services/admin-resource.test.ts (3 tests) 3ms
+     ✓ db:baseline : marque toutes les migrations sur une base existante, puis ne fait plus rien 2311ms
+     ✓ db:reset : « non » annule ; « oui » supprime les tables et l’historique 2199ms
+     ✓ db:migrate : applique toutes les migrations puis ne fait plus rien 2852ms
+     ✓ db:infra : dry run puis application 2210ms
+     ✓ db:seed : insère le manifest, relance idempotente 4287ms
+     ✓ db:seed-media : indexe les uploads puis ignore les déjà indexés 2356ms
+     ✓ db:backfill-variants : rien à traiter sur une base sans média 2874ms
+     ✓ db:sync LOCAL → TEST puis db:compare LOCAL TEST : identiques 5095ms
+     ✓ db:generate : schéma à jour → aucune migration générée 2128ms
+     ✓ db:check : OK sur la base migrée ; URL invalide → échec (code 1) 1255ms
+ ✓ tests/unit/core-locks.test.ts (8 tests) 16ms
+ ✓ tests/unit/services/validation.test.ts (6 tests) 13ms
+ ✓ tests/unit/seo.test.ts (32 tests) 8ms
+ ✓ tests/unit/cli-utils.test.ts (12 tests) 12ms
+ ✓ tests/unit/admin-consent.test.ts (5 tests) 13ms
+ ✓ tests/unit/platform/fields.test.ts (5 tests) 12ms
+ ✓ tests/unit/crud-engine.test.ts (8 tests) 13ms
+ ✓ tests/unit/blog-subscription.test.ts (5 tests) 18ms
+ ✓ tests/unit/effect/foundation.test.ts (4 tests) 11ms
+ ✓ tests/unit/content-import-schema.test.ts (10 tests) 9ms
+ ✓ tests/unit/mask-utils.test.ts (10 tests) 9ms
+ ✓ tests/unit/navigation-tree.test.ts (10 tests) 14ms
+ ✓ tests/unit/auth-guards.test.ts (5 tests) 11ms
+ ✓ tests/unit/internal-link-resolvers-effect.test.ts (4 tests) 8ms
+ ✓ tests/unit/lock-admin-release.test.ts (6 tests) 11ms
+ ✓ tests/unit/blog-validation.test.ts (3 tests) 7ms
+ ✓ tests/unit/core-bulk-ui.test.ts (4 tests) 6ms
+ ✓ tests/unit/blog-profile.test.ts (3 tests) 8ms
+ ✓ tests/unit/core-filters-facets.test.ts (5 tests) 7ms
+ ✓ tests/unit/cms-schemas.test.ts (85 tests) 6ms
+ ✓ tests/unit/auth-providers.test.ts (4 tests) 4ms
+ ✓ tests/unit/internal-link-effect.test.ts (3 tests) 10ms
+ ✓ tests/unit/payments/providers.test.ts (5 tests) 6ms
+ ✓ tests/unit/effect-action.test.ts (6 tests) 7ms
+ ✓ tests/unit/effect-run.test.ts (4 tests) 10ms
+ ✓ tests/unit/core/category-taxonomy.test.ts (5 tests) 5ms
+ ✓ tests/unit/blog/status-transitions.test.ts (17 tests) 6ms
+ ✓ tests/unit/editor-dom-safety.test.ts (4 tests) 4ms
+ ✓ tests/unit/services/admin-contract.test.ts (2 tests) 6ms
+ ✓ tests/unit/schema-validation.test.ts (12 tests) 13ms
+ ✓ tests/unit/csp-hash.test.ts (2 tests) 4ms
+ ✓ tests/unit/database/seed-manifest.test.ts (3 tests) 5ms
+ ✓ tests/unit/loaders.test.ts (9 tests) 7ms
+ ✓ tests/unit/seo-meta.test.ts (5 tests) 6ms
+ ✓ tests/unit/contact-form-template.test.ts (15 tests) 8ms
+ ✓ tests/unit/cms/module-registry.test.ts (2 tests) 4ms
+ ✓ tests/unit/content-editor-helpers.test.ts (14 tests) 9ms
+ ✓ tests/unit/cms/resource-contract.test.ts (6 tests) 4ms
+ ✓ tests/unit/readme-builder/node-requirement.test.ts (3 tests) 3ms
+ ✓ tests/unit/lighthouse-redact.test.ts (3 tests) 8ms
+ ✓ tests/unit/upload-api.test.ts (9 tests) 5ms
+ ✓ tests/unit/services/workflow.test.ts (3 tests) 4ms
+ ✓ tests/unit/core-filters-url-state.test.ts (6 tests) 6ms
+ ✓ tests/unit/i18n-utils.test.ts (6 tests) 4ms
+ ✓ tests/unit/cms/capabilities.test.ts (2 tests) 12ms
+ ✓ tests/unit/section-content-xss.test.ts (18 tests) 5ms
+ ✓ tests/unit/blog-lifecycle.test.ts (2 tests) 14ms
+ ✓ tests/unit/cms/workflow.test.ts (4 tests) 8ms
+ ✓ tests/unit/routing/content-routes.test.ts (4 tests) 3ms
+ ✓ tests/unit/loaders-effect.test.ts (2 tests) 5ms
+ ✓ tests/unit/services-workflow-restore.test.ts (2 tests) 4ms
+ ✓ tests/unit/blog-public-visibility.test.ts (1 test) 4ms
+ ✓ tests/unit/cms/admin-filter-contract.test.ts (2 tests) 3ms
+ ✓ tests/unit/cms/admin-module-contract.test.ts (3 tests) 3ms
+ ✓ tests/unit/cms/module-contract.test.ts (4 tests) 4ms
+ ✓ tests/unit/services/module-contract.test.ts (3 tests) 6ms
+ ✓ tests/unit/cms/module-boundaries.test.ts (2 tests) 5ms
+ ✓ tests/unit/services/urls.test.ts (3 tests) 3ms
+ ✓ tests/unit/cms-audit.test.ts (1 test) 2ms
+ ✓ tests/unit/services/admin-resource.test.ts (3 tests) 4ms
 
- Test Files  185 passed (185)
-      Tests  1656 passed | 1 skipped (1657)
-   Start at  20:23:38
-   Duration  28.78s (tests 52%, import 46%, transform 1%)
+ Test Files  188 passed (188)
+      Tests  1697 passed | 1 skipped (1698)
+   Start at  00:19:12
+   Duration  32.04s (tests 55%, import 44%, transform 1%)
 
-    Isolate  185 workers spawned · ~93ms startup each (spawn + environment, per file)
-             at least ~2.37s faster with isolate: false — reuses workers across files instead of one per file
+    Isolate  188 workers spawned · ~103ms startup each (spawn + environment, per file)
+             at least ~2.66s faster with isolate: false — reuses workers across files instead of one per file
 
-JSON report written to /workspace/mod-shop/tests/reports/vitest-results.json
+JSON report written to /workspace/h-qa/tests/reports/vitest-results.json
