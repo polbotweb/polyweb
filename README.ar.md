@@ -89,22 +89,22 @@ pnpm dev
 
 ### مستعارات TypeScript
 
-- `@/*` → `src/*`
-- `@styles/*` → `src/styles/*`
-- `@layouts/*` → `src/layouts/*`
-- `@components/*` → `src/components/*`
-- `@atoms/*` → `src/components/atoms/*`
-- `@molecules/*` → `src/components/molecules/*`
-- `@organisms/*` → `src/components/organisms/*`
-- `@wow/*` → `src/components/wow/*`
-- `@assets/*` → `src/assets/*`
-- `@starwind/*` → `src/lib/starwind/*`
-- `@i18n/*` → `src/i18n/*`
-- `@pages/*` → `src/components/pages/*`
-- `@lib/*` → `src/lib/*`
-- `@database/*` → `src/database/*`
-- `@smtp/*` → `src/smtp/*`
-- `@media/*` → `src/media/*`
+- `@/*` → `./src/*`
+- `@styles/*` → `./src/styles/*`
+- `@layouts/*` → `./src/layouts/*`
+- `@components/*` → `./src/components/*`
+- `@atoms/*` → `./src/components/atoms/*`
+- `@molecules/*` → `./src/components/molecules/*`
+- `@organisms/*` → `./src/components/organisms/*`
+- `@wow/*` → `./src/components/wow/*`
+- `@assets/*` → `./src/assets/*`
+- `@starwind/*` → `./src/lib/starwind/*`
+- `@i18n/*` → `./src/i18n/*`
+- `@pages/*` → `./src/components/pages/*`
+- `@lib/*` → `./src/lib/*`
+- `@database/*` → `./src/database/*`
+- `@smtp/*` → `./src/smtp/*`
+- `@media/*` → `./src/media/*`
 
 ## نظام التصميم
 
@@ -831,6 +831,13 @@ modules/
   index.ts
   module-contract.ts
   module-registry.ts
+money/
+  currency.ts
+  errors.ts
+  index.ts
+  money.ts
+  rounding.ts
+  vat.ts
 notifications/
   index.ts
 permissions/
