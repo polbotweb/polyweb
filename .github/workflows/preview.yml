@@ -61,12 +61,12 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
       - name: Install Playwright Browsers
         if: steps.pw-cache.outputs.cache-hit != 'true'
-        timeout-minutes: 15
-        run: for i in 1 2 3; do timeout 300 pnpm exec playwright install --with-deps chromium && exit 0; echo "tentative $i échouée"; done; exit 1
+        timeout-minutes: 35
+        run: bash .github/scripts/playwright-install.sh full chromium
       - name: Install Playwright system deps (browsers from cache)
         if: steps.pw-cache.outputs.cache-hit == 'true'
-        timeout-minutes: 10
-        run: for i in 1 2 3; do timeout 240 pnpm exec playwright install-deps chromium && exit 0; echo "tentative $i échouée"; done; exit 1
+        timeout-minutes: 40
+        run: bash .github/scripts/playwright-install.sh deps chromium
       - name: axe-core audit
         run: pnpm test:a11y
       - name: Visual regression
