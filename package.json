@@ -70,7 +70,7 @@
     "@astrojs/rss": "^4.0.19",
     "@astrojs/sitemap": "3.7.4",
     "@astrojs/vercel": "^11.0.16",
-    "@aws-sdk/client-s3": "^3.1152.0",
+    "@aws-sdk/client-s3": "^3.1156.0",
     "@better-auth/passkey": "1.7.10",
     "@iconify-json/circle-flags": "^1.2.10",
     "@iconify-json/mdi": "^1.2.3",
