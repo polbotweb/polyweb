@@ -29,8 +29,12 @@ export const returnWorkflow: WorkflowDefinition<ReturnStatus> = {
   ],
 };
 
-/** Statuts qui « consomment » les quantités d'une ligne de commande (pas de double retour). */
-export const OPEN_RETURN_STATUSES: readonly ReturnStatus[] = ["REQUESTED", "APPROVED", "RECEIVED", "INSPECTED", "REFUNDED"];
+/**
+ * Statuts qui « consomment » les quantités d'une ligne de commande (pas de double retour) :
+ * tous sauf refusé et annulé. Une marchandise reçue puis inspectée (même refusée, CLOSED) ne
+ * peut pas être redemandée.
+ */
+export const OPEN_RETURN_STATUSES: readonly ReturnStatus[] = ["REQUESTED", "APPROVED", "RECEIVED", "INSPECTED", "REFUNDED", "CLOSED"];
 
 export const RETURN_REASONS = ["defective", "damaged", "wrong_item", "not_as_described", "no_longer_needed", "other"] as const;
 export type ReturnReason = (typeof RETURN_REASONS)[number];
@@ -54,9 +58,8 @@ export interface ReturnableLine {
 }
 
 /**
- * Quantité encore retournable par ligne : commandée − déjà demandée dans un retour ouvert.
- * Les retours refusés, annulés ou clos sans acceptation libèrent leurs quantités, sauf la
- * part acceptée d'un retour clos (aucune ici : clos = rien d'accepté).
+ * Quantité encore retournable par ligne : commandée − déjà demandée dans un retour
+ * `OPEN_RETURN_STATUSES` (les retours refusés ou annulés libèrent leurs quantités).
  */
 export const returnableQuantities = (
   lines: readonly ReturnableLine[],
