@@ -35,6 +35,7 @@ export type AuditAction =
   | "SITE_CREATE" | "SITE_UPDATE" | "SITE_DELETE"
   | "SEARCH_REINDEX"
   | "BOOKING_PUBLIC_CREATE" | "BOOKING_PUBLIC_CANCEL"
+  | "SHOP_ORDER_CREATE" | "SHOP_ORDER_TRANSITION" | "SHOP_ORDER_LINK"
   // Action groupée générique (core/bulk) des modules générés : l'opération est dans metadata.operation.
   | "BULK_ACTION";
 

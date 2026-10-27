@@ -1,0 +1,16 @@
+---
+/** Panier public (invité : cookie signé ; connecté : panier du compte). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import CartView from "@/components/shop/public/CartView.astro";
+import { getCheckoutTranslations } from "@/modules/shop/i18n/checkout";
+import { cartPage } from "@/modules/shop/public/pages";
+import { shopPaths } from "@/modules/shop/public/flow";
+
+export const prerender = false;
+const view = await cartPage(Astro);
+if (view instanceof Response) return view;
+const t = getCheckoutTranslations(view.locale);
+---
+<BaseLayout title={t.cart} description={t.cartIntro} canonical={new URL(shopPaths.cart(view.locale), Astro.url.origin).href}>
+  <CartView {...view} />
+</BaseLayout>

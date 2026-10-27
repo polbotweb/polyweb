@@ -1,0 +1,18 @@
+---
+/** Commande publique — suivi et reprise du paiement par lien signé (`?t=`). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import OrderView from "@/components/shop/public/OrderView.astro";
+import { getCheckoutTranslations } from "@/modules/shop/i18n/checkout";
+import { orderPage } from "@/modules/shop/public/pages";
+
+export const prerender = false;
+const view = await orderPage(Astro);
+if (view instanceof Response) return view;
+const t = getCheckoutTranslations(view.locale);
+const title = view.found ? t.orderTitle.replace("{number}", view.found.order.number) : t.invalidLink;
+---
+<BaseLayout title={title} description={title} canonical={new URL(`/${view.locale}/shop`, Astro.url.origin).href}>
+  {/* same-origin : le jeton ne part jamais vers un tiers ; no-referrer enverrait « Origin: null » et ferait refuser le POST. */}
+  <meta slot="head" name="referrer" content="same-origin" />
+  <OrderView {...view} />
+</BaseLayout>

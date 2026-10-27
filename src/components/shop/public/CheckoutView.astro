@@ -1,0 +1,118 @@
+---
+/**
+ * Tunnel de commande public : coordonnées, adresse, mode de livraison, récapitulatif TTC.
+ * Sans JS : « Recalculer la livraison » renvoie le formulaire (intent=quote) sans valider.
+ */
+import type { Locale } from "@i18n/config";
+import type { CheckoutField } from "@/modules/shop/domain/errors";
+import type { CartView } from "@/modules/shop/services/cart.service";
+import type { Notice } from "@/modules/shop/public/pages";
+import type { checkoutPreview } from "@/modules/shop/public/flow";
+import type { Effect } from "effect";
+import { fill, getCheckoutTranslations } from "@/modules/shop/i18n/checkout";
+import { countryName, formatMinor } from "@/modules/shop/public/format";
+import { SHIPPING_COUNTRIES, shopPaths } from "@/modules/shop/public/flow";
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import PublicNotice from "@/components/bookings/public/PublicNotice.astro";
+
+type Preview = Effect.Success<ReturnType<typeof checkoutPreview>>;
+interface Props { locale: Locale; view: CartView; values: Record<string, string>; errors: readonly CheckoutField[]; notice: Notice; preview: Preview; timestamp: string }
+const { locale, view, values, errors, notice, preview, timestamp } = Astro.props;
+const t = getCheckoutTranslations(locale);
+const currency = view.currency ?? "EUR";
+const money = (minor: number) => formatMinor(minor, currency, locale);
+const has = (f: CheckoutField) => errors.includes(f);
+const errId = (f: CheckoutField) => `co-${f}-error`;
+const describe = (f: CheckoutField, hint?: string) => [hint, has(f) ? errId(f) : undefined].filter(Boolean).join(" ") || undefined;
+const target = (f: CheckoutField) => (f === "shippingMethod" ? `co-ship-${preview.options[0]?.method ?? "standard"}` : `co-${f}`);
+const countries = SHIPPING_COUNTRIES.map((code) => ({ code, name: countryName(code, locale) })).sort((a, b) => a.name.localeCompare(b.name, locale));
+const text = (f: CheckoutField, label: string, opts: { type?: "email" | "tel" | "text"; autocomplete: string; required?: boolean; max: number; hint?: string; dir?: string }) =>
+  ({ f, label, ...opts });
+const contact = [
+  text("email", t.email, { type: "email", autocomplete: "email", required: true, max: 254, hint: "co-email-hint" }),
+  text("customerName", t.name, { autocomplete: "name", required: true, max: 120 }),
+  text("phone", t.phone, { type: "tel", autocomplete: "tel", max: 30, dir: "ltr" }),
+];
+const address = [
+  text("addressLine1", t.addressLine1, { autocomplete: "address-line1", required: true, max: 200 }),
+  text("addressLine2", t.addressLine2, { autocomplete: "address-line2", max: 200 }),
+  text("postcode", t.postcode, { autocomplete: "postal-code", required: true, max: 20, dir: "ltr" }),
+  text("city", t.city, { autocomplete: "address-level2", required: true, max: 120 }),
+];
+const pricing = preview.pricing;
+---
+<section class="mx-auto grid max-w-4xl gap-6 px-4 py-12" aria-labelledby="checkout-title">
+  <h1 id="checkout-title" class="font-heading text-3xl font-semibold text-foreground">{t.checkoutTitle}</h1>
+  {notice && notice.text !== "errorSummary" && <PublicNotice kind={notice.kind} id="shop-notice"><p>{fill(t.notices[notice.text], { sku: notice.sku ?? "" })}</p></PublicNotice>}
+  {errors.length > 0 && (
+    <PublicNotice kind="error" id="co-error-summary">
+      <h2 class="text-lg font-semibold">{t.errorSummaryTitle}</h2>
+      <ul class="mt-2 list-disc ps-6">
+        {errors.map((f) => <li><a href={`#${target(f)}`} class="underline underline-offset-4">{t.errors[f]}</a></li>)}
+      </ul>
+    </PublicNotice>
+  )}
+  <form method="post" class="grid gap-6" novalidate={errors.length > 0 ? true : undefined} data-testid="checkout-form">
+    {[{ legend: t.contactLegend, id: "co-contact", fields: contact }, { legend: t.addressLegend, id: "co-address", fields: address }].map((group) => (
+      <fieldset class="grid gap-4 rounded-lg border-2 border-border p-5">
+        <legend class="px-1 text-xl font-semibold text-foreground">{group.legend}</legend>
+        {group.fields.map((field) => (
+          <div class="grid gap-1">
+            <Label for={`co-${field.f}`}>{field.label} <span>({field.required ? t.required : t.optional})</span></Label>
+            <Input id={`co-${field.f}`} name={field.f} type={field.type ?? "text"} autocomplete={field.autocomplete} required={field.required} maxlength={field.max} dir={field.dir} value={values[field.f] ?? ""} aria-invalid={has(field.f) ? "true" : undefined} aria-describedby={describe(field.f, field.hint)} />
+            {field.hint && <p id={field.hint} class="text-foreground">{t.emailHint}</p>}
+            {has(field.f) && <p id={errId(field.f)} class="font-medium text-foreground">⚠ {t.errors[field.f]}</p>}
+          </div>
+        ))}
+        {group.id === "co-address" && (
+          <div class="grid gap-1">
+            <Label for="co-country">{t.country} <span>({t.required})</span></Label>
+            <NativeSelect id="co-country" name="country" autocomplete="country" required aria-invalid={has("country") ? "true" : undefined} aria-describedby={describe("country")}>
+              {countries.map((c) => <NativeSelectOption value={c.code} selected={c.code === preview.country}>{c.name}</NativeSelectOption>)}
+            </NativeSelect>
+            {has("country") && <p id={errId("country")} class="font-medium text-foreground">⚠ {t.errors.country}</p>}
+          </div>
+        )}
+      </fieldset>
+    ))}
+    <fieldset class="grid gap-3 rounded-lg border-2 border-border p-5" aria-describedby={has("shippingMethod") ? errId("shippingMethod") : undefined}>
+      <legend class="px-1 text-xl font-semibold text-foreground">{t.shippingLegend}</legend>
+      {has("shippingMethod") && <p id={errId("shippingMethod")} class="font-medium text-foreground">⚠ {t.errors.shippingMethod}</p>}
+      {preview.options.map((option) => (
+        <label for={`co-ship-${option.method}`} class="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border-2 border-border px-3 py-2 text-foreground has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2">
+          <input type="radio" id={`co-ship-${option.method}`} name="shippingMethod" value={option.method} required checked={option.method === preview.chosen.method} class="size-5" />
+          <span><span class="font-semibold">{t.shippingMethods[option.method]}</span> — {option.priceMinor === 0 ? t.free : money(option.priceMinor)}. {t.shippingHints[option.method]}</span>
+        </label>
+      ))}
+      <div><Button type="submit" name="intent" value="quote" variant="outline" formnovalidate>{t.updateShipping}</Button></div>
+    </fieldset>
+    <section class="grid gap-3 rounded-lg border-2 border-border p-5 text-foreground" aria-labelledby="co-summary-title" data-testid="checkout-summary">
+      <h2 id="co-summary-title" class="text-xl font-semibold">{t.summary}</h2>
+      <ul class="grid gap-1">
+        {view.lines.map((line) => <li>{line.quantity} × {line.productTitle} (<span dir="ltr">{line.sku}</span>) — {formatMinor(line.lineTotalMinor, line.currency, locale)}</li>)}
+      </ul>
+      <dl class="grid gap-x-6 gap-y-1 sm:grid-cols-[max-content_1fr]">
+        <dt class="font-semibold">{t.subtotal}</dt><dd>{money(view.totalMinor)}</dd>
+        <dt class="font-semibold">{t.shipping}</dt><dd>{preview.chosen.priceMinor === 0 ? t.free : money(preview.chosen.priceMinor)}</dd>
+        {pricing && (
+          <>
+            <dt class="font-semibold">{t.net}</dt><dd>{money(pricing.net.amountMinor)}</dd>
+            {pricing.byRate.filter((r) => r.tax.amountMinor > 0).map((r) => <><dt class="font-semibold">{fill(t.vat, { rate: r.ratePercent })}</dt><dd>{money(r.tax.amountMinor)}</dd></>)}
+            <dt class="text-lg font-semibold">{t.gross}</dt><dd class="text-lg font-semibold" data-testid="checkout-gross">{money(pricing.gross.amountMinor)}</dd>
+          </>
+        )}
+      </dl>
+      {pricing && <p>{pricing.treatment === "export" ? t.vatExport : t.vatIncluded}</p>}
+    </section>
+    <div class="sr-only" aria-hidden="true">
+      <label>Ne pas remplir<input type="text" name="_hp" tabindex="-1" autocomplete="off" /></label>
+    </div>
+    <input type="hidden" name="_ts" value={timestamp} />
+    <p id="co-secure-note" class="text-foreground">{t.secureNote}</p>
+    <div><Button type="submit" name="intent" value="order" aria-describedby="co-secure-note" disabled={!view.orderable || undefined}>{t.placeOrder}</Button></div>
+  </form>
+  <p><a href={shopPaths.cart(locale)} class="text-foreground underline underline-offset-4 hover:no-underline">{fill(t.cartLink, { n: String(view.itemCount) })}</a></p>
+</section>

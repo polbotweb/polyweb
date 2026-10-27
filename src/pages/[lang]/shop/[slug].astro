@@ -3,6 +3,8 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import ShopDetail from "@/components/shop/ShopDetail.astro";
 import { loadProductOptions, loadProductVariants, loadPublishedProductBySlug } from "@/modules/shop/loaders";
 import { getShopTranslations } from "@/modules/shop/i18n";
+import { getCheckoutTranslations } from "@/modules/shop/i18n/checkout";
+import { shopPaths } from "@/modules/shop/public/flow";
 import { toLocale } from "@i18n/utils";
 
 export const prerender = false;
@@ -20,6 +22,7 @@ const canonical = new URL(`/${locale}/shop/${item.slug}`, Astro.url.origin).href
 ---
 <BaseLayout title={`${item.metaTitle ?? item.title} — ${t.meta.title}`} description={item.metaDescription ?? item.excerpt ?? t.meta.description} canonical={canonical}>
   <main class="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
-    <ShopDetail item={item} options={options} variants={variants} t={t} formatPrice={formatPrice} backHref={`/${locale}/shop`} />
+    <ShopDetail item={item} options={options} variants={variants} t={t} formatPrice={formatPrice} backHref={`/${locale}/shop`} cart={{ action: shopPaths.cart(locale), t: getCheckoutTranslations(locale) }} />
+    <p class="mt-8"><a href={shopPaths.cart(locale)} class="text-foreground underline underline-offset-4 hover:no-underline">{getCheckoutTranslations(locale).cart}</a></p>
   </main>
 </BaseLayout>

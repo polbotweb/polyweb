@@ -12,8 +12,8 @@ import { LOCALES } from "@i18n/config";
 import { SHOP_STATUSES } from "../domain/workflow";
 
 /**
- * Produit du CATALOGUE (TODO §19.3). Panier, commande, paiement, stock,
- * expédition et remboursement restent HORS du CMS Core : aucune table ici.
+ * Produit du CATALOGUE (TODO §19.3). Panier et commandes : `./orders.ts` (tunnel de vente,
+ * docs/shop-checkout.md) ; paiement via core/payments, stock et expédition via Logistics.
  * Tables nommées d'après l'entité au pluriel (`products`, `product_revisions`,
  * `product_locks`) ; renommées depuis `shop_*` par la migration 0027 (sans perte).
  */

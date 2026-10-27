@@ -1,0 +1,96 @@
+---
+/** Fiche commande (admin) : client, montants figés, lignes, transitions manuelles, liens Ventes/Logistique. */
+import type { Locale } from "@i18n/config";
+import type { OrderRow } from "@/modules/shop/services/order.service";
+import type { AdminNotice } from "@/modules/shop/admin/orders";
+import { canTransition } from "@/core/workflow";
+import { ADMIN_ORDER_TRANSITIONS, orderWorkflow, type OrderStatus } from "@/modules/shop/domain/orders";
+import { getCheckoutTranslations } from "@/modules/shop/i18n/checkout";
+import { getOrdersAdminTranslations } from "@/modules/shop/i18n/orders-admin";
+import { countryName, formatDateTime, formatMinor } from "@/modules/shop/public/format";
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import PublicNotice from "@/components/bookings/public/PublicNotice.astro";
+
+interface Line { id: string; sku: string; description: string; quantity: number; unitPriceMinor: number; lineTotalMinor: number }
+interface Props { locale: Locale; baseUrl: string; order: OrderRow; lines: readonly Line[]; canUpdate: boolean; notice: AdminNotice }
+const { locale, baseUrl, order, lines, canUpdate, notice } = Astro.props;
+const t = getOrdersAdminTranslations(locale);
+const ct = getCheckoutTranslations(locale);
+const money = (minor: number) => formatMinor(minor, order.currency, locale);
+const label: Partial<Record<OrderStatus, string>> = { SHIPPED: t.markShipped, DELIVERED: t.markDelivered, CANCELLED: t.cancel };
+const targets = canUpdate ? ADMIN_ORDER_TRANSITIONS.filter((to) => canTransition(orderWorkflow, order.status, to)) : [];
+const when = (d: Date | null) => (d ? formatDateTime(d, locale) : "—");
+---
+<div class="flex flex-col gap-6">
+  <p><a href={baseUrl} class="underline underline-offset-4 hover:no-underline">← {t.back}</a></p>
+  {notice && <PublicNotice kind={notice.kind} id="order-admin-notice"><p>{notice.key === "done" ? t.done : t.errors[notice.key]}</p></PublicNotice>}
+  <section aria-labelledby="oa-detail" class="grid gap-4 sm:grid-cols-2">
+    <h2 id="oa-detail" class="sr-only">{t.detail}</h2>
+    <dl class="grid gap-x-4 gap-y-2 rounded-lg border-2 border-border p-4 sm:grid-cols-[max-content_1fr]">
+      <dt class="font-semibold">{t.status}</dt><dd data-testid="order-admin-status">{ct.statuses[order.status]}</dd>
+      <dt class="font-semibold">{t.placedOn}</dt><dd>{when(order.createdAt)}</dd>
+      <dt class="font-semibold">{t.customer}</dt><dd>{order.customerName}</dd>
+      <dt class="font-semibold">{t.email}</dt><dd dir="ltr" class="text-start">{order.email}</dd>
+      {order.phone && <><dt class="font-semibold">{t.phone}</dt><dd dir="ltr" class="text-start">{order.phone}</dd></>}
+      <dt class="font-semibold">{t.address}</dt>
+      <dd>{order.addressLine1}{order.addressLine2 && <><br />{order.addressLine2}</>}<br />{order.postcode} {order.city}<br />{countryName(order.country, locale)}</dd>
+    </dl>
+    <dl class="grid gap-x-4 gap-y-2 rounded-lg border-2 border-border p-4 sm:grid-cols-[max-content_1fr]">
+      <dt class="font-semibold">{t.shipping}</dt><dd>{ct.shippingMethods[order.shippingMethod]} — {money(order.shippingMinor)}</dd>
+      <dt class="font-semibold">{t.net}</dt><dd>{money(order.netMinor)}</dd>
+      <dt class="font-semibold">{t.tax}</dt><dd>{money(order.taxMinor)}</dd>
+      <dt class="font-semibold">{t.gross}</dt><dd class="font-semibold" data-testid="order-admin-gross">{money(order.grossMinor)}</dd>
+      <dt class="font-semibold">{t.treatment}</dt><dd>{order.taxTreatment}{order.taxCountry && ` (${order.taxCountry})`}</dd>
+      <dt class="font-semibold">{t.expiresAt}</dt><dd>{when(order.expiresAt)}</dd>
+      <dt class="font-semibold">{t.paidAt}</dt><dd>{when(order.paidAt)}</dd>
+      <dt class="font-semibold">{t.shippedAt}</dt><dd>{when(order.shippedAt)}</dd>
+      {order.stockShortage && <><dt class="font-semibold">{t.stockShortage}</dt><dd data-testid="order-admin-shortage">⚠ <span dir="ltr">{order.stockShortage}</span></dd></>}
+    </dl>
+  </section>
+  <section aria-labelledby="oa-lines" class="grid gap-2">
+    <h2 id="oa-lines" class="text-xl font-semibold">{t.lines}</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-base">
+        <thead><tr class="border-b-2 border-border">
+          <th scope="col" class="p-2 text-start">{t.sku}</th><th scope="col" class="p-2 text-start">{t.description}</th>
+          <th scope="col" class="p-2 text-end">{t.quantity}</th><th scope="col" class="p-2 text-end">{t.unitPrice}</th><th scope="col" class="p-2 text-end">{t.lineTotal}</th>
+        </tr></thead>
+        <tbody>{lines.map((l) => (
+          <tr class="border-b border-border"><td class="p-2" dir="ltr">{l.sku}</td><td class="p-2">{l.description}</td><td class="p-2 text-end">{l.quantity}</td><td class="p-2 text-end">{money(l.unitPriceMinor)}</td><td class="p-2 text-end">{money(l.lineTotalMinor)}</td></tr>
+        ))}</tbody>
+      </table>
+    </div>
+  </section>
+  <section aria-labelledby="oa-actions" class="grid gap-2">
+    <h2 id="oa-actions" class="text-xl font-semibold">{t.actions}</h2>
+    {targets.length === 0 ? <p>{t.noAction}</p> : (
+      <div class="flex flex-wrap gap-2">
+        {targets.map((to) => (
+          <form method="post">
+            <input type="hidden" name="intent" value="transition" />
+            <input type="hidden" name="to" value={to} />
+            <Button type="submit" variant={to === "CANCELLED" ? "outline" : "default"} data-testid={`order-to-${to}`}>{label[to] ?? ct.statuses[to]}</Button>
+          </form>
+        ))}
+      </div>
+    )}
+  </section>
+  {canUpdate && (
+    <form method="post" class="grid gap-4 rounded-lg border-2 border-border p-4" aria-labelledby="oa-links" data-testid="order-links">
+      <h2 id="oa-links" class="text-xl font-semibold">{t.links}</h2>
+      <input type="hidden" name="intent" value="link" />
+      <p id="oa-links-hint">{t.linkHint}</p>
+      <div class="grid gap-1">
+        <Label for="oa-sales">{t.salesDocumentId}</Label>
+        <Input id="oa-sales" name="salesDocumentId" maxlength={64} dir="ltr" value={order.salesDocumentId ?? ""} aria-describedby="oa-links-hint" />
+      </div>
+      <div class="grid gap-1">
+        <Label for="oa-shipment">{t.shipmentId}</Label>
+        <Input id="oa-shipment" name="shipmentId" maxlength={64} dir="ltr" value={order.shipmentId ?? ""} aria-describedby="oa-links-hint" />
+      </div>
+      <div><Button type="submit">{t.saveLinks}</Button></div>
+    </form>
+  )}
+</div>

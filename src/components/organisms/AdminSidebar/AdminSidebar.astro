@@ -23,6 +23,8 @@ import FileInvoiceIcon from '@tabler/icons/outline/file-invoice.svg';
 import AddressBookIcon from '@tabler/icons/outline/address-book.svg';
 import TruckDeliveryIcon from '@tabler/icons/outline/truck-delivery.svg';
 import ShoppingCartIcon from '@tabler/icons/outline/shopping-cart.svg';
+import PackageIcon from '@tabler/icons/outline/package.svg';
+import { getOrdersAdminTranslations } from '@/modules/shop/i18n/orders-admin';
 import CalendarEventIcon from '@tabler/icons/outline/calendar-event.svg';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail, SidebarSeparator } from '@atoms/sidebar';
 
@@ -43,6 +45,7 @@ const cmsItems: { id: AdminSubpage; title: string; url: string; icon: typeof Set
   { id: 'services', title: getModuleLabel('services', locale), url: getAdminUrl(locale, 'services'), icon: BriefcaseIcon },
   { id: 'tax', title: getModuleLabel('tax', locale), url: getAdminUrl(locale, 'tax'), icon: ReceiptTaxIcon },
   { id: 'sales', title: getModuleLabel('sales', locale), url: getAdminUrl(locale, 'sales'), icon: FileInvoiceIcon },
+  { id: 'orders', title: getOrdersAdminTranslations(locale).title, url: getAdminUrl(locale, 'orders'), icon: PackageIcon },
   { id: 'crm', title: getModuleLabel('crm', locale), url: getAdminUrl(locale, 'crm'), icon: AddressBookIcon },
   { id: 'logistics', title: getModuleLabel('logistics', locale), url: getAdminUrl(locale, 'logistics'), icon: TruckDeliveryIcon },
   { id: 'purchasing', title: getModuleLabel('purchasing', locale), url: getAdminUrl(locale, 'purchasing'), icon: ShoppingCartIcon },

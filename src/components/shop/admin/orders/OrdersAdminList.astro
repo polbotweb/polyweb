@@ -1,0 +1,79 @@
+---
+/** Liste des commandes : filtres (GET, sans JS), tableau, accès à la fiche. */
+import type { Locale } from "@i18n/config";
+import type { OrderRow } from "@/modules/shop/services/order.service";
+import { fill, getCheckoutTranslations } from "@/modules/shop/i18n/checkout";
+import { getOrdersAdminTranslations } from "@/modules/shop/i18n/orders-admin";
+import { formatDateTime, formatMinor } from "@/modules/shop/public/format";
+import type { ORDER_STATUSES } from "@/modules/shop/domain/orders";
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+
+interface Props {
+  locale: Locale; baseUrl: string; rows: readonly OrderRow[]; total: number; invalidDate: boolean;
+  raw: { status: string; q: string; from: string; to: string }; statuses: typeof ORDER_STATUSES;
+}
+const { locale, baseUrl, rows, total, invalidDate, raw, statuses } = Astro.props;
+const t = getOrdersAdminTranslations(locale);
+const statusLabel = getCheckoutTranslations(locale).statuses;
+---
+<form method="get" class="grid gap-4 rounded-lg border-2 border-border p-4 sm:grid-cols-[repeat(4,minmax(0,1fr))_auto]" aria-labelledby="orders-filters" data-testid="orders-filters">
+  <h2 id="orders-filters" class="sr-only">{t.filters}</h2>
+  <div class="grid gap-1">
+    <Label for="of-status">{t.status}</Label>
+    <NativeSelect id="of-status" name="status">
+      <NativeSelectOption value="">{t.allStatuses}</NativeSelectOption>
+      {statuses.map((s) => <NativeSelectOption value={s} selected={raw.status === s}>{statusLabel[s]}</NativeSelectOption>)}
+    </NativeSelect>
+  </div>
+  <div class="grid gap-1">
+    <Label for="of-q">{t.search}</Label>
+    <Input id="of-q" name="q" type="search" maxlength={100} value={raw.q} aria-describedby="of-q-hint" />
+    <p id="of-q-hint" class="text-sm">{t.searchHint}</p>
+  </div>
+  <div class="grid gap-1">
+    <Label for="of-from">{t.from}</Label>
+    <Input id="of-from" name="from" type="date" value={raw.from} aria-invalid={invalidDate ? "true" : undefined} aria-describedby={invalidDate ? "of-date-error" : undefined} />
+  </div>
+  <div class="grid gap-1">
+    <Label for="of-to">{t.to}</Label>
+    <Input id="of-to" name="to" type="date" value={raw.to} aria-invalid={invalidDate ? "true" : undefined} aria-describedby={invalidDate ? "of-date-error" : undefined} />
+  </div>
+  <div class="flex items-end gap-2">
+    <Button type="submit">{t.apply}</Button>
+    <a href={baseUrl} class="inline-flex min-h-11 items-center rounded-md border-2 border-border px-4 underline-offset-4 hover:underline">{t.reset}</a>
+  </div>
+  {invalidDate && <p id="of-date-error" class="font-medium sm:col-span-5" role="alert">⚠ {t.errors.invalidDate}</p>}
+</form>
+<p data-testid="orders-count" aria-live="polite">{fill(t.count, { n: String(total) })}</p>
+{rows.length === 0 ? (
+  <p data-testid="orders-empty">{t.empty}</p>
+) : (
+  <div class="overflow-x-auto">
+    <table class="w-full text-start text-base" data-testid="orders-table">
+      <caption class="sr-only">{t.title}</caption>
+      <thead>
+        <tr class="border-b-2 border-border">
+          <th scope="col" class="p-2 text-start">{t.number}</th>
+          <th scope="col" class="p-2 text-start">{t.placedOn}</th>
+          <th scope="col" class="p-2 text-start">{t.customer}</th>
+          <th scope="col" class="p-2 text-start">{t.status}</th>
+          <th scope="col" class="p-2 text-end">{t.total}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((o) => (
+          <tr class="border-b border-border">
+            <th scope="row" class="p-2 text-start font-medium"><a href={`${baseUrl}/${o.id}`} class="underline underline-offset-4 hover:no-underline" dir="ltr" aria-label={fill(t.open, { number: o.number })}>{o.number}</a></th>
+            <td class="p-2">{formatDateTime(o.createdAt, locale)}</td>
+            <td class="p-2">{o.customerName}<br /><span dir="ltr">{o.email}</span></td>
+            <td class="p-2">{statusLabel[o.status]}</td>
+            <td class="p-2 text-end">{formatMinor(o.grossMinor, o.currency, locale)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+)}

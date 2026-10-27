@@ -4,7 +4,7 @@
  * a temporary config file for each user type with the right Cookie.
  */
 
-const { execSync } = require('node:child_process');
+const { execFileSync, execSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const config = require('../../lighthouserc.cjs');
@@ -25,7 +25,8 @@ function buildTempConfig(urls, cookie, label) {
           extraHeaders: { Cookie: cookie },
           // Back-office : exclu de l'indexation à dessein (robots.txt « Disallow: /<locale>/admin/ »).
           // On n'évalue donc pas « is-crawlable » ; le reste du score SEO garde le seuil de 0.9.
-          ...(label === 'admin' ? { skipAudits: ['is-crawlable'] } : {}),
+          // Tunnel boutique : pages privées (« noindex, nofollow », cache « no-store ») pour la même raison.
+          ...(label === 'admin' || label === 'shop' ? { skipAudits: ['is-crawlable'] } : {}),
         },
       },
       assert: {
@@ -81,6 +82,9 @@ function run(urls, cookie, label) {
     try { fs.unlinkSync(tmpConfig); } catch { /* ignore */ }
     // Lighthouse recopie extraHeaders (cookie) dans chaque LHR : caviardage immédiat.
     redactDir(path.resolve(__dirname, '../../.lighthouseci'));
+    // `lhci collect` efface les lhr-* du lot précédent : renommage immédiat pour conserver
+    // les rapports de chaque lot (authed, admin, shop) et pas seulement ceux du dernier.
+    execFileSync(process.execPath, [path.resolve(__dirname, 'lhci-rename.cjs')], { stdio: 'inherit' });
   }
 }
 
@@ -89,3 +93,6 @@ run(config._authedUrls, config._userCookie, 'authed');
 
 // Run admin pages
 run(config._adminUrls, config._adminCookie, 'admin');
+
+// Run shop checkout pages (guest cart cookie)
+run(config._shopUrls, config._shopCartCookie, 'shop');

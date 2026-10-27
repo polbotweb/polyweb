@@ -41,6 +41,8 @@ function urlToName(url) {
     if (!p.includes('--')) p += '--home';
     // Remove characters unsafe for filenames (Windows: <>:"/\|?* and control chars)
     p = p.replace(/[<>:"/\\|?*\x00-\x1f]/g, '');
+    // Commande seedée (id aléatoire à chaque run) : nom stable pour des rapports comparables.
+    p = p.replace(/^([^-]+--shop--order)--.+$/, '$1').replace(/^([^-]+--admin--orders)--.+$/, '$1--detail');
     return p;
   } catch {
     return 'unknown';

@@ -26,10 +26,17 @@ const COOKIES_PATH = path.resolve(__dirname, '.a11y-cookies.json');
 
 let userCookie = '';
 let adminCookie = '';
+// Boutique (tests/a11y/setup.ts) : cookie panier invité signé, commande en attente + jeton de suivi.
+let shopCartCookie = '';
+let shopOrder = null;
+let shopSlugs = null;
 if (fs.existsSync(COOKIES_PATH)) {
   const data = JSON.parse(fs.readFileSync(COOKIES_PATH, 'utf-8'));
   userCookie = data.userCookie ?? '';
   adminCookie = data.adminCookie ?? '';
+  shopCartCookie = data.shopCartCookie ?? '';
+  shopOrder = data.shopOrder ?? null;
+  shopSlugs = data.shopSlugs ?? null;
 }
 
 // ── Route definitions per locale ─────────────────────────────────────
@@ -68,6 +75,16 @@ for (const lang of locales) {
   for (const pageId of ['sign-in', 'sign-up', 'forgot-password']) {
     publicUrls.push(`${BASE}/${lang}/auth/${authRoutes[pageId][lang]}`);
   }
+  // Fiche du produit seedé par tests/a11y/setup.ts (indexable, seuils standard).
+  if (shopSlugs) publicUrls.push(`${BASE}/${lang}/shop/${encodeURIComponent(shopSlugs[lang])}`);
+}
+
+// Tunnel boutique (panier, commande, suivi) : pages privées « noindex » à dessein, auditées
+// dans un lot à part (cookie panier) par tests/a11y/lhci-authed.cjs, sans « is-crawlable ».
+const shopUrls = [];
+for (const lang of locales) {
+  if (shopCartCookie) shopUrls.push(`${BASE}/${lang}/shop/cart`, `${BASE}/${lang}/shop/checkout`);
+  if (shopOrder) shopUrls.push(`${BASE}/${lang}/shop/order/${encodeURIComponent(shopOrder.id)}?t=${encodeURIComponent(shopOrder.token)}`);
 }
 
 // Lighthouse doesn't support per-URL headers in the config file,
@@ -87,6 +104,8 @@ for (const lang of locales) {
   for (const page of adminPages) {
     adminUrls.push(`${BASE}/${lang}/admin/${page}`);
   }
+  adminUrls.push(`${BASE}/${lang}/admin/orders`);
+  if (shopOrder) adminUrls.push(`${BASE}/${lang}/admin/orders/${encodeURIComponent(shopOrder.id)}`);
 }
 
 module.exports = {
@@ -121,4 +140,6 @@ module.exports = {
   _adminUrls: adminUrls,
   _userCookie: userCookie,
   _adminCookie: adminCookie,
+  _shopUrls: shopUrls,
+  _shopCartCookie: shopCartCookie,
 };

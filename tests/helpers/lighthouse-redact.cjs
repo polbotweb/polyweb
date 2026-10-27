@@ -3,6 +3,8 @@
  * de session via `settings.extraHeaders`, que Lighthouse recopie dans chaque
  * LHR (JSON et HTML). Ces fonctions remplacent toute valeur d'en-tête sensible
  * et tout cookie better-auth par « [REDACTED] », puis vérifient qu'il n'en reste aucun.
+ * Boutique : le cookie panier signé (`pw_cart`) et le jeton d'accès des liens de suivi de
+ * commande (`/shop/order/<id>?t=…`, aussi en forme encodée) sont caviardés de la même façon.
  */
 
 const fs = require('node:fs');
@@ -10,12 +12,14 @@ const path = require('node:path');
 
 const REDACTED = '[REDACTED]';
 const SENSITIVE_HEADER = /("(?:cookie|authorization|x-api-key)"\s*:\s*")((?:[^"\\]|\\.)*)(")/gi;
-const SESSION_COOKIE = /(better-auth\.[\w.-]+=)([^;"'\s\\&]+)/g;
+const SESSION_COOKIE = /(better-auth\.[\w.-]+=|pw_cart=)([^;"'\s\\&]+)/g;
+const ORDER_TOKEN = /((?:\/|%2F)shop(?:\/|%2F)order(?:\/|%2F)[A-Za-z0-9_-]+(?:\?|%3F)t(?:=|%3D))([A-Za-z0-9_-]+)/gi;
 
 function redactText(text) {
   return text
     .replace(SENSITIVE_HEADER, (m, a, value, b) => (value === '' || value === REDACTED ? m : `${a}${REDACTED}${b}`))
-    .replace(SESSION_COOKIE, (m, a, value) => (value.startsWith(REDACTED) ? m : `${a}${REDACTED}`));
+    .replace(SESSION_COOKIE, (m, a, value) => (value.startsWith(REDACTED) ? m : `${a}${REDACTED}`))
+    .replace(ORDER_TOKEN, (_m, a) => `${a}REDACTED`);
 }
 
 /** Motifs résiduels : renvoie la liste des fuites trouvées (vide si propre). */
@@ -23,6 +27,7 @@ function findLeaks(text) {
   const leaks = [];
   for (const m of text.matchAll(SENSITIVE_HEADER)) if (m[2] !== '' && m[2] !== REDACTED) leaks.push(m[0].slice(0, 40));
   for (const m of text.matchAll(SESSION_COOKIE)) if (!m[2].startsWith(REDACTED)) leaks.push(m[1]);
+  for (const m of text.matchAll(ORDER_TOKEN)) if (m[2] !== 'REDACTED') leaks.push(m[1].slice(0, 40));
   return leaks;
 }
 
