@@ -57,14 +57,41 @@ Les permissions `bookings:create | read | update | delete` sont vérifiées pour
 
 Les traductions existent en fr, en, es et ar (`i18n/`), avec une interface RTL en arabe. Le script client est `client/init.ts` (formulaires, créneaux et actions de fiche).
 
+## Parcours public (visiteur)
+
+Pages SSR sans JavaScript requis (formulaires HTML, `POST` puis redirection 303), en fr, en, es et ar (RTL). Elles existent pour la plateforme et pour chaque organisation :
+
+- `/{lang}/bookings` et `/{lang}/{organisation}/bookings` : ressources actives du tenant.
+- `/{lang}/[{organisation}/]bookings/{CODE}?date=YYYY-MM-DD` : créneaux libres du jour, puis formulaire visiteur (nom et e-mail obligatoires, téléphone, nombre de personnes et note facultatifs). Les dates sont limitées à aujourd'hui + 180 jours, dans le fuseau de la ressource.
+- `/{lang}/[{organisation}/]bookings/manage/{id}?t={jeton}` : récapitulatif et annulation par lien signé.
+
+Le code est dans `public/` (`flow.ts` pour les effets, `pages.ts` pour les contrôleurs de page, `paths.ts`, `format.ts` et `email.ts` pour les fonctions pures), `domain/guest.ts` et `src/components/bookings/public/`.
+
+- **Créneaux** : plages d'ouverture moins les réservations actives (`freeSlots`). À l'envoi, `bookingsService.createGuestBooking` reprend le verrou transactionnel de la ressource, recalcule les créneaux et exige que le début demandé en fasse partie. Sinon, la réponse est `SlotUnavailableError` (HTTP 409, « créneau déjà pris »). La réservation est créée au statut `REQUESTED`.
+- **Validation** : toutes les erreurs sont renvoyées d'un coup (HTTP 422). Un récapitulatif lié aux champs s'affiche, avec `aria-invalid` et `aria-describedby`, et les valeurs saisies sont conservées.
+- **Anti-abus** : les mêmes mécanismes que les formulaires publics.
+  - Contrôle d'origine (CSRF) par le middleware.
+  - Pot de miel `_hp` et jeton horodaté signé `_ts` (2 s minimum). Un robot détecté reçoit un faux succès et rien n'est écrit.
+  - Limite de débit par IP hachée et par tenant : `BOOKING_RATE_LIMIT` envois par 10 minutes (10 par défaut), avec HTTP 429 et `Retry-After`.
+- **E-mail de confirmation** : envoyé par le service `Mailer` (infrastructure SMTP existante), en HTML et en texte, localisé, en RTL pour l'arabe. Il contient le lien de gestion. Un échec ou un délai de plus de 10 s ne bloque pas la réservation : la page de confirmation invite alors à conserver le lien affiché.
+- **Lien signé** : `HMAC(signingSecret, id)` tronqué, comparé à temps constant. Un jeton invalide ou un autre tenant donne une 404, sans révéler si la réservation existe.
+  - La page est servie en `no-store` et `noindex`, avec `<meta name="referrer" content="same-origin">`, pour que le jeton ne parte jamais vers un tiers.
+  - `no-referrer` n'est pas utilisé : il ferait envoyer `Origin: null` et le contrôle d'origine refuserait le `POST` d'annulation.
+- **Annulation** : possible si la réservation est `REQUESTED` ou `CONFIRMED` et pas encore commencée. Elle est idempotente.
+- **Journal d'audit** : les événements `BOOKING_PUBLIC_CREATE` et `BOOKING_PUBLIC_CANCEL` sont enregistrés. Les réservations visiteur n'ont pas de révision, car une révision exige un auteur utilisateur ; le journal d'audit en tient lieu.
+- **Acompte et paiement** : hors périmètre. Le module `payments` (Stripe ou simulé, `PAYMENTS_ENABLED`) existe, mais aucun acompte n'est encore relié aux réservations.
+
 ## Limites
 
-- Pas encore de parcours de réservation public (côté visiteur) : la prise de réservation se fait depuis le back-office.
+- Le parcours public ne prend ni acompte ni paiement, et n'envoie pas de rappel avant le rendez-vous.
 - Pas d'exceptions de calendrier (jours fériés, fermetures ponctuelles) ni de récurrence de réservations.
 
 ## Tests
 
 - `tests/unit/bookings/*.test.ts` (dont `scheduling.test.ts` : heure d'été, plages contiguës, minuit)
 - `tests/integration/bookings-module.test.ts`
+- `tests/integration/bookings-public.test.ts` (parcours public : revérification, concurrence, anti-robots, débit, lien signé, annulation, tenant)
 - `tests/e2e/bookings-admin.spec.ts`
+- `tests/e2e/bookings-public.spec.ts` (3 navigateurs : réservation, annulation, RTL, CSRF, organisation, axe)
+- pa11y et Lighthouse : `/{lang}/bookings` et `/{lang}/bookings/A11YROOM`, ressource créée par `tests/a11y/setup.ts`
 - `tests/e2e/a11y.spec.ts` (pages réservations)

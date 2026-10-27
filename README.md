@@ -198,6 +198,7 @@ blog/
   sidebars/
 bookings/
   admin/
+  public/
 content/
   ContentEditor.astro
   RichContent.astro
@@ -478,6 +479,7 @@ migrations/
   0034_purchasing.sql
   0035_purchasing_deferred_fks.sql
   0036_bookings.sql
+  0037_bookings_guest_phone.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -512,6 +514,7 @@ migrations/
     0034_snapshot.json
     0035_snapshot.json
     0036_snapshot.json
+    0037_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -706,6 +709,7 @@ schemas.ts
 - `0034_purchasing.sql`
 - `0035_purchasing_deferred_fks.sql`
 - `0036_bookings.sql`
+- `0037_bookings_guest_phone.sql`
 
 ### Commands
 
@@ -980,11 +984,13 @@ bookings/
   domain/
     booking.ts
     errors.ts
+    guest.ts
     numbering.ts
     resource.ts
     workflow.ts
   i18n/
     index.ts
+    public.ts
   loaders/
     booking-admin.loader.ts
     bookings.loader.ts
@@ -993,6 +999,12 @@ bookings/
   module.ts
   permissions/
     index.ts
+  public/
+    email.ts
+    flow.ts
+    format.ts
+    pages.ts
+    paths.ts
   schema/
     index.ts
   services/
@@ -1349,6 +1361,7 @@ src/pages/
   [organization]/
     admin/
     blog/
+    bookings/
     services/
   [slug].astro
   a-propos.astro
@@ -1380,6 +1393,10 @@ src/pages/
     author/
     index.astro
     tag/
+  bookings/
+    [code].astro
+    index.astro
+    manage/
   c/
     [type]/
   contact.astro
