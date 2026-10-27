@@ -4,7 +4,7 @@
  * a temporary config file for each user type with the right Cookie.
  */
 
-const { execSync } = require('node:child_process');
+const { execFileSync, execSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const config = require('../../lighthouserc.cjs');
@@ -82,6 +82,9 @@ function run(urls, cookie, label) {
     try { fs.unlinkSync(tmpConfig); } catch { /* ignore */ }
     // Lighthouse recopie extraHeaders (cookie) dans chaque LHR : caviardage immédiat.
     redactDir(path.resolve(__dirname, '../../.lighthouseci'));
+    // `lhci collect` efface les lhr-* du lot précédent : renommage immédiat pour conserver
+    // les rapports de chaque lot (authed, admin, shop) et pas seulement ceux du dernier.
+    execFileSync(process.execPath, [path.resolve(__dirname, 'lhci-rename.cjs')], { stdio: 'inherit' });
   }
 }
 
