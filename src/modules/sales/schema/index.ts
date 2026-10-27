@@ -120,3 +120,28 @@ export const salesDocumentLocks = pgTable("sales_document_locks", {
   lockedAt: timestamp("locked_at").defaultNow().notNull(),
   expiresAt: timestamp("expires_at").notNull(),
 });
+
+/**
+ * Profil vendeur d'un tenant (une ligne par organisation, `null` = plateforme) : identité légale
+ * imprimée sur les factures et reprise dans le XML Factur-X (BT-27 à BT-40, BT-84).
+ */
+export const salesSellerProfiles = pgTable("sales_seller_profiles", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: text("organization_id").references(() => organization.id, { onDelete: "cascade" }),
+  legalName: text("legal_name").notNull(),
+  vatNumber: text("vat_number"),
+  /** Identifiant légal (SIREN…) et son schéma ISO 6523 (`0002` = SIREN). */
+  legalId: text("legal_id"),
+  legalIdScheme: text("legal_id_scheme"),
+  addressLine1: text("address_line1"),
+  addressLine2: text("address_line2"),
+  postcode: text("postcode"),
+  city: text("city"),
+  country: text("country").notNull(),
+  email: text("email"),
+  iban: text("iban"),
+  bic: text("bic"),
+  updatedBy: text("updated_by").references(() => user.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
+}, (table) => [uniqueIndex("sales_seller_profiles_org_uidx").on(sql`coalesce(${table.organizationId}, '')`)]);

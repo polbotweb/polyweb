@@ -16,6 +16,7 @@ import { salesService } from "../services/salesDocument.service";
 import { SALES_DOCUMENT_KINDS, SALES_STATUSES, type SalesStatus } from "../domain/workflow";
 import { PAYMENT_METHODS } from "../domain/payments";
 import { bulkSalesLifecycle } from "./bulk";
+import { sellerProfileService } from "../services/sellerProfile.service";
 
 const idInput = z.object({ id: z.uuid() });
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -123,6 +124,29 @@ export const salesActions = {
       const user = yield* requireSalesResourcePermission(context, ["update"], input.id);
       yield* salesService.unlock(input.id, lockOwnerFrom(user.id, context.locals.session?.id));
       return { success: true };
+    })),
+  }),
+  /** Profil vendeur du tenant (identité légale des factures et du XML Factur-X). */
+  saveSellerProfile: defineAction({
+    input: z.object({
+      organizationId: z.string().nullable().default(null),
+      legalName: z.string().trim().min(1).max(200),
+      vatNumber: z.string().max(32).nullable().default(null),
+      legalId: z.string().max(50).nullable().default(null),
+      legalIdScheme: z.string().max(4).nullable().default(null),
+      addressLine1: z.string().max(200).nullable().default(null),
+      addressLine2: z.string().max(200).nullable().default(null),
+      postcode: z.string().max(20).nullable().default(null),
+      city: z.string().max(200).nullable().default(null),
+      country,
+      email: z.email().max(254).nullable().default(null),
+      iban: z.string().max(42).nullable().default(null),
+      bic: z.string().max(14).nullable().default(null),
+    }),
+    handler: effectHandler(({ organizationId, ...input }, context) => Effect.gen(function* () {
+      const user = yield* requireSalesPermission(context, ["update"], organizationId);
+      const row = yield* sellerProfileService.save(input, organizationId, user.id);
+      return { id: row.id };
     })),
   }),
 };

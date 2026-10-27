@@ -8,8 +8,12 @@ import { createRequire } from 'node:module';
 import { Effect, Exit } from 'effect';
 import { afterAll, describe, expect, it } from 'vitest';
 import { PdfRenderer } from '@/core/documents';
+import { embedFacturX, FACTURX_XML_FILENAME } from '@/core/einvoice';
+import { salesFacturXml } from '@/modules/sales/domain/einvoice';
+import { decodePDFRawStream, PDFArray, PDFDict, PDFDocument, PDFName, type PDFRawStream } from 'pdf-lib';
 import { closePdfBrowser, makePuppeteerPdfRenderer, pdfLaunchOptions } from '@/lib/pdf/puppeteer';
 import { renderSalesDocumentPdf, type PrintableSalesDocument } from '@/modules/sales/documents';
+import { validateFacturXsd } from '../helpers/factur-x-xsd';
 import { arabicCharCount, extractPdfText, pdfTextIncludes } from '../helpers/pdf-text';
 
 const resolveChromium = () => {
@@ -119,4 +123,48 @@ describe('PDF sans Chromium', () => {
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) expect(String(exit.cause)).toContain('unavailable');
   });
+});
+
+describe.skipIf(!available)('Factur-X : PDF Chromium réel → PDF/A-3B', () => {
+  const renderer = makePuppeteerPdfRenderer(chromium);
+  const seller = {
+    legalName: 'Polyweb SAS', vatNumber: 'FR32123456782', legalId: '732829320', legalIdScheme: '0002',
+    addressLine1: '1 rue de la Paix', addressLine2: null, postcode: '75002', city: 'Paris', country: 'FR',
+    email: 'factures@polyweb.test', iban: 'FR7630006000011234567890189', bic: 'AGRIFRPP',
+  };
+
+  afterAll(async () => {
+    await closePdfBrowser();
+  });
+
+  it('XML joint extractible et valide XSD, polices embarquées, page conservée', async () => {
+    const source = { ...doc, customerCountry: 'FR', sourceDocumentId: null, related: [], lines: doc.lines.map((line) => ({ ...line, taxCategory: 'standard' })) };
+    const visual = await Effect.runPromise(renderSalesDocumentPdf(doc, { locale: 'fr', seller }).pipe(Effect.provideService(PdfRenderer, renderer)));
+    const { xml } = await Effect.runPromise(salesFacturXml(source, seller, 'fr'));
+    const pdf = await Effect.runPromise(embedFacturX(visual, xml, { title: 'FA-2026-00042', author: seller.legalName }));
+
+    const loaded = await PDFDocument.load(pdf, { updateMetadata: false });
+    expect(loaded.getPageCount()).toBe((await PDFDocument.load(visual)).getPageCount());
+    const spec = loaded.catalog.lookup(PDFName.of('AF'), PDFArray).lookup(0, PDFDict);
+    const file = spec.lookup(PDFName.of('EF'), PDFDict).lookup(PDFName.of('F')) as PDFRawStream;
+    const embedded = new TextDecoder().decode(decodePDFRawStream(file).decode());
+    expect(embedded).toBe(xml);
+    expect((await validateFacturXsd(embedded)).errors).toEqual([]);
+    expect(String(spec.get(PDFName.of('F')))).toContain(FACTURX_XML_FILENAME);
+    expect(loaded.context.trailerInfo.Encrypt).toBeUndefined();
+    // PDF/A (ISO 19005-3 §6.2.11.4) : toute police embarquée — Type3 via ses CharProcs, sinon FontFile / FontFile2 / FontFile3.
+    const dicts = loaded.context.enumerateIndirectObjects().map(([, object]) => object).filter((object) => object instanceof PDFDict);
+    const fonts = dicts.filter((font) => font.get(PDFName.of('Type'))?.toString() === '/Font');
+    expect(fonts.length).toBeGreaterThan(0);
+    for (const font of fonts) {
+      const subtype = font.get(PDFName.of('Subtype'))?.toString();
+      if (subtype === '/Type3') expect(font.has(PDFName.of('CharProcs'))).toBe(true);
+      else {
+        const holder = subtype === '/Type0' ? font.lookup(PDFName.of('DescendantFonts'), PDFArray).lookup(0, PDFDict) : font;
+        const descriptor = holder.lookup(PDFName.of('FontDescriptor'), PDFDict);
+        expect(['FontFile', 'FontFile2', 'FontFile3'].some((key) => descriptor.has(PDFName.of(key))), String(font.get(PDFName.of('BaseFont')))).toBe(true);
+      }
+    }
+    expect(extractPdfText(pdf).length).toBeGreaterThan(0);
+  }, 60_000);
 });

@@ -1,0 +1,29 @@
+---
+/** Back-office plateforme : profil vendeur (identité légale des factures, Factur-X). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { requirePermission } from "@lib/auth-guards";
+import SellerProfileForm from "@/components/sales/admin/SellerProfileForm.astro";
+import { getSalesTranslations } from "@/modules/sales/i18n";
+import { loadSellerProfile } from "@/modules/sales/loaders";
+import { hasSalesPermission } from "@/modules/sales/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { sales: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getSalesTranslations(locale);
+const [profile, canUpdate] = await Promise.all([loadSellerProfile(null), hasSalesPermission(Astro, ["update"])]);
+---
+<BaseLayout title={t.seller.title} description={t.meta.description}>
+  <AuthLayout title={t.seller.title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="sales" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <h1 class="text-2xl font-semibold">{t.seller.title}</h1>
+      <p class="max-w-2xl text-muted-foreground">{t.seller.intro}</p>
+      <SellerProfileForm locale={locale} profile={profile} canUpdate={canUpdate} />
+      <a class="inline-flex min-h-11 items-center underline" href={`/${locale}/admin/sales`}>{t.admin.back}</a>
+    </main>
+  </AuthLayout>
+</BaseLayout>
