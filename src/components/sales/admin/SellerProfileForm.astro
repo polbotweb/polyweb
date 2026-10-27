@@ -1,0 +1,55 @@
+---
+/**
+ * Formulaire back-office du profil vendeur (identité légale de l'émetteur, Factur-X).
+ * Soumission par `modules/sales/client/seller-profile-form.ts` (action `sales.saveSellerProfile`).
+ */
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import type { Locale } from "@i18n/config";
+import { getSalesTranslations } from "@/modules/sales/i18n";
+import type { SellerProfileRow } from "@/modules/sales/loaders";
+
+interface Props {
+  locale: Locale;
+  organizationId?: string | null;
+  profile: SellerProfileRow | null;
+  canUpdate: boolean;
+}
+
+const { locale, organizationId = null, profile, canUpdate } = Astro.props as Props;
+const t = getSalesTranslations(locale).seller;
+const field = (name: keyof SellerProfileRow) => (profile?.[name] as string | null | undefined) ?? "";
+---
+
+<form class="flex max-w-2xl flex-col gap-4" data-seller-profile-form data-organization-id={organizationId ?? ""} data-done={t.saved} novalidate>
+  <fieldset class="grid gap-4" disabled={!canUpdate}>
+    <div class="grid gap-2"><Label for="seller-legal-name">{t.legalName}</Label><Input id="seller-legal-name" name="legalName" required maxlength={200} autocomplete="organization" value={field("legalName")} /></div>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div class="grid gap-2"><Label for="seller-vat">{t.vatNumber}</Label><Input id="seller-vat" name="vatNumber" maxlength={32} autocomplete="off" value={field("vatNumber")} /></div>
+      <div class="grid gap-2"><Label for="seller-email">{t.email}</Label><Input id="seller-email" name="email" type="email" maxlength={254} autocomplete="email" value={field("email")} /></div>
+      <div class="grid gap-2"><Label for="seller-legal-id">{t.legalId}</Label><Input id="seller-legal-id" name="legalId" maxlength={50} autocomplete="off" value={field("legalId")} /></div>
+      <div class="grid gap-2"><Label for="seller-legal-scheme">{t.legalIdScheme}</Label><Input id="seller-legal-scheme" name="legalIdScheme" maxlength={4} inputmode="numeric" pattern="[0-9]{4}" autocomplete="off" aria-describedby="seller-legal-scheme-hint" value={field("legalIdScheme")} /><p id="seller-legal-scheme-hint" class="text-xs text-muted-foreground">{t.legalIdHint}</p></div>
+    </div>
+    <div class="grid gap-2"><Label for="seller-line1">{t.addressLine1}</Label><Input id="seller-line1" name="addressLine1" maxlength={200} autocomplete="address-line1" value={field("addressLine1")} /></div>
+    <div class="grid gap-2"><Label for="seller-line2">{t.addressLine2}</Label><Input id="seller-line2" name="addressLine2" maxlength={200} autocomplete="address-line2" value={field("addressLine2")} /></div>
+    <div class="grid gap-4 sm:grid-cols-3">
+      <div class="grid gap-2"><Label for="seller-postcode">{t.postcode}</Label><Input id="seller-postcode" name="postcode" maxlength={20} autocomplete="postal-code" value={field("postcode")} /></div>
+      <div class="grid gap-2"><Label for="seller-city">{t.city}</Label><Input id="seller-city" name="city" maxlength={200} autocomplete="address-level2" value={field("city")} /></div>
+      <div class="grid gap-2"><Label for="seller-country">{t.country}</Label><Input id="seller-country" name="country" required maxlength={2} pattern="[A-Za-z]{2}" autocomplete="country" value={field("country")} /></div>
+    </div>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div class="grid gap-2"><Label for="seller-iban">{t.iban}</Label><Input id="seller-iban" name="iban" maxlength={42} autocomplete="off" value={field("iban")} /></div>
+      <div class="grid gap-2"><Label for="seller-bic">{t.bic}</Label><Input id="seller-bic" name="bic" maxlength={14} autocomplete="off" value={field("bic")} /></div>
+    </div>
+  </fieldset>
+  <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+  {canUpdate && <div class="flex gap-3"><Button type="submit">{t.save}</Button></div>}
+</form>
+
+<script>
+  import { initSales } from "@/modules/sales/client/init";
+
+  initSales();
+  document.addEventListener("astro:after-swap", initSales);
+</script>

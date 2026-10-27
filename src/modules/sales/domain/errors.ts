@@ -23,3 +23,16 @@ export class InvalidPaymentError extends Data.TaggedError("InvalidPaymentError")
     return `Paiement invalide (${this.reason}) : ${this.value}`;
   }
 }
+
+export class InvalidSellerProfileError extends Data.TaggedError("InvalidSellerProfileError")<{ readonly field: "legalName" | "country" | "vatNumber" | "legalId" | "legalIdScheme" | "email" | "iban" | "bic" | "postcode"; readonly value: string }> {
+  override get message() {
+    return `Profil vendeur invalide (${this.field}) : ${this.value}`;
+  }
+}
+
+/** Factur-X non produit pour ce document (PDF simple servi à la place) : motif auditable. */
+export class FacturXUnavailableError extends Data.TaggedError("FacturXUnavailableError")<{ readonly reason: "not-invoice" | "not-issued" | "no-seller-profile" | "unsupported-currency" | "totals-mismatch" | "invalid"; readonly detail?: string }> {
+  override get message() {
+    return `Factur-X indisponible (${this.reason})${this.detail ? ` : ${this.detail}` : ""}`;
+  }
+}

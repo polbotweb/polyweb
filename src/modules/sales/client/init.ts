@@ -8,6 +8,7 @@
 
 import { initSalesDocument } from "./document-actions";
 import { initSalesDocumentForm } from "./document-form";
+import { initSellerProfileForm } from "./seller-profile-form";
 
 /**
  * Branche les comportements d'une page. Idempotent : appelé au premier rendu
@@ -16,4 +17,5 @@ import { initSalesDocumentForm } from "./document-form";
 export function initSales(): void {
   initSalesDocumentForm();
   initSalesDocument();
+  initSellerProfileForm();
 }
