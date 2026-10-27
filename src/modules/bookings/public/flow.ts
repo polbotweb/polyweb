@@ -20,7 +20,9 @@ import { localDate } from "@/core/scheduling";
 import { Mailer } from "@smtp/mailer";
 import { checkTimestampToken } from "@/modules/forms/domain/forms";
 import { bookingsLoader } from "../loaders/bookings.loader";
-import { bookingsService } from "../services/bookings.service";
+import { bookingsService, type BookingRow } from "../services/bookings.service";
+import { depositDue, startDepositCheckout } from "../payments";
+import { isPaymentsEnabled } from "@/core/payments";
 import { addIsoDays, BOOKING_HORIZON_DAYS, guestToken, InvalidGuestError, isBookableDate, validateGuest, verifyGuestToken, type GuestField } from "../domain/guest";
 import { guestConfirmationEmail } from "./email";
 import { formatSlot } from "./format";
@@ -73,7 +75,7 @@ export interface SubmissionMeta {
   readonly locale: Locale;
   readonly now?: Date;
 }
-export type SubmitOutcome = { readonly kind: "created"; readonly id: string; readonly token: string; readonly emailSent: boolean } | { readonly kind: "discarded" };
+export type SubmitOutcome = { readonly kind: "created"; readonly id: string; readonly token: string; readonly emailSent: boolean; readonly payUrl: string | null } | { readonly kind: "discarded" };
 
 const RATE_LIMIT = { window: 600, max: Number(process.env.BOOKING_RATE_LIMIT ?? 10) };
 const ipHashOf = (ip: string | null) => (ip ? createHash("sha256").update(`polyweb:${ip}`).digest("hex").slice(0, 32) : null);
@@ -97,7 +99,7 @@ export const submitGuestBooking = (tenant: PublicTenant, resource: Resource, raw
     if (!raw.startsAt) fields.push("slot");
     if (fields.length > 0) return yield* new InvalidGuestError({ fields });
 
-    const { booking } = yield* bookingsService.createGuestBooking({ ...input, organizationId: tenant.organizationId, resourceId: resource.id, startsAt: raw.startsAt! }, now);
+    const { booking } = yield* bookingsService.createGuestBooking({ ...input, organizationId: tenant.organizationId, resourceId: resource.id, startsAt: raw.startsAt!, requireDeposit: isPaymentsEnabled() }, now);
     const config = yield* AppConfig;
     const token = guestToken(config.signingSecret, booking.id);
     const mail = guestConfirmationEmail({
@@ -110,7 +112,9 @@ export const submitGuestBooking = (tenant: PublicTenant, resource: Resource, raw
       Effect.timeout("10 seconds"),
       Effect.as(true), Effect.tapError((e) => Effect.logWarning("booking confirmation email failed", e)), Effect.catch(() => Effect.succeed(false)));
     yield* logAuditEventEffect({ action: "BOOKING_PUBLIC_CREATE", resource: "booking", resourceId: booking.id, metadata: { organizationId: tenant.organizationId, resourceId: resource.id, emailSent: sent }, ipAddress: meta.ip, userAgent: meta.userAgent });
-    return { kind: "created", id: booking.id, token, emailSent: sent } satisfies SubmitOutcome as SubmitOutcome;
+    // Acompte exigé : lien de paiement immédiat ; en cas d'échec fournisseur, le bouton de la page de suivi le relance.
+    const payUrl = depositDue(booking, now) ? yield* depositCheckoutUrl(booking, resource.name, config.siteUrl, manageUrlPath(meta.locale, tenant, booking.id, token), now) : null;
+    return { kind: "created", id: booking.id, token, emailSent: sent, payUrl } satisfies SubmitOutcome as SubmitOutcome;
   });
 
 /** Réservation du tenant si le jeton est valide ; `null` sinon (même réponse : pas d'oracle d'existence). */
@@ -119,6 +123,22 @@ export const guestBooking = (tenant: PublicTenant, id: string, token: string | n
     const config = yield* AppConfig;
     if (!verifyGuestToken(config.signingSecret, id, token)) return null;
     return yield* bookingsLoader.booking(id, tenant.organizationId);
+  });
+
+/** URL de paiement de l'acompte (`null` si le fournisseur est indisponible : journalisé, jamais bloquant). */
+const depositCheckoutUrl = (booking: BookingRow, resourceName: string, siteUrl: string, managePath: string, now: Date) =>
+  startDepositCheckout(booking, resourceName, { successUrl: `${siteUrl}${managePath}&paid=1`, cancelUrl: `${siteUrl}${managePath}` }, now).pipe(
+    Effect.map(({ url }): string | null => url),
+    Effect.catch((error) => Effect.logWarning("[bookings] lien de paiement de l'acompte indisponible", error._tag).pipe(Effect.as(null))),
+  );
+
+/** Paiement de l'acompte depuis la page de suivi (lien signé) ; `null` si lien invalide ou rien à payer. */
+export const payGuestDeposit = (tenant: PublicTenant, id: string, token: string | null | undefined, locale: Locale, now: Date = new Date()) =>
+  Effect.gen(function* () {
+    const current = yield* guestBooking(tenant, id, token);
+    if (!current || !token || !depositDue(current, now)) return null;
+    const config = yield* AppConfig;
+    return yield* depositCheckoutUrl(current, current.resource?.name ?? "", config.siteUrl, manageUrlPath(locale, tenant, current.id, token), now);
   });
 
 /** Annulation par lien signé ; `null` si lien invalide. Échoue en BAD_REQUEST si non annulable. */

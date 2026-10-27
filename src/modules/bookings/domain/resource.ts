@@ -1,11 +1,14 @@
 /** Validation des ressources réservables (salle, personne, équipement) et de leurs plages d'ouverture hebdomadaires. */
 import { Effect } from "effect";
+import { fromDecimal, isCurrencyCode, type CurrencyCode } from "@/core/money";
 import { isTimeZone, validWindows, type WeeklyWindow } from "@/core/scheduling";
 import { InvalidResourceError } from "./errors";
 
 export const RESOURCE_KINDS = ["room", "staff", "equipment"] as const;
 export type ResourceKind = (typeof RESOURCE_KINDS)[number];
 export const MAX_WINDOWS = 50;
+/** Plafond d'acompte en unités mineures (garde-fou de saisie). */
+export const MAX_DEPOSIT_MINOR = 100_000_000;
 
 export interface ResourceFields {
   readonly code: string;
@@ -16,6 +19,19 @@ export interface ResourceFields {
   readonly slotMinutes: number;
   readonly windows: readonly WeeklyWindow[];
 }
+
+/**
+ * Acompte en saisie décimale exacte (« 15 », « 15.50 ») dans une devise ISO 4217 (core/money) ;
+ * « 0 » = pas d'acompte. Précision supérieure à la devise refusée.
+ */
+export const validateDeposit = (amount: string, currency: string) =>
+  Effect.gen(function* () {
+    const code = currency.trim().toUpperCase();
+    if (!isCurrencyCode(code)) return yield* new InvalidResourceError({ field: "deposit", value: currency });
+    const money = yield* fromDecimal(amount.trim() || "0", code as CurrencyCode).pipe(Effect.mapError(() => new InvalidResourceError({ field: "deposit", value: amount })));
+    if (money.amountMinor < 0 || money.amountMinor > MAX_DEPOSIT_MINOR) return yield* new InvalidResourceError({ field: "deposit", value: amount });
+    return { depositMinor: money.amountMinor, depositCurrency: code };
+  });
 
 export const validateResource = (input: ResourceFields) =>
   Effect.gen(function* () {

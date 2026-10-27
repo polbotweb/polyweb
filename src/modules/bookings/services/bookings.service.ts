@@ -19,8 +19,8 @@ import type { LockOwner } from "@/core/locks/policy";
 import { freeSlots, localDate, zonedToUtc, type Interval, type WeeklyWindow } from "@/core/scheduling";
 import { bookings, bookingsResources, bookingsRevisions } from "../schema";
 import { bookingsLock } from "../locks";
-import { ACTIVE_STATUSES, assignsNumber, bookingWorkflow, isEditable, reoccupiesSlot, type BookingStatus } from "../domain/workflow";
-import { validateResource } from "../domain/resource";
+import { ACTIVE_STATUSES, assignsNumber, bookingWorkflow, isEditable, reoccupiesSlot, SYSTEM_STATUSES, type BookingStatus } from "../domain/workflow";
+import { validateDeposit, validateResource } from "../domain/resource";
 import { checkSlot, validateBooking } from "../domain/booking";
 import { BOOKING_NUMBERING_KEY, DEFAULT_BOOKING_NUMBERING } from "../domain/numbering";
 import type { BookingConflictError, InvalidBookingError, InvalidResourceError, OutsideAvailabilityError } from "../domain/errors";
@@ -79,6 +79,9 @@ export interface ResourceInput {
   readonly slotMinutes?: number;
   readonly windows?: readonly WeeklyWindow[];
   readonly active?: boolean;
+  /** Acompte décimal (« 15.50 ») ; absent = inchangé (création : aucun). */
+  readonly deposit?: string;
+  readonly depositCurrency?: string;
 }
 
 const resourceColumns = (executor: Executor, input: ResourceInput, organizationId: string | null, exceptId?: string) =>
@@ -91,7 +94,8 @@ const resourceColumns = (executor: Executor, input: ResourceInput, organizationI
       executor.select({ id: bookingsResources.id }).from(bookingsResources)
         .where(and(eq(bookingsResources.code, valid.code), sameTenant(bookingsResources.organizationId, organizationId), exceptId ? ne(bookingsResources.id, exceptId) : undefined)).limit(1));
     if (clash[0]) return yield* fail("CONFLICT", `Le code ressource ${valid.code} existe déjà.`);
-    return { ...valid, windows: [...valid.windows], active: input.active ?? true };
+    const deposit = input.deposit === undefined ? {} : yield* domain(validateDeposit(input.deposit, input.depositCurrency ?? "EUR"));
+    return { ...valid, ...deposit, windows: [...valid.windows], active: input.active ?? true };
   });
 
 /** Créneau : instants UTC (ISO) ou date + heure locales de la ressource + durée. */
@@ -136,7 +140,12 @@ export interface GuestBookingInput extends GuestInput {
   readonly resourceId: string;
   /** Instant ISO du début d'un créneau proposé par `freeSlots`. */
   readonly startsAt: string;
+  /** Paiement en ligne disponible : l'acompte de la ressource est alors exigé (sinon demande classique). */
+  readonly requireDeposit?: boolean;
 }
+
+/** Délai de paiement de l'acompte d'une réservation publique (créneau retenu pendant ce temps). */
+export const DEPOSIT_WINDOW_MINUTES = 60;
 
 
 export const bookingsService = {
@@ -212,6 +221,9 @@ export const bookingsService = {
           organizationId: input.organizationId, resourceId: resource.id, startsAt: start, endsAt: end, slug,
           title: `${guest.customerName} — ${resource.name}`.slice(0, 200), customerName: guest.customerName, customerEmail: guest.customerEmail,
           customerPhone: guest.customerPhone, partySize: guest.partySize, notes: guest.notes,
+          ...(input.requireDeposit && resource.depositMinor > 0
+            ? { depositMinor: resource.depositMinor, depositCurrency: resource.depositCurrency, paymentDueAt: new Date(now.getTime() + DEPOSIT_WINDOW_MINUTES * 60_000) }
+            : {}),
         }).returning());
         return { booking: row!, resource };
       })),
@@ -254,7 +266,7 @@ export const bookingsService = {
       return yield* dbTransaction("bookings.transition", (tx) =>
         Effect.gen(function* () {
           const current = yield* findBooking(tx, id, true);
-          if (!canTransition(bookingWorkflow, current.status, to)) return yield* fail("BAD_REQUEST", `Transition invalide : ${current.status} → ${to}.`);
+          if (SYSTEM_STATUSES.includes(to) || !canTransition(bookingWorkflow, current.status, to)) return yield* fail("BAD_REQUEST", `Transition invalide : ${current.status} → ${to}.`);
           if (reoccupiesSlot(current.status, to)) {
             const resource = yield* lockResource(tx, current.resourceId, current.organizationId);
             yield* assertSlot(tx, resource, { start: current.startsAt, end: current.endsAt }, id);

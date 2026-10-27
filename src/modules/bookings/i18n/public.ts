@@ -9,6 +9,7 @@ export type BookingsPublicTranslations = {
   submit: string; errorSummary: string; errors: Record<GuestField, string>; slotTaken: string; rateLimited: string; generic: string;
   manageTitle: string; created: string; emailSent: string; status: string; resource: string; when: string; partySize: string; reference: string;
   cancel: string; cancelNote: string; cancelled: string; notCancellable: string; invalidLink: string; keepLink: string;
+  deposit: string; depositDue: string; payDeposit: string; depositPaid: string; paymentReturn: string; payUnavailable: string;
   mail: { subject: string; heading: string; greeting: string; body: string; button: string; footnote: string };
 };
 
@@ -27,6 +28,7 @@ const translations: Record<Locale, BookingsPublicTranslations> = {
     status: "Statut", resource: "Ressource", when: "Créneau", partySize: "Personnes", reference: "Référence",
     cancel: "Annuler la réservation", cancelNote: "L'annulation libère le créneau ; elle est définitive.", cancelled: "Votre réservation est annulée.",
     notCancellable: "Cette réservation ne peut plus être annulée en ligne.", invalidLink: "Lien de réservation invalide.", keepLink: "Conservez cette page : son adresse permet de consulter ou d'annuler la réservation.",
+    deposit: "Acompte", depositDue: "Acompte de {amount} à régler avant {time} ; sans paiement, la demande expire et le créneau est libéré.", payDeposit: "Payer l'acompte", depositPaid: "Acompte réglé", paymentReturn: "Paiement en cours de vérification : cette page indiquera la confirmation dès réception.", payUnavailable: "Le paiement en ligne est momentanément indisponible. Réessayez dans quelques minutes.",
     mail: { subject: "Demande de réservation : {resource}", heading: "Demande de réservation enregistrée", greeting: "Bonjour {name},", body: "Votre demande pour « {resource} » le {when} ({party} personne(s)) est bien enregistrée.", button: "Consulter ou annuler", footnote: "Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail ou annulez-la avec le bouton ci-dessus." },
   },
   en: {
@@ -43,6 +45,7 @@ const translations: Record<Locale, BookingsPublicTranslations> = {
     status: "Status", resource: "Resource", when: "Time slot", partySize: "People", reference: "Reference",
     cancel: "Cancel booking", cancelNote: "Cancelling frees the slot; it cannot be undone.", cancelled: "Your booking is cancelled.",
     notCancellable: "This booking can no longer be cancelled online.", invalidLink: "Invalid booking link.", keepLink: "Keep this page: its address lets you view or cancel the booking.",
+    deposit: "Deposit", depositDue: "A deposit of {amount} is due before {time}; without payment the request expires and the slot is released.", payDeposit: "Pay the deposit", depositPaid: "Deposit paid", paymentReturn: "Payment is being verified: this page will show the confirmation as soon as it is received.", payUnavailable: "Online payment is temporarily unavailable. Please try again in a few minutes.",
     mail: { subject: "Booking request: {resource}", heading: "Booking request received", greeting: "Hello {name},", body: "Your request for “{resource}” on {when} ({party} people) has been recorded.", button: "View or cancel", footnote: "If you did not make this request, ignore this email or cancel it with the button above." },
   },
   es: {
@@ -59,6 +62,7 @@ const translations: Record<Locale, BookingsPublicTranslations> = {
     status: "Estado", resource: "Recurso", when: "Horario", partySize: "Personas", reference: "Referencia",
     cancel: "Cancelar la reserva", cancelNote: "La cancelación libera el horario y es definitiva.", cancelled: "Su reserva está cancelada.",
     notCancellable: "Esta reserva ya no se puede cancelar en línea.", invalidLink: "Enlace de reserva no válido.", keepLink: "Conserve esta página: su dirección permite consultar o cancelar la reserva.",
+    deposit: "Depósito", depositDue: "Debe abonar un depósito de {amount} antes de {time}; sin pago, la solicitud caduca y el horario queda libre.", payDeposit: "Pagar el depósito", depositPaid: "Depósito pagado", paymentReturn: "Pago en verificación: esta página mostrará la confirmación en cuanto se reciba.", payUnavailable: "El pago en línea no está disponible por el momento. Inténtelo de nuevo en unos minutos.",
     mail: { subject: "Solicitud de reserva: {resource}", heading: "Solicitud de reserva registrada", greeting: "Hola, {name}:", body: "Su solicitud para «{resource}» el {when} ({party} personas) ha quedado registrada.", button: "Consultar o cancelar", footnote: "Si no realizó esta solicitud, ignore este correo o cancélela con el botón de arriba." },
   },
   ar: {
@@ -75,6 +79,7 @@ const translations: Record<Locale, BookingsPublicTranslations> = {
     status: "الحالة", resource: "المورد", when: "الموعد", partySize: "الأشخاص", reference: "المرجع",
     cancel: "إلغاء الحجز", cancelNote: "الإلغاء يحرر الموعد وهو نهائي.", cancelled: "تم إلغاء حجزك.",
     notCancellable: "لم يعد من الممكن إلغاء هذا الحجز عبر الإنترنت.", invalidLink: "رابط حجز غير صالح.", keepLink: "احتفظ بهذه الصفحة: عنوانها يتيح عرض الحجز أو إلغاءه.",
+    deposit: "العربون", depositDue: "يجب دفع عربون قدره {amount} قبل {time}؛ وبدون الدفع ينتهي الطلب ويُحرَّر الموعد.", payDeposit: "دفع العربون", depositPaid: "تم دفع العربون", paymentReturn: "جارٍ التحقق من الدفع: ستعرض هذه الصفحة التأكيد فور استلامه.", payUnavailable: "الدفع عبر الإنترنت غير متاح مؤقتًا. يُرجى المحاولة بعد بضع دقائق.",
     mail: { subject: "طلب حجز: {resource}", heading: "تم تسجيل طلب الحجز", greeting: "مرحبًا {name}،", body: "تم تسجيل طلبك لـ«{resource}» بتاريخ {when} ({party} أشخاص).", button: "عرض الحجز أو إلغاؤه", footnote: "إن لم تكن صاحب هذا الطلب، تجاهل هذا البريد أو ألغِ الطلب بالزر أعلاه." },
   },
 };

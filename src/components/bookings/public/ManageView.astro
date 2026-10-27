@@ -3,17 +3,18 @@
 import type { Locale } from "@i18n/config";
 import type { BookingDetail } from "@/modules/bookings/loaders/bookings.loader";
 import { getBookingsTranslations } from "@/modules/bookings/i18n";
-import { getBookingsPublicTranslations } from "@/modules/bookings/i18n/public";
-import { formatSlot } from "@/modules/bookings/public/format";
+import { fill, getBookingsPublicTranslations } from "@/modules/bookings/i18n/public";
+import { formatDue, formatMinor, formatSlot } from "@/modules/bookings/public/format";
 import type { Notice } from "@/modules/bookings/public/pages";
 import { Button } from "@atoms/button";
 import PublicNotice from "./PublicNotice.astro";
 
-interface Props { locale: Locale; base: string; booking: BookingDetail | null; token: string; cancellable: boolean; notice: Notice; mailFailed: boolean }
-const { locale, base, booking, token, cancellable, notice, mailFailed } = Astro.props;
+interface Props { locale: Locale; base: string; booking: BookingDetail | null; token: string; cancellable: boolean; notice: Notice; mailFailed: boolean; payable?: boolean }
+const { locale, base, booking, token, cancellable, notice, mailFailed, payable = false } = Astro.props;
 const t = getBookingsPublicTranslations(locale);
 const statuses = getBookingsTranslations(locale).statuses;
 const tz = booking?.resource?.timezone ?? "UTC";
+const deposit = booking && booking.depositMinor > 0 ? formatMinor(booking.depositMinor, booking.depositCurrency, locale) : null;
 ---
 <section class="mx-auto grid max-w-3xl gap-6 px-4 py-12" aria-labelledby="manage-title">
   <h1 id="manage-title" class="font-heading text-3xl font-semibold text-foreground">{t.manageTitle}</h1>
@@ -33,7 +34,16 @@ const tz = booking?.resource?.timezone ?? "UTC";
         <dt class="font-semibold">{t.when}</dt><dd>{formatSlot(booking.startsAt, booking.endsAt, tz, locale)}</dd>
         <dt class="font-semibold">{t.partySize}</dt><dd>{booking.partySize}</dd>
         <dt class="font-semibold">{t.status}</dt><dd data-testid="booking-status">{statuses[booking.status]}</dd>
+        {deposit && <><dt class="font-semibold">{t.deposit}</dt><dd data-testid="booking-deposit">{deposit}{booking.depositPaidAt && <> — {t.depositPaid}</>}</dd></>}
       </dl>
+      {payable && deposit && booking.paymentDueAt && (
+        <form method="post" class="grid gap-3" data-testid="pay-deposit">
+          <input type="hidden" name="t" value={token} />
+          <input type="hidden" name="intent" value="pay" />
+          <p id="bk-pay-note" class="text-foreground">{fill(t.depositDue, { amount: deposit, time: formatDue(booking.paymentDueAt, tz, locale) })}</p>
+          <div><Button type="submit" aria-describedby="bk-pay-note">{t.payDeposit}</Button></div>
+        </form>
+      )}
       <p class="text-foreground">{t.keepLink}</p>
       {cancellable ? (
         <form method="post" class="grid gap-3">

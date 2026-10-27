@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Effect, Exit } from "effect";
 import { canTransition } from "@/core/workflow";
 import { bookingLabel, checkSlot, validateBooking } from "@/modules/bookings/domain/booking";
-import { validateResource } from "@/modules/bookings/domain/resource";
+import { validateDeposit, validateResource } from "@/modules/bookings/domain/resource";
 import { assignsNumber, bookingWorkflow, isActive, nextStatuses, reoccupiesSlot } from "@/modules/bookings/domain/workflow";
 
 const run = <A, E>(effect: Effect.Effect<A, E>) => Effect.runSyncExit(effect);
@@ -45,7 +45,7 @@ describe("bookings domain", () => {
   });
 
   it("cycle de vie et numérotation", () => {
-    expect(nextStatuses("REQUESTED")).toEqual(["CONFIRMED", "CANCELLED"]);
+    expect(nextStatuses("REQUESTED")).toEqual(["CONFIRMED", "CANCELLED"]); // EXPIRED : statut système (échéance d’acompte)
     expect(nextStatuses("CONFIRMED")).toEqual(["REQUESTED", "CHECKED_IN", "CANCELLED", "NO_SHOW"]);
     expect(nextStatuses("COMPLETED")).toEqual([]);
     expect(canTransition(bookingWorkflow, "CHECKED_IN", "COMPLETED")).toBe(true);
@@ -57,5 +57,18 @@ describe("bookings domain", () => {
     expect(reoccupiesSlot("CONFIRMED", "REQUESTED")).toBe(false);
     expect(bookingLabel({ number: null, customerName: "Ada" })).toBe("Ada");
     expect(bookingLabel({ number: "RES-2026-00001", customerName: "Ada" })).toBe("RES-2026-00001");
+  });
+});
+
+describe("bookings — acompte de ressource (core/money)", () => {
+  it("saisie décimale exacte, devise ISO 4217, 0 = aucun acompte", () => {
+    const ok = (amount: string, currency: string) => { const exit = run(validateDeposit(amount, currency)); return Exit.isSuccess(exit) ? exit.value : null; };
+    expect(ok("15.50", "eur")).toEqual({ depositMinor: 1550, depositCurrency: "EUR" });
+    expect(ok("15,5", "EUR")).toEqual({ depositMinor: 1550, depositCurrency: "EUR" });
+    expect(ok("", "EUR")).toEqual({ depositMinor: 0, depositCurrency: "EUR" });
+    expect(ok("500", "JPY")).toEqual({ depositMinor: 500, depositCurrency: "JPY" });
+    for (const [amount, currency] of [["1.005", "EUR"], ["1.5", "JPY"], ["-1", "EUR"], ["abc", "EUR"], ["10", "XXX"], ["1000001", "EUR"]] as const) {
+      expect(failTag(validateDeposit(amount, currency))).toBe("InvalidResourceError");
+    }
   });
 });

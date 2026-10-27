@@ -31,6 +31,7 @@ export const readResourceForm = (form: HTMLFormElement) => ({
   code: text(form, "code").toUpperCase(), name: text(form, "name"), kind: text(form, "kind") as "room" | "staff" | "equipment",
   capacity: integer(text(form, "capacity")) ?? 1, timezone: text(form, "timezone") || "UTC", slotMinutes: integer(text(form, "slotMinutes")) ?? 30,
   windows: readWindows(form), active: form.querySelector<HTMLInputElement>("[name=active]")?.checked ?? true,
+  deposit: text(form, "deposit") || "0", depositCurrency: (text(form, "depositCurrency") || "EUR").toUpperCase(),
 });
 
 export const readBookingForm = (form: HTMLFormElement) => ({

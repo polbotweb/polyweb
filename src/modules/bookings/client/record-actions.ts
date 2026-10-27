@@ -4,7 +4,7 @@
  */
 import { actions } from "astro:actions";
 
-type Status = "REQUESTED" | "CONFIRMED" | "CHECKED_IN" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
+type Status = "REQUESTED" | "CONFIRMED" | "CHECKED_IN" | "COMPLETED" | "CANCELLED" | "NO_SHOW" | "EXPIRED";
 
 const showError = (root: HTMLElement, message: string) => {
   const box = root.querySelector<HTMLElement>("[data-bookings-error]");

@@ -10,14 +10,14 @@ export type BookingsTranslations = {
     newBooking: string; newResource: string; edit: string; view: string; back: string;
     empty: string; noResources: string; noSlots: string; listLabel: string;
     save: string; create: string; delete: string; saved: string; created: string; deleted: string; facetStatus: string;
-    lockedNote: string; none: string; addWindow: string; removeWindow: string; showSlots: string; book: string;
+    lockedNote: string; depositPaid: string; depositUnpaid: string; none: string; addWindow: string; removeWindow: string; showSlots: string; book: string;
     confirmDelete: string; timesIn: string;
     bulk: { cancel: string; noShow: string; complete: string };
   };
   fields: {
     number: string; title: string; status: string; resource: string; date: string; time: string; duration: string; startsAt: string; endsAt: string;
     customerName: string; customerEmail: string; partySize: string; notes: string; confirmedAt: string;
-    code: string; name: string; kind: string; capacity: string; timezone: string; slotMinutes: string; windows: string; weekday: string; start: string; end: string; active: string;
+    code: string; name: string; kind: string; capacity: string; timezone: string; slotMinutes: string; windows: string; weekday: string; start: string; end: string; active: string; deposit: string; depositCurrency: string; depositHint: string;
   };
   actions: { moveTo: string };
   statuses: Record<BookingStatus, string>;
@@ -34,7 +34,7 @@ const translations: Record<Locale, BookingsTranslations> = {
       newBooking: "Nouvelle réservation", newResource: "Nouvelle ressource", edit: "Modifier", view: "Ouvrir", back: "Toutes les réservations",
       empty: "Aucune réservation.", noResources: "Aucune ressource.", noSlots: "Aucun créneau libre ce jour-là.", listLabel: "Liste des réservations",
       save: "Enregistrer", create: "Créer", delete: "Supprimer", saved: "Enregistré.", created: "Créé.", deleted: "Supprimé.", facetStatus: "Statut",
-      lockedNote: "Réservation non modifiable dans ce statut.", none: "—", addWindow: "Ajouter une plage", removeWindow: "Retirer",
+      lockedNote: "Réservation non modifiable dans ce statut.", depositPaid: "payé le {date}", depositUnpaid: "non payé (échéance {date})", none: "—", addWindow: "Ajouter une plage", removeWindow: "Retirer",
       showSlots: "Voir les créneaux", book: "Réserver", confirmDelete: "Supprimer définitivement ?", timesIn: "Heures locales de la ressource",
       bulk: { cancel: "Annuler", noShow: "Absent", complete: "Terminer" },
     },
@@ -42,9 +42,10 @@ const translations: Record<Locale, BookingsTranslations> = {
       number: "N° de réservation", title: "Intitulé", status: "Statut", resource: "Ressource", date: "Date", time: "Heure", duration: "Durée (min)", startsAt: "Début", endsAt: "Fin",
       customerName: "Client", customerEmail: "E-mail du client", partySize: "Nombre de personnes", notes: "Notes", confirmedAt: "Confirmée le",
       code: "Code", name: "Nom", kind: "Type", capacity: "Capacité", timezone: "Fuseau horaire", slotMinutes: "Pas des créneaux (min)", windows: "Plages d'ouverture", weekday: "Jour", start: "Début", end: "Fin", active: "Active",
+      deposit: "Acompte en ligne", depositCurrency: "Devise de l'acompte", depositHint: "0 = aucun acompte. Exigé à la réservation publique uniquement si le paiement en ligne est activé ; sans paiement sous 60 minutes, la demande expire.",
     },
     actions: { moveTo: "Passer à" },
-    statuses: { REQUESTED: "Demandée", CONFIRMED: "Confirmée", CHECKED_IN: "Arrivée", COMPLETED: "Terminée", CANCELLED: "Annulée", NO_SHOW: "Absent" },
+    statuses: { REQUESTED: "Demandée", CONFIRMED: "Confirmée", CHECKED_IN: "Arrivée", COMPLETED: "Terminée", CANCELLED: "Annulée", NO_SHOW: "Absent", EXPIRED: "Expirée" },
     kinds: { room: "Salle", staff: "Personne", equipment: "Équipement" },
     weekdays: ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"],
   },
@@ -55,7 +56,7 @@ const translations: Record<Locale, BookingsTranslations> = {
       newBooking: "New booking", newResource: "New resource", edit: "Edit", view: "Open", back: "All bookings",
       empty: "No bookings.", noResources: "No resources.", noSlots: "No free slot that day.", listLabel: "Bookings list",
       save: "Save", create: "Create", delete: "Delete", saved: "Saved.", created: "Created.", deleted: "Deleted.", facetStatus: "Status",
-      lockedNote: "This booking cannot be edited in its current status.", none: "—", addWindow: "Add a time window", removeWindow: "Remove",
+      lockedNote: "This booking cannot be edited in its current status.", depositPaid: "paid on {date}", depositUnpaid: "unpaid (due {date})", none: "—", addWindow: "Add a time window", removeWindow: "Remove",
       showSlots: "Show slots", book: "Book", confirmDelete: "Delete permanently?", timesIn: "Resource local time",
       bulk: { cancel: "Cancel", noShow: "No-show", complete: "Complete" },
     },
@@ -63,9 +64,10 @@ const translations: Record<Locale, BookingsTranslations> = {
       number: "Booking no.", title: "Title", status: "Status", resource: "Resource", date: "Date", time: "Time", duration: "Duration (min)", startsAt: "Start", endsAt: "End",
       customerName: "Customer", customerEmail: "Customer email", partySize: "Party size", notes: "Notes", confirmedAt: "Confirmed on",
       code: "Code", name: "Name", kind: "Type", capacity: "Capacity", timezone: "Time zone", slotMinutes: "Slot step (min)", windows: "Opening hours", weekday: "Day", start: "Start", end: "End", active: "Active",
+      deposit: "Online deposit", depositCurrency: "Deposit currency", depositHint: "0 = no deposit. Required on public booking only when online payment is enabled; unpaid after 60 minutes, the request expires.",
     },
     actions: { moveTo: "Move to" },
-    statuses: { REQUESTED: "Requested", CONFIRMED: "Confirmed", CHECKED_IN: "Checked in", COMPLETED: "Completed", CANCELLED: "Cancelled", NO_SHOW: "No-show" },
+    statuses: { REQUESTED: "Requested", CONFIRMED: "Confirmed", CHECKED_IN: "Checked in", COMPLETED: "Completed", CANCELLED: "Cancelled", NO_SHOW: "No-show", EXPIRED: "Expired" },
     kinds: { room: "Room", staff: "Staff", equipment: "Equipment" },
     weekdays: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
   },
@@ -76,7 +78,7 @@ const translations: Record<Locale, BookingsTranslations> = {
       newBooking: "Nueva reserva", newResource: "Nuevo recurso", edit: "Editar", view: "Abrir", back: "Todas las reservas",
       empty: "No hay reservas.", noResources: "No hay recursos.", noSlots: "No hay huecos libres ese día.", listLabel: "Lista de reservas",
       save: "Guardar", create: "Crear", delete: "Eliminar", saved: "Guardado.", created: "Creado.", deleted: "Eliminado.", facetStatus: "Estado",
-      lockedNote: "La reserva no se puede modificar en este estado.", none: "—", addWindow: "Añadir franja", removeWindow: "Quitar",
+      lockedNote: "La reserva no se puede modificar en este estado.", depositPaid: "pagado el {date}", depositUnpaid: "sin pagar (vence {date})", none: "—", addWindow: "Añadir franja", removeWindow: "Quitar",
       showSlots: "Ver huecos", book: "Reservar", confirmDelete: "¿Eliminar definitivamente?", timesIn: "Hora local del recurso",
       bulk: { cancel: "Cancelar", noShow: "No presentado", complete: "Finalizar" },
     },
@@ -84,9 +86,10 @@ const translations: Record<Locale, BookingsTranslations> = {
       number: "N.º de reserva", title: "Título", status: "Estado", resource: "Recurso", date: "Fecha", time: "Hora", duration: "Duración (min)", startsAt: "Inicio", endsAt: "Fin",
       customerName: "Cliente", customerEmail: "Correo del cliente", partySize: "Número de personas", notes: "Notas", confirmedAt: "Confirmada el",
       code: "Código", name: "Nombre", kind: "Tipo", capacity: "Capacidad", timezone: "Zona horaria", slotMinutes: "Intervalo de huecos (min)", windows: "Horario de apertura", weekday: "Día", start: "Inicio", end: "Fin", active: "Activo",
+      deposit: "Depósito en línea", depositCurrency: "Moneda del depósito", depositHint: "0 = sin depósito. Solo se exige en la reserva pública si el pago en línea está activado; sin pago en 60 minutos, la solicitud caduca.",
     },
     actions: { moveTo: "Pasar a" },
-    statuses: { REQUESTED: "Solicitada", CONFIRMED: "Confirmada", CHECKED_IN: "Llegada", COMPLETED: "Finalizada", CANCELLED: "Cancelada", NO_SHOW: "No presentado" },
+    statuses: { REQUESTED: "Solicitada", CONFIRMED: "Confirmada", CHECKED_IN: "Llegada", COMPLETED: "Finalizada", CANCELLED: "Cancelada", NO_SHOW: "No presentado", EXPIRED: "Caducada" },
     kinds: { room: "Sala", staff: "Persona", equipment: "Equipo" },
     weekdays: ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"],
   },
@@ -97,7 +100,7 @@ const translations: Record<Locale, BookingsTranslations> = {
       newBooking: "حجز جديد", newResource: "مورد جديد", edit: "تعديل", view: "فتح", back: "كل الحجوزات",
       empty: "لا توجد حجوزات.", noResources: "لا توجد موارد.", noSlots: "لا توجد مواعيد متاحة في هذا اليوم.", listLabel: "قائمة الحجوزات",
       save: "حفظ", create: "إنشاء", delete: "حذف", saved: "تم الحفظ.", created: "تم الإنشاء.", deleted: "تم الحذف.", facetStatus: "الحالة",
-      lockedNote: "لا يمكن تعديل الحجز في هذه الحالة.", none: "—", addWindow: "إضافة فترة", removeWindow: "إزالة",
+      lockedNote: "لا يمكن تعديل الحجز في هذه الحالة.", depositPaid: "دُفع في {date}", depositUnpaid: "غير مدفوع (الاستحقاق {date})", none: "—", addWindow: "إضافة فترة", removeWindow: "إزالة",
       showSlots: "عرض المواعيد", book: "احجز", confirmDelete: "حذف نهائيًا؟", timesIn: "التوقيت المحلي للمورد",
       bulk: { cancel: "إلغاء", noShow: "لم يحضر", complete: "إنهاء" },
     },
@@ -105,9 +108,10 @@ const translations: Record<Locale, BookingsTranslations> = {
       number: "رقم الحجز", title: "العنوان", status: "الحالة", resource: "المورد", date: "التاريخ", time: "الوقت", duration: "المدة (دقيقة)", startsAt: "البداية", endsAt: "النهاية",
       customerName: "العميل", customerEmail: "بريد العميل", partySize: "عدد الأشخاص", notes: "ملاحظات", confirmedAt: "أُكّد في",
       code: "الرمز", name: "الاسم", kind: "النوع", capacity: "السعة", timezone: "المنطقة الزمنية", slotMinutes: "مدة الموعد (دقيقة)", windows: "ساعات العمل", weekday: "اليوم", start: "البداية", end: "النهاية", active: "نشط",
+      deposit: "عربون عبر الإنترنت", depositCurrency: "عملة العربون", depositHint: "0 = بدون عربون. يُطلب عند الحجز العام فقط إذا كان الدفع عبر الإنترنت مفعّلاً؛ وإذا لم يُدفع خلال 60 دقيقة تنتهي صلاحية الطلب.",
     },
     actions: { moveTo: "نقل إلى" },
-    statuses: { REQUESTED: "مطلوب", CONFIRMED: "مؤكَّد", CHECKED_IN: "حاضر", COMPLETED: "منتهٍ", CANCELLED: "ملغى", NO_SHOW: "لم يحضر" },
+    statuses: { REQUESTED: "مطلوب", CONFIRMED: "مؤكَّد", CHECKED_IN: "حاضر", COMPLETED: "منتهٍ", CANCELLED: "ملغى", NO_SHOW: "لم يحضر", EXPIRED: "منتهية الصلاحية" },
     kinds: { room: "قاعة", staff: "شخص", equipment: "معدّات" },
     weekdays: ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"],
   },

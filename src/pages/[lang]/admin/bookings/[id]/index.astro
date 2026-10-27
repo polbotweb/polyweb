@@ -9,6 +9,7 @@ import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
 import { Button } from "@atoms/button";
 import { requirePermission } from "@lib/auth-guards";
 import { formatZoned, localTime } from "@/core/scheduling";
+import { formatMinor } from "@/modules/bookings/public/format";
 import { bookingLabel } from "@/modules/bookings/domain/booking";
 import { FINAL_STATUSES, isEditable, nextStatuses } from "@/modules/bookings/domain/workflow";
 import { getBookingsTranslations } from "@/modules/bookings/i18n";
@@ -28,6 +29,11 @@ const label = bookingLabel(b);
 const zone = b.resource?.timezone ?? "UTC";
 const targets = canUpdate ? nextStatuses(b.status) : [];
 const deletable = canDelete && (b.status === "REQUESTED" || b.status === "CANCELLED");
+const deposit = b.depositMinor > 0
+  ? `${formatMinor(b.depositMinor, b.depositCurrency, locale)} — ${b.depositPaidAt
+    ? t.admin.depositPaid.split("{date}").join(formatZoned(b.depositPaidAt, zone, locale))
+    : t.admin.depositUnpaid.split("{date}").join(b.paymentDueAt ? formatZoned(b.paymentDueAt, zone, locale) : t.admin.none)}`
+  : null;
 const when = `${formatZoned(b.startsAt, zone, locale)} – ${localTime(b.endsAt, zone)} (${zone})`;
 ---
 <BaseLayout title={label} description={t.meta.description}>
@@ -56,6 +62,7 @@ const when = `${formatZoned(b.startsAt, zone, locale)} – ${localTime(b.endsAt,
         <div><dt class="text-sm text-muted-foreground">{t.fields.customerEmail}</dt><dd>{b.customerEmail ?? t.admin.none}</dd></div>
         <div><dt class="text-sm text-muted-foreground">{t.fields.partySize}</dt><dd>{b.partySize}</dd></div>
         <div><dt class="text-sm text-muted-foreground">{t.fields.confirmedAt}</dt><dd>{b.confirmedAt ? formatZoned(b.confirmedAt, zone, locale) : t.admin.none}</dd></div>
+        {deposit && <div class="sm:col-span-2"><dt class="text-sm text-muted-foreground">{t.fields.deposit}</dt><dd data-testid="bookings-deposit">{deposit}</dd></div>}
         {b.notes && <div class="sm:col-span-3"><dt class="text-sm text-muted-foreground">{t.fields.notes}</dt><dd class="whitespace-pre-line">{b.notes}</dd></div>}
       </dl>
 

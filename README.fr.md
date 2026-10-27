@@ -262,6 +262,7 @@ sales/
   SalesCard.astro
   SalesDetail.astro
   admin/
+  public/
 seo/
   JsonLd.astro
   SEOHead.astro
@@ -480,6 +481,7 @@ migrations/
   0035_purchasing_deferred_fks.sql
   0036_bookings.sql
   0037_bookings_guest_phone.sql
+  0038_core_payments.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -515,6 +517,7 @@ migrations/
     0035_snapshot.json
     0036_snapshot.json
     0037_snapshot.json
+    0038_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -638,7 +641,9 @@ schemas.ts
 - `service_review_helpful`: `reviewId`, `userId`, `isHelpful`, `createdAt`
 
 **payments.schema.ts**
-- `payments`: `id`, `organizationId`, `reference`, `description`, `provider`, `providerSessionId`, `providerPaymentId`, `status`, `amount`, `currency`, `customerEmail`, `idempotencyKey`, `metadata`, `createdAt`, `updatedAt`, `paidAt`, `failedAt`
+- `payments`: `id`, `organizationId`, `reference`, `description`, `provider`, `providerSessionId`, `providerPaymentId`, `status`, `amount`, `currency`, `customerEmail`, `idempotencyKey`, `metadata`, `createdAt`, `updatedAt`, `paidAt`, `failedAt`, `expiresAt`
+- `payment_events`: `id`, `provider`, `eventId`, `type`, `paymentId`, `processedAt`
+- `payment_settings`: `id`, `organizationId`, `enabled`, `defaultCurrency`, `stripeAccountId`, `statementDescriptor`, `checkoutExpiryMinutes`, `createdAt`, `updatedAt`
 
 **content.schema.ts**
 - `sites`: `id`, `slug`, `name`, `domains`, `defaultLocale`, `locales`, `organizationId`, `isDefault`, `settings`, `createdAt`, `updatedAt`
@@ -710,6 +715,7 @@ schemas.ts
 - `0035_purchasing_deferred_fks.sql`
 - `0036_bookings.sql`
 - `0037_bookings_guest_phone.sql`
+- `0038_core_payments.sql`
 
 ### Commandes
 
@@ -898,6 +904,17 @@ numbering/
   format.ts
   index.ts
   service.ts
+payments/
+  errors.ts
+  gateway.ts
+  index.ts
+  mock.ts
+  provider.ts
+  purposes.ts
+  reference.ts
+  service.ts
+  stripe.ts
+  transitions.ts
 permissions/
   tenant.ts
 plugins/
@@ -997,6 +1014,7 @@ bookings/
     index.ts
   locks.ts
   module.ts
+  payments.ts
   permissions/
     index.ts
   public/
@@ -1223,14 +1241,18 @@ sales/
     workflow.ts
   i18n/
     index.ts
+    pay.ts
   loaders/
     index.ts
     salesDocument-admin.loader.ts
     salesDocument.loader.ts
   locks.ts
   module.ts
+  payments.ts
   permissions/
     index.ts
+  public/
+    pay-page.ts
   schema/
     index.ts
   services/
@@ -1414,6 +1436,8 @@ src/pages/
   index.astro
   organizations/
     [slug]/
+  pay/
+    invoice/
   preview/
     [token].astro
     draft/
@@ -1436,6 +1460,7 @@ api/
   content-export.ts
   content-import.ts
   cron/
+    payments-expire.ts
     publish.ts
     search-reindex.ts
     webhooks.ts
@@ -1696,6 +1721,7 @@ Toutes les routes sont préfixées par la locale : `/fr/`, `/en/`, `/es/`, `/ar/
 tests/
   a11y/
   e2e/
+  fixtures/
   helpers/
   integration/
   unit/

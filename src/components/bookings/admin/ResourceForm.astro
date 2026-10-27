@@ -5,6 +5,7 @@ import { Input } from "@atoms/input";
 import { Label } from "@atoms/label";
 import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
 import type { WeeklyWindow } from "@/core/scheduling";
+import { CURRENCY_EXPONENTS, isCurrencyCode, toDecimalString } from "@/core/money";
 import type { Locale } from "@i18n/config";
 import { RESOURCE_KINDS, type ResourceKind } from "@/modules/bookings/domain/resource";
 import { getBookingsTranslations } from "@/modules/bookings/i18n";
@@ -13,7 +14,7 @@ interface Props {
   locale: Locale;
   organizationId?: string | null;
   viewBaseUrl?: string;
-  resource?: { id: string; code: string; name: string; kind: ResourceKind; capacity: number; timezone: string; slotMinutes: number; windows: readonly WeeklyWindow[]; active: boolean };
+  resource?: { id: string; code: string; name: string; kind: ResourceKind; capacity: number; timezone: string; slotMinutes: number; windows: readonly WeeklyWindow[]; active: boolean; depositMinor: number; depositCurrency: string };
 }
 const { locale, organizationId = null, viewBaseUrl = "", resource: r } = Astro.props as Props;
 const t = getBookingsTranslations(locale);
@@ -21,6 +22,9 @@ const p = r ? "bk-res-edit" : "bk-res-new";
 const SLOT_STEPS = [5, 10, 15, 20, 30, 45, 60, 90, 120, 240, 480];
 const windows: readonly (WeeklyWindow | null)[] = r?.windows.length ? r.windows : [null];
 const ORDER = [1, 2, 3, 4, 5, 6, 0];
+const CURRENCIES = Object.keys(CURRENCY_EXPONENTS);
+const depositCurrency = r && isCurrencyCode(r.depositCurrency) ? r.depositCurrency : "EUR";
+const depositValue = r && r.depositMinor > 0 ? toDecimalString({ amountMinor: r.depositMinor, currency: depositCurrency }) : "0";
 ---
 <form class="flex max-w-3xl flex-col gap-4" data-bookings-form="resource" data-id={r?.id ?? ""} data-organization-id={organizationId ?? ""} data-view-base-url={viewBaseUrl} data-done={r ? t.admin.saved : t.admin.created} novalidate>
   <div class="grid gap-4 sm:grid-cols-3">
@@ -36,6 +40,12 @@ const ORDER = [1, 2, 3, 4, 5, 6, 0];
       <Label for={`${p}-step`}>{t.fields.slotMinutes}</Label>
       <NativeSelect id={`${p}-step`} name="slotMinutes">{SLOT_STEPS.map((step) => <NativeSelectOption value={String(step)} selected={(r?.slotMinutes ?? 30) === step}>{step}</NativeSelectOption>)}</NativeSelect>
     </div>
+    <div class="grid gap-2"><Label for={`${p}-deposit`}>{t.fields.deposit}</Label><Input id={`${p}-deposit`} name="deposit" inputmode="decimal" maxlength={24} pattern="[0-9]+([.,][0-9]{1,3})?" aria-describedby={`${p}-deposit-hint`} value={depositValue} /></div>
+    <div class="grid gap-2">
+      <Label for={`${p}-deposit-cur`}>{t.fields.depositCurrency}</Label>
+      <NativeSelect id={`${p}-deposit-cur`} name="depositCurrency">{CURRENCIES.map((code) => <NativeSelectOption value={code} selected={depositCurrency === code}>{code}</NativeSelectOption>)}</NativeSelect>
+    </div>
+    <p id={`${p}-deposit-hint`} class="text-sm text-foreground sm:col-span-3">{t.fields.depositHint}</p>
     <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" class="size-6" name="active" checked={r ? r.active : true} />{t.fields.active}</label>
   </div>
 

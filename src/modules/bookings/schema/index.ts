@@ -7,7 +7,7 @@
  *
  * Exportées depuis `src/database/schemas.ts` ; migration produite par `pnpm db:generate`.
  */
-import { boolean, check, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { bigint, boolean, check, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { organization, user } from "@database/schemas/auth.schema";
 import type { WeeklyWindow } from "@/core/scheduling";
@@ -25,11 +25,15 @@ export const bookingsResources = pgTable("bookings_resources", {
   slotMinutes: integer("slot_minutes").default(30).notNull(),
   windows: jsonb("windows").$type<WeeklyWindow[]>().default([]).notNull(),
   active: boolean("active").default(true).notNull(),
+  /** Acompte exigé à la réservation publique (unités mineures, core/money ; 0 = aucun). */
+  depositMinor: bigint("deposit_minor", { mode: "number" }).default(0).notNull(),
+  depositCurrency: varchar("deposit_currency", { length: 3 }).default("EUR").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
 }, (table) => [
   uniqueIndex("bookings_resources_org_code_uidx").on(table.organizationId, table.code),
   check("bookings_resources_capacity_positive", sql`${table.capacity} > 0`),
+  check("bookings_resources_deposit_non_negative", sql`${table.depositMinor} >= 0`),
 ]);
 
 /** Réservations : entité principale du module (`bookings`, alias attendu par le socle). */
@@ -51,6 +55,12 @@ export const bookings = pgTable("bookings", {
   partySize: integer("party_size").default(1).notNull(),
   notes: text("notes"),
   confirmedAt: timestamp("confirmed_at"),
+  /** Acompte dû (figé à la création) ; la réservation reste REQUESTED jusqu'au paiement. */
+  depositMinor: bigint("deposit_minor", { mode: "number" }).default(0).notNull(),
+  depositCurrency: varchar("deposit_currency", { length: 3 }).default("EUR").notNull(),
+  /** Échéance de paiement de l'acompte : au-delà, la réservation passe EXPIRED. */
+  paymentDueAt: timestamp("payment_due_at", { withTimezone: true }),
+  depositPaidAt: timestamp("deposit_paid_at", { withTimezone: true }),
   createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
@@ -61,6 +71,7 @@ export const bookings = pgTable("bookings", {
   index("bookings_resource_starts_idx").on(table.resourceId, table.startsAt),
   check("bookings_interval_valid", sql`${table.endsAt} > ${table.startsAt}`),
   check("bookings_party_size_positive", sql`${table.partySize} > 0`),
+  index("bookings_payment_due_idx").on(table.status, table.paymentDueAt),
 ]);
 
 /** Révisions (core/revision) : une ligne par écriture de réservation. */

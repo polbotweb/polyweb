@@ -1,6 +1,6 @@
 import { Data } from "effect";
 
-export class InvalidResourceError extends Data.TaggedError("InvalidResourceError")<{ readonly field: "code" | "name" | "kind" | "capacity" | "timezone" | "slotMinutes" | "windows"; readonly value: string }> {
+export class InvalidResourceError extends Data.TaggedError("InvalidResourceError")<{ readonly field: "code" | "name" | "kind" | "capacity" | "timezone" | "slotMinutes" | "windows" | "deposit"; readonly value: string }> {
   override get message() {
     return `Ressource invalide (${this.field}) : ${this.value}`;
   }
