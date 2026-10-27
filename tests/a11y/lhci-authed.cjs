@@ -25,7 +25,8 @@ function buildTempConfig(urls, cookie, label) {
           extraHeaders: { Cookie: cookie },
           // Back-office : exclu de l'indexation à dessein (robots.txt « Disallow: /<locale>/admin/ »).
           // On n'évalue donc pas « is-crawlable » ; le reste du score SEO garde le seuil de 0.9.
-          ...(label === 'admin' ? { skipAudits: ['is-crawlable'] } : {}),
+          // Tunnel boutique : pages privées (« noindex, nofollow », cache « no-store ») pour la même raison.
+          ...(label === 'admin' || label === 'shop' ? { skipAudits: ['is-crawlable'] } : {}),
         },
       },
       assert: {
@@ -89,3 +90,6 @@ run(config._authedUrls, config._userCookie, 'authed');
 
 // Run admin pages
 run(config._adminUrls, config._adminCookie, 'admin');
+
+// Run shop checkout pages (guest cart cookie)
+run(config._shopUrls, config._shopCartCookie, 'shop');

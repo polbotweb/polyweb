@@ -25,6 +25,7 @@ const http = require('node:http');
 
 const path = require('node:path');
 const { ensurePortFree } = require('../helpers/port-guard.cjs');
+const { redactText } = require('../helpers/lighthouse-redact.cjs');
 
 const PORT = 4321;
 const HOST = 'localhost';
@@ -78,8 +79,10 @@ function ensureReportsDir() {
 }
 
 /** Generate readable Pa11y report from JSON data and save to files */
-function savePa11yReport(jsonStr) {
+function savePa11yReport(rawJson) {
   ensureReportsDir();
+  // Rapports versionnés : jetons de suivi de commande / cookies éventuels caviardés.
+  const jsonStr = redactText(rawJson);
 
   // Save raw JSON
   const jsonPath = path.join(REPORTS_DIR, 'pa11y-results.json');

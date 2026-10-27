@@ -25,10 +25,17 @@ function findChrome() {
 // Load auth cookies (may not exist for public-only runs)
 let userCookie = '';
 let adminCookie = '';
+// Boutique (tests/a11y/setup.ts) : cookie panier invité signé, commande en attente + jeton de suivi.
+let shopCartCookie = '';
+let shopOrder = null;
+let shopSlugs = null;
 if (fs.existsSync(COOKIES_PATH)) {
   const data = JSON.parse(fs.readFileSync(COOKIES_PATH, 'utf-8'));
   userCookie = data.userCookie ?? '';
   adminCookie = data.adminCookie ?? '';
+  shopCartCookie = data.shopCartCookie ?? '';
+  shopOrder = data.shopOrder ?? null;
+  shopSlugs = data.shopSlugs ?? null;
 }
 
 // ── Route definitions per locale ─────────────────────────────────────
@@ -73,6 +80,16 @@ for (const lang of locales) {
   for (const pageId of ['sign-in', 'sign-up', 'forgot-password']) {
     publicUrls.push(`${BASE}/${lang}/auth/${authRoutes[pageId][lang]}`);
   }
+  // Boutique (segment « shop » non localisé) : fiche du produit seedé, puis tunnel visiteur
+  // (panier et commande via le cookie panier signé, page de suivi via son jeton signé).
+  if (shopSlugs) publicUrls.push(`${BASE}/${lang}/shop/${encodeURIComponent(shopSlugs[lang])}`);
+  if (shopCartCookie) {
+    publicUrls.push({ url: `${BASE}/${lang}/shop/cart`, headers: { Cookie: shopCartCookie } });
+    publicUrls.push({ url: `${BASE}/${lang}/shop/checkout`, headers: { Cookie: shopCartCookie } });
+  }
+  if (shopOrder) {
+    publicUrls.push(`${BASE}/${lang}/shop/order/${encodeURIComponent(shopOrder.id)}?t=${encodeURIComponent(shopOrder.token)}`);
+  }
 }
 
 // Authenticated pages (user cookie)
@@ -96,6 +113,9 @@ for (const lang of locales) {
       headers: { Cookie: adminCookie },
     });
   }
+  // Commandes boutique : liste filtrable et fiche de la commande seedée.
+  adminUrls.push({ url: `${BASE}/${lang}/admin/orders`, headers: { Cookie: adminCookie } });
+  if (shopOrder) adminUrls.push({ url: `${BASE}/${lang}/admin/orders/${encodeURIComponent(shopOrder.id)}`, headers: { Cookie: adminCookie } });
 }
 
 module.exports = {
