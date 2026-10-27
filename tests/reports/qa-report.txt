@@ -1,6 +1,6 @@
 ══════════════════════════════════════════════════════════════════════════════════
   POLYWEB — GLOBAL QA REPORT
-  Generated: 2026-10-27 17:36:15
+  Generated: 2026-10-27 20:50:02
 ══════════════════════════════════════════════════════════════════════════════════
 
   ✅ Type & Template Check (astro check)
@@ -10,7 +10,7 @@
      0 errors, 0 warnings
 
   ✅ Unit & Integration Tests (Vitest)
-     1988/1989 passed, 1 skipped
+     2001/2002 passed, 1 skipped
 
   ✅ End-to-End Tests (Playwright)
      299/369 passed, 70 skipped
@@ -33,7 +33,7 @@
   ├─────────────────────────────────────────────┼──────────────┼─────────┤
   │ Astro check                                 │ GREEN        │ 0 error │
   │ ESLint                                      │ GREEN        │ 0 error │
-  │ Vitest (unit/integration)                   │ GREEN        │ 1988/19 │
+  │ Vitest (unit/integration)                   │ GREEN        │ 2001/20 │
   │ Playwright (e2e)                            │ GREEN        │ 299/369 │
   │ Pa11y (a11y)                                │ GREEN        │ 96/96 U │
   │ Lighthouse (perf)                           │ GREEN        │ 96 page │
