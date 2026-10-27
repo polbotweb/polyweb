@@ -10,7 +10,7 @@ import type { PgColumn } from "drizzle-orm/pg-core";
 import { getDrizzle } from "@database/drizzle";
 import { dbTry } from "@/lib/effect/run";
 import { dbTransaction, type DbTransaction } from "@/lib/effect/transaction";
-import { fail } from "@/lib/effect/action";
+import { fail } from "@/lib/effect/failure";
 import type { Locale } from "@i18n/config";
 import { isCurrencyCode, type CurrencyCode } from "@/core/money";
 import { logisticsStockPort } from "@/modules/logistics/services/logistics.service";

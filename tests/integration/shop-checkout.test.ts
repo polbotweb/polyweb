@@ -64,7 +64,7 @@ let draft = '';
 let foreign = '';
 
 const reload = async (id: string) => (await db.select().from(orders).where(eq(orders.id, id)))[0]!;
-const level = async () => (await run(logisticsLoader.stockLevels(orgId, warehouseId))).find((row) => row.sku === `${t}-TEE`)?.level ?? 0;
+const level = async () => (await run(logisticsLoader.stockLevels(orgId, warehouseId))).find((row) => row.sku === `${t}-TEE`.toUpperCase())?.level ?? 0;
 
 const product = async (organizationId: string, status: 'PUBLISHED' | 'DRAFT', sku: string, priceMinor: number) => {
   const [p] = await db.insert(products).values({ organizationId, slug: `${sku}`.toLowerCase(), title: `Produit ${sku}`, status }).returning();
@@ -213,7 +213,7 @@ describe('boutique : commande et paiement', () => {
     await webhook('succeeded', paymentId, order.grossMinor);
     const late = await reload(order.id);
     expect(late.status).toBe('PAID');
-    expect(late.stockShortage).toBe(`${t}-TEE`);
+    expect(late.stockShortage).toBe(`${t}-TEE`.toUpperCase()); // SKU logistique (normalisé en majuscules)
     expect(await level()).toBe(1);
   });
 

@@ -12,7 +12,7 @@ import type { PgColumn } from "drizzle-orm/pg-core";
 import { getDrizzle } from "@database/drizzle";
 import { dbTry } from "@/lib/effect/run";
 import { dbTransaction, type DbTransaction } from "@/lib/effect/transaction";
-import { fail } from "@/lib/effect/action";
+import { fail } from "@/lib/effect/failure";
 import { canTransition } from "@/core/workflow";
 import { assignDocumentNumber } from "@/core/numbering";
 import type { LockOwner } from "@/core/locks/policy";

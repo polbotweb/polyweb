@@ -13,16 +13,12 @@
  * Une `ActionError` levée par du code Promise appelé via `actionTry` est relevée telle quelle.
  */
 import { ActionError, type ActionAPIContext } from 'astro:actions';
-import { Data, Effect, Exit } from 'effect';
+import { Effect, Exit } from 'effect';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { OperationError } from './errors';
+import { ActionFailure, fail, type ActionErrorCode } from './failure';
 
-type ActionErrorCode = ConstructorParameters<typeof ActionError>[0]['code'];
-
-/** Échec métier explicite, avec le message affiché à l'utilisateur. */
-export class ActionFailure extends Data.TaggedError('ActionFailure')<{ readonly code: ActionErrorCode; readonly message: string }> {}
-
-export const fail = (code: ActionErrorCode, message: string) => Effect.fail(new ActionFailure({ code, message }));
+export { ActionFailure, fail };
 
 /** Appel Promise dans une action : `ActionError` conservée, autre rejet → `OperationError`. */
 export const actionTry = <A>(operation: string, f: () => Promise<A>) =>
