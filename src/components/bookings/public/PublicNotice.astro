@@ -3,6 +3,6 @@
 interface Props { kind: "success" | "error"; id?: string }
 const { kind, id } = Astro.props;
 ---
-<div id={id} class:list={["rounded-md border-2 p-4 text-base text-foreground", kind === "success" ? "border-success bg-success/10" : "border-error bg-error/10"]} role={kind === "success" ? "status" : "alert"} tabindex="-1">
+<div id={id} class:list={["rounded-md border-2 p-4 text-base text-foreground", { "border-success bg-success/10": kind === "success", "border-error bg-error/10": kind !== "success" }]} role={kind === "success" ? "status" : "alert"} tabindex="-1">
   <slot />
 </div>
