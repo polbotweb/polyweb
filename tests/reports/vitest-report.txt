@@ -1,6 +1,6 @@
 ════════════════════════════════════════════════════════════════════════════════
   VITEST UNIT & INTEGRATION TEST REPORT
-  Generated: 2026-10-27 12:39:17
+  Generated: 2026-10-27 16:59:45
 ════════════════════════════════════════════════════════════════════════════════
 
   ✅ tests/integration/audit.test.ts  (8/8 passed)
@@ -180,6 +180,14 @@
   ✅ tests/unit/bookings/domain.test.ts  (5/5 passed)
   ✅ tests/unit/bookings/guest.test.ts  (7/7 passed)
   ✅ tests/unit/bookings/scheduling.test.ts  (5/5 passed)
+  ✅ tests/unit/cms/admin-filter-contract.test.ts  (2/2 passed)
+  ✅ tests/unit/cms/admin-module-contract.test.ts  (3/3 passed)
+  ✅ tests/unit/cms/capabilities.test.ts  (2/2 passed)
+  ✅ tests/unit/cms/module-boundaries.test.ts  (2/2 passed)
+  ✅ tests/unit/cms/module-contract.test.ts  (4/4 passed)
+  ✅ tests/unit/cms/module-registry.test.ts  (2/2 passed)
+  ✅ tests/unit/cms/resource-contract.test.ts  (6/6 passed)
+  ✅ tests/unit/cms/workflow.test.ts  (4/4 passed)
   ✅ tests/unit/core/category-taxonomy.test.ts  (5/5 passed)
   ✅ tests/unit/core/documents.test.ts  (9/9 passed)
   ✅ tests/unit/core/einvoice-pdfa.test.ts  (4/4 passed)
@@ -189,14 +197,6 @@
   ✅ tests/unit/core/payments.test.ts  (14/14 passed)
   ✅ tests/unit/crm/admin-resource.test.ts  (3/3 passed)
   ✅ tests/unit/crm/domain.test.ts  (9/9 passed)
-  ✅ tests/unit/cms/admin-filter-contract.test.ts  (2/2 passed)
-  ✅ tests/unit/cms/admin-module-contract.test.ts  (3/3 passed)
-  ✅ tests/unit/cms/capabilities.test.ts  (2/2 passed)
-  ✅ tests/unit/cms/module-boundaries.test.ts  (2/2 passed)
-  ✅ tests/unit/cms/module-contract.test.ts  (4/4 passed)
-  ✅ tests/unit/cms/module-registry.test.ts  (2/2 passed)
-  ✅ tests/unit/cms/resource-contract.test.ts  (6/6 passed)
-  ✅ tests/unit/cms/workflow.test.ts  (4/4 passed)
   ✅ tests/unit/dashboard/metrics.test.ts  (3/3 passed)
   ✅ tests/unit/dashboard/period.test.ts  (8/8 passed)
   ✅ tests/unit/database/migration-sql.test.ts  (12/12 passed)
@@ -239,7 +239,7 @@
   Passed:        1988  ✅
   Failed:        0  
   Skipped:       1
-  Duration:      39s
+  Duration:      36s
 
 ════════════════════════════════════════════════════════════════════════════════
   END OF REPORT — 1988/1989 passed

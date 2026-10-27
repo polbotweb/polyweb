@@ -11,7 +11,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "lint": "eslint \"src/**/*.{js,ts,astro}\"",
+    "lint": "eslint \"src/**/*.{js,ts,astro}\" --max-warnings 0",
     "lint:fix": "eslint \"src/**/*.{js,ts,astro}\" --fix",
     "check": "astro check",
     "readme:generate": "tsx readme-builder/readme-generate.ts",

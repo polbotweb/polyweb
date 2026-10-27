@@ -130,7 +130,6 @@ const canonicalUrl = absoluteUrl(canonicalOverride ?? Astro.url.pathname);
     {(ogImageOverride || siteData?.ogImage) && <meta name="twitter:image" content={ogImageOverride ?? siteData!.ogImage!} />}
     {/* eslint-disable-next-line astro/no-set-html-directive -- jsonLd is pre-escaped via safeJsonLd() (neutralizes </script> breakout); it is structured data (JSON.stringify output), not arbitrary HTML */}
     {jsonLd && <script type="application/ld+json" set:html={safeJsonLd(jsonLd)} />}
-    {/* eslint-disable-next-line astro/no-set-html-directive -- theme CSS is generated server-side from validated OKLCH tokens */}
     {themeCss && <link rel="stylesheet" href={`/theme.css?v=${themeCssVersion}`} />}
     <slot name="head" />
 </head>

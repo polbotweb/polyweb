@@ -152,11 +152,14 @@ const readingTime = formatReadingTime(translation.content);
 </article>
 
 <style>
+  /* Classes posées sur des composants enfants (Card, Image, Icon, Button) : ciblées via
+     :global() ANCRÉ sous .post-card-wrapper (élément de ce template) — reste scopé à ce
+     composant, sans dépendre de la propagation de data-astro-cid, cascade équivalente (aucune règle concurrente). */
   .post-card-wrapper {
     display: contents;
   }
 
-  .post-card { 
+  .post-card-wrapper :global(.post-card) { 
     max-width: 400px; 
     box-shadow: none;
     border: 1px solid var(--border-default);
@@ -176,7 +179,7 @@ const readingTime = formatReadingTime(translation.content);
     border-radius: var(--radius-md);
   }
 
-  .post-card__image {
+  .post-card-wrapper :global(.post-card__image) {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -184,7 +187,7 @@ const readingTime = formatReadingTime(translation.content);
     transition: transform 220ms ease;
   }
 
-  .post-card__link:hover .post-card__image {
+  .post-card__link:hover :global(.post-card__image) {
     transform: scale(1.03);
   }
 
@@ -213,7 +216,7 @@ const readingTime = formatReadingTime(translation.content);
     gap: var(--space-2);
   }
 
-  .post-card__header {
+  .post-card-wrapper :global(.post-card__header) {
     padding-top: var(--space-4);
     display: flex;
     flex-direction: column;
@@ -230,7 +233,7 @@ const readingTime = formatReadingTime(translation.content);
     align-self: flex-end;
   }
 
-  .post-card__title {
+  .post-card-wrapper :global(.post-card__title) {
     margin: 0;
     font-size: 1.125rem;
     font-weight: 700;
@@ -244,11 +247,11 @@ const readingTime = formatReadingTime(translation.content);
     width: 100%;
   }
 
-  .post-card__title-link:hover .post-card__title {
+  .post-card__title-link:hover :global(.post-card__title) {
     text-decoration: underline;
   }
 
-  .post-card__content {
+  .post-card-wrapper :global(.post-card__content) {
     padding-top: 0;
   }
 
@@ -263,7 +266,7 @@ const readingTime = formatReadingTime(translation.content);
     overflow: hidden;
   }
 
-  .post-card__footer {
+  .post-card-wrapper :global(.post-card__footer) {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
@@ -297,7 +300,7 @@ const readingTime = formatReadingTime(translation.content);
     object-fit: cover;
   }
 
-  .post-card__author-icon {
+  .post-card-wrapper :global(.post-card__author-icon) {
     width: 18px;
     height: 18px;
   }
@@ -309,49 +312,49 @@ const readingTime = formatReadingTime(translation.content);
     height: 0.875rem;
   }
 
-  .post-card__read-more {
+  .post-card-wrapper :global(.post-card__read-more) {
     margin-left: auto;
   }
 
-  .post-card__read-more :global(svg) {
+  .post-card-wrapper :global(.post-card__read-more svg) {
     width: 1rem;
     height: 1rem;
   }
 
   /* Variants */
-  .post-card--retro .post-card__image-wrap {
+  .post-card-wrapper :global(.post-card--retro) .post-card__image-wrap {
     border-radius: var(--radius-lg);
     height: 240px;
   }
 
-  .post-card--retro .post-card__badges {
+  .post-card-wrapper :global(.post-card--retro) .post-card__badges {
     top: var(--space-2);
     left: var(--space-2);
     right: var(--space-2);
   }
 
-  .post-card--retro .post-card__title {
+  .post-card-wrapper :global(.post-card--retro .post-card__title) {
     font-size: 1.25rem;
   }
 
-  .post-card--retro .post-card__date {
+  .post-card-wrapper :global(.post-card--retro .post-card__date) {
     font-size: 0.875rem;
   }
 
-  .post-card--compact .post-card__image-wrap {
+  .post-card-wrapper :global(.post-card--compact) .post-card__image-wrap {
     height: 180px;
   }
 
-  .post-card--compact .post-card__excerpt {
+  .post-card-wrapper :global(.post-card--compact .post-card__excerpt) {
     -webkit-line-clamp: 2;
   }
 
-  .post-card--modern .post-card__image-wrap {
+  .post-card-wrapper :global(.post-card--modern) .post-card__image-wrap {
     border-radius: var(--radius-lg);
     height: 200px;
   }
 
-  .post-card--modern .post-card__badges {
+  .post-card-wrapper :global(.post-card--modern) .post-card__badges {
     top: var(--space-2);
     left: var(--space-2);
   }
