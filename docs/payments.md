@@ -73,7 +73,7 @@ manuel. Seules les erreurs base remontent (rollback, le fournisseur réessaie).
 
 ### Boutique
 
-Paiement de commande (objet `shop-order`) : voir [shop-checkout.md](shop-checkout.md).
+Paiement de commande (objet `shop-order`) : voir [shop-checkout.md](shop-checkout.md) ; retours clients (RMA) : [shop-returns.md](shop-returns.md).
 
 ## Remboursements
 
