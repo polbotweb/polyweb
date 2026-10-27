@@ -208,6 +208,8 @@ courses/
   admin/
 crm/
   admin/
+dashboard/
+  ErpDashboard.astro
 events/
   EventsCard.astro
   EventsDetail.astro
@@ -1107,6 +1109,16 @@ crm/
     index.ts
   services/
     crm.service.ts
+dashboard/
+  admin/
+    view.ts
+  domain/
+    metrics.ts
+    period.ts
+  i18n/
+    index.ts
+  services/
+    dashboard.service.ts
 events/
   actions/
     bulk.ts
@@ -1428,6 +1440,7 @@ src/pages/
     blog/
     bookings/
     crm/
+    dashboard.astro
     index.astro
     logistics/
     media.astro
