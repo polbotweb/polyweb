@@ -4,17 +4,18 @@
  *   REQUESTED → CONFIRMED → CHECKED_IN → COMPLETED
  *
  * Retour possible CONFIRMED → REQUESTED ; annulation depuis REQUESTED ou CONFIRMED ;
- * absence (NO_SHOW) depuis CONFIRMED. Le numéro de réservation est attribué à la confirmation.
+ * absence (NO_SHOW) depuis CONFIRMED ; expiration (EXPIRED) d'une demande dont l'acompte
+ * n'a pas été payé à temps (core/payments). Le numéro de réservation est attribué à la confirmation.
  * Les statuts « actifs » occupent le créneau (contrôle de chevauchement).
  */
 import type { WorkflowDefinition } from "@/core/workflow";
 
-export const BOOKING_STATUSES = ["REQUESTED", "CONFIRMED", "CHECKED_IN", "COMPLETED", "CANCELLED", "NO_SHOW"] as const;
+export const BOOKING_STATUSES = ["REQUESTED", "CONFIRMED", "CHECKED_IN", "COMPLETED", "CANCELLED", "NO_SHOW", "EXPIRED"] as const;
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 
 export const ACTIVE_STATUSES: readonly BookingStatus[] = ["REQUESTED", "CONFIRMED", "CHECKED_IN"];
 export const EDITABLE_STATUSES: readonly BookingStatus[] = ["REQUESTED", "CONFIRMED"];
-export const FINAL_STATUSES: readonly BookingStatus[] = ["COMPLETED", "CANCELLED", "NO_SHOW"];
+export const FINAL_STATUSES: readonly BookingStatus[] = ["COMPLETED", "CANCELLED", "NO_SHOW", "EXPIRED"];
 
 export const bookingWorkflow: WorkflowDefinition<BookingStatus> = {
   states: BOOKING_STATUSES,
@@ -22,6 +23,7 @@ export const bookingWorkflow: WorkflowDefinition<BookingStatus> = {
     { from: "REQUESTED", to: "CONFIRMED" },
     { from: "CONFIRMED", to: "REQUESTED" },
     { from: "REQUESTED", to: "CANCELLED" },
+    { from: "REQUESTED", to: "EXPIRED" },
     { from: "CONFIRMED", to: "CANCELLED" },
     { from: "CONFIRMED", to: "CHECKED_IN" },
     { from: "CONFIRMED", to: "NO_SHOW" },
