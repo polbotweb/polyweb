@@ -113,6 +113,8 @@ for (const lang of locales) {
       headers: { Cookie: adminCookie },
     });
   }
+  // Tableau de bord ERP (CA, marges, stock).
+  adminUrls.push({ url: `${BASE}/${lang}/admin/dashboard`, headers: { Cookie: adminCookie } });
   // Commandes boutique : liste filtrable et fiche de la commande seedée.
   adminUrls.push({ url: `${BASE}/${lang}/admin/orders`, headers: { Cookie: adminCookie } });
   if (shopOrder) adminUrls.push({ url: `${BASE}/${lang}/admin/orders/${encodeURIComponent(shopOrder.id)}`, headers: { Cookie: adminCookie } });

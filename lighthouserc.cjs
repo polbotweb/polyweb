@@ -104,6 +104,8 @@ for (const lang of locales) {
   for (const page of adminPages) {
     adminUrls.push(`${BASE}/${lang}/admin/${page}`);
   }
+  // Tableau de bord ERP (CA, marges, stock).
+  adminUrls.push(`${BASE}/${lang}/admin/dashboard`);
   adminUrls.push(`${BASE}/${lang}/admin/orders`);
   if (shopOrder) adminUrls.push(`${BASE}/${lang}/admin/orders/${encodeURIComponent(shopOrder.id)}`);
 }

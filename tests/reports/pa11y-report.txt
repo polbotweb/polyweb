@@ -1,11 +1,11 @@
 ════════════════════════════════════════════════════════════════════════════════
   PA11Y ACCESSIBILITY REPORT — WCAG 2.1 AAA
-  Generated: 2026-10-27 02:31:10
+  Generated: 2026-10-27 10:35:44
 ════════════════════════════════════════════════════════════════════════════════
 
-  Total URLs tested:  68
-  Passed:             68/68  ✅
-  Failed:             0/68
+  Total URLs tested:  96
+  Passed:             96/96  ✅
+  Failed:             0/96
 
 ────────────────────────────────────────────────────────────────────────────────
 
@@ -22,6 +22,10 @@
   ✅ http://localhost:4321/fr/auth/connexion
   ✅ http://localhost:4321/fr/auth/inscription
   ✅ http://localhost:4321/fr/auth/mot-de-passe-oublie
+  ✅ http://localhost:4321/fr/shop/a11y-t-shirt
+  ✅ http://localhost:4321/fr/shop/cart
+  ✅ http://localhost:4321/fr/shop/checkout
+  ✅ http://localhost:4321/fr/shop/order/b8caef68-f638-43b6-a88c-a83fceb9baee?t=REDACTED
   ✅ http://localhost:4321/en/
   ✅ http://localhost:4321/en/about
   ✅ http://localhost:4321/en/contact
@@ -32,6 +36,10 @@
   ✅ http://localhost:4321/en/auth/sign-in
   ✅ http://localhost:4321/en/auth/sign-up
   ✅ http://localhost:4321/en/auth/forgot-password
+  ✅ http://localhost:4321/en/shop/a11y-t-shirt
+  ✅ http://localhost:4321/en/shop/cart
+  ✅ http://localhost:4321/en/shop/checkout
+  ✅ http://localhost:4321/en/shop/order/b8caef68-f638-43b6-a88c-a83fceb9baee?t=REDACTED
   ✅ http://localhost:4321/es/
   ✅ http://localhost:4321/es/acerca-de
   ✅ http://localhost:4321/es/contacto
@@ -42,6 +50,10 @@
   ✅ http://localhost:4321/es/auth/iniciar-sesion
   ✅ http://localhost:4321/es/auth/registro
   ✅ http://localhost:4321/es/auth/contrasena-olvidada
+  ✅ http://localhost:4321/es/shop/a11y-camiseta
+  ✅ http://localhost:4321/es/shop/cart
+  ✅ http://localhost:4321/es/shop/checkout
+  ✅ http://localhost:4321/es/shop/order/b8caef68-f638-43b6-a88c-a83fceb9baee?t=REDACTED
   ✅ http://localhost:4321/ar/
   ✅ http://localhost:4321/ar/%D9%85%D9%86-%D9%86%D8%AD%D9%86
   ✅ http://localhost:4321/ar/%D8%A7%D8%AA%D8%B5%D9%84-%D8%A8%D9%86%D8%A7
@@ -52,6 +64,10 @@
   ✅ http://localhost:4321/ar/auth/%D8%AA%D8%B3%D8%AC%D9%8A%D9%84-%D8%A7%D9%84%D8%AF%D8%AE%D9%88%D9%84
   ✅ http://localhost:4321/ar/auth/%D8%A7%D9%86%D8%B4%D8%A7%D8%A1-%D8%AD%D8%B3%D8%A7%D8%A8
   ✅ http://localhost:4321/ar/auth/%D9%86%D8%B3%D9%8A%D8%AA-%D9%83%D9%84%D9%85%D8%A9-%D8%A7%D9%84%D9%85%D8%B1%D9%88%D8%B1
+  ✅ http://localhost:4321/ar/shop/a11y-qamis
+  ✅ http://localhost:4321/ar/shop/cart
+  ✅ http://localhost:4321/ar/shop/checkout
+  ✅ http://localhost:4321/ar/shop/order/b8caef68-f638-43b6-a88c-a83fceb9baee?t=REDACTED
   ✅ http://localhost:4321/fr/auth/tableau-de-bord
   ✅ http://localhost:4321/fr/auth/profil
   ✅ http://localhost:4321/en/auth/dashboard
@@ -65,22 +81,34 @@
   ✅ http://localhost:4321/fr/admin/navigation
   ✅ http://localhost:4321/fr/admin/theme
   ✅ http://localhost:4321/fr/admin/blog
+  ✅ http://localhost:4321/fr/admin/dashboard
+  ✅ http://localhost:4321/fr/admin/orders
+  ✅ http://localhost:4321/fr/admin/orders/b8caef68-f638-43b6-a88c-a83fceb9baee
   ✅ http://localhost:4321/en/admin/stats
   ✅ http://localhost:4321/en/admin/site
   ✅ http://localhost:4321/en/admin/navigation
   ✅ http://localhost:4321/en/admin/theme
   ✅ http://localhost:4321/en/admin/blog
+  ✅ http://localhost:4321/en/admin/dashboard
+  ✅ http://localhost:4321/en/admin/orders
+  ✅ http://localhost:4321/en/admin/orders/b8caef68-f638-43b6-a88c-a83fceb9baee
   ✅ http://localhost:4321/es/admin/stats
   ✅ http://localhost:4321/es/admin/site
   ✅ http://localhost:4321/es/admin/navigation
   ✅ http://localhost:4321/es/admin/theme
   ✅ http://localhost:4321/es/admin/blog
+  ✅ http://localhost:4321/es/admin/dashboard
+  ✅ http://localhost:4321/es/admin/orders
+  ✅ http://localhost:4321/es/admin/orders/b8caef68-f638-43b6-a88c-a83fceb9baee
   ✅ http://localhost:4321/ar/admin/stats
   ✅ http://localhost:4321/ar/admin/site
   ✅ http://localhost:4321/ar/admin/navigation
   ✅ http://localhost:4321/ar/admin/theme
   ✅ http://localhost:4321/ar/admin/blog
+  ✅ http://localhost:4321/ar/admin/dashboard
+  ✅ http://localhost:4321/ar/admin/orders
+  ✅ http://localhost:4321/ar/admin/orders/b8caef68-f638-43b6-a88c-a83fceb9baee
 
 ════════════════════════════════════════════════════════════════════════════════
-  END OF REPORT — 68/68 passed
+  END OF REPORT — 96/96 passed
 ════════════════════════════════════════════════════════════════════════════════
