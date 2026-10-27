@@ -17,7 +17,7 @@ import { paymentEvents } from '@database/schemas/payments.schema';
 import { appRuntime } from '@/lib/effect/runtime';
 import { gatewayOf, handleWebhook, makeMockProvider, MOCK_SIGNATURE_HEADER, mockWebhookBody, PaymentGateway, signMockPayload } from '@/core/payments';
 import { salesService, type SalesDocumentInput } from '@/modules/sales/services/salesDocument.service';
-import { invoiceForPayLink, isPayableInvoice, payLinkToken, registerSalesPayments, startInvoiceCheckout } from '@/modules/sales/payments';
+import { invoiceForPayLink, isPayableInvoice, payLinkToken, payLinkUrl, registerSalesPayments, startInvoiceCheckout } from '@/modules/sales/payments';
 
 const SECRET = 'itest-mock-secret';
 const LINK_SECRET = 'itest-link-secret';
@@ -76,6 +76,12 @@ describe('sales : paiement en ligne d’une facture', () => {
     expect(await run(invoiceForPayLink(LINK_SECRET, invoice.id, `${token.slice(0, 31)}x`))).toBeNull();
     expect(await run(invoiceForPayLink('other-secret', invoice.id, token))).toBeNull();
     expect(await run(invoiceForPayLink(LINK_SECRET, invoice.id, null))).toBeNull();
+    // URL du back-office : jeton du secret de signature de l'application, vérifiable par la page publique.
+    const url = new URL(await run(payLinkUrl('fr', invoice.id)));
+    expect(url.pathname).toBe(`/fr/pay/invoice/${invoice.id}`);
+    const appToken = url.searchParams.get('t');
+    expect(appToken).toMatch(/^[A-Za-z0-9_-]{32}$/);
+    expect(appToken).not.toBe(token);
   });
 
   it('webhook payé → encaissement carte, facture PAID ; doublon ignoré', async () => {

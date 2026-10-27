@@ -15,6 +15,7 @@ import { getDrizzle } from '@database/drizzle';
 import type { Payment } from '@database/schemas/payments.schema';
 import { isCurrencyCode } from '@/core/money';
 import { registerPaymentPurpose, startCheckout, UnsupportedAmountError } from '@/core/payments';
+import { AppConfig } from '@/lib/effect/config';
 import { dbTry } from '@/lib/effect/run';
 import type { DbTransaction } from '@/lib/effect/transaction';
 import { sales, salesPayments } from './schema';
@@ -40,6 +41,10 @@ export const verifyPayLinkToken = (secret: string, invoiceId: string, token: str
 
 /** Chemin public du lien de paiement (à préfixer de `siteUrl`). */
 export const payLinkPath = (locale: string, invoiceId: string, token: string) => `/${locale}/pay/invoice/${encodeURIComponent(invoiceId)}?t=${encodeURIComponent(token)}`;
+
+/** URL absolue du lien de paiement (`siteUrl` + jeton signé). */
+export const payLinkUrl = (locale: string, invoiceId: string) =>
+  Effect.map(AppConfig, (config) => `${config.siteUrl}${payLinkPath(locale, invoiceId, payLinkToken(config.signingSecret, invoiceId))}`);
 
 /** Facture payable en ligne : émise, non soldée. */
 export const isPayableInvoice = (invoice: Pick<InvoiceRow, 'kind' | 'status' | 'grossMinor' | 'paidMinor' | 'creditedMinor'>) =>

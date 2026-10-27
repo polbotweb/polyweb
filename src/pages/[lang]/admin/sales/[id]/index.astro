@@ -19,6 +19,10 @@ import { isLocked, manualTargets, type SalesStatus } from "@/modules/sales/domai
 import { getSalesTranslations } from "@/modules/sales/i18n";
 import { loadSalesDocument } from "@/modules/sales/loaders";
 import { hasSalesPermission } from "@/modules/sales/permissions";
+import { isPaymentsEnabled } from "@/core/payments";
+import { isPayableInvoice, payLinkUrl } from "@/modules/sales/payments";
+import { getSalesPayTranslations } from "@/modules/sales/i18n/pay";
+import { runApp } from "@/lib/effect/http";
 
 export const prerender = false;
 const result = await requirePermission(Astro, { sales: ["read"] });
@@ -47,6 +51,9 @@ const editable = canUpdate && doc.kind !== "credit_note" && !isLocked(doc.kind, 
 const heading = `${t.kinds[doc.kind]} ${doc.number ?? t.admin.draftNumber}`;
 const exponent = isCurrencyCode(doc.currency) ? currencyExponent(doc.currency) : 2;
 const today = new Date().toISOString().slice(0, 10);
+// Lien de paiement en ligne : réservé aux droits d'encaissement, uniquement si le paiement en ligne est actif.
+const payLink = canPayment && isPaymentsEnabled() && isPayableInvoice(doc) ? await runApp(payLinkUrl(locale, doc.id)) : null;
+const payT = getSalesPayTranslations(locale);
 ---
 <BaseLayout title={heading} description={t.meta.description}>
   <AuthLayout title={heading}>
@@ -116,6 +123,13 @@ const today = new Date().toISOString().slice(0, 10);
               <div class="grid gap-1"><Label for="payment-reference">{t.payments.reference}</Label><Input id="payment-reference" name="reference" maxlength={200} /></div>
               <Button type="submit">{t.actions.recordPayment}</Button>
             </form>
+          )}
+          {payLink && (
+            <div class="grid max-w-3xl gap-1" data-testid="sales-pay-link">
+              <Label for="sales-pay-link">{payT.adminLink}</Label>
+              <Input id="sales-pay-link" readonly value={payLink} aria-describedby="sales-pay-link-hint" dir="ltr" />
+              <p id="sales-pay-link-hint" class="text-sm text-muted-foreground">{payT.adminHint}</p>
+            </div>
           )}
           <h2 class="text-lg font-semibold">{t.reminders.title}</h2>
           {doc.reminders.length === 0 ? <p class="text-sm text-muted-foreground">{t.reminders.empty}</p> : (
