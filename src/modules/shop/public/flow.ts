@@ -9,6 +9,7 @@ import { Effect } from "effect";
 import type { Locale } from "@i18n/config";
 import { AppConfig } from "@/lib/effect/config";
 import { RateLimitedError } from "@/lib/effect/errors";
+import type { ActionFailure } from "@/lib/effect/failure";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { logAuditEventEffect } from "@/lib/audit";
 import { checkTimestampToken } from "@/modules/forms/domain/forms";
@@ -18,6 +19,8 @@ import { checkoutOrder, orderLinesOf, orderService, quoteOrder, startOrderPaymen
 import { NON_EU_SHIPPING_COUNTRIES, shippingOptions, shopSettingsFromEnv, type CheckoutInput } from "../domain/checkout";
 import { signCartToken, verifyCartToken, verifyOrderAccessToken } from "../domain/cart-token";
 import { CHECKOUT_FIELDS } from "../domain/errors";
+import { isReturnReason, type ReturnRequestProblem } from "../domain/returns";
+import { returnService } from "../services/return.service";
 
 /** Le catalogue public est celui de la plateforme. */
 export const SHOP_PUBLIC_ORGANIZATION: string | null = null;
@@ -146,4 +149,65 @@ export const payOrder = (id: string, token: string, locale: Locale, now: Date = 
     const page = `${config.siteUrl}${shopPaths.order(locale, id, token)}`;
     const started = yield* startOrderPayment(found.order, { successUrl: `${page}&paid=1`, cancelUrl: `${page}&cancelled=1` }, now);
     return started.url;
+  });
+
+/** Demandes de retour : 5 par commande et par quart d'heure (le lien signé est l'authentification). */
+const RETURN_RATE_LIMIT = { window: 15 * 60 * 1000, max: 5 } as const;
+const RETURN_QTY_PREFIX = "qty:";
+
+export interface ReturnSubmission {
+  readonly reason: string;
+  readonly note: string;
+  /** Champs `qty:<orderLineId>` du formulaire. */
+  readonly quantities: Readonly<Record<string, string>>;
+}
+
+export type ReturnOutcome =
+  | { readonly kind: "requested"; readonly number: string }
+  | { readonly kind: "invalid"; readonly problem: ReturnRequestProblem }
+  | { readonly kind: "notEligible" }
+  | { readonly kind: "rateLimited"; readonly retryAfterSeconds: number };
+
+/** Extrait les quantités `qty:<ligne>` d'un formulaire ; une saisie non entière vaut `NaN` (refusée). */
+export const returnQuantitiesOf = (entries: Iterable<[string, FormDataEntryValue]>) => {
+  const out: Record<string, string> = {};
+  for (const [key, value] of entries) if (key.startsWith(RETURN_QTY_PREFIX) && typeof value === "string") out[key.slice(RETURN_QTY_PREFIX.length)] = value;
+  return out;
+};
+
+const parseReturnQuantity = (raw: string) => {
+  const v = raw.trim();
+  if (v === "") return 0;
+  return /^\d{1,3}$/.test(v) ? Number(v) : Number.NaN;
+};
+
+/** Vue « retours » de la page de commande : lignes retournables (si livrée) et demandes existantes. */
+export const publicOrderReturns = (order: Pick<OrderRow, "id" | "status">) =>
+  Effect.gen(function* () {
+    const existing = yield* returnService.forOrder(order.id);
+    const returnable = order.status === "DELIVERED" ? yield* returnService.returnable(order.id) : [];
+    return { existing, returnable, open: returnable.some((entry) => entry.remaining > 0) };
+  });
+
+/** Demande de retour depuis la page de commande (lien signé, POST sans JS). */
+export const requestOrderReturn = (id: string, token: string, raw: ReturnSubmission, meta: RequestMeta) =>
+  Effect.gen(function* () {
+    const found = yield* publicOrder(id, token);
+    if (!found) return yield* Effect.fail({ _tag: "InvalidLink" as const });
+    const rl = checkRateLimit(`shop-return:${found.order.id}`, RETURN_RATE_LIMIT);
+    if (!rl.allowed) return { kind: "rateLimited", retryAfterSeconds: Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 1000)) } satisfies ReturnOutcome as ReturnOutcome;
+    if (found.order.status !== "DELIVERED" || !isReturnReason(raw.reason)) {
+      return (found.order.status !== "DELIVERED" ? { kind: "notEligible" } : { kind: "invalid", problem: "empty" }) satisfies ReturnOutcome as ReturnOutcome;
+    }
+    const lines = Object.entries(raw.quantities).map(([orderLineId, value]) => ({ orderLineId, quantity: parseReturnQuantity(value) }));
+    type Attempt = { readonly kind: "created"; readonly id: string; readonly number: string } | ReturnOutcome;
+    const created: Attempt = yield* returnService.request({ orderId: found.order.id, organizationId: SHOP_PUBLIC_ORGANIZATION, reason: raw.reason, note: raw.note, lines, now: meta.now }).pipe(
+      Effect.map((row): Attempt => ({ kind: "created", id: row.id, number: row.number })),
+      Effect.catchTag("ActionFailure", (e: ActionFailure): Effect.Effect<Attempt, ActionFailure> =>
+        e.code === "BAD_REQUEST" ? Effect.succeed({ kind: "invalid", problem: e.message as ReturnRequestProblem })
+          : e.code === "CONFLICT" ? Effect.succeed({ kind: "notEligible" }) : Effect.fail(e)),
+    );
+    if (created.kind !== "created") return created;
+    yield* logAuditEventEffect({ action: "SHOP_RETURN_REQUEST", resource: "order_return", resourceId: created.id, metadata: { number: created.number, order: found.order.number }, ipAddress: meta.ip, userAgent: meta.userAgent });
+    return { kind: "requested", number: created.number } satisfies ReturnOutcome as ReturnOutcome;
   });
