@@ -31,6 +31,8 @@ let shopOrder = null;
 let shopSlugs = null;
 // Commande livrée avec une demande de retour (RMA) : suivi public, fiche commande et retours admin.
 let shopReturn = null;
+// Logistique : inventaires seedés (un en cours, un validé) — pages inventaires et grand livre.
+let logistics = null;
 if (fs.existsSync(COOKIES_PATH)) {
   const data = JSON.parse(fs.readFileSync(COOKIES_PATH, 'utf-8'));
   userCookie = data.userCookie ?? '';
@@ -38,6 +40,7 @@ if (fs.existsSync(COOKIES_PATH)) {
   shopCartCookie = data.shopCartCookie ?? '';
   shopOrder = data.shopOrder ?? null;
   shopSlugs = data.shopSlugs ?? null;
+  logistics = data.logistics ?? null;
   shopReturn = data.shopReturn ?? null;
 }
 
@@ -129,6 +132,13 @@ for (const lang of locales) {
   if (shopReturn) {
     adminUrls.push({ url: `${BASE}/${lang}/admin/returns/${encodeURIComponent(shopReturn.id)}`, headers: { Cookie: adminCookie } });
     adminUrls.push({ url: `${BASE}/${lang}/admin/orders/${encodeURIComponent(shopReturn.orderId)}`, headers: { Cookie: adminCookie } });
+  }
+  // Logistique : liste des inventaires, inventaire en cours (saisie) et validé (écarts), grand livre.
+  adminUrls.push({ url: `${BASE}/${lang}/admin/logistics/inventories`, headers: { Cookie: adminCookie } });
+  adminUrls.push({ url: `${BASE}/${lang}/admin/logistics/movements`, headers: { Cookie: adminCookie } });
+  if (logistics) {
+    adminUrls.push({ url: `${BASE}/${lang}/admin/logistics/inventories/${encodeURIComponent(logistics.openCountId)}`, headers: { Cookie: adminCookie } });
+    adminUrls.push({ url: `${BASE}/${lang}/admin/logistics/inventories/${encodeURIComponent(logistics.validatedCountId)}`, headers: { Cookie: adminCookie } });
   }
 }
 

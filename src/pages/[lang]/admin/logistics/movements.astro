@@ -1,0 +1,81 @@
+---
+/**
+ * Back-office plateforme : grand livre de stock — tous les mouvements (origine, auteur, horodatage),
+ * filtrables par entrepôt, SKU, type, origine, utilisateur et période ; paginé (filtres en GET).
+ */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import AdminPagination from "@molecules/AdminPagination/AdminPagination.astro";
+import { ScrollRegion } from "@molecules/ScrollRegion";
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import { requirePermission } from "@lib/auth-guards";
+import { ledgerQuery, parseLedgerFilters } from "@/modules/logistics/domain/ledger";
+import { MOVEMENT_KINDS, MOVEMENT_SOURCES } from "@/modules/logistics/domain/stock";
+import { getLogisticsTranslations } from "@/modules/logistics/i18n";
+import { loadLedger, loadLedgerUsers, loadWarehouses } from "@/modules/logistics/loaders";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { logistics: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getLogisticsTranslations(locale);
+const ti = t.inventory;
+const baseAdminUrl = `/${locale}/admin/logistics`;
+const filters = parseLedgerFilters(Astro.url.searchParams);
+const [ledger, users, warehouses] = await Promise.all([loadLedger(null, filters), loadLedgerUsers(null), loadWarehouses(null)]);
+const pageBase = new URL(`${Astro.url.pathname}?${ledgerQuery(filters, 1)}`, Astro.url);
+const when = (value: Date) => new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "medium" }).format(value);
+---
+<BaseLayout title={ti.ledger} description={t.meta.description}>
+  <AuthLayout title={ti.ledger}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="logistics" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{ti.ledger}</h1>
+        <nav class="flex flex-wrap gap-2" aria-label={t.admin.title}>
+          <a class="inline-flex min-h-11 items-center px-3 underline" href={`${baseAdminUrl}/inventories`}>{ti.title}</a>
+          <a class="inline-flex min-h-11 items-center px-3 underline" href={`${baseAdminUrl}/stock`}>{ti.back}</a>
+        </nav>
+      </div>
+      <form method="get" class="grid gap-3 rounded-md border p-4 sm:grid-cols-2 lg:grid-cols-4" aria-labelledby="lg-ledger-filters" data-testid="logistics-ledger-filters">
+        <h2 id="lg-ledger-filters" class="text-lg font-semibold sm:col-span-2 lg:col-span-4">{ti.filters}</h2>
+        <div class="grid gap-2"><Label for="lg-lf-warehouse">{t.fields.warehouse}</Label><NativeSelect id="lg-lf-warehouse" name="warehouse"><NativeSelectOption value="">{ti.all}</NativeSelectOption>{warehouses.map((w) => <NativeSelectOption value={w.id} selected={filters.warehouseId === w.id}>{w.code} — {w.name}</NativeSelectOption>)}</NativeSelect></div>
+        <div class="grid gap-2"><Label for="lg-lf-sku">{t.fields.sku}</Label><Input id="lg-lf-sku" name="sku" value={filters.sku ?? ""} maxlength={64} autocomplete="off" /></div>
+        <div class="grid gap-2"><Label for="lg-lf-kind">{t.fields.kind}</Label><NativeSelect id="lg-lf-kind" name="kind"><NativeSelectOption value="">{ti.all}</NativeSelectOption>{MOVEMENT_KINDS.map((k) => <NativeSelectOption value={k} selected={filters.kind === k}>{t.movementKinds[k]}</NativeSelectOption>)}</NativeSelect></div>
+        <div class="grid gap-2"><Label for="lg-lf-source">{ti.source}</Label><NativeSelect id="lg-lf-source" name="source"><NativeSelectOption value="">{ti.all}</NativeSelectOption>{MOVEMENT_SOURCES.map((s) => <NativeSelectOption value={s} selected={filters.source === s}>{t.movementSources[s]}</NativeSelectOption>)}</NativeSelect></div>
+        <div class="grid gap-2"><Label for="lg-lf-user">{ti.user}</Label><NativeSelect id="lg-lf-user" name="user"><NativeSelectOption value="">{ti.all}</NativeSelectOption>{users.map((u) => <NativeSelectOption value={u.id} selected={filters.userId === u.id}>{u.name}</NativeSelectOption>)}</NativeSelect></div>
+        <div class="grid gap-2"><Label for="lg-lf-from">{ti.from}</Label><Input id="lg-lf-from" name="from" type="date" value={filters.from ?? ""} /></div>
+        <div class="grid gap-2"><Label for="lg-lf-to">{ti.to}</Label><Input id="lg-lf-to" name="to" type="date" value={filters.to ?? ""} /></div>
+        <div class="flex items-end gap-3"><Button type="submit" data-testid="logistics-ledger-apply">{ti.apply}</Button><a class="inline-flex min-h-11 items-center px-3 underline" href={Astro.url.pathname}>{ti.reset}</a></div>
+      </form>
+      <p class="text-sm" data-ledger-total={ledger.total}>{ti.results.replace("{total}", String(ledger.total))}</p>
+      {ledger.rows.length === 0 ? <p class="text-sm text-muted-foreground">{ti.empty}</p> : (
+        <ScrollRegion label={ti.ledger}>
+          <table class="w-full text-sm" data-testid="logistics-ledger">
+            <caption class="sr-only">{ti.ledger}</caption>
+            <thead><tr class="border-b">
+              <th scope="col" class="py-2 text-start">{ti.createdAt}</th><th scope="col" class="py-2 text-start">{t.fields.warehouse}</th><th scope="col" class="py-2 text-start">{t.fields.sku}</th>
+              <th scope="col" class="py-2 text-start">{t.fields.kind}</th><th scope="col" class="py-2 text-start">{ti.source}</th><th scope="col" class="py-2 text-end">{t.fields.quantity}</th>
+              <th scope="col" class="py-2 text-start">{t.fields.reference}</th><th scope="col" class="py-2 text-start">{ti.user}</th>
+            </tr></thead>
+            <tbody>{ledger.rows.map((m) => (
+              <tr class="border-b" data-ledger-row={m.id}>
+                <td class="py-2 whitespace-nowrap"><time datetime={m.createdAt.toISOString()}>{when(m.createdAt)}</time></td>
+                <td class="py-2 font-mono">{m.warehouseCode}</td><td class="py-2"><span class="font-mono">{m.sku}</span> <span class="text-muted-foreground">{m.itemName}</span></td>
+                <td class="py-2">{t.movementKinds[m.kind]}</td><td class="py-2">{t.movementSources[m.source]}</td>
+                <td class="py-2 text-end">{m.delta > 0 ? `+${m.delta}` : m.delta}</td>
+                <td class="py-2">{m.inventoryCountId ? <a class="underline" href={`${baseAdminUrl}/inventories/${m.inventoryCountId}`}>{m.inventoryNumber ?? m.reference}</a> : (m.reference ?? t.admin.none)}</td>
+                <td class="py-2">{m.userName ?? t.admin.none}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </ScrollRegion>
+      )}
+      <AdminPagination currentPage={ledger.page} totalPages={ledger.pages} baseUrl={pageBase} />
+    </main>
+  </AuthLayout>
+</BaseLayout>

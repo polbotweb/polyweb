@@ -1,5 +1,5 @@
 ---
-/** Back-office plateforme : niveaux de stock par entrepôt, saisie de mouvements / transferts, journal récent. */
+/** Back-office plateforme : niveaux de stock par entrepôt, saisie de mouvements / transferts, journal récent (grand livre complet : `movements`). */
 import BaseLayout from "@layouts/BaseLayout.astro";
 import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
 import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
@@ -28,7 +28,11 @@ const when = (value: Date) => new Intl.DateTimeFormat(locale, { dateStyle: "shor
     <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <h1 class="text-2xl font-semibold">{t.admin.stock}</h1>
-        <a class="inline-flex min-h-11 items-center px-3 underline" href={baseAdminUrl}>{t.admin.back}</a>
+        <nav class="flex flex-wrap gap-2" aria-label={t.admin.title}>
+          <a class="inline-flex min-h-11 items-center px-3 underline" href={`${baseAdminUrl}/inventories`}>{t.inventory.title}</a>
+          <a class="inline-flex min-h-11 items-center px-3 underline" href={`${baseAdminUrl}/movements`}>{t.inventory.ledger}</a>
+          <a class="inline-flex min-h-11 items-center px-3 underline" href={baseAdminUrl}>{t.admin.back}</a>
+        </nav>
       </div>
       {levels.length === 0 ? <p class="text-sm text-muted-foreground">{t.admin.noStock}</p> : (
         <ScrollRegion label={t.admin.stock}>

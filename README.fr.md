@@ -492,6 +492,7 @@ migrations/
   0040_shop_orders.sql
   0041_core_refunds.sql
   0042_shop_returns.sql
+  0043_logistics_inventory.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -532,6 +533,7 @@ migrations/
     0040_snapshot.json
     0041_snapshot.json
     0042_snapshot.json
+    0043_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -738,6 +740,7 @@ schemas.ts
 - `0040_shop_orders.sql`
 - `0041_core_refunds.sql`
 - `0042_shop_returns.sql`
+- `0043_logistics_inventory.sql`
 
 ### Commandes
 
@@ -1210,6 +1213,8 @@ logistics/
     record-actions.ts
   domain/
     errors.ts
+    inventory.ts
+    ledger.ts
     numbering.ts
     shipment.ts
     stock.ts
@@ -1218,6 +1223,7 @@ logistics/
     index.ts
   loaders/
     index.ts
+    inventory.loader.ts
     logistics.loader.ts
     shipment-admin.loader.ts
   locks.ts
@@ -1227,6 +1233,7 @@ logistics/
   schema/
     index.ts
   services/
+    inventory.service.ts
     logistics.service.ts
 payments/
   domain/

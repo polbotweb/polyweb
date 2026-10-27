@@ -10,6 +10,14 @@ export type MovementKind = (typeof MOVEMENT_KINDS)[number];
 /** Mouvements saisis à la main dans l'admin (les autres sont produits par les expéditions / transferts). */
 export const MANUAL_MOVEMENT_KINDS = ["receipt", "issue", "adjustment"] as const satisfies readonly MovementKind[];
 
+/**
+ * Origine d'un mouvement dans le grand livre de stock (traçabilité) : saisie manuelle, transfert,
+ * expédition, inventaire, et mouvements produits par d'autres modules via `logisticsStockPort`
+ * (réception d'achat, vente boutique, retour client).
+ */
+export const MOVEMENT_SOURCES = ["manual", "transfer", "shipment", "inventory", "purchase", "order", "return"] as const;
+export type MovementSource = (typeof MOVEMENT_SOURCES)[number];
+
 /** Statuts d'une réservation de stock (tunnel de vente). */
 export const RESERVATION_STATUSES = ["active", "consumed", "released"] as const;
 export type ReservationStatus = (typeof RESERVATION_STATUSES)[number];

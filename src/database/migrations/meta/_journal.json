@@ -302,6 +302,13 @@
       "when": 1793118774895,
       "tag": "0042_shop_returns",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1793121438550,
+      "tag": "0043_logistics_inventory",
+      "breakpoints": true
     }
   ]
 }
