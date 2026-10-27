@@ -16,7 +16,7 @@ import { fail } from "@/lib/effect/action";
 import { canTransition } from "@/core/workflow";
 import { assignDocumentNumber } from "@/core/numbering";
 import type { LockOwner } from "@/core/locks/policy";
-import { zonedToUtc, type Interval, type WeeklyWindow } from "@/core/scheduling";
+import { freeSlots, localDate, zonedToUtc, type Interval, type WeeklyWindow } from "@/core/scheduling";
 import { bookings, bookingsResources, bookingsRevisions } from "../schema";
 import { bookingsLock } from "../locks";
 import { ACTIVE_STATUSES, assignsNumber, bookingWorkflow, isEditable, reoccupiesSlot, type BookingStatus } from "../domain/workflow";
@@ -24,6 +24,7 @@ import { validateResource } from "../domain/resource";
 import { checkSlot, validateBooking } from "../domain/booking";
 import { BOOKING_NUMBERING_KEY, DEFAULT_BOOKING_NUMBERING } from "../domain/numbering";
 import type { BookingConflictError, InvalidBookingError, InvalidResourceError, OutsideAvailabilityError } from "../domain/errors";
+import { isBookableDate, SlotUnavailableError, validateGuest, type GuestInput } from "../domain/guest";
 
 export type BookingRow = typeof bookings.$inferSelect;
 export type ResourceRow = typeof bookingsResources.$inferSelect;
@@ -129,6 +130,15 @@ const bookingColumns = (tx: DbTransaction, input: BookingInput, organizationId: 
     };
   });
 
+/** Demande de réservation d'un visiteur : un créneau libre (instant de début) d'une ressource publique. */
+export interface GuestBookingInput extends GuestInput {
+  readonly organizationId: string | null;
+  readonly resourceId: string;
+  /** Instant ISO du début d'un créneau proposé par `freeSlots`. */
+  readonly startsAt: string;
+}
+
+
 export const bookingsService = {
   // ── Ressources ──────────────────────────────────────────────────────────
   createResource: (input: ResourceInput & { readonly organizationId: string | null }) =>
@@ -171,6 +181,54 @@ export const bookingsService = {
         const slug = `${slugify(columns.customerName)}-${crypto.randomUUID().slice(0, 8)}`;
         const [row] = yield* dbTry("bookings.create", () => tx.insert(bookings).values({ ...columns, slug, organizationId: input.organizationId, createdBy: authorId }).returning());
         yield* revision(tx, row!, authorId, "Création");
+        return row!;
+      })),
+
+  /**
+   * Parcours public. Sous verrou de la ressource, le créneau demandé doit être EXACTEMENT un des
+   * créneaux libres recalculés côté serveur (plages d'ouverture − réservations actives, futur,
+   * horizon) : alignement, ouverture et non-chevauchement sont revérifiés dans la transaction.
+   * Statut « demandée », sans auteur (pas de révision : l'historique est porté par l'audit).
+   */
+  createGuestBooking: (input: GuestBookingInput, now: Date = new Date()) =>
+    dbTransaction("bookings.guest.create", (tx) =>
+      Effect.gen(function* () {
+        const slotUnavailable = new SlotUnavailableError({ startsAt: input.startsAt });
+        const resource = yield* lockResource(tx, input.resourceId, input.organizationId);
+        if (!resource.active) return yield* Effect.fail(slotUnavailable);
+        const guest = yield* validateGuest(input, resource.capacity);
+        const start = new Date(input.startsAt);
+        if (Number.isNaN(start.getTime())) return yield* Effect.fail(slotUnavailable);
+        const date = localDate(start, resource.timezone);
+        if (!isBookableDate(date, localDate(now, resource.timezone))) return yield* Effect.fail(slotUnavailable);
+        const end = new Date(start.getTime() + resource.slotMinutes * 60_000);
+        const dayStart = zonedToUtc(date, "00:00", resource.timezone);
+        const busy = yield* activeOverlapping(tx, resource.id, { start: new Date(dayStart.getTime() - 86_400_000), end: new Date(dayStart.getTime() + 2 * 86_400_000) });
+        const offered = freeSlots(date, resource.windows, resource.timezone, busy, resource.slotMinutes, now);
+        if (!offered.some((slot) => slot.start.getTime() === start.getTime())) return yield* Effect.fail(slotUnavailable);
+        yield* checkSlot({ start, end }, { resourceId: resource.id, timezone: resource.timezone, windows: resource.windows, active: busy }).pipe(Effect.mapError(() => slotUnavailable));
+        const slug = `${slugify(guest.customerName)}-${crypto.randomUUID().slice(0, 8)}`;
+        const [row] = yield* dbTry("bookings.guest.create", () => tx.insert(bookings).values({
+          organizationId: input.organizationId, resourceId: resource.id, startsAt: start, endsAt: end, slug,
+          title: `${guest.customerName} — ${resource.name}`.slice(0, 200), customerName: guest.customerName, customerEmail: guest.customerEmail,
+          customerPhone: guest.customerPhone, partySize: guest.partySize, notes: guest.notes,
+        }).returning());
+        return { booking: row!, resource };
+      })),
+
+  /**
+   * Annulation par le visiteur (lien signé vérifié par l'appelant) : demandée ou confirmée, créneau
+   * non commencé. Idempotent : une réservation déjà annulée est renvoyée telle quelle.
+   */
+  cancelByGuest: (id: string, now: Date = new Date()) =>
+    dbTransaction("bookings.guest.cancel", (tx) =>
+      Effect.gen(function* () {
+        const current = yield* findBooking(tx, id, true);
+        if (current.status === "CANCELLED") return current;
+        if (!canTransition(bookingWorkflow, current.status, "CANCELLED") || current.startsAt.getTime() <= now.getTime()) {
+          return yield* fail("BAD_REQUEST", "Réservation non annulable.");
+        }
+        const [row] = yield* dbTry("bookings.guest.cancel", () => tx.update(bookings).set({ status: "CANCELLED" }).where(eq(bookings.id, id)).returning());
         return row!;
       })),
 

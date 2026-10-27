@@ -1,0 +1,16 @@
+---
+/** Réservation publique — ressources réservables du tenant (plateforme ou organisation). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import ResourceList from "@/components/bookings/public/ResourceList.astro";
+import { getBookingsPublicTranslations } from "@/modules/bookings/i18n/public";
+import { listPage, pageTenant } from "@/modules/bookings/public/pages";
+
+export const prerender = false;
+const tenant = await pageTenant(Astro);
+if (!tenant) return Astro.rewrite("/404");
+const view = await listPage(Astro, tenant);
+const t = getBookingsPublicTranslations(view.locale);
+---
+<BaseLayout title={tenant.name ? `${t.title} — ${tenant.name}` : t.title} description={t.intro}>
+  <ResourceList locale={view.locale} base={view.base} tenantName={tenant.name} resources={view.resources} />
+</BaseLayout>

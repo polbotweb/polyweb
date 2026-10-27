@@ -1,0 +1,19 @@
+---
+/** Réservation publique — consultation / annulation par lien signé (`?t=`). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import ManageView from "@/components/bookings/public/ManageView.astro";
+import { getBookingsPublicTranslations } from "@/modules/bookings/i18n/public";
+import { managePage, pageTenant } from "@/modules/bookings/public/pages";
+
+export const prerender = false;
+const tenant = await pageTenant(Astro);
+if (!tenant) return Astro.rewrite("/404");
+const view = await managePage(Astro, tenant);
+if (view instanceof Response) return view;
+const t = getBookingsPublicTranslations(view.locale);
+---
+<BaseLayout title={t.manageTitle} description={t.manageTitle} canonical={view.base}>
+  {/* same-origin : le jeton ne part jamais vers un tiers ; no-referrer enverrait « Origin: null » et ferait refuser le POST d’annulation. */}
+  <meta slot="head" name="referrer" content="same-origin" />
+  <ManageView {...view} />
+</BaseLayout>

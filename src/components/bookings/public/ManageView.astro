@@ -1,0 +1,48 @@
+---
+/** Consultation / annulation d'une réservation par son lien signé (visiteur). */
+import type { Locale } from "@i18n/config";
+import type { BookingDetail } from "@/modules/bookings/loaders/bookings.loader";
+import { getBookingsTranslations } from "@/modules/bookings/i18n";
+import { getBookingsPublicTranslations } from "@/modules/bookings/i18n/public";
+import { formatSlot } from "@/modules/bookings/public/format";
+import type { Notice } from "@/modules/bookings/public/pages";
+import { Button } from "@atoms/button";
+import PublicNotice from "./PublicNotice.astro";
+
+interface Props { locale: Locale; base: string; booking: BookingDetail | null; token: string; cancellable: boolean; notice: Notice; mailFailed: boolean }
+const { locale, base, booking, token, cancellable, notice, mailFailed } = Astro.props;
+const t = getBookingsPublicTranslations(locale);
+const statuses = getBookingsTranslations(locale).statuses;
+const tz = booking?.resource?.timezone ?? "UTC";
+---
+<section class="mx-auto grid max-w-3xl gap-6 px-4 py-12" aria-labelledby="manage-title">
+  <h1 id="manage-title" class="font-heading text-3xl font-semibold text-foreground">{t.manageTitle}</h1>
+  {notice && (
+    <PublicNotice kind={notice.kind} id="bk-notice">
+      <p>{t[notice.text]}</p>
+      {notice.text === "created" && <p>{mailFailed ? t.keepLink : t.emailSent}</p>}
+    </PublicNotice>
+  )}
+  {!booking ? (
+    <p class="text-foreground" data-testid="invalid-link">{t.invalidLink}</p>
+  ) : (
+    <>
+      <dl class="grid gap-x-6 gap-y-3 rounded-lg border-2 border-border p-5 text-foreground sm:grid-cols-[max-content_1fr]" data-testid="booking-summary">
+        <dt class="font-semibold">{t.reference}</dt><dd dir="ltr" class="text-start">{booking.number ?? booking.slug}</dd>
+        <dt class="font-semibold">{t.resource}</dt><dd>{booking.resource?.name ?? "—"}</dd>
+        <dt class="font-semibold">{t.when}</dt><dd>{formatSlot(booking.startsAt, booking.endsAt, tz, locale)}</dd>
+        <dt class="font-semibold">{t.partySize}</dt><dd>{booking.partySize}</dd>
+        <dt class="font-semibold">{t.status}</dt><dd data-testid="booking-status">{statuses[booking.status]}</dd>
+      </dl>
+      <p class="text-foreground">{t.keepLink}</p>
+      {cancellable ? (
+        <form method="post" class="grid gap-3">
+          <input type="hidden" name="t" value={token} />
+          <p id="bk-cancel-note" class="text-foreground">{t.cancelNote}</p>
+          <div><Button type="submit" aria-describedby="bk-cancel-note">{t.cancel}</Button></div>
+        </form>
+      ) : booking.status !== "CANCELLED" && <p class="text-foreground">{t.notCancellable}</p>}
+    </>
+  )}
+  <p><a href={base} class="text-foreground underline underline-offset-4 hover:no-underline">{t.back}</a></p>
+</section>

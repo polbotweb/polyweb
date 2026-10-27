@@ -1,0 +1,30 @@
+---
+/** Liste publique des ressources réservables d'un tenant. */
+import type { Locale } from "@i18n/config";
+import type { bookingsResources } from "@/modules/bookings/schema";
+import { getBookingsTranslations } from "@/modules/bookings/i18n";
+import { fill, getBookingsPublicTranslations } from "@/modules/bookings/i18n/public";
+
+interface Props { locale: Locale; base: string; tenantName: string | null; resources: readonly (typeof bookingsResources.$inferSelect)[] }
+const { locale, base, tenantName, resources } = Astro.props;
+const t = getBookingsPublicTranslations(locale);
+const kinds = getBookingsTranslations(locale).kinds;
+---
+<section class="mx-auto grid max-w-3xl gap-6 px-4 py-12" aria-labelledby="bookings-title">
+  <h1 id="bookings-title" class="font-heading text-3xl font-semibold text-foreground">{tenantName ? `${t.title} — ${tenantName}` : t.title}</h1>
+  <p class="text-lg text-foreground">{t.intro}</p>
+  {resources.length === 0 ? (
+    <p class="text-foreground">{t.noResources}</p>
+  ) : (
+    <ul class="grid gap-4" data-testid="booking-resources">
+      {resources.map((r) => (
+        <li class="rounded-lg border-2 border-border p-5">
+          <h2 class="text-xl font-semibold">
+            <a href={`${base}/${encodeURIComponent(r.code)}`} class="text-foreground underline underline-offset-4 hover:no-underline focus-visible:outline-3 focus-visible:outline-offset-2">{fill(t.bookResource, { name: r.name })}</a>
+          </h2>
+          <p class="mt-2 text-foreground">{kinds[r.kind]} · {fill(t.capacity, { n: r.capacity })} · {fill(t.slotLength, { n: r.slotMinutes })}</p>
+        </li>
+      ))}
+    </ul>
+  )}
+</section>

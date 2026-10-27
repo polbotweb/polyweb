@@ -1,0 +1,123 @@
+---
+/**
+ * Page publique d'une ressource : choix de la date (GET), créneaux libres (radios) et coordonnées
+ * du visiteur (POST, sans JS). Erreurs : récapitulatif lié aux champs + message par champ.
+ */
+import type { Locale } from "@i18n/config";
+import type { bookingsResources } from "@/modules/bookings/schema";
+import type { Interval } from "@/core/scheduling";
+import { formatZoned, zonedToUtc } from "@/core/scheduling";
+import type { GuestField } from "@/modules/bookings/domain/guest";
+import { BOOKING_HORIZON_DAYS } from "@/modules/bookings/domain/guest";
+import { getBookingsTranslations } from "@/modules/bookings/i18n";
+import { fill, getBookingsPublicTranslations } from "@/modules/bookings/i18n/public";
+import type { Notice } from "@/modules/bookings/public/pages";
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { Textarea } from "@atoms/textarea";
+import PublicNotice from "./PublicNotice.astro";
+
+interface Props {
+  locale: Locale; base: string; resource: typeof bookingsResources.$inferSelect;
+  day: { valid: boolean; date: string; range: { min: string; max: string }; slots: readonly Interval[] };
+  dateRequested: boolean; values: Record<string, string>; errors: readonly GuestField[]; notice: Notice; sent: boolean; timestamp: string;
+}
+const { locale, base, resource, day, dateRequested, values, errors, notice, sent, timestamp } = Astro.props;
+const t = getBookingsPublicTranslations(locale);
+const kinds = getBookingsTranslations(locale).kinds;
+const tz = resource.timezone;
+const has = (f: GuestField) => errors.includes(f);
+const errId = (f: GuestField) => `bk-${f}-error`;
+const describe = (f: GuestField, hint?: string) => [hint, has(f) ? errId(f) : undefined].filter(Boolean).join(" ") || undefined;
+const fieldTarget: Record<GuestField, string> = { customerName: "bk-customerName", customerEmail: "bk-customerEmail", customerPhone: "bk-customerPhone", partySize: "bk-partySize", notes: "bk-notes", slot: "bk-slot-0" };
+const dayLabel = day.valid ? formatZoned(zonedToUtc(day.date, "12:00", tz), tz, locale, { dateStyle: "full" }) : "";
+const time = (d: Date) => formatZoned(d, tz, locale, { timeStyle: "short" });
+const showSlots = day.valid && day.slots.length > 0;
+---
+<section class="mx-auto grid max-w-3xl gap-6 px-4 py-12" aria-labelledby="resource-title">
+  <p><a href={base} class="text-foreground underline underline-offset-4 hover:no-underline">{t.back}</a></p>
+  <h1 id="resource-title" class="font-heading text-3xl font-semibold text-foreground">{resource.name}</h1>
+  <p class="text-foreground">{kinds[resource.kind]} · {fill(t.capacity, { n: resource.capacity })} · {fill(t.slotLength, { n: resource.slotMinutes })}</p>
+
+  {sent && <PublicNotice kind="success"><p>{t.created}</p><p>{t.emailSent}</p></PublicNotice>}
+  {notice && notice.text !== "errorSummary" && <PublicNotice kind={notice.kind} id="bk-notice"><p>{t[notice.text]}</p></PublicNotice>}
+  {errors.length > 0 && (
+    <PublicNotice kind="error" id="bk-error-summary">
+      <h2 class="text-lg font-semibold">{t.errorSummary}</h2>
+      <ul class="mt-2 list-disc ps-6">
+        {errors.map((f) => <li><a href={`#${showSlots || f !== "slot" ? fieldTarget[f] : "bk-date"}`} class="underline underline-offset-4">{t.errors[f]}</a></li>)}
+      </ul>
+    </PublicNotice>
+  )}
+
+  <form method="get" class="grid gap-3 rounded-lg border-2 border-border p-5" aria-labelledby="bk-date-legend">
+    <h2 id="bk-date-legend" class="text-xl font-semibold text-foreground">{t.date}</h2>
+    <div class="flex flex-wrap items-end gap-3">
+      <div class="grid gap-2">
+        <Label for="bk-date">{t.date}</Label>
+        <Input id="bk-date" name="date" type="date" min={day.range.min} max={day.range.max} value={day.date} required aria-describedby={`bk-date-hint${dateRequested && !day.valid ? " bk-date-error" : ""}`} aria-invalid={dateRequested && !day.valid ? "true" : undefined} class="w-auto" />
+      </div>
+      <Button type="submit" variant="outline">{t.showSlots}</Button>
+    </div>
+    <p id="bk-date-hint" class="text-sm text-foreground">{fill(t.dateHint, { n: BOOKING_HORIZON_DAYS })} {fill(t.timezoneNote, { tz })}</p>
+    {dateRequested && !day.valid && <p id="bk-date-error" class="font-medium text-foreground">⚠ {fill(t.dateInvalid, { max: day.range.max })}</p>}
+  </form>
+
+  {day.valid && !showSlots && <p class="text-foreground" data-testid="no-slots">{t.noSlots}</p>}
+
+  {showSlots && (
+    <form method="post" class="grid gap-6" novalidate={false} data-testid="booking-form">
+      <input type="hidden" name="date" value={day.date} />
+      <fieldset class="grid gap-3 rounded-lg border-2 border-border p-5" aria-describedby={has("slot") ? errId("slot") : undefined}>
+        <legend class="px-1 text-xl font-semibold text-foreground">{fill(t.slotsLegend, { date: dayLabel })}</legend>
+        {has("slot") && <p id={errId("slot")} class="font-medium text-foreground">⚠ {t.errors.slot}</p>}
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {day.slots.map((slot, i) => (
+            <label for={`bk-slot-${i}`} class="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border-2 border-border px-3 py-2 text-foreground has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2">
+              <input type="radio" id={`bk-slot-${i}`} name="startsAt" value={slot.start.toISOString()} required checked={values.startsAt === slot.start.toISOString()} class="size-5" />
+              <span>{time(slot.start)} – {time(slot.end)}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset class="grid gap-4 rounded-lg border-2 border-border p-5">
+        <legend class="px-1 text-xl font-semibold text-foreground">{t.guestLegend}</legend>
+        <div class="grid gap-2">
+          <Label for="bk-customerName">{t.name} <span>({t.required})</span></Label>
+          <Input id="bk-customerName" name="customerName" type="text" autocomplete="name" required minlength={2} maxlength={120} value={values.customerName ?? ""} aria-invalid={has("customerName") ? "true" : undefined} aria-describedby={describe("customerName")} />
+          {has("customerName") && <p id={errId("customerName")} class="font-medium text-foreground">⚠ {t.errors.customerName}</p>}
+        </div>
+        <div class="grid gap-2">
+          <Label for="bk-customerEmail">{t.email} <span>({t.required})</span></Label>
+          <Input id="bk-customerEmail" name="customerEmail" type="email" autocomplete="email" required maxlength={254} value={values.customerEmail ?? ""} aria-invalid={has("customerEmail") ? "true" : undefined} aria-describedby={describe("customerEmail", "bk-customerEmail-hint")} />
+          <p id="bk-customerEmail-hint" class="text-sm text-foreground">{t.emailHint}</p>
+          {has("customerEmail") && <p id={errId("customerEmail")} class="font-medium text-foreground">⚠ {t.errors.customerEmail}</p>}
+        </div>
+        <div class="grid gap-2">
+          <Label for="bk-customerPhone">{t.phone} <span>({t.optional})</span></Label>
+          <Input id="bk-customerPhone" name="customerPhone" type="tel" autocomplete="tel" maxlength={30} dir="ltr" value={values.customerPhone ?? ""} aria-invalid={has("customerPhone") ? "true" : undefined} aria-describedby={describe("customerPhone", "bk-customerPhone-hint")} />
+          <p id="bk-customerPhone-hint" class="text-sm text-foreground">{t.phoneHint}</p>
+          {has("customerPhone") && <p id={errId("customerPhone")} class="font-medium text-foreground">⚠ {t.errors.customerPhone}</p>}
+        </div>
+        <div class="grid gap-2">
+          <Label for="bk-partySize">{t.party} <span>({t.required})</span></Label>
+          <Input id="bk-partySize" name="partySize" type="number" inputmode="numeric" min={1} max={resource.capacity} step={1} required value={values.partySize || "1"} class="w-32" aria-invalid={has("partySize") ? "true" : undefined} aria-describedby={describe("partySize", "bk-partySize-hint")} />
+          <p id="bk-partySize-hint" class="text-sm text-foreground">{fill(t.capacity, { n: resource.capacity })}</p>
+          {has("partySize") && <p id={errId("partySize")} class="font-medium text-foreground">⚠ {t.errors.partySize}</p>}
+        </div>
+        <div class="grid gap-2">
+          <Label for="bk-notes">{t.notes} <span>({t.optional})</span></Label>
+          <Textarea id="bk-notes" name="notes" rows={4} maxlength={1000} aria-invalid={has("notes") ? "true" : undefined} aria-describedby={describe("notes")} defaultValue={values.notes ?? ""} />
+          {has("notes") && <p id={errId("notes")} class="font-medium text-foreground">⚠ {t.errors.notes}</p>}
+        </div>
+      </fieldset>
+      <div class="sr-only" aria-hidden="true">
+        <label>Ne pas remplir<input type="text" name="_hp" tabindex="-1" autocomplete="off" /></label>
+      </div>
+      <input type="hidden" name="_ts" value={timestamp} />
+      <div><Button type="submit" size="lg">{t.submit}</Button></div>
+    </form>
+  )}
+</section>

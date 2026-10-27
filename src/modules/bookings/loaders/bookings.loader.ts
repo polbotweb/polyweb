@@ -38,6 +38,11 @@ export const bookingsLoader = {
     dbTry("bookings.resources", () => getDrizzle().select().from(bookingsResources)
       .where(and(tenant(bookingsResources.organizationId, organizationId), options.activeOnly ? eq(bookingsResources.active, true) : undefined)).orderBy(asc(bookingsResources.code))),
 
+  /** Ressource du tenant par son code (unique par tenant, normalisé en majuscules). */
+  resourceByCode: (code: string, organizationId: string | null) =>
+    dbTry("bookings.resource.byCode", () => getDrizzle().select().from(bookingsResources)
+      .where(and(eq(bookingsResources.code, code.trim().toUpperCase()), tenant(bookingsResources.organizationId, organizationId))).limit(1)).pipe(Effect.map(first)),
+
   /** Organisation d'une ressource (après garde de permission) ; `null` = plateforme ou introuvable. */
   resourceOrganization: (id: string) =>
     dbTry("bookings.resource.organization", () => getDrizzle().select({ organizationId: bookingsResources.organizationId }).from(bookingsResources).where(eq(bookingsResources.id, id)).limit(1))

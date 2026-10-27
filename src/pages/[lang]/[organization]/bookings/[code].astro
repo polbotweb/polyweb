@@ -1,0 +1,17 @@
+---
+/** Réservation publique — créneaux libres d'une ressource et formulaire visiteur (POST sans JS). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import ResourceView from "@/components/bookings/public/ResourceView.astro";
+import { fill, getBookingsPublicTranslations } from "@/modules/bookings/i18n/public";
+import { pageTenant, resourcePage } from "@/modules/bookings/public/pages";
+
+export const prerender = false;
+const tenant = await pageTenant(Astro);
+if (!tenant) return Astro.rewrite("/404");
+const view = await resourcePage(Astro, tenant);
+if (view instanceof Response) return view;
+const t = getBookingsPublicTranslations(view.locale);
+---
+<BaseLayout title={fill(t.bookResource, { name: view.resource.name })} description={t.intro}>
+  <ResourceView {...view} />
+</BaseLayout>

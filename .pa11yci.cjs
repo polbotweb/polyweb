@@ -65,6 +65,10 @@ for (const lang of locales) {
   // Post/category/tag detail pages are excluded here: they depend on seeded demo
   // content (pnpm db:seed-blog-demo) that CI does not run before this job.
   publicUrls.push(`${BASE}/${lang}/blog`);
+  // Public booking flow (route segment "bookings" is not localized). The resource
+  // A11YROOM is seeded by tests/a11y/setup.ts (open 24/7, so slots always render).
+  publicUrls.push(`${BASE}/${lang}/bookings`);
+  publicUrls.push(`${BASE}/${lang}/bookings/A11YROOM`);
   // Guest auth pages
   for (const pageId of ['sign-in', 'sign-up', 'forgot-password']) {
     publicUrls.push(`${BASE}/${lang}/auth/${authRoutes[pageId][lang]}`);

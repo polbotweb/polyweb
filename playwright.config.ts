@@ -51,6 +51,7 @@ export default defineConfig({
     // for the same determinism. Ensure port 4322 is free before running.
     reuseExistingServer: false,
     timeout: 180_000,
-    env: { NODE_ENV: 'test' },
+    // BOOKING_RATE_LIMIT : réservations publiques des 3 navigateurs (+ reprises) depuis la même IP.
+    env: { NODE_ENV: 'test', BOOKING_RATE_LIMIT: '100' },
   },
 });
