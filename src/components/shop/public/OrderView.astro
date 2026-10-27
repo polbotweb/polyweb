@@ -1,0 +1,52 @@
+---
+/** Suivi public d'une commande par lien signé (`?t=`) et reprise du paiement. */
+import type { Locale } from "@i18n/config";
+import type { Effect } from "effect";
+import type { Notice } from "@/modules/shop/public/pages";
+import type { publicOrder } from "@/modules/shop/public/flow";
+import { fill, getCheckoutTranslations } from "@/modules/shop/i18n/checkout";
+import { countryName, formatDateTime, formatMinor } from "@/modules/shop/public/format";
+import { SHIPPING_LINE_SKU } from "@/modules/shop/services/order.service";
+import { Button } from "@atoms/button";
+import PublicNotice from "@/components/bookings/public/PublicNotice.astro";
+
+interface Props { locale: Locale; found: Effect.Success<ReturnType<typeof publicOrder>>; token: string; notice: Notice; payable: boolean }
+const { locale, found, token, notice, payable } = Astro.props;
+const t = getCheckoutTranslations(locale);
+const order = found?.order;
+const money = (minor: number) => formatMinor(minor, order?.currency ?? "EUR", locale);
+---
+<section class="mx-auto grid max-w-3xl gap-6 px-4 py-12" aria-labelledby="order-title">
+  <h1 id="order-title" class="font-heading text-3xl font-semibold text-foreground">{order ? fill(t.orderTitle, { number: order.number }) : t.orderTitle.replace(/\s*\{number\}/, "")}</h1>
+  {notice && <PublicNotice kind={notice.kind} id="shop-notice"><p>{fill(t.notices[notice.text], { sku: notice.sku ?? "" })}</p></PublicNotice>}
+  {!found || !order ? (
+    <p class="text-foreground" data-testid="invalid-link">{t.invalidLink}</p>
+  ) : (
+    <>
+      <dl class="grid gap-x-6 gap-y-3 rounded-lg border-2 border-border p-5 text-foreground sm:grid-cols-[max-content_1fr]" data-testid="order-summary">
+        <dt class="font-semibold">{t.orderNumber}</dt><dd dir="ltr" class="text-start">{order.number}</dd>
+        <dt class="font-semibold">{t.status}</dt><dd data-testid="order-status">{t.statuses[order.status]}</dd>
+        <dt class="font-semibold">{t.placedOn}</dt><dd>{formatDateTime(order.createdAt, locale)}</dd>
+        <dt class="font-semibold">{t.deliverTo}</dt>
+        <dd>{order.customerName}<br />{order.addressLine1}{order.addressLine2 && <><br />{order.addressLine2}</>}<br />{order.postcode} {order.city}<br />{countryName(order.country, locale)}</dd>
+        <dt class="font-semibold">{t.shipping}</dt><dd>{t.shippingMethods[order.shippingMethod]} — {order.shippingMinor === 0 ? t.free : money(order.shippingMinor)}</dd>
+        <dt class="text-lg font-semibold">{t.gross}</dt><dd class="text-lg font-semibold">{money(order.grossMinor)}</dd>
+      </dl>
+      <section class="grid gap-2 text-foreground" aria-labelledby="order-items">
+        <h2 id="order-items" class="text-xl font-semibold">{t.itemsLegend}</h2>
+        <ul class="grid gap-1">
+          {found.lines.filter((line) => line.sku !== SHIPPING_LINE_SKU).map((line) => <li>{line.quantity} × {line.description} (<span dir="ltr">{line.sku}</span>) — {money(line.lineTotalMinor)}</li>)}
+        </ul>
+      </section>
+      {payable && (
+        <form method="post" class="grid gap-3" data-testid="pay-order">
+          <input type="hidden" name="t" value={token} />
+          <input type="hidden" name="intent" value="pay" />
+          <p id="order-pay-note" class="text-foreground">{fill(t.payDeadline, { date: formatDateTime(order.expiresAt, locale) })} {t.secureNote}</p>
+          <div><Button type="submit" aria-describedby="order-pay-note">{t.payNow}</Button></div>
+        </form>
+      )}
+    </>
+  )}
+  <p><a href={`/${locale}/shop`} class="text-foreground underline underline-offset-4 hover:no-underline">{t.continueShopping}</a></p>
+</section>

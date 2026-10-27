@@ -1,0 +1,29 @@
+---
+/** Back-office plateforme : commandes du Shop — filtres statut / recherche / période, pagination. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import AdminPagination from "@molecules/AdminPagination/AdminPagination.astro";
+import { requirePermission } from "@lib/auth-guards";
+import OrdersAdminList from "@/components/shop/admin/orders/OrdersAdminList.astro";
+import { ordersAdminList } from "@/modules/shop/admin/orders";
+import { getOrdersAdminTranslations } from "@/modules/shop/i18n/orders-admin";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { shop: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getOrdersAdminTranslations(locale);
+const view = await ordersAdminList(Astro);
+Astro.response.headers.set("cache-control", "private, no-store");
+---
+<BaseLayout title={t.title} description={t.title}>
+  <AuthLayout title={t.title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="orders" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <h1 class="text-2xl font-semibold">{t.title}</h1>
+      <OrdersAdminList locale={locale} baseUrl={`/${locale}/admin/orders`} {...view} />
+      {view.totalPages > 1 && <AdminPagination currentPage={view.page} totalPages={view.totalPages} baseUrl={Astro.url} />}
+    </main>
+  </AuthLayout>
+</BaseLayout>

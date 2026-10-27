@@ -3,11 +3,15 @@
  * Page de détail du domaine shop (catalogue).
  *
  * La DTO arrive par props : la page a fait appel au loader. Ce composant
- * n'interroge jamais la base. Pas de panier ni de stock ici : le transactionnel
- * reste hors CMS Core (TODO §19.3).
+ * n'interroge jamais la base. Si `cart` est fourni, chaque variante disponible a un formulaire
+ * « Ajouter au panier » (POST classique vers la page panier, sans JS) ; le stock est vérifié
+ * côté serveur par le module Shop (réservations Logistics).
  */
 import type { ProductOptionDTO, ProductPublicDTO, ProductVariantDTO } from "@/modules/shop/loaders/product.loader";
 import type { ShopTranslations } from "@/modules/shop/i18n";
+import type { CheckoutTranslations } from "@/modules/shop/i18n/checkout";
+import { fill } from "@/modules/shop/i18n/checkout";
+import { Button } from "@atoms/button";
 
 interface Props {
   item: ProductPublicDTO;
@@ -16,9 +20,10 @@ interface Props {
   t: ShopTranslations;
   formatPrice: (minor: number, currency: string) => string;
   backHref: string;
+  cart?: { action: string; t: CheckoutTranslations };
 }
 
-const { item, options, variants, t, formatPrice, backHref } = Astro.props as Props;
+const { item, options, variants, t, formatPrice, backHref, cart } = Astro.props as Props;
 const labelOf = new Map(options.flatMap((o) => o.values.map((v) => [v.id, v.label] as const)));
 const describe = (v: ProductVariantDTO) => v.valueIds.map((id) => labelOf.get(id)).filter(Boolean).join(" / ") || v.sku;
 ---
@@ -38,7 +43,20 @@ const describe = (v: ProductVariantDTO) => v.valueIds.map((id) => labelOf.get(id
               <td>{describe(v)}</td>
               <td>{v.sku}</td>
               <td>{formatPrice(v.priceMinor, v.currency)}</td>
-              <td>{v.available ? t.labels.available : t.labels.unavailable}</td>
+              <td>
+                {v.available ? t.labels.available : t.labels.unavailable}
+                {cart && v.available && (
+                  <form method="post" action={cart.action} class="mt-2 flex flex-wrap items-end gap-2" data-testid="add-to-cart">
+                    <input type="hidden" name="intent" value="add" />
+                    <input type="hidden" name="variantId" value={v.id} />
+                    <label class="grid gap-1 text-base">
+                      <span>{cart.t.quantity}<span class="sr-only"> — {fill(cart.t.addQuantity, { name: `${item.title} ${describe(v)}` })}</span></span>
+                      <input name="quantity" type="number" inputmode="numeric" min="1" max="99" step="1" value="1" required class="h-11 w-20 rounded-md border-2 border-border bg-background px-3 text-base text-foreground" />
+                    </label>
+                    <Button type="submit">{cart.t.addToCart}<span class="sr-only"> — {describe(v)}</span></Button>
+                  </form>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

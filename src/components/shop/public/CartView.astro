@@ -1,0 +1,70 @@
+---
+/** Panier public : lignes modifiables (formulaires sans JS), total TTC, accès à la commande. */
+import type { Locale } from "@i18n/config";
+import type { CartView } from "@/modules/shop/services/cart.service";
+import type { Notice } from "@/modules/shop/public/pages";
+import { fill, getCheckoutTranslations } from "@/modules/shop/i18n/checkout";
+import { formatMinor } from "@/modules/shop/public/format";
+import { shopPaths } from "@/modules/shop/public/flow";
+import { Button } from "@atoms/button";
+import PublicNotice from "@/components/bookings/public/PublicNotice.astro";
+
+interface Props { locale: Locale; view: CartView; notice: Notice }
+const { locale, view, notice } = Astro.props;
+const t = getCheckoutTranslations(locale);
+const money = (minor: number) => formatMinor(minor, view.currency ?? "EUR", locale);
+const stockLabel = (line: CartView["lines"][number]) =>
+  !line.purchasable || (line.available !== null && line.available < line.quantity) ? t.notOrderable
+    : line.available === null ? t.notTracked : line.available <= 5 ? fill(t.lowStock, { n: String(line.available) }) : t.inStock;
+---
+<section class="mx-auto grid max-w-4xl gap-6 px-4 py-12" aria-labelledby="cart-title">
+  <h1 id="cart-title" class="font-heading text-3xl font-semibold text-foreground">{t.cart}</h1>
+  {notice && <PublicNotice kind={notice.kind} id="shop-notice"><p>{fill(t.notices[notice.text], { sku: notice.sku ?? "" })}</p></PublicNotice>}
+  {view.lines.length === 0 ? (
+    <p class="text-foreground" data-testid="empty-cart">{t.emptyCart}</p>
+  ) : (
+    <>
+      <p class="text-foreground">{t.cartIntro}</p>
+      <ul class="grid gap-4" data-testid="cart-lines">
+        {view.lines.map((line) => {
+          const qtyId = `qty-${line.lineId}`;
+          const stockId = `stock-${line.lineId}`;
+          return (
+            <li class="grid gap-3 rounded-lg border-2 border-border p-4 text-foreground sm:grid-cols-[1fr_auto]">
+              <div class="grid gap-1">
+                <h2 class="text-lg font-semibold"><a href={`/${locale}/shop/${line.productSlug}`} class="underline underline-offset-4 hover:no-underline">{line.productTitle}</a></h2>
+                <p><span class="font-semibold">SKU</span> <span dir="ltr">{line.sku}</span> — {t.unitPrice} {formatMinor(line.unitPriceMinor, line.currency, locale)}</p>
+                <p id={stockId}>{stockLabel(line)}</p>
+                <p><span class="font-semibold">{t.lineTotal}</span> {formatMinor(line.lineTotalMinor, line.currency, locale)}</p>
+              </div>
+              <div class="flex flex-wrap items-end gap-3">
+                <form method="post" class="flex items-end gap-2">
+                  <input type="hidden" name="intent" value="update" />
+                  <input type="hidden" name="lineId" value={line.lineId} />
+                  <div class="grid gap-1">
+                    <label for={qtyId} class="text-base font-medium">{t.quantity}<span class="sr-only"> — {line.productTitle}</span></label>
+                    <input id={qtyId} name="quantity" type="number" inputmode="numeric" min="0" max="99" step="1" value={String(line.quantity)} required aria-describedby={stockId} class="h-11 w-24 rounded-md border-2 border-border bg-background px-3 text-base text-foreground" />
+                  </div>
+                  <Button type="submit" variant="outline">{t.update}</Button>
+                </form>
+                <form method="post">
+                  <input type="hidden" name="intent" value="remove" />
+                  <input type="hidden" name="lineId" value={line.lineId} />
+                  <Button type="submit" variant="outline" aria-label={fill(t.removeLine, { name: line.productTitle })}>{t.remove}</Button>
+                </form>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <div class="grid gap-2 rounded-lg border-2 border-border p-5 text-foreground">
+        <p class="text-xl font-semibold" data-testid="cart-total">{t.total} : {money(view.totalMinor)}</p>
+        <p>{t.totalNote}</p>
+        {view.orderable
+          ? <p><a href={shopPaths.checkout(locale)} class="inline-flex min-h-11 items-center rounded-md bg-primary px-5 font-semibold text-primary-foreground underline-offset-4 hover:underline focus-visible:outline-3 focus-visible:outline-offset-2" data-testid="to-checkout">{t.checkout}</a></p>
+          : <p class="font-medium">⚠ {t.notices.unavailable}</p>}
+      </div>
+    </>
+  )}
+  <p><a href={`/${locale}/shop`} class="text-foreground underline underline-offset-4 hover:no-underline">{t.continueShopping}</a></p>
+</section>

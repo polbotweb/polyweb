@@ -1,0 +1,16 @@
+---
+/** Tunnel de commande public : adresse, livraison, TVA, puis paiement (core payments). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import CheckoutView from "@/components/shop/public/CheckoutView.astro";
+import { getCheckoutTranslations } from "@/modules/shop/i18n/checkout";
+import { checkoutPage } from "@/modules/shop/public/pages";
+import { shopPaths } from "@/modules/shop/public/flow";
+
+export const prerender = false;
+const view = await checkoutPage(Astro);
+if (view instanceof Response) return view;
+const t = getCheckoutTranslations(view.locale);
+---
+<BaseLayout title={t.checkoutTitle} description={t.checkoutTitle} canonical={new URL(shopPaths.checkout(view.locale), Astro.url.origin).href}>
+  <CheckoutView {...view} />
+</BaseLayout>
