@@ -15,6 +15,9 @@ import { FINAL_STATUSES, isEditable, nextStatuses } from "@/modules/bookings/dom
 import { getBookingsTranslations } from "@/modules/bookings/i18n";
 import { loadBooking } from "@/modules/bookings/loaders";
 import { hasBookingsPermission } from "@/modules/bookings/permissions";
+import { BOOKING_PAYMENT_PURPOSE } from "@/modules/bookings/payments";
+import RefundPanel from "@/components/refunds/RefundPanel.astro";
+import { refundPanelView } from "@/core/refunds/admin";
 
 export const prerender = false;
 const result = await requirePermission(Astro, { bookings: ["read"] });
@@ -34,6 +37,8 @@ const deposit = b.depositMinor > 0
     ? t.admin.depositPaid.split("{date}").join(formatZoned(b.depositPaidAt, zone, locale))
     : t.admin.depositUnpaid.split("{date}").join(b.paymentDueAt ? formatZoned(b.paymentDueAt, zone, locale) : t.admin.none)}`
   : null;
+const refundView = await refundPanelView(Astro, `${BOOKING_PAYMENT_PURPOSE}:${b.id}`);
+if (refundView) Astro.response.headers.set("cache-control", "private, no-store");
 const when = `${formatZoned(b.startsAt, zone, locale)} – ${localTime(b.endsAt, zone)} (${zone})`;
 ---
 <BaseLayout title={label} description={t.meta.description}>
@@ -74,6 +79,7 @@ const when = `${formatZoned(b.startsAt, zone, locale)} – ${localTime(b.endsAt,
           </div>
         </section>
       )}
+      {refundView && <RefundPanel locale={locale} view={refundView} defaultReason="cancellation" />}
     </main>
   </AuthLayout>
 </BaseLayout>

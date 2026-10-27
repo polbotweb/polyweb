@@ -8,6 +8,7 @@
  *   d'idempotence `payment_events` (provider, event_id), verrou `FOR UPDATE` du paiement,
  *   contrôle montant/devise, transition d'état, réaction du module propriétaire.
  * - `expireDuePayments` : passe `expired` les paiements échus (cron) et prévient le module.
+ * - Événements `refund` : délégués à core/refunds (`setRefundEventSink`).
  *
  * Montants : `Money` (core/money). Secrets : environnement uniquement (`PaymentGateway`).
  */
@@ -26,6 +27,7 @@ import { PaymentAmountMismatchError, PaymentsUnavailableError, UnsupportedAmount
 import { PaymentGateway } from './gateway';
 import type { PaymentEventKind, PaymentProvider, VerifiedPaymentEvent } from './provider';
 import { paymentPurpose, registeredPaymentHandlers, type PaymentPurposeHandler } from './purposes';
+import { dispatchRefundEvent, type RefundEventOutcome } from './refund-sink';
 import { formatReference, parseReference } from './reference';
 import { canTransitionPayment } from './transitions';
 
@@ -156,11 +158,15 @@ export const startPaymentIntent = (input: Omit<StartCheckoutInput, 'successUrl' 
 
 export type WebhookResult =
   | { readonly status: 'ignored' | 'duplicate' | 'unmatched'; readonly eventId: string }
+  | { readonly status: 'refund'; readonly eventId: string; readonly outcome: RefundEventOutcome | 'ignored' }
   | { readonly status: 'applied' | 'unchanged'; readonly eventId: string; readonly payment: Payment };
 
-const TARGET: Record<Exclude<PaymentEventKind, 'ignored'>, PaymentStatus> = { succeeded: 'paid', failed: 'failed', expired: 'expired', refunded: 'refunded' };
+type TransitionKind = Exclude<PaymentEventKind, 'ignored' | 'refund'>;
 
-const lockPaymentFor = (tx: DbTransaction, provider: PaymentProvider, event: VerifiedPaymentEvent) => {
+const TARGET: Record<TransitionKind, PaymentStatus> = { succeeded: 'paid', failed: 'failed', expired: 'expired' };
+
+/** Verrouille (`FOR UPDATE`) le paiement désigné par un événement fournisseur (exposé pour core/refunds). */
+export const lockPaymentFor = (tx: DbTransaction, provider: PaymentProvider, event: VerifiedPaymentEvent) => {
   const keys = [
     event.paymentId ? eq(payments.id, event.paymentId) : undefined,
     event.providerPaymentId ? eq(payments.providerPaymentId, event.providerPaymentId) : undefined,
@@ -170,11 +176,11 @@ const lockPaymentFor = (tx: DbTransaction, provider: PaymentProvider, event: Ver
   return dbTry('payments.lockForEvent', () => tx.select().from(payments).where(and(eq(payments.provider, provider.name), or(...keys))).limit(1).for('update')).pipe(Effect.map(([row]) => row));
 };
 
-const reactionOf = (handler: PaymentPurposeHandler | undefined, kind: PaymentEventKind) =>
-  kind === 'succeeded' ? handler?.onSucceeded : kind === 'failed' ? handler?.onFailed : kind === 'expired' ? handler?.onExpired : kind === 'refunded' ? handler?.onRefunded : undefined;
+const reactionOf = (handler: PaymentPurposeHandler | undefined, kind: TransitionKind) =>
+  kind === 'succeeded' ? handler?.onSucceeded : kind === 'failed' ? handler?.onFailed : handler?.onExpired;
 
 /** Transition + réaction du module, dans `tx` (paiement déjà verrouillé). */
-const applyTransition = (tx: DbTransaction, payment: Payment, kind: Exclude<PaymentEventKind, 'ignored'>, extra: { providerPaymentId?: string | null; now: Date }) =>
+const applyTransition = (tx: DbTransaction, payment: Payment, kind: TransitionKind, extra: { providerPaymentId?: string | null; now: Date }) =>
   Effect.gen(function* () {
     const to = TARGET[kind];
     if (payment.status === to || !canTransitionPayment(payment.status, to)) return { changed: false as const, payment };
@@ -189,25 +195,37 @@ const applyTransition = (tx: DbTransaction, payment: Payment, kind: Exclude<Paym
     return { changed: true as const, payment: updated };
   });
 
-const AUDIT = { succeeded: 'PAYMENT_PAID', failed: 'PAYMENT_FAILED', expired: 'PAYMENT_EXPIRED', refunded: 'PAYMENT_REFUND' } as const;
+const AUDIT = { succeeded: 'PAYMENT_PAID', failed: 'PAYMENT_FAILED', expired: 'PAYMENT_EXPIRED' } as const;
 
-const announce = (payment: Payment, kind: Exclude<PaymentEventKind, 'ignored'>, source: string) =>
+const announce = (payment: Payment, kind: TransitionKind, source: string) =>
   Effect.gen(function* () {
     yield* logAuditEventEffect({ action: AUDIT[kind], resource: 'payment', resourceId: payment.id, metadata: { reference: payment.reference, source } });
     if (kind === 'succeeded') yield* emitEventEffect('payment.succeeded', { paymentId: payment.id, reference: payment.reference, amount: payment.amount, currency: payment.currency });
     if (kind === 'failed') yield* emitEventEffect('payment.failed', { paymentId: payment.id, reference: payment.reference });
   });
 
+/**
+ * Trace d'idempotence d'un événement fournisseur, dans `tx` : renvoie l'id de la trace, ou
+ * `null` si l'événement a déjà été traité (rejeu). Exposé pour core/refunds.
+ */
+export const recordPaymentEvent = (tx: DbTransaction, provider: PaymentProvider, event: VerifiedPaymentEvent) =>
+  dbTry('payments.event.insert', () =>
+    tx.insert(paymentEvents).values({ provider: provider.name, eventId: event.eventId, type: event.type }).onConflictDoNothing().returning({ id: paymentEvents.id })).pipe(Effect.map((rows) => rows[0]?.id ?? null));
+
+/** Rattache une trace d'événement à son paiement. */
+export const linkPaymentEvent = (tx: DbTransaction, traceId: string, paymentId: string) =>
+  dbTry('payments.event.link', () => tx.update(paymentEvents).set({ paymentId }).where(eq(paymentEvents.id, traceId))).pipe(Effect.asVoid);
+
 /** Applique un événement déjà vérifié (exposé pour les tests et l'outillage). */
 export const applyVerifiedEvent = (provider: PaymentProvider, event: VerifiedPaymentEvent, now = new Date()) =>
   Effect.gen(function* () {
     if (event.kind === 'ignored') return { status: 'ignored', eventId: event.eventId } satisfies WebhookResult as WebhookResult;
+    // Remboursements : idempotence, plafond et réactions des modules portés par core/refunds.
+    if (event.kind === 'refund') return { status: 'refund', eventId: event.eventId, outcome: yield* dispatchRefundEvent(provider, event) } satisfies WebhookResult as WebhookResult;
     const kind = event.kind;
     const result = yield* dbTransaction('payments.webhook', (tx) =>
       Effect.gen(function* () {
-        const inserted = yield* dbTry('payments.event.insert', () =>
-          tx.insert(paymentEvents).values({ provider: provider.name, eventId: event.eventId, type: event.type }).onConflictDoNothing().returning({ id: paymentEvents.id }));
-        const trace = inserted[0];
+        const trace = yield* recordPaymentEvent(tx, provider, event);
         if (!trace) return { status: 'duplicate', eventId: event.eventId } satisfies WebhookResult as WebhookResult;
         const payment = yield* lockPaymentFor(tx, provider, event);
         if (!payment) return { status: 'unmatched', eventId: event.eventId } satisfies WebhookResult as WebhookResult;
@@ -215,7 +233,7 @@ export const applyVerifiedEvent = (provider: PaymentProvider, event: VerifiedPay
           return yield* new PaymentAmountMismatchError({ expected: payment.amount, received: event.amount?.amountMinor ?? -1, currency: payment.currency });
         }
         const applied = yield* applyTransition(tx, payment, kind, { providerPaymentId: event.providerPaymentId, now });
-        yield* dbTry('payments.event.link', () => tx.update(paymentEvents).set({ paymentId: payment.id }).where(eq(paymentEvents.id, trace.id)));
+        yield* linkPaymentEvent(tx, trace, payment.id);
         return { status: applied.changed ? 'applied' : 'unchanged', eventId: event.eventId, payment: applied.payment } satisfies WebhookResult as WebhookResult;
       }));
     if (result.status === 'applied') yield* announce(result.payment, kind, event.type);

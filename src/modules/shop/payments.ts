@@ -7,7 +7,7 @@
  * - Paiement reçu sur une commande annulée : `paidAt` enregistré, anomalie journalisée
  *   (remboursement à traiter). Idempotent : un second webhook ne refait rien.
  * - Expiré → PENDING_PAYMENT passe EXPIRED, stock libéré.
- * - Remboursé → REFUNDED (le retour en stock reste une décision manuelle Logistics).
+ * - Remboursements : core/refunds (voir ./refunds.ts — remise en stock, REFUNDED).
  * - Balayage (cron payments-expire) : commandes échues sans webhook, réservations échues,
  *   paniers invités abandonnés.
  */
@@ -57,17 +57,6 @@ const markExpired = (tx: DbTransaction, _payment: Payment, orderId: string) =>
     yield* logisticsStockPort.releaseReservations(tx, reservationReference(orderId));
   });
 
-const markRefunded = (tx: DbTransaction, payment: Payment, orderId: string) =>
-  Effect.gen(function* () {
-    const order = yield* lockOrder(tx, orderId);
-    if (!order) return;
-    if (!canTransition(orderWorkflow, order.status, "REFUNDED")) {
-      if (order.status !== "REFUNDED") yield* Effect.logWarning("[shop] remboursement sur une commande non remboursable", { orderId, status: order.status, paymentId: payment.id });
-      return;
-    }
-    yield* dbTry("shop.payment.refund", () => tx.update(orders).set({ status: "REFUNDED" }).where(eq(orders.id, orderId)));
-  });
-
 /** Filet de sécurité : commandes échues sans webhook, réservations échues, paniers abandonnés. */
 export const sweepShopOrders = (now: Date = new Date()) =>
   Effect.gen(function* () {
@@ -81,4 +70,4 @@ export const sweepShopOrders = (now: Date = new Date()) =>
   });
 
 export const registerShopPayments = () =>
-  registerPaymentPurpose({ purpose: SHOP_ORDER_PAYMENT_PURPOSE, onSucceeded: markPaid, onExpired: markExpired, onRefunded: markRefunded, sweep: sweepShopOrders });
+  registerPaymentPurpose({ purpose: SHOP_ORDER_PAYMENT_PURPOSE, onSucceeded: markPaid, onExpired: markExpired, sweep: sweepShopOrders });

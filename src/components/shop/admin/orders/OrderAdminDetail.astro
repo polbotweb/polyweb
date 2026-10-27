@@ -13,10 +13,12 @@ import { Input } from "@atoms/input";
 import { Label } from "@atoms/label";
 import PublicNotice from "@/components/bookings/public/PublicNotice.astro";
 import { ScrollRegion } from "@molecules/ScrollRegion";
+import RefundPanel from "@/components/refunds/RefundPanel.astro";
+import type { RefundPanelView } from "@/core/refunds/admin";
 
 interface Line { id: string; sku: string; description: string; quantity: number; unitPriceMinor: number; lineTotalMinor: number }
-interface Props { locale: Locale; baseUrl: string; order: OrderRow; lines: readonly Line[]; canUpdate: boolean; notice: AdminNotice }
-const { locale, baseUrl, order, lines, canUpdate, notice } = Astro.props;
+interface Props { locale: Locale; baseUrl: string; order: OrderRow; lines: readonly Line[]; canUpdate: boolean; notice: AdminNotice; refunds: RefundPanelView | null }
+const { locale, baseUrl, order, lines, canUpdate, notice, refunds } = Astro.props;
 const t = getOrdersAdminTranslations(locale);
 const ct = getCheckoutTranslations(locale);
 const money = (minor: number) => formatMinor(minor, order.currency, locale);
@@ -94,4 +96,5 @@ const when = (d: Date | null) => (d ? formatDateTime(d, locale) : "—");
       <div><Button type="submit">{t.saveLinks}</Button></div>
     </form>
   )}
+  {refunds && <RefundPanel locale={locale} view={refunds} defaultReason="return" />}
 </div>

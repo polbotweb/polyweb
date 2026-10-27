@@ -10,13 +10,14 @@ import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { dbTry } from "@/lib/effect/run";
 import { dbTransaction, type DbTransaction } from "@/lib/effect/transaction";
-import { fail } from "@/lib/effect/action";
+import { fail } from "@/lib/effect/failure";
 import { canTransition } from "@/core/workflow";
 import { assignDocumentNumber } from "@/core/numbering";
-import { parseCurrency } from "@/core/money";
+import { allocate, parseCurrency } from "@/core/money";
 import type { LockOwner } from "@/core/locks/policy";
 import { taxActiveRates } from "@/modules/tax/loaders/tax-rate-admin.loader";
-import type { CustomerType, SupplyType } from "@/modules/tax/domain/rules";
+import type { CustomerType, SupplyType, TaxCategory } from "@/modules/tax/domain/rules";
+import type { TaxRateEntry } from "@/modules/tax/domain/rates";
 import { sales, salesDocumentLines, salesDocumentRevisions, salesPayments, salesReminders } from "../schema";
 import { salesLock } from "../locks";
 import { DERIVED_SALES_STATUSES, isLocked, workflowFor, type SalesDocumentKind, type SalesStatus } from "../domain/workflow";
@@ -68,8 +69,11 @@ const required = (executor: Executor, id: string, forUpdate = false) =>
 export const salesLinesOf = (executor: Executor, documentId: string) =>
   dbTry("sales.lines", () => executor.select().from(salesDocumentLines).where(eq(salesDocumentLines.documentId, documentId)).orderBy(asc(salesDocumentLines.position)));
 
-const revision = (executor: Executor, row: SalesDocumentRow, authorId: string, note: string) =>
-  dbTry("sales.revision", () => executor.insert(salesDocumentRevisions).values({ resourceId: row.id, authorId, title: row.title, slug: row.slug, status: row.status, number: row.number, grossMinor: row.grossMinor, note }));
+/** Révision d'un document ; ignorée pour une écriture système (sans auteur, tracée par l'audit). */
+const revision = (executor: Executor, row: SalesDocumentRow, authorId: string | null, note: string) =>
+  authorId === null
+    ? Effect.void
+    : dbTry("sales.revision", () => executor.insert(salesDocumentRevisions).values({ resourceId: row.id, authorId, title: row.title, slug: row.slug, status: row.status, number: row.number, grossMinor: row.grossMinor, note })).pipe(Effect.asVoid);
 
 const tenantRates = (organizationId: string | null) =>
   Effect.map(Effect.all([taxActiveRates(null), organizationId ? taxActiveRates(organizationId) : Effect.succeed([])]), ([platform, own]) => [...own, ...platform]);
@@ -83,10 +87,10 @@ const toLineInput = (line: SalesLineRow): SalesLineInput => ({
 });
 
 /** Totaux + lignes calculées pour un document et une date (taux du tenant puis taux par défaut). */
-const price = (party: SalesPartyInput & { readonly kind: SalesDocumentKind; readonly organizationId: string | null }, lines: readonly SalesLineInput[], date: string) =>
+const price = (party: SalesPartyInput & { readonly kind: SalesDocumentKind; readonly organizationId: string | null }, lines: readonly SalesLineInput[], date: string, preloadedRates?: readonly TaxRateEntry[]) =>
   Effect.gen(function* () {
     const currency = yield* parseCurrency(party.currency);
-    const rates = yield* tenantRates(party.organizationId);
+    const rates = preloadedRates ?? (yield* tenantRates(party.organizationId));
     return yield* computeSalesTotals({
       kind: party.kind,
       currency,
@@ -151,7 +155,7 @@ const partyOf = (row: SalesDocumentRow): SalesPartyInput => ({ ...row });
 
 const draftSlug = (kind: SalesDocumentKind) => `${kind.replace("_", "-")}-${crypto.randomUUID().slice(0, 8)}`;
 
-const insertDraft = (executor: Executor, input: SalesDocumentInput & { readonly sourceDocumentId?: string | null }, authorId: string, date: string) =>
+const insertDraft = (executor: Executor, input: SalesDocumentInput & { readonly sourceDocumentId?: string | null }, authorId: string | null, date: string) =>
   Effect.gen(function* () {
     const priced = yield* price(input, input.lines, date);
     const [row] = yield* dbTry("sales.create", () =>
@@ -194,6 +198,99 @@ const issue = (tx: DbTransaction, row: SalesDocumentRow, to: SalesStatus, today:
     const [updated] = yield* dbTry("sales.issue", () =>
       tx.update(sales).set({ ...totalsColumns(priced), status: to, number, issueDate: today, dueDate }).where(eq(sales.id, row.id)).returning());
     return updated;
+  });
+
+// ─── Avoirs de remboursement (core/refunds) ─────────────────────────
+
+const refundLine = (invoice: SalesDocumentRow, taxCategory: TaxCategory, unitPriceMinor: number): SalesLineInput => ({
+  description: "Remboursement" + (invoice.number ? " — facture " + invoice.number : ""), quantity: "1", unitPriceMinor, discountPercent: "0", taxCategory,
+});
+
+/**
+ * Lignes d'un avoir dont le TTC vaut exactement `amountMinor` (en vigueur à `today`), ou null si
+ * ce montant n'est pas atteignable (arrondi de TVA : certains TTC n'existent pas pour un HT entier).
+ * Total sans avoir antérieur → copie intégrale des lignes ; sinon une ligne par catégorie de taxe,
+ * TTC réparti au prorata de la facture (plus fort reste), HT trouvé par dichotomie (TTC croissant en HT).
+ */
+const refundCreditPlan = (executor: Executor, invoice: SalesDocumentRow, amountMinor: number, today: string) =>
+  Effect.gen(function* () {
+    const party = { ...partyOf(invoice), kind: "credit_note" as const, organizationId: invoice.organizationId };
+    const rates = yield* tenantRates(invoice.organizationId);
+    const grossOf = (lines: readonly SalesLineInput[]) => Effect.map(price(party, lines, today, rates), (priced) => priced.totals.gross.amountMinor);
+    const invoiceLines = yield* salesLinesOf(executor, invoice.id);
+    if (invoiceLines.length === 0 || !Number.isSafeInteger(amountMinor) || amountMinor <= 0) return null;
+    if (invoice.creditedMinor === 0 && amountMinor === invoice.grossMinor) {
+      const copy = invoiceLines.map(toLineInput);
+      if ((yield* grossOf(copy)) === amountMinor) return copy;
+    }
+    const weights = new Map<TaxCategory, number>();
+    for (const line of invoiceLines) {
+      const weight = Math.max(0, line.netMinor) * (10_000 + Math.round(Number(line.ratePercent) * 100));
+      weights.set(line.taxCategory, (weights.get(line.taxCategory) ?? 0) + weight);
+    }
+    const categories = [...weights.entries()].filter(([, w]) => w > 0).sort((a, b) => a[1] - b[1]);
+    if (categories.length === 0) return null;
+    const currency = yield* parseCurrency(invoice.currency);
+    const targets = yield* allocate({ amountMinor, currency }, categories.map(([, w]) => w));
+    const lines: SalesLineInput[] = [];
+    let carry = 0;
+    for (const [index, [category]] of categories.entries()) {
+      const target = targets[index]!.amountMinor + carry;
+      // Plus grand HT dont le TTC ne dépasse pas la cible ; le reste passe à la catégorie suivante.
+      let low = 0;
+      let high = target;
+      while (low < high) {
+        const mid = Math.ceil((low + high) / 2);
+        if ((yield* grossOf([refundLine(invoice, category, mid)])) <= target) low = mid;
+        else high = mid - 1;
+      }
+      const reached = low > 0 ? yield* grossOf([refundLine(invoice, category, low)]) : 0;
+      carry = target - reached;
+      if (low > 0) lines.push(refundLine(invoice, category, low));
+    }
+    if (carry !== 0 || lines.length === 0) return null;
+    return (yield* grossOf(lines)) === amountMinor ? lines : null;
+  });
+
+/** Restant créditable d'une facture et faisabilité d'un avoir de remboursement exact. */
+export const checkRefundCredit = (executor: Executor, invoiceId: string, amountMinor: number, today = salesToday()) =>
+  Effect.gen(function* () {
+    const invoice = yield* findById(executor, invoiceId);
+    if (!invoice || invoice.kind !== "invoice") return { ok: false as const, reason: "not_invoice" };
+    if (!CREDITABLE_INVOICE_STATUSES.includes(invoice.status)) return { ok: false as const, reason: "status:" + invoice.status };
+    if (amountMinor > invoice.grossMinor - invoice.creditedMinor) return { ok: false as const, reason: "exceeds_creditable" };
+    if (amountMinor > invoice.paidMinor) return { ok: false as const, reason: "exceeds_paid" };
+    const plan = yield* refundCreditPlan(executor, invoice, amountMinor, today);
+    return plan ? { ok: true as const, invoice } : { ok: false as const, reason: "unreachable_amount" };
+  });
+
+/**
+ * Avoir émis + remboursement enregistré (encaissement négatif `card`, référence = remboursement),
+ * dans la transaction appelante. Montant inatteignable exactement → avoir laissé en brouillon
+ * (copie des lignes, à ajuster par l'administration) et `issued: false`.
+ */
+export const issueRefundCreditNote = (tx: DbTransaction, invoiceId: string, input: { readonly amountMinor: number; readonly refundId: string; readonly authorId: string | null; readonly paidAt: string }, today = salesToday()) =>
+  Effect.gen(function* () {
+    const invoice = yield* required(tx, invoiceId, true);
+    if (invoice.kind !== "invoice" || !CREDITABLE_INVOICE_STATUSES.includes(invoice.status)) return yield* fail("BAD_REQUEST", "Facture non créditable (" + invoice.status + ").");
+    const [existing] = yield* dbTry("sales.refund.payment.find", () =>
+      tx.select({ id: salesPayments.id }).from(salesPayments).where(and(eq(salesPayments.documentId, invoice.id), eq(salesPayments.reference, input.refundId))).limit(1));
+    if (existing) return { creditNote: null, issued: false, duplicate: true };
+    const plan = yield* refundCreditPlan(tx, invoice, input.amountMinor, today);
+    const title = "Avoir — remboursement" + (invoice.number ? " " + invoice.number : "");
+    const lines = plan ?? (yield* salesLinesOf(tx, invoice.id)).map(toLineInput);
+    const draft = yield* insertDraft(tx, { ...partyOf(invoice), title, kind: "credit_note", organizationId: invoice.organizationId, lines, sourceDocumentId: invoice.id, validUntil: null }, input.authorId, today);
+    if (!plan) return { creditNote: draft, issued: false, duplicate: false };
+    const creditNote = yield* issue(tx, draft, NUMBERED_AT.credit_note, today);
+    yield* revision(tx, creditNote, input.authorId, "Émis (remboursement " + input.refundId + ")");
+    const credited = yield* required(tx, invoice.id, true);
+    yield* dbTry("sales.refund.payment", () =>
+      tx.insert(salesPayments).values({ documentId: invoice.id, organizationId: invoice.organizationId, amountMinor: -input.amountMinor, currency: invoice.currency, method: "card", paidAt: input.paidAt, reference: input.refundId, createdBy: input.authorId }));
+    const paidMinor = credited.paidMinor - input.amountMinor;
+    const status = invoiceStatusFromBalance({ grossMinor: credited.grossMinor, paidMinor, creditedMinor: credited.creditedMinor });
+    const [row] = yield* dbTry("sales.refund.apply", () => tx.update(sales).set({ paidMinor, status }).where(eq(sales.id, invoice.id)).returning());
+    yield* revision(tx, row, input.authorId, "Remboursement " + input.amountMinor);
+    return { creditNote, issued: true, duplicate: false };
   });
 
 export const salesService = {

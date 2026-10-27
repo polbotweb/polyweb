@@ -6,6 +6,9 @@
  * - Idempotence : clé `checkout:<paymentId>` / `intent:<paymentId>` (un rejeu ne crée
  *   jamais un second objet chez Stripe).
  * - Webhook : `Stripe.webhooks.constructEvent` sur le corps BRUT, tolérance 300 s.
+ * - Remboursements (core/refunds) : `refunds.create` avec montant explicite, métadonnées
+ *   `refund_id`/`payment_id`, clé `refund:<refundId>` ; événements `refund.created|updated|failed`
+ *   normalisés en `kind = 'refund'` (`charge.refunded` est ignoré : doublon de `refund.*`).
  * - Montants : unités mineures ISO 4217 (core/money) converties en unités Stripe
  *   (ISK à 2 décimales chez Stripe, devises à 3 décimales multiples de 10).
  *
@@ -16,13 +19,13 @@ import Stripe from 'stripe';
 import { Duration, Effect } from 'effect';
 import { currencyExponent, isCurrencyCode, type Money } from '@/core/money';
 import { PaymentProviderError, UnsupportedAmountError, WebhookSignatureError } from './errors';
-import type { PaymentEventKind, PaymentProvider, ProviderTenantOptions, VerifiedPaymentEvent } from './provider';
+import type { PaymentEventKind, PaymentProvider, ProviderRefundStatus, ProviderTenantOptions, VerifiedPaymentEvent } from './provider';
 
 /** Sous-ensemble du client Stripe utilisé (facilite le double de test). */
 export interface StripeClientLike {
   readonly checkout: { readonly sessions: { create: (params: Stripe.Checkout.SessionCreateParams, options?: Stripe.RequestOptions) => Promise<Pick<Stripe.Checkout.Session, 'id' | 'url'>> } };
   readonly paymentIntents: { create: (params: Stripe.PaymentIntentCreateParams, options?: Stripe.RequestOptions) => Promise<Pick<Stripe.PaymentIntent, 'id' | 'client_secret' | 'status'>> };
-  readonly refunds: { create: (params: Stripe.RefundCreateParams, options?: Stripe.RequestOptions) => Promise<Pick<Stripe.Refund, 'id'>> };
+  readonly refunds: { create: (params: Stripe.RefundCreateParams, options?: Stripe.RequestOptions) => Promise<Pick<Stripe.Refund, 'id' | 'status'>> };
 }
 
 export interface StripeWebhookVerifier {
@@ -69,14 +72,23 @@ const requestOptions = (idempotencyKey: string, tenant: ProviderTenantOptions): 
 const safeCause = (cause: unknown) =>
   cause instanceof Stripe.errors.StripeError ? `${cause.type}${cause.code ? `:${cause.code}` : ''} (${cause.statusCode ?? 'n/a'})` : cause instanceof Error ? cause.name : 'unknown';
 
+/** Refus définitifs (4xx hors 409/429) : rejouer la même requête idempotente ne changerait rien. */
+const DEFINITIVE_STRIPE_ERRORS: ReadonlySet<string> = new Set(['StripeCardError', 'StripeInvalidRequestError', 'StripeAuthenticationError', 'StripePermissionError', 'StripeIdempotencyError']);
+
+const isRetryable = (cause: unknown) => !(cause instanceof Stripe.errors.StripeError && DEFINITIVE_STRIPE_ERRORS.has(cause.type));
+
 const call = <A>(operation: string, f: () => Promise<A>) =>
-  Effect.tryPromise({ try: f, catch: (cause) => new PaymentProviderError({ provider: 'stripe', operation, cause: safeCause(cause) }) }).pipe(
+  Effect.tryPromise({ try: f, catch: (cause) => new PaymentProviderError({ provider: 'stripe', operation, cause: safeCause(cause), retryable: isRetryable(cause) }) }).pipe(
     Effect.timeoutOrElse({ duration: CALL_TIMEOUT, orElse: () => Effect.fail(new PaymentProviderError({ provider: 'stripe', operation, cause: 'timeout' })) }),
     Effect.withSpan(`payments.stripe.${operation}`),
   );
 
 const idOf = (value: string | { id: string } | null | undefined) => (typeof value === 'string' ? value : value?.id ?? null);
 const metadataPaymentId = (metadata: Stripe.Metadata | null | undefined) => (typeof metadata?.payment_id === 'string' && metadata.payment_id ? metadata.payment_id : null);
+
+/** Statut Stripe d'un remboursement → statut normalisé (`requires_action` reste en attente). */
+export const stripeRefundStatus = (status: string | null | undefined): ProviderRefundStatus =>
+  status === 'succeeded' ? 'succeeded' : status === 'failed' ? 'failed' : status === 'canceled' ? 'cancelled' : 'pending';
 
 /** Normalise un événement Stripe vérifié (types non gérés → `ignored`). */
 export const normalizeStripeEvent = (event: Stripe.Event): VerifiedPaymentEvent => {
@@ -101,11 +113,17 @@ export const normalizeStripeEvent = (event: Stripe.Event): VerifiedPaymentEvent 
       const succeeded = event.type === 'payment_intent.succeeded';
       return { ...base, kind: succeeded ? 'succeeded' : 'failed', paymentId: metadataPaymentId(intent.metadata), providerPaymentId: intent.id, sessionId: null, amount: fromStripeAmount(succeeded ? intent.amount_received : intent.amount, intent.currency) };
     }
-    case 'charge.refunded': {
-      const charge = event.data.object;
-      // Remboursement total uniquement ; un remboursement partiel reste à traiter par le module.
-      if (!charge.refunded) return ignored;
-      return { ...base, kind: 'refunded', paymentId: metadataPaymentId(charge.metadata), providerPaymentId: idOf(charge.payment_intent), sessionId: null, amount: fromStripeAmount(charge.amount_refunded, charge.currency) };
+    case 'refund.created':
+    case 'refund.updated':
+    case 'refund.failed': {
+      const refund = event.data.object;
+      const amount = fromStripeAmount(refund.amount, refund.currency);
+      if (!amount) return ignored;
+      const status: ProviderRefundStatus = event.type === 'refund.failed' ? 'failed' : stripeRefundStatus(refund.status);
+      return {
+        ...base, kind: 'refund', paymentId: metadataPaymentId(refund.metadata), providerPaymentId: idOf(refund.payment_intent), sessionId: null, amount,
+        refund: { providerRefundId: refund.id, status, refundId: typeof refund.metadata?.refund_id === 'string' && refund.metadata.refund_id ? refund.metadata.refund_id : null, amount, failureReason: refund.failure_reason ?? null },
+      };
     }
     default:
       return ignored;
@@ -169,11 +187,18 @@ export const makeStripeProvider = ({ client, webhookSecret, verifier = Stripe.we
 
   refund: (request) =>
     Effect.gen(function* () {
-      const amount = request.amount ? yield* toStripeAmount(request.amount) : undefined;
+      const amount = yield* toStripeAmount(request.amount);
       const refund = yield* call('refund.create', () =>
-        client.refunds.create({ payment_intent: request.providerPaymentId, ...(amount === undefined ? {} : { amount }) }, requestOptions(request.idempotencyKey, request)),
+        client.refunds.create(
+          {
+            payment_intent: request.providerPaymentId, amount,
+            metadata: { refund_id: request.refundId, payment_id: request.paymentId },
+            ...(request.reason ? { reason: request.reason } : {}),
+          },
+          requestOptions(request.idempotencyKey, request),
+        ),
       );
-      return { refundId: refund.id };
+      return { providerRefundId: refund.id, status: stripeRefundStatus(refund.status) };
     }),
 
   verifyWebhook: (rawBody, signature) =>

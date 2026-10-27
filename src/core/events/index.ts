@@ -25,6 +25,7 @@ export const POLYWEB_EVENTS = [
   "form.submitted",
   "payment.succeeded",
   "payment.failed",
+  "payment.refunded",
   "media.uploaded",
   "media.deleted",
 ] as const;

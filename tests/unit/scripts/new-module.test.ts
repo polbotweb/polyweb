@@ -89,6 +89,9 @@ describe('scripts/new-module.ts', () => {
     const read = (file: string) => readFileSync(join(base, file), 'utf8');
     expect(read('locks.ts')).toContain('defineLockResource("event-tickets", drizzleLockStore("event-tickets", ticketLocks, "resourceId"), {');
     expect(read('locks.ts')).toContain('tenantOf: (id) =>');
+    expect(read('refunds.ts')).toContain('export const EVENT_TICKETS_PAYMENT_PURPOSE = "event-tickets";');
+    expect(read('refunds.ts')).toContain('registerRefundHandler({ purpose: EVENT_TICKETS_PAYMENT_PURPOSE, validate: validateRefund, onSucceeded: onRefundSucceeded })');
+    expect(read('refunds.ts')).toContain('eq(eventTickets.organizationId, organizationId)');
     expect(readFileSync(join(dir, 'components/event-tickets/admin/EventTicketsAdminList.astro'), 'utf8')).toContain('<ForceReleaseLockButton resourceType="event-tickets"');
     expect(read('domain/workflow.ts')).toContain('export const eventTicketsWorkflow: WorkflowDefinition<EventTicketsStatus>');
     const perms = read('permissions/index.ts');

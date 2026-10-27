@@ -16,6 +16,12 @@ export class PaymentProviderError extends Data.TaggedError('PaymentProviderError
   readonly provider: string;
   readonly operation: string;
   readonly cause: unknown;
+  /**
+   * `false` : refus définitif du fournisseur (requête invalide, carte, authentification) —
+   * un nouvel essai avec la même clé d'idempotence renverrait le même refus. Absent : incertain
+   * (réseau, délai, 5xx), l'opération a pu aboutir chez le fournisseur.
+   */
+  readonly retryable?: boolean;
 }> {
   override get message() {
     return `Fournisseur de paiement ${this.provider} : échec de ${this.operation}`;

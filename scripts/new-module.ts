@@ -484,6 +484,43 @@ export const ${camel}Lock = defineLockResource("${name}", drizzleLockStore("${na
 });
 `,
 
+  [`${moduleDir}/refunds.ts`]: `/**
+ * Réaction du domaine ${name} aux remboursements génériques (\`src/core/refunds\`, docs/refunds.md).
+ *
+ * Objet de paiement \`${name}\` : une référence \`${name}:<id>\` (core/payments) rattache le
+ * paiement à une ligne \`${table}\`. \`validate\` s'exécute AVANT l'appel fournisseur, dans la
+ * transaction qui verrouille le paiement ; \`onSucceeded\` DANS celle qui constate le
+ * remboursement (restock, annulation, avoir…). Une règle métier non satisfaite se journalise
+ * sans échouer : l'argent est déjà rendu ; seule une \`DbError\` annule (webhook rejoué).
+ * À enregistrer au démarrage (\`src/core/modules/bootstrap.ts\`).
+ */
+import { and, eq } from "drizzle-orm";
+import { Effect } from "effect";
+import { registerRefundHandler, RefundNotAllowedError, type RefundOutcome, type RefundValidation } from "@/core/refunds";
+import { dbTry } from "@/lib/effect/run";
+import type { DbTransaction } from "@/lib/effect/transaction";
+import { ${camel} } from "./schema";
+
+export const ${upper}_PAYMENT_PURPOSE = "${name}";
+
+/** Le sujet doit exister dans l'organisation du paiement (isolation tenant). */
+const validateRefund = (tx: DbTransaction, input: RefundValidation) =>
+  Effect.gen(function* () {
+    const organizationId = input.payment.organizationId;
+    if (!organizationId) return yield* Effect.fail(new RefundNotAllowedError({ paymentId: input.payment.id, reason: "handler", detail: "paiement sans organisation" }));
+    const rows = yield* dbTry("${name}.refund.validate", () =>
+      tx.select({ id: ${camel}.id }).from(${camel}).where(and(eq(${camel}.id, input.subjectId), eq(${camel}.organizationId, organizationId))).limit(1),
+    );
+    if (!rows[0]) return yield* Effect.fail(new RefundNotAllowedError({ paymentId: input.payment.id, reason: "not_found", detail: "${name} inconnu dans cette organisation" }));
+  });
+
+/** Réaction métier au remboursement constaté — à compléter (restock, annulation…). */
+const onRefundSucceeded = (_tx: DbTransaction, outcome: RefundOutcome) =>
+  Effect.logInfo("[${name}] remboursement constaté", { refundId: outcome.refund.id, subjectId: outcome.subjectId, fullyRefunded: outcome.fullyRefunded });
+
+export const register${pascal}Refunds = () =>
+  registerRefundHandler({ purpose: ${upper}_PAYMENT_PURPOSE, validate: validateRefund, onSucceeded: onRefundSucceeded });
+`,
   [`${moduleDir}/permissions/index.ts`]: `/**
  * Gardes de permission Effect du domaine ${name}, tenant-aware (core \`permissions/tenant\`) :
  * administrateur global → tout ; propriétaire / administrateur d'organisation → le contenu
@@ -963,6 +1000,7 @@ Module « ${name} » généré.
 Étapes suivantes :
   1. exporter le schéma et générer la migration  (src/modules/${name}/schema → src/database/schemas.ts, pnpm db:generate)
      puis déclarer le namespace « ${name} » dans le contrôle d'accès (permissions/index.ts)
+     si le domaine encaisse : register${pascal}Refunds() dans src/core/modules/bootstrap.ts (refunds.ts, docs/refunds.md)
      compléter ${camel}Loader / load${pascal}()      (src/modules/${name}/loaders/${entity}.loader.ts)
   2. déclarer les capacités réelles         (capabilities.ts + module.ts)
   3. ajouter les libellés des 4 locales     (modules/${name}/i18n/)

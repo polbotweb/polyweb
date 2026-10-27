@@ -90,7 +90,7 @@ export const requireAdmin = (context: Pick<ActionAPIContext, 'locals'>) =>
   });
 
 /** Session + RBAC better-auth (`userHasPermission`). */
-export const requireActionPermission = (context: ActionAPIContext, permissions: Permissions) =>
+export const requireActionPermission = (context: Pick<ActionAPIContext, 'locals'>, permissions: Permissions) =>
   Effect.gen(function* () {
     const user = context.locals.user;
     if (!user) return yield* fail('UNAUTHORIZED', 'Vous devez être connecté pour effectuer cette action.');
@@ -110,7 +110,7 @@ export const requireActionPermission = (context: ActionAPIContext, permissions: 
  * - ressource d'organisation : propriétaire / administrateur de CETTE organisation
  *   uniquement (autre organisation ou simple membre → FORBIDDEN).
  */
-export const requireTenantPermission = (context: ActionAPIContext, permissions: Permissions, organizationId: string | null) =>
+export const requireTenantPermission = (context: Pick<ActionAPIContext, 'locals'>, permissions: Permissions, organizationId: string | null) =>
   Effect.gen(function* () {
     const user = context.locals.user;
     if (!user) return yield* fail('UNAUTHORIZED', 'Vous devez être connecté pour effectuer cette action.');

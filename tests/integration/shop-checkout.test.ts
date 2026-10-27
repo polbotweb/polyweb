@@ -17,6 +17,8 @@ import { eq, inArray, like } from 'drizzle-orm';
 import { getDrizzle } from '@database/drizzle';
 import { organization, payments, user, products, productVariants, orders, orderLines, carts, logisticsStockReservations } from '@database/schemas';
 import { paymentEvents } from '@database/schemas/payments.schema';
+import { refunds } from '@database/schemas/refunds.schema';
+import { registerRefundsCore, requestRefund } from '@/core/refunds';
 import { appRuntime } from '@/lib/effect/runtime';
 import { gatewayOf, handleWebhook, makeMockProvider, MOCK_SIGNATURE_HEADER, mockWebhookBody, PaymentGateway, signMockPayload, type PaymentEventKind } from '@/core/payments';
 import { logisticsService } from '@/modules/logistics/services/logistics.service';
@@ -24,6 +26,7 @@ import { logisticsLoader } from '@/modules/logistics/loaders';
 import { cartService } from '@/modules/shop/services/cart.service';
 import { checkoutOrder, createOrder, orderService, reservationReference } from '@/modules/shop/services/order.service';
 import { registerShopPayments, sweepShopOrders } from '@/modules/shop/payments';
+import { registerShopRefunds } from '@/modules/shop/refunds';
 import type { CheckoutInput } from '@/modules/shop/domain/checkout';
 
 const SECRET = 'itest-mock-secret';
@@ -94,11 +97,16 @@ beforeAll(async () => {
   await run(logisticsService.createItem({ organizationId: orgId, sku: `${t}-TEE`, name: 'T-shirt', variantId: tracked }));
   await run(logisticsService.recordMovement({ organizationId: orgId, warehouseId, sku: `${t}-TEE`, kind: 'receipt', quantity: 5 }, author));
   registerShopPayments();
+  registerRefundsCore();
+  registerShopRefunds();
 });
 
 afterAll(async () => {
   const pids = (await db.select({ id: payments.id }).from(payments).where(inArray(payments.organizationId, [orgId, otherOrg]))).map((r) => r.id);
-  if (pids.length) await db.delete(paymentEvents).where(inArray(paymentEvents.paymentId, pids));
+  if (pids.length) {
+    await db.delete(refunds).where(inArray(refunds.paymentId, pids));
+    await db.delete(paymentEvents).where(inArray(paymentEvents.paymentId, pids));
+  }
   await db.delete(paymentEvents).where(like(paymentEvents.eventId, `evt_${t}_%`));
   const oids = (await db.select({ id: orders.id }).from(orders).where(inArray(orders.organizationId, [orgId, otherOrg]))).map((r) => r.id);
   if (oids.length) {
@@ -196,8 +204,12 @@ describe('boutique : commande et paiement', () => {
     expect((await run(orderService.transition(order.id, orgId, 'SHIPPED'))).shippedAt).toBeInstanceOf(Date);
     expect((await failure(orderService.transition(order.id, orgId, 'CANCELLED')))?.code).toBe('CONFLICT');
     expect((await run(orderService.transition(order.id, orgId, 'DELIVERED'))).status).toBe('DELIVERED');
-    await webhook('refunded', paymentId, 5390);
+    // Remboursement total (core/refunds, mock) : commande REFUNDED ; livrée → pas de remise en stock automatique.
+    const refund = await run(requestRefund({ paymentId, organizationId: orgId, requestedBy: author }));
+    expect(refund).toMatchObject({ status: 'succeeded', amount: 5390, currency: 'EUR' });
     expect((await reload(order.id)).status).toBe('REFUNDED');
+    expect((await db.select({ status: payments.status }).from(payments).where(eq(payments.id, paymentId)))[0]!.status).toBe('refunded');
+    expect(await level()).toBe(3);
   });
 
   it('expiration du paiement → EXPIRED et stock libéré ; paiement tardif acquis avec manque consigné', async () => {
