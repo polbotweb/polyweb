@@ -24,7 +24,7 @@ import { validateResource } from "../domain/resource";
 import { checkSlot, validateBooking } from "../domain/booking";
 import { BOOKING_NUMBERING_KEY, DEFAULT_BOOKING_NUMBERING } from "../domain/numbering";
 import type { BookingConflictError, InvalidBookingError, InvalidResourceError, OutsideAvailabilityError } from "../domain/errors";
-import { isBookableDate, validateGuest, type GuestInput, type InvalidGuestError } from "../domain/guest";
+import { isBookableDate, SlotUnavailableError, validateGuest, type GuestInput } from "../domain/guest";
 
 export type BookingRow = typeof bookings.$inferSelect;
 export type ResourceRow = typeof bookingsResources.$inferSelect;
@@ -138,9 +138,6 @@ export interface GuestBookingInput extends GuestInput {
   readonly startsAt: string;
 }
 
-/** Erreur du parcours public : champs invalides (affichés par champ) ou créneau plus disponible. */
-export type GuestBookingError = InvalidGuestError | { readonly _tag: "SlotUnavailable" };
-const slotUnavailable = { _tag: "SlotUnavailable" } as const;
 
 export const bookingsService = {
   // ── Ressources ──────────────────────────────────────────────────────────
@@ -196,6 +193,7 @@ export const bookingsService = {
   createGuestBooking: (input: GuestBookingInput, now: Date = new Date()) =>
     dbTransaction("bookings.guest.create", (tx) =>
       Effect.gen(function* () {
+        const slotUnavailable = new SlotUnavailableError({ startsAt: input.startsAt });
         const resource = yield* lockResource(tx, input.resourceId, input.organizationId);
         if (!resource.active) return yield* Effect.fail(slotUnavailable);
         const guest = yield* validateGuest(input, resource.capacity);

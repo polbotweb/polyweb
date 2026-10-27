@@ -16,6 +16,9 @@ export class InvalidGuestError extends Data.TaggedError("InvalidGuestError")<{ r
   }
 }
 
+/** Le créneau demandé n'est plus (ou n'a jamais été) proposé : pris entre-temps, passé, hors plage. */
+export class SlotUnavailableError extends Data.TaggedError("SlotUnavailableError")<{ readonly startsAt: string }> {}
+
 export interface GuestInput {
   readonly customerName: string;
   readonly customerEmail: string;

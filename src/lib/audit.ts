@@ -34,6 +34,7 @@ export type AuditAction =
   | "PLUGIN_ENABLE" | "PLUGIN_DISABLE" | "PLUGIN_SETTINGS_UPDATE"
   | "SITE_CREATE" | "SITE_UPDATE" | "SITE_DELETE"
   | "SEARCH_REINDEX"
+  | "BOOKING_PUBLIC_CREATE" | "BOOKING_PUBLIC_CANCEL"
   // Action groupée générique (core/bulk) des modules générés : l'opération est dans metadata.operation.
   | "BULK_ACTION";
 
