@@ -199,7 +199,7 @@ export const returnService = {
           if (current.status === "REFUNDED") return { current, done: true as const };
           if (current.status !== "INSPECTED" || !current.refundMinor) return yield* fail("CONFLICT", "Retour non remboursable.");
           const [order] = yield* dbTry("shop.return.refund.order", () => tx.select().from(orders).where(eq(orders.id, current.orderId)).limit(1));
-          if (!order?.paymentId) return yield* fail("CONFLICT", "Commande sans paiement en ligne.");
+          if (!order?.paymentId) return yield* fail("PRECONDITION_FAILED", "Commande sans paiement en ligne.");
           let attempts = current.refundAttempts;
           if (current.refundId) {
             const [previous] = yield* dbTry("shop.return.refund.previous", () => tx.select({ status: refunds.status }).from(refunds).where(eq(refunds.id, current.refundId!)).limit(1));

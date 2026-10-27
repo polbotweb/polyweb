@@ -13,8 +13,10 @@ import type { CheckoutField } from "../domain/errors";
 import { CHECKOUT_FIELDS } from "../domain/errors";
 import type { CheckoutNoticeKey } from "../i18n/checkout";
 import { cartService } from "../services/cart.service";
-import { addToCart, checkoutPreview, orderPayable, parseQuantity, payOrder, publicOrder, resolveOwner, shopPaths, submitCheckout } from "./flow";
+import type { ReturnPublicNoticeKey } from "../i18n/returns";
+import { addToCart, checkoutPreview, orderPayable, parseQuantity, payOrder, publicOrder, publicOrderReturns, requestOrderReturn, resolveOwner, returnQuantitiesOf, shopPaths, submitCheckout } from "./flow";
 
+export type ReturnNotice = { readonly kind: "success" | "error"; readonly text: ReturnPublicNoticeKey; readonly number?: string } | null;
 export type Notice = { readonly kind: "success" | "error"; readonly text: CheckoutNoticeKey; readonly sku?: string } | null;
 
 const str = (fd: FormData, key: string) => {
@@ -125,18 +127,47 @@ export async function orderPage(Astro: AstroGlobal) {
   privatePage(Astro);
   let token = Astro.url.searchParams.get("t") ?? "";
   let notice: Notice = null;
+  let returnNotice: ReturnNotice = null;
+  let returnValues: { reason: string; note: string; quantities: Record<string, string> } | null = null;
   if (Astro.request.method === "POST") {
     const fd = await Astro.request.formData();
     token = str(fd, "t") || token;
-    const pay = await runAppResult(payOrder(id, token, locale));
-    if (pay.ok && pay.value) return Astro.redirect(pay.value, 303);
-    Astro.response.status = pay.ok ? 409 : 500;
-    notice = { kind: "error", text: "payUnavailable" };
+    if (str(fd, "intent") === "return") {
+      returnValues = { reason: str(fd, "reason"), note: str(fd, "note"), quantities: returnQuantitiesOf(fd.entries()) };
+      const r = await runAppResult(requestOrderReturn(id, token, returnValues, {
+        ip: extractIp(Astro.request.headers, Astro.clientAddress), userAgent: Astro.request.headers.get("user-agent"), locale,
+      }));
+      if (r.ok && r.value.kind === "requested") return Astro.redirect(`${shopPaths.order(locale, id, token)}&returned=${encodeURIComponent(r.value.number)}#order-returns`, 303);
+      if (r.ok && r.value.kind === "rateLimited") {
+        Astro.response.status = 429;
+        Astro.response.headers.set("retry-after", String(r.value.retryAfterSeconds));
+        returnNotice = { kind: "error", text: "rateLimited" };
+      } else if (r.ok && r.value.kind === "invalid") {
+        Astro.response.status = 422;
+        returnNotice = { kind: "error", text: r.value.problem };
+      } else if (r.ok && r.value.kind === "notEligible") {
+        Astro.response.status = 409;
+        returnNotice = { kind: "error", text: "notEligible" };
+      } else if (!r.ok && (r.error as { _tag?: string })._tag === "InvalidLink") {
+        Astro.response.status = 404;
+      } else {
+        Astro.response.status = 500;
+        returnNotice = { kind: "error", text: "generic" };
+      }
+    } else {
+      const pay = await runAppResult(payOrder(id, token, locale));
+      if (pay.ok && pay.value) return Astro.redirect(pay.value, 303);
+      Astro.response.status = pay.ok ? 409 : 500;
+      notice = { kind: "error", text: "payUnavailable" };
+    }
   }
   const found = await runApp(publicOrder(id, token));
-  if (!found) Astro.response.status = 404;
+  if (!found && (Astro.response.status ?? 200) < 400) Astro.response.status = 404;
   const q = Astro.url.searchParams;
   if (!notice && found && q.get("paid") === "1" && found.order.status === "PENDING_PAYMENT") notice = { kind: "success", text: "paymentReturn" };
   if (!notice && found && q.get("cancelled") === "1" && orderPayable(found.order)) notice = { kind: "error", text: "paymentCancelled" };
-  return { locale, found, token, notice, payable: !!found && orderPayable(found.order) };
+  const returns = found ? await runApp(publicOrderReturns(found.order)) : null;
+  const returned = q.get("returned") ?? "";
+  if (!returnNotice && returns && returned && returns.existing.some((row) => row.number === returned)) returnNotice = { kind: "success", text: "requested", number: returned };
+  return { locale, found, token, notice, payable: !!found && orderPayable(found.order), returns, returnNotice, returnValues };
 }

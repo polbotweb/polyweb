@@ -2,16 +2,21 @@
 /** Suivi public d'une commande par lien signé (`?t=`) et reprise du paiement. */
 import type { Locale } from "@i18n/config";
 import type { Effect } from "effect";
-import type { Notice } from "@/modules/shop/public/pages";
-import type { publicOrder } from "@/modules/shop/public/flow";
+import type { Notice, ReturnNotice } from "@/modules/shop/public/pages";
+import type { publicOrder, publicOrderReturns } from "@/modules/shop/public/flow";
 import { fill, getCheckoutTranslations } from "@/modules/shop/i18n/checkout";
 import { countryName, formatDateTime, formatMinor } from "@/modules/shop/public/format";
 import { SHIPPING_LINE_SKU } from "@/modules/shop/services/order.service";
 import { Button } from "@atoms/button";
 import PublicNotice from "@/components/bookings/public/PublicNotice.astro";
+import OrderReturns from "./OrderReturns.astro";
 
-interface Props { locale: Locale; found: Effect.Success<ReturnType<typeof publicOrder>>; token: string; notice: Notice; payable: boolean }
-const { locale, found, token, notice, payable } = Astro.props;
+interface Props {
+  locale: Locale; found: Effect.Success<ReturnType<typeof publicOrder>>; token: string; notice: Notice; payable: boolean;
+  returns: Effect.Success<ReturnType<typeof publicOrderReturns>> | null; returnNotice: ReturnNotice;
+  returnValues: { reason: string; note: string; quantities: Record<string, string> } | null;
+}
+const { locale, found, token, notice, payable, returns, returnNotice, returnValues } = Astro.props;
 const t = getCheckoutTranslations(locale);
 const order = found?.order;
 const money = (minor: number) => formatMinor(minor, order?.currency ?? "EUR", locale);
@@ -46,6 +51,7 @@ const money = (minor: number) => formatMinor(minor, order?.currency ?? "EUR", lo
           <div><Button type="submit" aria-describedby="order-pay-note">{t.payNow}</Button></div>
         </form>
       )}
+      {returns && <OrderReturns locale={locale} token={token} currency={order.currency} returns={returns} notice={returnNotice} values={returnValues} />}
     </>
   )}
   <p><a href={`/${locale}/shop`} class="text-foreground underline underline-offset-4 hover:no-underline">{t.continueShopping}</a></p>
