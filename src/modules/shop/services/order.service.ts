@@ -20,7 +20,7 @@ import { fail } from "@/lib/effect/action";
 import { AppConfig } from "@/lib/effect/config";
 import { canTransition } from "@/core/workflow";
 import { assignDocumentNumber } from "@/core/numbering";
-import { isCurrencyCode } from "@/core/money";
+import { isCurrencyCode, type CurrencyCode } from "@/core/money";
 import { startCheckout } from "@/core/payments";
 import type { Locale } from "@i18n/config";
 import { logisticsStockPort } from "@/modules/logistics/services/logistics.service";
@@ -31,7 +31,7 @@ import { logistics } from "@/modules/logistics/schema";
 import { products, productTranslations, productVariants } from "../schema";
 import { cartLines, carts, orderLines, orders } from "../schema/orders";
 import { priceOrder, type PricedLine } from "../domain/pricing";
-import { shopSettingsFromEnv, validateCheckout, type CheckoutInput } from "../domain/checkout";
+import { shopSettingsFromEnv, validateCheckout, type CheckoutInput, type ShopSettings } from "../domain/checkout";
 import { ADMIN_ORDER_TRANSITIONS, DEFAULT_ORDER_NUMBERING, ORDER_NUMBERING_KEY, orderWorkflow, type OrderStatus } from "../domain/orders";
 import { OutOfStockError } from "../domain/errors";
 import { orderAccessToken } from "../domain/cart-token";
@@ -63,6 +63,36 @@ const cancelPending = (tx: DbTransaction, order: OrderRow, to: "CANCELLED" | "EX
     yield* dbTry("shop.order.cancel", () =>
       tx.update(orders).set({ status: to, cancelledAt: to === "CANCELLED" ? now : null }).where(and(eq(orders.id, order.id), eq(orders.status, "PENDING_PAYMENT"))));
     yield* logisticsStockPort.releaseReservations(tx, reservationReference(order.id));
+  });
+
+/**
+ * Prix d'une commande (articles + port) : prix catalogue TTC au taux du pays vendeur, TVA du
+ * pays d'imposition (module Tax, surcharges tenant puis plateforme). Partagé par l'aperçu du
+ * tunnel et la création, pour que le montant affiché soit celui facturé.
+ */
+export const orderPricing = (input: {
+  readonly currency: CurrencyCode;
+  readonly settings: ShopSettings;
+  readonly rates: Effect.Success<ReturnType<typeof tenantRates>>;
+  readonly country: string;
+  readonly shippingMinor: number;
+  readonly now: Date;
+  readonly goods: readonly { readonly variantId: string; readonly unitPriceMinor: number; readonly quantity: number }[];
+}) => {
+  const lines: PricedLine[] = input.goods.map((line) => ({ key: line.variantId, unitGrossMinor: line.unitPriceMinor, quantity: line.quantity, category: "standard" }));
+  if (input.shippingMinor > 0) lines.push({ key: SHIPPING_LINE_SKU, unitGrossMinor: input.shippingMinor, quantity: 1, category: "standard" });
+  return priceOrder(lines, {
+    currency: input.currency, sellerCountry: input.settings.sellerCountry, buyerCountry: input.country, ossRegistered: input.settings.ossRegistered,
+    date: input.now.toISOString().slice(0, 10), rates: input.rates,
+  });
+};
+
+/** Aperçu du tunnel (pays/mode saisis) ; aucune écriture. */
+export const quoteOrder = (organizationId: string | null, goods: Parameters<typeof orderPricing>[0]["goods"], currency: CurrencyCode, country: string, shippingMinor: number, now: Date = new Date()) =>
+  Effect.gen(function* () {
+    const config = yield* AppConfig;
+    const rates = yield* tenantRates(organizationId);
+    return yield* orderPricing({ currency, settings: shopSettingsFromEnv(config.env), rates, country, shippingMinor, now, goods });
   });
 
 export interface CheckoutRequest {
@@ -108,10 +138,9 @@ export const createOrder = (request: CheckoutRequest) =>
           const purchasable = row.variant.available && row.product.status === "PUBLISHED" && (row.product.organizationId ?? null) === request.organizationId;
           if (!purchasable || row.variant.currency.toUpperCase() !== currency) return yield* fail("CONFLICT", `Article ${row.variant.sku} indisponible.`);
         }
-        const goods: PricedLine[] = rows.map((row) => ({ key: row.variant.id, unitGrossMinor: row.variant.priceMinor, quantity: row.line.quantity, category: "standard" }));
-        const shipping: PricedLine[] = valid.shippingMinor > 0 ? [{ key: SHIPPING_LINE_SKU, unitGrossMinor: valid.shippingMinor, quantity: 1, category: "standard" }] : [];
-        const pricing = yield* priceOrder([...goods, ...shipping], {
-          currency, sellerCountry: settings.sellerCountry, buyerCountry: valid.country, ossRegistered: settings.ossRegistered, date: now.toISOString().slice(0, 10), rates,
+        const pricing = yield* orderPricing({
+          currency, settings, rates, country: valid.country, shippingMinor: valid.shippingMinor, now,
+          goods: rows.map((row) => ({ variantId: row.variant.id, unitPriceMinor: row.variant.priceMinor, quantity: row.line.quantity })),
         });
         if (pricing.gross.amountMinor <= 0) return yield* fail("BAD_REQUEST", "Montant de commande nul.");
         const { number } = yield* assignDocumentNumber(tx, { organizationId: request.organizationId, key: ORDER_NUMBERING_KEY, scheme: DEFAULT_ORDER_NUMBERING, date: now.toISOString().slice(0, 10) });

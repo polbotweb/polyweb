@@ -18,13 +18,12 @@ import { products, productTranslations, productVariants } from "../schema";
 import { cartLines, carts } from "../schema/orders";
 import { MAX_CART_LINES, validateQuantity } from "../domain/pricing";
 import { CART_TTL_SECONDS } from "../domain/cart-token";
-import type { InvalidCartError } from "../domain/errors";
+import { InvalidCartError } from "../domain/errors";
 
 export type CartRow = typeof carts.$inferSelect;
 type Executor = ReturnType<typeof getDrizzle> | DbTransaction;
 
 const sameTenant = (column: PgColumn, organizationId: string | null): SQL => (organizationId === null ? isNull(column) : eq(column, organizationId));
-const domain = <A>(effect: Effect.Effect<A, InvalidCartError>) => Effect.catch(effect, (error: InvalidCartError) => fail("BAD_REQUEST", error.message));
 
 export interface CartOwner {
   readonly organizationId: string | null;
@@ -147,13 +146,13 @@ export const cartService = {
   addItem: (owner: CartOwner, variantId: string, quantity: number) =>
     dbTransaction("shop.cart.add", (tx) =>
       Effect.gen(function* () {
-        yield* domain(validateQuantity(quantity));
+        yield* validateQuantity(quantity);
         const variant = yield* findPurchasableVariant(tx, variantId, owner.organizationId);
         const cart = (yield* findCart(tx, owner, true)) ?? (yield* createCart(tx, owner));
         const lines = yield* linesOf(tx, cart.id);
-        if (cart.currency && cart.currency !== variant.currency && lines.length > 0) return yield* fail("BAD_REQUEST", "Devise différente de celle du panier.");
+        if (cart.currency && cart.currency !== variant.currency && lines.length > 0) return yield* new InvalidCartError({ field: "currency", value: variant.currency });
         const existing = lines.find((line) => line.variantId === variant.id);
-        if (!existing && lines.length >= MAX_CART_LINES) return yield* fail("BAD_REQUEST", "Panier plein.");
+        if (!existing && lines.length >= MAX_CART_LINES) return yield* new InvalidCartError({ field: "lines", value: String(lines.length) });
         const next = Math.min(99, (existing?.quantity ?? 0) + quantity);
         yield* dbTry("shop.cart.line.upsert", () =>
           tx.insert(cartLines).values({ cartId: cart.id, variantId: variant.id, quantity: next })
@@ -171,7 +170,7 @@ export const cartService = {
         if (quantity === 0) {
           yield* dbTry("shop.cart.line.delete", () => tx.delete(cartLines).where(and(eq(cartLines.id, lineId), eq(cartLines.cartId, cart.id))));
         } else {
-          yield* domain(validateQuantity(quantity));
+          yield* validateQuantity(quantity);
           const updated = yield* dbTry("shop.cart.line.update", () =>
             tx.update(cartLines).set({ quantity }).where(and(eq(cartLines.id, lineId), eq(cartLines.cartId, cart.id))).returning({ id: cartLines.id }));
           if (updated.length === 0) return yield* fail("NOT_FOUND", "Ligne introuvable.");

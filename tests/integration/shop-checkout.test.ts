@@ -39,7 +39,7 @@ const failure = async <A, E>(e: Effect.Effect<A, E, any>) => {
   const exit = await appRuntime.runPromiseExit(Effect.provideService(e, PaymentGateway, gatewayOf(provider)) as Effect.Effect<A, E, never>);
   if (Exit.isSuccess(exit)) throw new Error('succès inattendu');
   const reason = exit.cause.reasons.find((r) => r._tag === 'Fail');
-  return (reason as { error: { code?: string; _tag: string; sku?: string; fields?: readonly string[] } } | undefined)?.error;
+  return (reason as { error: { code?: string; _tag: string; sku?: string; field?: string; fields?: readonly string[] } } | undefined)?.error;
 };
 const urls = () => ({ successUrl: 'https://example.test/ok', cancelUrl: 'https://example.test/ko' });
 
@@ -115,8 +115,8 @@ describe('boutique : panier', () => {
   it('refuse les variantes non publiées, d’un autre tenant ou en quantité invalide', async () => {
     expect((await failure(cartService.addItem({ organizationId: orgId }, draft, 1)))?.code).toBe('NOT_FOUND');
     expect((await failure(cartService.addItem({ organizationId: orgId }, foreign, 1)))?.code).toBe('NOT_FOUND');
-    expect((await failure(cartService.addItem({ organizationId: orgId }, tracked, 0)))?.code).toBe('BAD_REQUEST');
-    expect((await failure(cartService.addItem({ organizationId: orgId }, tracked, 100)))?.code).toBe('BAD_REQUEST');
+    expect(await failure(cartService.addItem({ organizationId: orgId }, tracked, 0))).toMatchObject({ _tag: 'InvalidCartError', field: 'quantity' });
+    expect(await failure(cartService.addItem({ organizationId: orgId }, tracked, 100))).toMatchObject({ _tag: 'InvalidCartError', field: 'quantity' });
   });
 
   it('cumule les quantités, plafonne à 99 et expose le stock disponible', async () => {
