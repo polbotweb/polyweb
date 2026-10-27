@@ -226,6 +226,7 @@ molecules/
   AdminPagination/
   AdminResourceStats.astro
   DataView/
+  ScrollRegion/
 organisms/
   AdminBulkBar.astro
   AdminFacets.astro
@@ -302,7 +303,7 @@ images/
 ### المكونات
 
 - **atoms/** — 48 components
-- **molecules/** — 3 components
+- **molecules/** — 4 components
 - **organisms/** — 16 components
 - **pages/** — 10 components
 - **wow/** — 9 components

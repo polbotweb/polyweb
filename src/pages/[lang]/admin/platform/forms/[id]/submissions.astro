@@ -11,6 +11,7 @@ import { ForbiddenError } from '@/lib/effect/errors';
 import { getForm, listSubmissions, setSubmissionStatus, deleteSubmission } from '@/modules/forms/domain/forms';
 import { labelFor } from '@/core/content-types/fields';
 import type { FormSubmissionStatus } from '@database/schemas/forms.schema';
+import { ScrollRegion } from '@molecules/ScrollRegion';
 
 export const prerender = false;
 const result = await requirePermission(Astro, { formSubmission: ['read'] });
@@ -58,7 +59,7 @@ const statusLabel = { new: 'nouveau', read: 'lu', spam: 'spam' } as const;
     {canExport && <a class="ms-auto rounded-md border px-3 py-1.5" href={`/api/admin/forms/${form.id}/export.csv?locale=${locale}`}>Exporter en CSV</a>}
   </div>
   {items.length === 0 ? <p class="text-sm">Aucune soumission.</p> : (
-    <div class="overflow-x-auto">
+    <ScrollRegion labelledby="platform-admin-title">
       <table class="w-full text-sm" data-testid="submissions">
         <thead><tr class="border-b"><th class="py-2 text-start">Date</th><th class="text-start">État</th>{form.fields.map((f) => <th class="text-start">{labelFor(f.label, locale)}</th>)}<th></th></tr></thead>
         <tbody>
@@ -79,7 +80,7 @@ const statusLabel = { new: 'nouveau', read: 'lu', spam: 'spam' } as const;
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   )}
   {total > page * 50 && <a class="text-sm underline" href={`${selfUrl}?page=${page + 1}${status ? `&status=${status}` : ''}`}>Page suivante →</a>}
 </PlatformAdminShell>

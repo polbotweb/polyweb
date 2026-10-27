@@ -16,6 +16,7 @@ import { FINAL_STATUSES, RECEIPT_DRIVEN_STATUSES, isEditable, isReceivable, next
 import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
 import { loadPurchaseOrder } from "@/modules/purchasing/loaders";
 import { hasPurchasingPermission } from "@/modules/purchasing/permissions";
+import { ScrollRegion } from "@molecules/ScrollRegion";
 
 export const prerender = false;
 const result = await requirePermission(Astro, { purchasing: ["read"] });
@@ -64,12 +65,12 @@ const skuOf = new Map(o.lines.map((line) => [line.id, line.sku]));
 
       <section class="flex flex-col gap-3" aria-labelledby="po-lines-heading">
         <h2 id="po-lines-heading" class="text-lg font-semibold">{t.fields.lines}</h2>
-        <div class="overflow-x-auto">
+        <ScrollRegion labelledby="po-lines-heading">
           <table class="w-full text-sm" data-testid="purchasing-lines">
             <thead><tr class="border-b"><th scope="col" class="py-2 text-start">{t.fields.sku}</th><th scope="col" class="py-2 text-start">{t.fields.description}</th><th scope="col" class="py-2 text-end">{t.fields.quantity}</th><th scope="col" class="py-2 text-end">{t.fields.received}</th><th scope="col" class="py-2 text-end">{t.fields.unitPrice}</th><th scope="col" class="py-2 text-end">{t.fields.net}</th></tr></thead>
             <tbody>{o.lines.map((line) => <tr class="border-b"><td class="py-2 font-mono">{line.sku}</td><td class="py-2">{line.description ?? ""}</td><td class="py-2 text-end">{line.quantity}</td><td class="py-2 text-end" data-received>{line.receivedQuantity}</td><td class="py-2 text-end">{amount(line.unitPriceMinor)}</td><td class="py-2 text-end">{amount(line.netMinor)}</td></tr>)}</tbody>
           </table>
-        </div>
+        </ScrollRegion>
       </section>
 
       {targets.length > 0 && (

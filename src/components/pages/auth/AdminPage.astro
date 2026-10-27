@@ -20,6 +20,7 @@ import {
   DialogFooter,
 } from '@atoms/dialog';
 import { safeUrl } from '@lib/sanitize';
+import { ScrollRegion } from '@molecules/ScrollRegion';
 
 interface Props {
   t: AuthTranslations;
@@ -105,7 +106,7 @@ const uniqueActions = [...new Set(adminAuditLogs.map((l: any) => l.action))].sor
           class="max-w-sm"
         />
 
-        <div class="rounded-md border overflow-x-auto">
+        <ScrollRegion label={ta.tabs.users} class="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -205,13 +206,13 @@ const uniqueActions = [...new Set(adminAuditLogs.map((l: any) => l.action))].sor
               )}
             </TableBody>
           </Table>
-        </div>
+        </ScrollRegion>
       </div>
     </TabsContent>
 
     <!-- ─── Organizations Tab ─── -->
     <TabsContent value="organizations">
-      <div class="mt-4 rounded-md border overflow-x-auto">
+      <ScrollRegion label={ta.tabs.organizations} class="mt-4 rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -269,7 +270,7 @@ const uniqueActions = [...new Set(adminAuditLogs.map((l: any) => l.action))].sor
             )}
           </TableBody>
         </Table>
-      </div>
+      </ScrollRegion>
     </TabsContent>
 
     <!-- ─── Audit Log Tab ─── -->
@@ -282,7 +283,7 @@ const uniqueActions = [...new Set(adminAuditLogs.map((l: any) => l.action))].sor
           ))}
         </NativeSelect>
 
-        <div class="rounded-md border overflow-x-auto">
+        <ScrollRegion label={ta.tabs.auditLog} class="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -319,7 +320,7 @@ const uniqueActions = [...new Set(adminAuditLogs.map((l: any) => l.action))].sor
               )}
             </TableBody>
           </Table>
-        </div>
+        </ScrollRegion>
       </div>
     </TabsContent>
   </Tabs>

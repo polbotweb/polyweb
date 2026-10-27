@@ -16,6 +16,7 @@ import { FINAL_STATUSES, isEditable, nextStatuses } from "@/modules/logistics/do
 import { getLogisticsTranslations } from "@/modules/logistics/i18n";
 import { loadShipment } from "@/modules/logistics/loaders";
 import { hasLogisticsPermission } from "@/modules/logistics/permissions";
+import { ScrollRegion } from "@molecules/ScrollRegion";
 
 export const prerender = false;
 const result = await requirePermission(Astro, { logistics: ["read"] });
@@ -63,12 +64,12 @@ const date = (value: Date | null) => (value ? new Intl.DateTimeFormat(locale, { 
 
       <section class="flex flex-col gap-3" aria-labelledby="lg-lines-heading">
         <h2 id="lg-lines-heading" class="text-lg font-semibold">{t.fields.lines} ({totalUnits(s.lines)} {t.fields.units})</h2>
-        <div class="overflow-x-auto">
+        <ScrollRegion labelledby="lg-lines-heading">
           <table class="w-full text-sm" data-testid="logistics-lines">
             <thead><tr class="border-b text-start"><th scope="col" class="py-2 text-start">{t.fields.sku}</th><th scope="col" class="py-2 text-start">{t.fields.description}</th><th scope="col" class="py-2 text-end">{t.fields.quantity}</th></tr></thead>
             <tbody>{s.lines.map((line) => <tr class="border-b"><td class="py-2 font-mono">{line.sku}</td><td class="py-2">{line.description ?? ""}</td><td class="py-2 text-end">{line.quantity}</td></tr>)}</tbody>
           </table>
-        </div>
+        </ScrollRegion>
       </section>
 
       {targets.length > 0 && (

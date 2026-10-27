@@ -1,0 +1,45 @@
+---
+/**
+ * ScrollRegion — keyboard-scrollable overflow container (WCAG 2.1.1 / axe
+ * `scrollable-region-focusable`).
+ *
+ * A horizontally (or vertically) overflowing box whose content is not itself
+ * focusable (data tables, diffs…) cannot be scrolled with the keyboard unless
+ * the container is in the tab order. The standard pattern is a named landmark:
+ * `role="region"` + accessible name + `tabindex="0"` + a visible focus ring.
+ *
+ * The accessible name is REQUIRED and mutually exclusive by type: either an
+ * already-translated `label`, or `labelledby` pointing at an existing heading
+ * or caption id (preferred: it reuses the visible, localised text).
+ *
+ * The focus ring is inset (negative offset) so a parent `overflow-hidden` /
+ * rounded border never clips it, and uses `--foreground` (≥ 3:1 against the
+ * background in both themes, WCAG 2.4.11/2.4.13).
+ *
+ * This is the ONLY file allowed to put tabindex on role="region"
+ * (see the scoped override in eslint.config.js): every scroll wrapper must
+ * go through this component.
+ */
+import type { HTMLAttributes } from "astro/types";
+
+type Labelled = { label: string; labelledby?: never } | { labelledby: string; label?: never };
+
+type Props = Labelled & Omit<HTMLAttributes<"div">, "role" | "tabindex" | "aria-label" | "aria-labelledby">;
+
+const { label, labelledby, class: className, ...rest } = Astro.props;
+---
+
+<div
+  role="region"
+  aria-label={label}
+  aria-labelledby={labelledby}
+  tabindex="0"
+  data-scroll-region
+  class:list={[
+    "overflow-x-auto focus-visible:outline-3 focus-visible:-outline-offset-3 focus-visible:outline-foreground",
+    className,
+  ]}
+  {...rest}
+>
+  <slot />
+</div>

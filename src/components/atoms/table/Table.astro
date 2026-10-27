@@ -1,4 +1,6 @@
 ---
+// No overflow here: callers wrap <Table> in @molecules/ScrollRegion, which
+// owns the keyboard-scrollable, named, focusable overflow container.
 import type { HTMLAttributes } from "astro/types";
 import { tv, type VariantProps } from "tailwind-variants";
 
@@ -11,7 +13,7 @@ export const table = tv({
 const { class: className, ...rest } = Astro.props;
 ---
 
-<div data-slot="table-container" class="relative w-full overflow-x-auto">
+<div data-slot="table-container" class="relative w-full">
   <table role="table" class={table({ class: className })} {...rest} data-slot="table">
     <slot />
   </table>

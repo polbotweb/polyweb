@@ -47,6 +47,27 @@ export default [
     },
   },
 
+  // ── ScrollRegion — keyboard-scrollable overflow containers (a11y) ──
+  // WCAG 2.1.1 / axe `scrollable-region-focusable`: an overflowing box whose
+  // content is not focusable (data tables, diffs) must itself be reachable by
+  // keyboard to be scrolled with the arrow keys. The WAI pattern is a NAMED
+  // landmark: role="region" + aria-label/aria-labelledby + tabindex="0".
+  // Narrow on purpose:
+  //  - scoped to this single file, so every scroll wrapper has to go through
+  //    the shared component (a hand-rolled one elsewhere still fails lint);
+  //  - no-noninteractive-tabindex stays an ERROR, only the `region` role is
+  //    added to the allowed roles (tabpanel is the rule's own default);
+  //  - prefer-tag-over-role is off here only: it would suggest <section>,
+  //    which maps to role=region solely when named; the explicit role keeps
+  //    the landmark semantics independent of how the name is provided.
+  {
+    files: ["src/components/molecules/ScrollRegion/ScrollRegion.astro"],
+    rules: {
+      "astro/jsx-a11y/no-noninteractive-tabindex": ["error", { roles: ["tabpanel", "region"], tags: [] }],
+      "astro/jsx-a11y/prefer-tag-over-role": "off",
+    },
+  },
+
   // ── Starwind library components — relax a11y semantic tag preference ──
   // These components use ARIA roles (role="dialog", role="region", etc.)
   // by design — the library handles semantics internally.

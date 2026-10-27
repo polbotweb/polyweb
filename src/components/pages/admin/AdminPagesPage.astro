@@ -20,6 +20,7 @@ import AdminSavedViews from '@organisms/AdminSavedViews.astro';
 import { canonicalListQuery, facetLinks } from '@/core/filters';
 import { pagesListDefinition } from '@/lib/pages/admin-list';
 import { formatBulk, getBulkOperationLabels, getBulkUiTranslations } from '@/core/bulk/i18n';
+import { ScrollRegion } from '@molecules/ScrollRegion';
 
 type PageRow = Pick<
   typeof pages.$inferSelect,
@@ -152,7 +153,7 @@ function isoDate(d: Date | string | null) {
     </Fragment>
 
     <!-- ─── Table view ─── -->
-    <div slot="table" class="rounded-md border overflow-x-auto">
+    <ScrollRegion slot="table" label={cms.title} class="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
@@ -229,7 +230,7 @@ function isoDate(d: Date | string | null) {
           )}
         </TableBody>
       </Table>
-    </div>
+    </ScrollRegion>
 
     <!-- ─── Cards view ─── -->
     <div slot="cards" class="grid gap-3" id="admin-pages-cards">

@@ -12,6 +12,7 @@ import { Button } from "@atoms/button";
 import { Input } from "@atoms/input";
 import { Label } from "@atoms/label";
 import PublicNotice from "@/components/bookings/public/PublicNotice.astro";
+import { ScrollRegion } from "@molecules/ScrollRegion";
 
 interface Line { id: string; sku: string; description: string; quantity: number; unitPriceMinor: number; lineTotalMinor: number }
 interface Props { locale: Locale; baseUrl: string; order: OrderRow; lines: readonly Line[]; canUpdate: boolean; notice: AdminNotice }
@@ -51,7 +52,7 @@ const when = (d: Date | null) => (d ? formatDateTime(d, locale) : "—");
   </section>
   <section aria-labelledby="oa-lines" class="grid gap-2">
     <h2 id="oa-lines" class="text-xl font-semibold">{t.lines}</h2>
-    <div class="overflow-x-auto">
+    <ScrollRegion labelledby="oa-lines">
       <table class="w-full text-base">
         <thead><tr class="border-b-2 border-border">
           <th scope="col" class="p-2 text-start">{t.sku}</th><th scope="col" class="p-2 text-start">{t.description}</th>
@@ -61,7 +62,7 @@ const when = (d: Date | null) => (d ? formatDateTime(d, locale) : "—");
           <tr class="border-b border-border"><td class="p-2" dir="ltr">{l.sku}</td><td class="p-2">{l.description}</td><td class="p-2 text-end">{l.quantity}</td><td class="p-2 text-end">{money(l.unitPriceMinor)}</td><td class="p-2 text-end">{money(l.lineTotalMinor)}</td></tr>
         ))}</tbody>
       </table>
-    </div>
+    </ScrollRegion>
   </section>
   <section aria-labelledby="oa-actions" class="grid gap-2">
     <h2 id="oa-actions" class="text-xl font-semibold">{t.actions}</h2>

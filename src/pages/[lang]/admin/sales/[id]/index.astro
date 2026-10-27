@@ -23,6 +23,7 @@ import { isPaymentsEnabled } from "@/core/payments";
 import { isPayableInvoice, payLinkUrl } from "@/modules/sales/payments";
 import { getSalesPayTranslations } from "@/modules/sales/i18n/pay";
 import { runApp } from "@/lib/effect/http";
+import { ScrollRegion } from "@molecules/ScrollRegion";
 
 export const prerender = false;
 const result = await requirePermission(Astro, { sales: ["read"] });
@@ -97,16 +98,16 @@ const payT = getSalesPayTranslations(locale);
         </dl>
       </section>
 
-      <section aria-labelledby="sales-lines" class="overflow-x-auto">
+      <section aria-labelledby="sales-lines">
         <h2 id="sales-lines" class="mb-2 text-lg font-semibold">{t.lines.title}</h2>
-        <table class="w-full text-sm">
+        <ScrollRegion labelledby="sales-lines"><table class="w-full text-sm">
           <thead><tr><th scope="col" class="text-start">{t.lines.description}</th><th scope="col" class="text-end">{t.lines.quantity}</th><th scope="col" class="text-end">{t.lines.unitPrice}</th><th scope="col" class="text-end">{t.lines.discount}</th><th scope="col" class="text-end">{t.lines.rate}</th><th scope="col" class="text-end">{t.lines.net}</th></tr></thead>
           <tbody>
             {doc.lines.map((line) => (
               <tr class="border-t"><td>{line.description}</td><td class="text-end">{Number(line.quantity)}</td><td class="text-end">{money(line.unitPriceMinor)}</td><td class="text-end">{Number(line.discountPercent)} %</td><td class="text-end">{Number(line.ratePercent)} %</td><td class="text-end">{money(line.netMinor)}</td></tr>
             ))}
           </tbody>
-        </table>
+        </table></ScrollRegion>
       </section>
 
       {isInvoice && (

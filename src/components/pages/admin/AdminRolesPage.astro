@@ -39,6 +39,7 @@ import {
 import CheckIcon from '@tabler/icons/outline/check.svg';
 import XIcon from '@tabler/icons/outline/x.svg';
 import PlusIcon from '@tabler/icons/outline/plus.svg';
+import { ScrollRegion } from '@molecules/ScrollRegion';
 
 interface Props {
   t: AuthTranslations;
@@ -192,7 +193,7 @@ function hasAction(role: RoleDef, resource: string, action: string): boolean {
         <CardDescription>admin · editor · user</CardDescription>
       </CardHeader>
       <CardContent>
-        <div class="overflow-x-auto">
+        <ScrollRegion label={tr.globalRoles}>
           <Table>
             <TableHeader>
               <TableRow>
@@ -230,7 +231,7 @@ function hasAction(role: RoleDef, resource: string, action: string): boolean {
               })}
             </TableBody>
           </Table>
-        </div>
+        </ScrollRegion>
       </CardContent>
     </Card>
   </TabsContent>
@@ -243,7 +244,7 @@ function hasAction(role: RoleDef, resource: string, action: string): boolean {
         <CardDescription>owner · admin · member</CardDescription>
       </CardHeader>
       <CardContent>
-        <div class="overflow-x-auto">
+        <ScrollRegion label={tr.orgRoles}>
           <Table>
             <TableHeader>
               <TableRow>
@@ -281,7 +282,7 @@ function hasAction(role: RoleDef, resource: string, action: string): boolean {
               })}
             </TableBody>
           </Table>
-        </div>
+        </ScrollRegion>
       </CardContent>
     </Card>
   </TabsContent>

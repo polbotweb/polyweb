@@ -7,6 +7,7 @@ import Badge from '@atoms/badge/Badge.astro';
 import { NativeSelect, NativeSelectOption } from '@atoms/native-select';
 import { DataView } from '@molecules/DataView';
 import AdminPagination from '@molecules/AdminPagination/AdminPagination.astro';
+import { ScrollRegion } from '@molecules/ScrollRegion';
 
 interface Props {
   t: AuthTranslations;
@@ -39,7 +40,7 @@ const uniqueActions = [...new Set(adminAuditLogs.map((l: any) => l.action))].sor
   </NativeSelect>
 
   <!-- ─── Table view ─── -->
-  <div slot="table" class="rounded-md border overflow-x-auto">
+  <ScrollRegion slot="table" label={ta.tabs.auditLog} class="rounded-md border">
     <Table>
       <TableHeader>
         <TableRow>
@@ -76,7 +77,7 @@ const uniqueActions = [...new Set(adminAuditLogs.map((l: any) => l.action))].sor
         )}
       </TableBody>
     </Table>
-  </div>
+  </ScrollRegion>
 
   <!-- ─── Cards view (mobile) ─── -->
   <div slot="cards" class="grid gap-3" id="audit-log-cards">
