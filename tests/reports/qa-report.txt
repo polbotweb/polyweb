@@ -1,6 +1,6 @@
 ══════════════════════════════════════════════════════════════════════════════════
   POLYWEB — GLOBAL QA REPORT
-  Generated: 2026-10-27 01:43:09
+  Generated: 2026-10-27 02:32:43
 ══════════════════════════════════════════════════════════════════════════════════
 
   ✅ Type & Template Check (astro check)
@@ -16,7 +16,7 @@
      294/354 passed, 60 skipped
 
   ✅ Accessibility Audit (Pa11y — WCAG 2.1 AAA)
-     67/68 URLs clean
+     68/68 URLs clean
 
   ✅ Performance & Quality Audit (Lighthouse CI)
      60 page(s) audited, all ≥90
@@ -35,7 +35,7 @@
   │ ESLint                                      │ GREEN        │ 0 error │
   │ Vitest (unit/integration)                   │ GREEN        │ 1883/18 │
   │ Playwright (e2e)                            │ GREEN        │ 294/354 │
-  │ Pa11y (a11y)                                │ GREEN        │ 67/68 U │
+  │ Pa11y (a11y)                                │ GREEN        │ 68/68 U │
   │ Lighthouse (perf)                           │ GREEN        │ 60 page │
   └─────────────────────────────────────────────┴──────────────┴─────────┘
 
