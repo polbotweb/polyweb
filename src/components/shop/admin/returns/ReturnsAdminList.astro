@@ -1,0 +1,65 @@
+---
+/** Liste des retours clients : filtres (GET, sans JS), tableau, accès à la fiche. */
+import type { Locale } from "@i18n/config";
+import type { Effect } from "effect";
+import type { returnService } from "@/modules/shop/services/return.service";
+import type { RETURN_STATUSES } from "@/modules/shop/domain/returns";
+import { getReturnTranslations } from "@/modules/shop/i18n/returns";
+import { formatDateTime, formatMinor } from "@/modules/shop/public/format";
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import { ScrollRegion } from "@molecules/ScrollRegion";
+
+type Rows = Effect.Success<ReturnType<typeof returnService.list>>["rows"];
+interface Props { locale: Locale; baseUrl: string; rows: Rows; total: number; raw: { status: string; q: string }; statuses: typeof RETURN_STATUSES }
+const { locale, baseUrl, rows, raw, statuses } = Astro.props;
+const t = getReturnTranslations(locale);
+---
+<form method="get" class="grid gap-4 rounded-lg border-2 border-border p-4 sm:grid-cols-[repeat(2,minmax(0,1fr))_auto]" aria-labelledby="returns-filters" data-testid="returns-filters">
+  <h2 id="returns-filters" class="sr-only">{t.admin.filters}</h2>
+  <div class="grid gap-1">
+    <Label for="rf-status">{t.status}</Label>
+    <NativeSelect id="rf-status" name="status">
+      <NativeSelectOption value="">{t.admin.allStatuses}</NativeSelectOption>
+      {statuses.map((s) => <NativeSelectOption value={s} selected={raw.status === s}>{t.statuses[s]}</NativeSelectOption>)}
+    </NativeSelect>
+  </div>
+  <div class="grid gap-1">
+    <Label for="rf-q">{t.admin.search}</Label>
+    <Input id="rf-q" name="q" type="search" maxlength={100} value={raw.q} />
+  </div>
+  <div class="flex items-end"><Button type="submit">{t.admin.apply}</Button></div>
+</form>
+{rows.length === 0 ? (
+  <p data-testid="returns-empty">{t.admin.empty}</p>
+) : (
+  <ScrollRegion label={t.admin.listTitle}>
+    <table class="w-full text-start text-base" data-testid="returns-table">
+      <caption class="sr-only">{t.admin.listTitle}</caption>
+      <thead>
+        <tr class="border-b-2 border-border">
+          <th scope="col" class="p-2 text-start">{t.number}</th>
+          <th scope="col" class="p-2 text-start">{t.createdOn}</th>
+          <th scope="col" class="p-2 text-start">{t.admin.order}</th>
+          <th scope="col" class="p-2 text-start">{t.admin.customer}</th>
+          <th scope="col" class="p-2 text-start">{t.status}</th>
+          <th scope="col" class="p-2 text-end">{t.refundAmount}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(({ returnRow: r, orderNumber, email }) => (
+          <tr class="border-b border-border">
+            <th scope="row" class="p-2 text-start font-medium"><a href={`${baseUrl}/${r.id}`} class="underline underline-offset-4 hover:no-underline" dir="ltr">{r.number}</a></th>
+            <td class="p-2">{formatDateTime(r.createdAt, locale)}</td>
+            <td class="p-2" dir="ltr">{orderNumber}</td>
+            <td class="p-2" dir="ltr">{email}</td>
+            <td class="p-2">{t.statuses[r.status]}</td>
+            <td class="p-2 text-end">{r.refundMinor === null ? "—" : formatMinor(r.refundMinor, r.currency, locale)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </ScrollRegion>
+)}

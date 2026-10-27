@@ -59,6 +59,7 @@ export interface ReturnTranslations {
     readonly inspect: string;
     readonly refund: string;
     readonly refundStatus: string;
+    readonly actions: string;
     readonly orderReturns: string;
     readonly viewAll: string;
     readonly pageOf: string;
@@ -88,7 +89,7 @@ const fr: ReturnTranslations = {
     acceptedFor: "Quantité acceptée pour {name}", restockedFor: "Quantité remise en stock pour {name}",
     inspectHint: "Accepté : remboursé au prix payé. Remis en stock : revendable, entre en stock Logistics. Rien d’accepté : le retour est clos sans remboursement.",
     approve: "Accepter la demande", reject: "Refuser la demande", cancel: "Annuler le retour", receive: "Confirmer la réception du colis", inspect: "Valider le contrôle",
-    refund: "Rembourser", refundStatus: "Remboursement", orderReturns: "Retours de cette commande", viewAll: "Tous les retours", pageOf: "Page {page} sur {pages}",
+    refund: "Rembourser", refundStatus: "Remboursement", actions: "Actions", orderReturns: "Retours de cette commande", viewAll: "Tous les retours", pageOf: "Page {page} sur {pages}",
     previous: "Page précédente", next: "Page suivante",
     notices: {
       approved: "Demande acceptée.", rejected: "Demande refusée.", cancelled: "Retour annulé.", received: "Réception enregistrée.", inspected: "Contrôle validé, remise en stock effectuée.",
@@ -121,7 +122,7 @@ const en: ReturnTranslations = {
     acceptedFor: "Accepted quantity for {name}", restockedFor: "Restocked quantity for {name}",
     inspectHint: "Accepted: refunded at the price paid. Restocked: resellable, goes back to Logistics stock. Nothing accepted: the return is closed without refund.",
     approve: "Approve the request", reject: "Reject the request", cancel: "Cancel the return", receive: "Confirm the parcel was received", inspect: "Confirm the inspection",
-    refund: "Refund", refundStatus: "Refund", orderReturns: "Returns for this order", viewAll: "All returns", pageOf: "Page {page} of {pages}",
+    refund: "Refund", refundStatus: "Refund", actions: "Actions", orderReturns: "Returns for this order", viewAll: "All returns", pageOf: "Page {page} of {pages}",
     previous: "Previous page", next: "Next page",
     notices: {
       approved: "Request approved.", rejected: "Request rejected.", cancelled: "Return cancelled.", received: "Receipt recorded.", inspected: "Inspection confirmed, stock updated.",
@@ -154,7 +155,7 @@ const es: ReturnTranslations = {
     acceptedFor: "Cantidad aceptada de {name}", restockedFor: "Cantidad repuesta en stock de {name}",
     inspectHint: "Aceptado: se reembolsa al precio pagado. Repuesto: revendible, vuelve al stock de Logística. Nada aceptado: la devolución se cierra sin reembolso.",
     approve: "Aceptar la solicitud", reject: "Rechazar la solicitud", cancel: "Cancelar la devolución", receive: "Confirmar la recepción del paquete", inspect: "Validar la revisión",
-    refund: "Reembolsar", refundStatus: "Reembolso", orderReturns: "Devoluciones de este pedido", viewAll: "Todas las devoluciones", pageOf: "Página {page} de {pages}",
+    refund: "Reembolsar", refundStatus: "Reembolso", actions: "Acciones", orderReturns: "Devoluciones de este pedido", viewAll: "Todas las devoluciones", pageOf: "Página {page} de {pages}",
     previous: "Página anterior", next: "Página siguiente",
     notices: {
       approved: "Solicitud aceptada.", rejected: "Solicitud rechazada.", cancelled: "Devolución cancelada.", received: "Recepción registrada.", inspected: "Revisión validada, stock actualizado.",
@@ -187,7 +188,7 @@ const ar: ReturnTranslations = {
     acceptedFor: "الكمية المقبولة من {name}", restockedFor: "الكمية المعادة إلى المخزون من {name}",
     inspectHint: "المقبول: يُسترد بالسعر المدفوع. المعاد إلى المخزون: قابل لإعادة البيع ويدخل مخزون اللوجستيات. لا شيء مقبول: يُغلق الإرجاع دون استرداد.",
     approve: "قبول الطلب", reject: "رفض الطلب", cancel: "إلغاء الإرجاع", receive: "تأكيد استلام الطرد", inspect: "تأكيد الفحص",
-    refund: "استرداد", refundStatus: "الاسترداد", orderReturns: "مرتجعات هذا الطلب", viewAll: "جميع المرتجعات", pageOf: "الصفحة {page} من {pages}",
+    refund: "استرداد", refundStatus: "الاسترداد", actions: "الإجراءات", orderReturns: "مرتجعات هذا الطلب", viewAll: "جميع المرتجعات", pageOf: "الصفحة {page} من {pages}",
     previous: "الصفحة السابقة", next: "الصفحة التالية",
     notices: {
       approved: "تم قبول الطلب.", rejected: "تم رفض الطلب.", cancelled: "تم إلغاء الإرجاع.", received: "تم تسجيل الاستلام.", inspected: "تم تأكيد الفحص وتحديث المخزون.",
