@@ -29,6 +29,8 @@ let adminCookie = '';
 let shopCartCookie = '';
 let shopOrder = null;
 let shopSlugs = null;
+// Commande livrée avec une demande de retour (RMA) : suivi public, fiche commande et retours admin.
+let shopReturn = null;
 if (fs.existsSync(COOKIES_PATH)) {
   const data = JSON.parse(fs.readFileSync(COOKIES_PATH, 'utf-8'));
   userCookie = data.userCookie ?? '';
@@ -36,6 +38,7 @@ if (fs.existsSync(COOKIES_PATH)) {
   shopCartCookie = data.shopCartCookie ?? '';
   shopOrder = data.shopOrder ?? null;
   shopSlugs = data.shopSlugs ?? null;
+  shopReturn = data.shopReturn ?? null;
 }
 
 // ── Route definitions per locale ─────────────────────────────────────
@@ -90,6 +93,9 @@ for (const lang of locales) {
   if (shopOrder) {
     publicUrls.push(`${BASE}/${lang}/shop/order/${encodeURIComponent(shopOrder.id)}?t=${encodeURIComponent(shopOrder.token)}`);
   }
+  if (shopReturn) {
+    publicUrls.push(`${BASE}/${lang}/shop/order/${encodeURIComponent(shopReturn.orderId)}?t=${encodeURIComponent(shopReturn.token)}`);
+  }
 }
 
 // Authenticated pages (user cookie)
@@ -118,6 +124,12 @@ for (const lang of locales) {
   // Commandes boutique : liste filtrable et fiche de la commande seedée.
   adminUrls.push({ url: `${BASE}/${lang}/admin/orders`, headers: { Cookie: adminCookie } });
   if (shopOrder) adminUrls.push({ url: `${BASE}/${lang}/admin/orders/${encodeURIComponent(shopOrder.id)}`, headers: { Cookie: adminCookie } });
+  // Retours (RMA) : liste filtrable, fiche du retour seedé et fiche de sa commande (section retours).
+  adminUrls.push({ url: `${BASE}/${lang}/admin/returns`, headers: { Cookie: adminCookie } });
+  if (shopReturn) {
+    adminUrls.push({ url: `${BASE}/${lang}/admin/returns/${encodeURIComponent(shopReturn.id)}`, headers: { Cookie: adminCookie } });
+    adminUrls.push({ url: `${BASE}/${lang}/admin/orders/${encodeURIComponent(shopReturn.orderId)}`, headers: { Cookie: adminCookie } });
+  }
 }
 
 module.exports = {

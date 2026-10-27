@@ -121,7 +121,8 @@ async function seedBookingResource() {
 /**
  * Boutique (catalogue plateforme) : produit A11Y publié dans les 4 locales, variante non suivie
  * en stock, un panier invité (cookie signé) et une commande en attente de paiement (lien de suivi
- * signé). Aucun appel au fournisseur de paiement. Le cookie et le jeton sont écrits dans
+ * signé), plus une commande livrée portant une demande de retour (page de suivi avec retours,
+ * liste et fiche admin des retours). Aucun appel au fournisseur de paiement. Le cookie et le jeton sont écrits dans
  * .a11y-cookies.json (ignoré par git) et caviardés des rapports Lighthouse.
  */
 export const A11Y_SHOP_SKU = 'A11Y-TEE';
@@ -145,12 +146,14 @@ async function deleteShopSeed() {
 
 async function seedShop() {
   const { getDrizzle } = await import('../../src/database/drizzle');
-  const { products, productTranslations, productVariants } = await import('../../src/database/schemas');
+  const { products, productTranslations, productVariants, orders, orderLines } = await import('../../src/database/schemas');
+  const { eq } = await import('drizzle-orm');
   const { Effect } = await import('effect');
   const { appRuntime } = await import('../../src/lib/effect/runtime');
   const { AppConfig } = await import('../../src/lib/effect/config');
   const { cartService } = await import('../../src/modules/shop/services/cart.service');
   const { createOrder } = await import('../../src/modules/shop/services/order.service');
+  const { returnService } = await import('../../src/modules/shop/services/return.service');
   const { CART_COOKIE, orderAccessToken, signCartToken } = await import('../../src/modules/shop/domain/cart-token');
   await deleteShopSeed();
   const db = getDrizzle();
@@ -169,9 +172,19 @@ async function seedShop() {
     organizationId: null, cartId: orderCart.id, userId: null, locale: 'fr',
     input: { email: A11Y_SHOP_EMAIL, customerName: 'A11y Shop', phone: '', addressLine1: '1 rue de la Paix', addressLine2: '', postcode: '75002', city: 'Paris', country: 'FR', shippingMethod: 'standard' },
   }));
+  // Commande livrée (statut posé directement : pas de paiement réel) + retour d'une unité sur deux.
+  const deliveredCart = await run(cartService.addItem({ organizationId: null }, variant!.id, 2));
+  const delivered = await run(createOrder({
+    organizationId: null, cartId: deliveredCart.id, userId: null, locale: 'fr',
+    input: { email: A11Y_SHOP_EMAIL, customerName: 'A11y Retour', phone: '', addressLine1: '1 rue de la Paix', addressLine2: '', postcode: '75002', city: 'Paris', country: 'FR', shippingMethod: 'standard' },
+  }));
+  await db.update(orders).set({ status: 'DELIVERED' }).where(eq(orders.id, delivered.id));
+  const [deliveredLine] = await db.select({ id: orderLines.id }).from(orderLines).where(eq(orderLines.orderId, delivered.id));
+  const rma = await run(returnService.request({ orderId: delivered.id, organizationId: null, reason: 'damaged', note: 'Colis abîmé', lines: [{ orderLineId: deliveredLine!.id, quantity: 1 }] }));
   return {
     shopCartCookie: `${CART_COOKIE}=${signCartToken(cart.id, secret)}`,
     shopOrder: { id: order.id, token: orderAccessToken(order.id, secret) },
+    shopReturn: { orderId: delivered.id, token: orderAccessToken(delivered.id, secret), id: rma.id },
     shopSlugs: A11Y_SHOP_SLUGS,
   };
 }
