@@ -10,22 +10,34 @@ mode="${1:?mode: deps|full}"; shift
 browsers=("$@")
 
 # Une tentative coupée par `timeout` laisse le `sudo apt-get` de Playwright vivant, verrou dpkg tenu
-# (cas observé : miroir apt lent, run 40237326474). On attend d'abord qu'il termine — ses paquets
-# téléchargés restent en cache pour la tentative suivante — puis on le tue et on répare dpkg.
-apt_busy() { pgrep -x apt-get >/dev/null || pgrep -x dpkg >/dev/null; }
+# (cas observé : miroir apt lent, run 40237326474 ; workflow Preview, runs 40404640465 / 40414379557).
+# Défense 1 : apt attend lui-même le verrou (`DPkg::Lock::Timeout`, ci-dessous) au lieu d'échouer
+# aussitôt (code 100). Défense 2 : entre deux tentatives, attente bornée qu'aucun apt/dpkg ne tourne
+# et que les verrous soient libres — ses paquets téléchargés restent en cache — sinon arrêt forcé
+# puis réparation de dpkg.
+APT_LOCKS=(/var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/lib/apt/lists/lock /var/cache/apt/archives/lock)
+apt_procs() { pgrep -x apt-get >/dev/null || pgrep -x apt >/dev/null || pgrep -x dpkg >/dev/null; }
+# Verrou tenu : `fuser` (psmisc, présent sur les runners Ubuntu) ; à défaut, seuls les processus comptent.
+apt_locked() { command -v fuser >/dev/null && sudo fuser "${APT_LOCKS[@]}" >/dev/null 2>&1; }
+apt_busy() { apt_procs || apt_locked; }
 repair_apt() {
-  for _ in $(seq 1 24); do apt_busy || break; sleep 5; done
+  # Attente bornée (≤ 300 s, le même délai que DPkg::Lock::Timeout) que l'apt-get orphelin termine.
+  for _ in $(seq 1 60); do apt_busy || break; sleep 5; done
   if apt_busy; then
-    echo "apt/dpkg toujours actif après 120 s : arrêt forcé"
+    echo "apt/dpkg toujours actif après 300 s : arrêt forcé"
     sudo pkill -9 -x apt-get 2>/dev/null || true
+    sudo pkill -9 -x apt 2>/dev/null || true
     sudo pkill -9 -x dpkg 2>/dev/null || true
-    sleep 2
+    for _ in $(seq 1 12); do apt_busy || break; sleep 5; done
   fi
+  apt_busy && echo "::warning::verrou apt/dpkg encore tenu après arrêt forcé"
   sudo dpkg --configure -a || true
 }
 
 # Miroir lent ou coupures : apt réessaie lui-même chaque téléchargement avant d'abandonner.
-echo 'Acquire::Retries "5"; Acquire::http::Timeout "30"; Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/80-ci-retries >/dev/null
+# DPkg::Lock::Timeout : un apt-get concurrent (orphelin ou unattended-upgrades) fait attendre ≤ 300 s.
+# Fichier de conf (lu par le `sudo apt-get` interne de Playwright, que l'environnement n'atteint pas).
+echo 'Acquire::Retries "5"; Acquire::http::Timeout "30"; Acquire::https::Timeout "30"; DPkg::Lock::Timeout "300";' | sudo tee /etc/apt/apt.conf.d/80-ci-retries >/dev/null
 
 # Miroir Azure très lent (≈ 40 ko/s observé, runs 40292262172 / 40295000348 / 40295409861) : à partir de
 # la 2e tentative on bascule les sources apt vers un autre miroir officiel puis `apt-get update`.
@@ -39,13 +51,14 @@ switch_mirror() { # <index>
     [ -f "$f" ] || continue
     sudo sed -i -E "s#mirror\+file:/etc/apt/apt-mirrors\.txt/?#${m}#g; s#https?://(azure\.)?archive\.ubuntu\.com/ubuntu/?#${m}#g; s#https?://us\.archive\.ubuntu\.com/ubuntu/?#${m}#g" "$f"
   done
-  timeout -k 10 120 sudo apt-get update -o Acquire::Retries=3 >/dev/null || echo "::warning::apt-get update sur $m incomplet"
+  timeout -k 10 420 sudo apt-get update -o Acquire::Retries=3 -o DPkg::Lock::Timeout=300 >/dev/null || echo "::warning::apt-get update sur $m incomplet"
 }
 
 attempt() { # <seconds> <label> <cmd...>
   local limit="$1" label="$2" rc; shift 2
   for i in 1 2 3; do
     [ "$i" -gt 1 ] && switch_mirror $((i - 2))
+    apt_busy && { echo "apt/dpkg occupé avant la tentative $i : attente"; repair_apt; }
     echo "::group::$label — tentative $i/3 (≤ ${limit}s)"
     if timeout -k 20 "$limit" "$@"; then echo "::endgroup::"; return 0; else rc=$?; fi
     echo "::endgroup::"
