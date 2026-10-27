@@ -145,3 +145,36 @@ export const salesSellerProfiles = pgTable("sales_seller_profiles", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
 }, (table) => [uniqueIndex("sales_seller_profiles_org_uidx").on(sql`coalesce(${table.organizationId}, '')`)]);
+
+export const SALES_FEC_EXPORT_STATUSES = ["PENDING", "READY", "FAILED"] as const;
+
+/**
+ * Exports FEC mensuels par tenant (organisation, `null` = plateforme) : un par période `AAAA-MM`.
+ * Fichier en stockage privé (`storageKey`), empreinte SHA-256 et totaux pour l'audit ; `PENDING` =
+ * génération en cours (verrou logique, repris s'il est périmé), `FAILED` = motif dans `error`.
+ * `generatedBy` null = cron.
+ */
+export const salesFecExports = pgTable("sales_fec_exports", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: text("organization_id").references(() => organization.id, { onDelete: "cascade" }),
+  period: text("period").notNull(),
+  status: text("status", { enum: SALES_FEC_EXPORT_STATUSES }).default("PENDING").notNull(),
+  filename: text("filename"),
+  storageKey: text("storage_key"),
+  sizeBytes: integer("size_bytes"),
+  sha256: text("sha256"),
+  entryCount: integer("entry_count"),
+  lineCount: integer("line_count"),
+  debitMinor: bigint("debit_minor", { mode: "number" }),
+  creditMinor: bigint("credit_minor", { mode: "number" }),
+  error: text("error"),
+  attempts: integer("attempts").default(0).notNull(),
+  generatedBy: text("generated_by").references(() => user.id, { onDelete: "set null" }),
+  attemptedAt: timestamp("attempted_at").defaultNow().notNull(),
+  generatedAt: timestamp("generated_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
+}, (table) => [
+  uniqueIndex("sales_fec_exports_org_period_uidx").on(sql`coalesce(${table.organizationId}, '')`, table.period),
+  index("sales_fec_exports_period_idx").on(table.period),
+]);

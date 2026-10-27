@@ -6,7 +6,7 @@
 import { defineAction } from "astro:actions";
 import { z } from "astro/zod";
 import { Effect } from "effect";
-import { effectHandler } from "@/lib/effect/action";
+import { effectHandler, fail } from "@/lib/effect/action";
 import { lockOwnerFrom } from "@/core/locks/service";
 import { lockLocaleFrom } from "@/core/locks/errors";
 import { isCurrencyCode } from "@/core/money";
@@ -17,6 +17,10 @@ import { SALES_DOCUMENT_KINDS, SALES_STATUSES, type SalesStatus } from "../domai
 import { PAYMENT_METHODS } from "../domain/payments";
 import { bulkSalesLifecycle } from "./bulk";
 import { sellerProfileService } from "../services/sellerProfile.service";
+import { fecExportService } from "../services/fecExport.service";
+import { isClosedFecPeriod } from "../domain/fec";
+import { extractIp, logAuditEventEffect } from "@/lib/audit";
+import { PrivateStorage, privateStorage } from "@/lib/storage/private";
 
 const idInput = z.object({ id: z.uuid() });
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -147,6 +151,30 @@ export const salesActions = {
       const user = yield* requireSalesPermission(context, ["update"], organizationId);
       const row = yield* sellerProfileService.save(input, organizationId, user.id);
       return { id: row.id };
+    })),
+  }),
+  /**
+   * Export FEC d'une période close (`AAAA-MM`, antérieure au mois courant) : génération immédiate,
+   * relance forcée d'un échec ; un export prêt est figé (CONFLICT). Permission `issue` (pièce
+   * comptable légale) ; journal d'audit `SALES_FEC_GENERATE`.
+   */
+  generateFecExport: defineAction({
+    input: z.object({ organizationId: z.string().nullable().default(null), period: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/) }),
+    handler: effectHandler(({ organizationId, period }, context) => Effect.gen(function* () {
+      const user = yield* requireSalesPermission(context, ["issue"], organizationId);
+      if (!isClosedFecPeriod(period, new Date())) return yield* fail("BAD_REQUEST", "Période non close : seul un mois révolu s'exporte.");
+      const result = yield* fecExportService.generate({ organizationId, period, authorId: user.id, force: true }).pipe(
+        Effect.provideService(PrivateStorage, privateStorage()),
+        Effect.catchTag("FecExportError", (error) => fail("BAD_REQUEST", error.message)),
+      );
+      if (result.status === "SKIPPED") return yield* fail("CONFLICT", "Export déjà disponible ou en cours pour cette période.");
+      const exportId = result.status === "READY" ? result.export.id : result.exportId;
+      yield* logAuditEventEffect({
+        userId: user.id, action: "SALES_FEC_GENERATE", resource: "sales_fec_export", resourceId: exportId,
+        metadata: { organizationId, period, status: result.status, ...(result.status === "READY" ? { sha256: result.export.sha256, entryCount: result.export.entryCount } : { error: result.error }) },
+        ipAddress: extractIp(context.request.headers, context.clientAddress), userAgent: context.request.headers.get("user-agent"),
+      });
+      return result.status === "READY" ? { id: exportId, status: result.status } : { id: exportId, status: result.status, error: result.error };
     })),
   }),
 };

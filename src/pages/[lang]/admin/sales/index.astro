@@ -39,6 +39,7 @@ const bulkOperations = bulkBarOperations(salesDocumentAdminResource.list?.bulkAc
         <h1 class="text-2xl font-semibold">{t.admin.title}</h1>
         <div class="flex flex-wrap gap-2">
           <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/seller`} data-testid="sales-seller-profile">{t.seller.link}</a>
+          <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/fec`} data-testid="sales-fec-exports">{t.fec.link}</a>
         {canCreate && (
           <div class="flex flex-wrap gap-2">
             <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/new?kind=quote`} data-testid="sales-new-quote">{t.admin.newQuote}</a>
