@@ -52,4 +52,4 @@ Une configuration privée absente ou invalide produit un export `FAILED` — jam
 
 `tests/unit/modules/sales-fec.test.ts` (domaine, format, encodage), `tests/integration/sales-fec.test.ts`
 (génération, immutabilité, reprise, cron, route, action, audit), `tests/integration/storage/s3.test.ts`
-(bucket privé) ; page couverte par Lighthouse et Pa11y (seed `tests/a11y/setup.ts`).
+(bucket privé), `tests/e2e/sales-fec.spec.ts` (liste, téléchargement, période refusée) ; page couverte par Lighthouse et Pa11y (seed `tests/a11y/setup.ts`).
