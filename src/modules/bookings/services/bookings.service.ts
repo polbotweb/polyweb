@@ -20,7 +20,7 @@ import { freeSlots, localDate, zonedToUtc, type Interval, type WeeklyWindow } fr
 import { bookings, bookingsResources, bookingsRevisions } from "../schema";
 import { bookingsLock } from "../locks";
 import { ACTIVE_STATUSES, assignsNumber, bookingWorkflow, isEditable, reoccupiesSlot, SYSTEM_STATUSES, type BookingStatus } from "../domain/workflow";
-import { validateResource } from "../domain/resource";
+import { validateDeposit, validateResource } from "../domain/resource";
 import { checkSlot, validateBooking } from "../domain/booking";
 import { BOOKING_NUMBERING_KEY, DEFAULT_BOOKING_NUMBERING } from "../domain/numbering";
 import type { BookingConflictError, InvalidBookingError, InvalidResourceError, OutsideAvailabilityError } from "../domain/errors";
@@ -79,6 +79,9 @@ export interface ResourceInput {
   readonly slotMinutes?: number;
   readonly windows?: readonly WeeklyWindow[];
   readonly active?: boolean;
+  /** Acompte décimal (« 15.50 ») ; absent = inchangé (création : aucun). */
+  readonly deposit?: string;
+  readonly depositCurrency?: string;
 }
 
 const resourceColumns = (executor: Executor, input: ResourceInput, organizationId: string | null, exceptId?: string) =>
@@ -91,7 +94,8 @@ const resourceColumns = (executor: Executor, input: ResourceInput, organizationI
       executor.select({ id: bookingsResources.id }).from(bookingsResources)
         .where(and(eq(bookingsResources.code, valid.code), sameTenant(bookingsResources.organizationId, organizationId), exceptId ? ne(bookingsResources.id, exceptId) : undefined)).limit(1));
     if (clash[0]) return yield* fail("CONFLICT", `Le code ressource ${valid.code} existe déjà.`);
-    return { ...valid, windows: [...valid.windows], active: input.active ?? true };
+    const deposit = input.deposit === undefined ? {} : yield* domain(validateDeposit(input.deposit, input.depositCurrency ?? "EUR"));
+    return { ...valid, ...deposit, windows: [...valid.windows], active: input.active ?? true };
   });
 
 /** Créneau : instants UTC (ISO) ou date + heure locales de la ressource + durée. */

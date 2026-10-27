@@ -55,7 +55,11 @@ beforeAll(async () => {
   registerBookingPayments();
   const resource = await run(bookingsService.createResource({ organizationId: orgId, code: `${t}-R`.toUpperCase(), name: 'Salle à acompte', capacity: 2, timezone: 'Europe/Paris', slotMinutes: 60, windows }));
   resourceId = resource.id;
-  await db.update(bookingsResources).set({ depositMinor: 1500, depositCurrency: 'EUR' }).where(eq(bookingsResources.id, resourceId));
+  const base = { code: resource.code, name: resource.name, capacity: 2, timezone: 'Europe/Paris', slotMinutes: 60, windows };
+  expect(await run(bookingsService.updateResource(resourceId, { ...base, deposit: '15.00', depositCurrency: 'eur' }))).toMatchObject({ depositMinor: 1500, depositCurrency: 'EUR' });
+  // Saisie absente : acompte inchangé ; précision invalide refusée.
+  expect((await run(bookingsService.updateResource(resourceId, base))).depositMinor).toBe(1500);
+  await expect(run(bookingsService.updateResource(resourceId, { ...base, deposit: '1.005' }))).rejects.toThrow();
 });
 
 afterAll(async () => {

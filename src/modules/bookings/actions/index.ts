@@ -27,6 +27,7 @@ const resourceFields = {
   timezone: z.string().trim().min(1).max(64).default("UTC"), slotMinutes: z.number().int().min(5).max(480).default(30),
   windows: z.array(z.object({ weekday: z.number().int().min(0).max(6), start: hhmm, end: hhmm })).max(MAX_WINDOWS).default([]),
   active: z.boolean().default(true),
+  deposit: z.string().trim().max(24).optional(), depositCurrency: z.string().trim().length(3).optional(),
 };
 const slotInput = z.union([
   z.object({ startsAt: z.iso.datetime({ offset: true }), endsAt: z.iso.datetime({ offset: true }) }),
