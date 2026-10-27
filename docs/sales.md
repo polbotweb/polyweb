@@ -36,3 +36,10 @@ Traductions fr / en / es / ar (`i18n/`), interface RTL en arabe.
 ## Tests
 
 `tests/unit/sales/domain.test.ts`, `tests/unit/sales/pdf-template.test.ts`, `tests/integration/sales-module.test.ts`, `tests/integration/sales-pdf.test.ts`.
+
+## Paiement en ligne
+
+Lien de paiement signé par facture (fiche facture, droit `payment`) → page publique
+`/{lang}/pay/invoice/{id}` ; le webhook enregistre l'encaissement carte et recalcule le statut.
+Tests : `tests/unit/sales/pay-link.test.ts`, `tests/integration/sales-payments.test.ts`.
+Détails : [payments.md](payments.md).

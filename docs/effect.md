@@ -111,7 +111,7 @@ Le code antérieur est migré **par zones**, chaque zone gardant typecheck/tests
 | Briques plateforme (contenu, API v1, webhooks, formulaires, plugins, sites, recherche, observabilité, sauvegarde, CLI) | Effect natif. |
 | `src/modules/content/domain/entries.ts`, `revisions.ts`, `content-types.ts` | Effect natif + adaptateurs Promise (`runContent`). |
 | `src/modules/sites/domain/sites.ts`, `src/lib/platform/admin.ts` | Effect natif + adaptateurs (`runSites`, `getAdminSiteEffect`, `userCanEffect`). |
-| `src/modules/payments/domain/payment-service.ts` | Effect natif (timeout fournisseur 20 s, compensation) + adaptateurs. `providers.ts` (SDK Stripe/mock) reste en Promise, appelé sous timeout. |
+| `src/core/payments` | Effect natif : `PaymentGateway` (service), `startCheckout`, `handleWebhook` (transaction unique, idempotence), `expireDuePayments` ; SDK Stripe appelé via `Effect.tryPromise` sous timeout. `src/modules/payments` : lecture administration. Voir [payments.md](payments.md). |
 | `src/smtp/send.ts`, `src/core/events`, `src/lib/audit.ts` | Effect natif + adaptateurs Promise. Fournisseurs SMTP (Brevo/Resend/Nodemailer) : frontières SDK en Promise, enveloppées par `sendEmailEffect`. |
 | `src/core/crud/engine.ts` | `handleCrudEffect` natif ; `handleCrud` adaptateur (page admin CRUD). |
 | `src/lib/auth-guards.ts` | `requireAuthEffect` / `requireAdminEffect` / `requirePermissionEffect` natifs ; versions `async` = adaptateurs pour les pages `.astro`. |

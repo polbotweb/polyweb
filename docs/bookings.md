@@ -95,3 +95,8 @@ Le code est dans `public/` (`flow.ts` pour les effets, `pages.ts` pour les contr
 - `tests/e2e/bookings-public.spec.ts` (3 navigateurs : réservation, annulation, RTL, CSRF, organisation, axe)
 - pa11y et Lighthouse : `/{lang}/bookings` et `/{lang}/bookings/A11YROOM`, ressource créée par `tests/a11y/setup.ts`
 - `tests/e2e/a11y.spec.ts` (pages réservations)
+
+## Acompte en ligne
+
+Acompte configurable par ressource ; exigé à la réservation publique quand le paiement en ligne
+est actif (échéance 60 min, puis statut système `EXPIRED`). Détails : [payments.md](payments.md).
