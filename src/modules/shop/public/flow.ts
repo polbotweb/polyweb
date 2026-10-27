@@ -75,7 +75,9 @@ export interface RequestMeta {
   readonly now?: Date;
 }
 
-const RATE_LIMIT = { window: 600, max: Number(process.env.SHOP_CHECKOUT_RATE_LIMIT ?? 10) };
+/** Commandes par IP et par 10 min ; valeur d'environnement invalide ou hors [1, 1000] → 10. */
+const configuredRateLimit = Number.parseInt(process.env.SHOP_CHECKOUT_RATE_LIMIT ?? "", 10);
+const RATE_LIMIT = { window: 600, max: Number.isInteger(configuredRateLimit) && configuredRateLimit >= 1 && configuredRateLimit <= 1000 ? configuredRateLimit : 10 };
 const ipHashOf = (ip: string | null) => (ip ? createHash("sha256").update(`polyweb:${ip}`).digest("hex").slice(0, 32) : null);
 
 export type CheckoutOutcome = { readonly kind: "redirect"; readonly url: string } | { readonly kind: "discarded" };

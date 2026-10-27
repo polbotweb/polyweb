@@ -274,6 +274,7 @@ shop/
   ShopCard.astro
   ShopDetail.astro
   admin/
+  public/
 tax/
   TaxCard.astro
   TaxDetail.astro
@@ -483,6 +484,7 @@ migrations/
   0037_bookings_guest_phone.sql
   0038_core_payments.sql
   0039_sales_seller_profiles.sql
+  0040_shop_orders.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -520,6 +522,7 @@ migrations/
     0037_snapshot.json
     0038_snapshot.json
     0039_snapshot.json
+    0040_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -719,6 +722,7 @@ schemas.ts
 - `0037_bookings_guest_phone.sql`
 - `0038_core_payments.sql`
 - `0039_sales_seller_profiles.sql`
+- `0040_shop_orders.sql`
 
 ### Commandes
 
@@ -1330,25 +1334,41 @@ shop/
     bulk.ts
     index.ts
   admin/
+    orders.ts
     resource.ts
   capabilities.ts
   client/
     init.ts
   domain/
+    cart-token.ts
+    checkout.ts
+    errors.ts
+    orders.ts
+    pricing.ts
     workflow.ts
   i18n/
+    checkout.ts
     index.ts
+    orders-admin.ts
   loaders/
     index.ts
     product-admin.loader.ts
     product.loader.ts
   locks.ts
   module.ts
+  payments.ts
   permissions/
     index.ts
+  public/
+    flow.ts
+    format.ts
+    pages.ts
   schema/
     index.ts
+    orders.ts
   services/
+    cart.service.ts
+    order.service.ts
     product.service.ts
   taxonomy.ts
 sites/
@@ -1412,6 +1432,7 @@ src/pages/
     logistics/
     media.astro
     navigation.astro
+    orders/
     organizations.astro
     pages.astro
     platform/
@@ -1463,7 +1484,10 @@ src/pages/
     index.astro
   shop/
     [slug].astro
+    cart.astro
+    checkout.astro
     index.astro
+    order/
 api/
   admin/
     forms/
