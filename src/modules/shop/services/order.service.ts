@@ -91,7 +91,8 @@ export const createOrder = (request: CheckoutRequest) =>
       Effect.gen(function* () {
         const [cart] = yield* dbTry("shop.order.cart", () =>
           tx.select().from(carts).where(and(eq(carts.id, request.cartId), sameTenant(carts.organizationId, request.organizationId))).limit(1).for("update"));
-        if (!cart) return yield* fail("NOT_FOUND", "Panier introuvable.");
+        // Le panier doit appartenir au demandeur : panier invité ↔ pas d'utilisateur, sinon le sien.
+        if (!cart || (cart.userId ?? null) !== request.userId) return yield* fail("NOT_FOUND", "Panier introuvable.");
         const rows = yield* dbTry("shop.order.cartLines", () =>
           tx.select({ line: cartLines, variant: productVariants, product: products, translatedTitle: productTranslations.title })
             .from(cartLines)
