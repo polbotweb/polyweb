@@ -11,7 +11,8 @@ import { organization, user } from "@database/schemas/auth.schema";
 import { sales } from "@/modules/sales/schema";
 import { productVariants } from "@/modules/shop/schema";
 import { SHIPMENT_STATUSES } from "../domain/workflow";
-import { MOVEMENT_KINDS, RESERVATION_STATUSES } from "../domain/stock";
+import { MOVEMENT_KINDS, MOVEMENT_SOURCES, RESERVATION_STATUSES } from "../domain/stock";
+import { INVENTORY_COUNT_STATUSES } from "../domain/inventory";
 
 export const logisticsWarehouses = pgTable("logistics_warehouses", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -91,10 +92,15 @@ export const logisticsStockMovements = pgTable("logistics_stock_movements", {
   kind: text("kind", { enum: MOVEMENT_KINDS }).notNull(),
   delta: integer("delta").notNull(),
   shipmentId: text("shipment_id").references(() => logistics.id, { onDelete: "set null" }),
+  /** Origine du mouvement (grand livre) ; `inventoryCountId` renseigné quand `source = inventory`. */
+  source: text("source", { enum: MOVEMENT_SOURCES }).default("manual").notNull(),
+  inventoryCountId: text("inventory_count_id").references(() => logisticsInventoryCounts.id, { onDelete: "set null" }),
   reference: text("reference"),
   createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
+  index("logistics_stock_movements_ledger_idx").on(table.organizationId, table.createdAt),
+  index("logistics_stock_movements_inventory_idx").on(table.inventoryCountId),
   index("logistics_stock_movements_level_idx").on(table.warehouseId, table.itemId),
   index("logistics_stock_movements_shipment_idx").on(table.shipmentId),
   check("logistics_stock_movements_delta_non_zero", sql`${table.delta} <> 0`),
@@ -145,3 +151,46 @@ export const logisticsShipmentLocks = pgTable("logistics_shipment_locks", {
   lockedAt: timestamp("locked_at").defaultNow().notNull(),
   expiresAt: timestamp("expires_at").notNull(),
 });
+
+/**
+ * Inventaires physiques par entrepôt (OPEN → VALIDATED | CANCELLED). Un seul inventaire ouvert
+ * par entrepôt (index unique partiel). La validation poste les ajustements d'écart.
+ */
+export const logisticsInventoryCounts = pgTable("logistics_inventory_counts", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: text("organization_id").references(() => organization.id, { onDelete: "cascade" }),
+  warehouseId: text("warehouse_id").notNull().references(() => logisticsWarehouses.id, { onDelete: "no action" }),
+  number: text("number").notNull(),
+  status: text("status", { enum: INVENTORY_COUNT_STATUSES }).default("OPEN").notNull(),
+  note: text("note"),
+  createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+  validatedBy: text("validated_by").references(() => user.id, { onDelete: "set null" }),
+  validatedAt: timestamp("validated_at"),
+  cancelledAt: timestamp("cancelled_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
+}, (table) => [
+  uniqueIndex("logistics_inventory_counts_org_number_uidx").on(table.organizationId, table.number),
+  uniqueIndex("logistics_inventory_counts_open_uidx").on(table.warehouseId).where(sql`${table.status} = 'OPEN'`),
+  index("logistics_inventory_counts_org_idx").on(table.organizationId, table.createdAt),
+]);
+
+/**
+ * Lignes d'inventaire : stock théorique figé à l'ouverture (`expected`), quantité comptée
+ * (null = non comptée), niveau réel et écart figés à la validation.
+ */
+export const logisticsInventoryCountLines = pgTable("logistics_inventory_count_lines", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  countId: text("count_id").notNull().references(() => logisticsInventoryCounts.id, { onDelete: "cascade" }),
+  itemId: text("item_id").notNull().references(() => logisticsItems.id, { onDelete: "no action" }),
+  sku: text("sku").notNull(),
+  expected: integer("expected").notNull(),
+  counted: integer("counted"),
+  system: integer("system"),
+  variance: integer("variance"),
+  countedBy: text("counted_by").references(() => user.id, { onDelete: "set null" }),
+  countedAt: timestamp("counted_at"),
+}, (table) => [
+  uniqueIndex("logistics_inventory_count_lines_item_uidx").on(table.countId, table.itemId),
+  check("logistics_inventory_count_lines_counted_non_negative", sql`${table.counted} IS NULL OR ${table.counted} >= 0`),
+]);

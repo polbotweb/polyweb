@@ -24,3 +24,16 @@ export class InsufficientStockError extends Data.TaggedError("InsufficientStockE
     return `Stock insuffisant pour ${this.sku} : ${this.available} disponible(s), ${this.requested} demandé(s)`;
   }
 }
+
+export class InvalidInventoryCountError extends Data.TaggedError("InvalidInventoryCountError")<{ readonly field: "counted" | "lines" | "line" | "warehouse" | "note"; readonly value: string }> {
+  override get message() {
+    return `Inventaire invalide (${this.field}) : ${this.value}`;
+  }
+}
+
+/** Action impossible dans l'état courant de l'inventaire (déjà validé / annulé). */
+export class InventoryCountStateError extends Data.TaggedError("InventoryCountStateError")<{ readonly status: string; readonly action: string }> {
+  override get message() {
+    return `Inventaire ${this.status} : action « ${this.action} » impossible`;
+  }
+}

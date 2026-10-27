@@ -23,7 +23,7 @@ import {
 } from "../schema";
 import { logisticsLock } from "../locks";
 import { assignsNumber, isEditable, shipmentWorkflow, stockEffect, type ShipmentStatus } from "../domain/workflow";
-import { aggregateBySku, ensureAvailable, MANUAL_MOVEMENT_KINDS, signedQuantity, validateSku } from "../domain/stock";
+import { aggregateBySku, ensureAvailable, MANUAL_MOVEMENT_KINDS, signedQuantity, validateSku, type MovementSource } from "../domain/stock";
 import { validateShipment, validateWarehouse, type ShipmentLineInput } from "../domain/shipment";
 import { DEFAULT_SHIPMENT_NUMBERING, SHIPMENT_NUMBERING_KEY } from "../domain/numbering";
 import { InsufficientStockError as InsufficientStockErrorClass, type InsufficientStockError, type InvalidMovementError, type InvalidShipmentError, type InvalidWarehouseError } from "../domain/errors";
@@ -62,6 +62,16 @@ const levelOf = (executor: Executor, warehouseId: string, itemId: string) =>
       .where(and(eq(logisticsStockMovements.warehouseId, warehouseId), eq(logisticsStockMovements.itemId, itemId))),
   ).pipe(Effect.map((rows) => Number(rows[0]?.level ?? 0)));
 
+/**
+ * Niveaux courants des articles d'un entrepôt (somme des deltas par article) — à lire sous
+ * `lockWarehouse` pour une photo cohérente.
+ */
+const levelsOf = (executor: Executor, warehouseId: string) =>
+  dbTry("logistics.stock.levels", () =>
+    executor.select({ itemId: logisticsStockMovements.itemId, level: sql<number>`coalesce(sum(${logisticsStockMovements.delta}), 0)::int` })
+      .from(logisticsStockMovements).where(eq(logisticsStockMovements.warehouseId, warehouseId)).groupBy(logisticsStockMovements.itemId),
+  ).pipe(Effect.map((rows) => new Map(rows.map((row) => [row.itemId, Number(row.level)]))));
+
 /** Quantité réservée (réservations `active` non échues), hors réservations de `excludeReference`. */
 const reservedOf = (executor: Executor, warehouseId: string, itemId: string, now: Date, excludeReference?: string | null) =>
   dbTry("logistics.stock.reserved", () =>
@@ -77,6 +87,13 @@ const reservedOf = (executor: Executor, warehouseId: string, itemId: string, now
 const availableOf = (executor: Executor, warehouseId: string, itemId: string, now: Date, excludeReference?: string | null) =>
   Effect.map(Effect.all([levelOf(executor, warehouseId, itemId), reservedOf(executor, warehouseId, itemId, now, excludeReference)]), ([level, reserved]) => level - reserved);
 
+/**
+ * Primitives internes au module (inventaires) — jamais exposées aux autres modules, qui passent
+ * par `logisticsStockPort`.
+ * @internal
+ */
+export const logisticsStockInternals = { lockWarehouse, levelsOf, sameTenant };
+
 interface MovementWrite {
   readonly organizationId: string | null;
   readonly warehouseId: string;
@@ -85,6 +102,8 @@ interface MovementWrite {
   readonly quantity: number;
   readonly shipmentId?: string | null;
   readonly reference?: string | null;
+  /** Origine portée au grand livre (obligatoire : chaque écrivain se déclare). */
+  readonly source: MovementSource;
   /** Sortie qui consomme les réservations de cette référence (elles ne la bloquent pas). */
   readonly consumesReservation?: string | null;
 }
@@ -103,7 +122,7 @@ const writeMovement = (executor: Executor, input: MovementWrite, authorId: strin
     const [row] = yield* dbTry("logistics.movement.insert", () =>
       executor.insert(logisticsStockMovements).values({
         organizationId: input.organizationId, warehouseId: input.warehouseId, itemId: input.item.id, kind, delta,
-        shipmentId: input.shipmentId ?? null, reference: input.reference?.trim() || null, createdBy: authorId,
+        shipmentId: input.shipmentId ?? null, reference: input.reference?.trim() || null, source: input.source, createdBy: authorId,
       }).returning());
     return row!;
   });
@@ -218,7 +237,7 @@ const applyStockEffect = (tx: DbTransaction, row: ShipmentRow, effect: "issue" |
       const item = yield* findItemBySku(tx, sku, row.organizationId);
       yield* writeMovement(tx, {
         organizationId: row.organizationId, warehouseId: row.warehouseId, item, kind: effect === "issue" ? "shipment" : "return",
-        quantity, shipmentId: row.id, reference: row.number,
+        quantity, shipmentId: row.id, reference: row.number, source: "shipment",
       }, authorId);
     }
   });
@@ -231,7 +250,7 @@ export const logisticsStockPort = {
   lockWarehouse: (tx: DbTransaction, id: string, organizationId: string | null) => lockWarehouse(tx, id, organizationId),
   findItemBySku: (tx: DbTransaction, sku: string, organizationId: string | null) => findItemBySku(tx, sku, organizationId),
   receive: (tx: DbTransaction, input: { readonly organizationId: string | null; readonly warehouseId: string; readonly item: ItemRow; readonly quantity: number; readonly reference: string }, authorId: string) =>
-    writeMovement(tx, { ...input, kind: "receipt" }, authorId),
+    writeMovement(tx, { ...input, kind: "receipt", source: "purchase" }, authorId),
 
   /**
    * Réserve, dans la transaction de l'appelant, le stock des variantes boutique suivies en
@@ -306,7 +325,7 @@ export const logisticsStockPort = {
         const [item] = yield* dbTry("logistics.reserve.item", () => tx.select().from(logisticsItems).where(eq(logisticsItems.id, reservation.itemId)).limit(1));
         const movement = yield* Effect.result(writeMovement(tx, {
           organizationId: input.organizationId, warehouseId: reservation.warehouseId, item: item!, kind: "issue", quantity: reservation.quantity,
-          reference: input.movementReference, consumesReservation: input.reference,
+          reference: input.movementReference, consumesReservation: input.reference, source: "order",
         }, null));
         if (movement._tag === "Failure") {
           if (movement.failure._tag !== "ActionFailure" || movement.failure.code !== "BAD_REQUEST") return yield* Effect.fail(movement.failure);
@@ -361,7 +380,7 @@ export const logisticsStockPort = {
         const quantity = Math.min(left, budget);
         if (quantity <= 0) continue;
         if (wanted && item.variantId) wanted.set(item.variantId, budget - quantity);
-        written.push(yield* writeMovement(tx, { organizationId: input.organizationId, warehouseId, item, kind: "return", quantity, reference: input.returnReference }, authorId));
+        written.push(yield* writeMovement(tx, { organizationId: input.organizationId, warehouseId, item, kind: "return", quantity, reference: input.returnReference, source: "return" }, authorId));
       }
       return written;
     }),
@@ -472,7 +491,7 @@ export const logisticsService = {
         Effect.gen(function* () {
           yield* lockWarehouse(tx, input.warehouseId, input.organizationId);
           const item = yield* findItemBySku(tx, sku, input.organizationId);
-          return yield* writeMovement(tx, { ...input, item }, authorId);
+          return yield* writeMovement(tx, { ...input, item, source: "manual" }, authorId);
         }));
     }),
 
@@ -489,8 +508,8 @@ export const logisticsService = {
           // Ordre de verrouillage stable (id croissant) : pas d'interblocage entre deux transferts croisés.
           for (const id of [input.fromWarehouseId, input.toWarehouseId].sort()) yield* lockWarehouse(tx, id, input.organizationId);
           const item = yield* findItemBySku(tx, sku, input.organizationId);
-          const out = yield* writeMovement(tx, { organizationId: input.organizationId, warehouseId: input.fromWarehouseId, item, kind: "transfer_out", quantity: input.quantity, reference: input.reference }, authorId);
-          const into = yield* writeMovement(tx, { organizationId: input.organizationId, warehouseId: input.toWarehouseId, item, kind: "transfer_in", quantity: input.quantity, reference: input.reference }, authorId);
+          const out = yield* writeMovement(tx, { organizationId: input.organizationId, warehouseId: input.fromWarehouseId, item, kind: "transfer_out", quantity: input.quantity, reference: input.reference, source: "transfer" }, authorId);
+          const into = yield* writeMovement(tx, { organizationId: input.organizationId, warehouseId: input.toWarehouseId, item, kind: "transfer_in", quantity: input.quantity, reference: input.reference, source: "transfer" }, authorId);
           return { out, into };
         }));
     }),
