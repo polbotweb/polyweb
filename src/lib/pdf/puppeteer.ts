@@ -1,8 +1,9 @@
 /**
  * Adaptateur Puppeteer du port `PdfRenderer` (`@/core/documents`).
  *
- * - Chromium fourni par l'environnement (`PDF_CHROMIUM_PATH`, ou `PUPPETEER_EXECUTABLE_PATH`) :
- *   `puppeteer-core` ne télécharge rien. Absent → `DocumentRenderError{reason:"unavailable"}`.
+ * - Chromium choisi par la couche `ChromiumLauncher` (`./chromium`) : binaire de l'environnement
+ *   en local / CI (`PDF_CHROMIUM_PATH`, ou `PUPPETEER_EXECUTABLE_PATH`), `@sparticuz/chromium`
+ *   en serverless. `puppeteer-core` ne télécharge rien. Absent → `DocumentRenderError{reason:"unavailable"}`.
  * - Navigateur lancé à la première demande puis réutilisé (relancé s'il se déconnecte).
  * - Connexion par pipe (`pipe: true`) et non WebSocket : Chromium (lancé détaché par Puppeteer)
  *   se termine dès que le processus Node meurt, même tué par SIGKILL (ex. arrêt du `webServer`
@@ -15,11 +16,14 @@
 import { Duration, Effect, Layer } from "effect";
 import type { Browser } from "puppeteer-core";
 import { DocumentRenderError, PdfRenderer, type PdfRendererShape, type PdfRenderOptions } from "@/core/documents";
+import {
+  ChromiumLauncher, ChromiumLauncherLive, chromiumExecutablePath, makeLocalChromiumLauncher,
+  type ChromiumLaunch, type ChromiumLauncherShape,
+} from "./chromium";
+
+export { chromiumExecutablePath, pdfLaunchOptions } from "./chromium";
 
 const DEFAULT_TIMEOUT_MS = 15_000;
-
-export const chromiumExecutablePath = (env: Record<string, string | undefined> = process.env) =>
-  env.PDF_CHROMIUM_PATH || env.PUPPETEER_EXECUTABLE_PATH || null;
 
 const timeoutFromEnv = () => {
   const value = Number(process.env.PDF_RENDER_TIMEOUT_MS);
@@ -29,23 +33,23 @@ const timeoutFromEnv = () => {
 const isTimeout = (cause: unknown) => cause instanceof Error && cause.name === "TimeoutError";
 
 let browserPromise: Promise<Browser> | null = null;
+let browserKey: string | null = null;
 
-/** Options de lancement (exportées pour les tests). */
-export const pdfLaunchOptions = (executablePath: string, env: Record<string, string | undefined> = process.env) => {
-  const args = ["--disable-gpu", "--disable-dev-shm-usage", "--font-render-hinting=none"];
-  if (env.PDF_CHROMIUM_SANDBOX !== "1") args.push("--no-sandbox", "--disable-setuid-sandbox");
-  return { executablePath, headless: true, pipe: true, args } as const;
-};
-
-const launch = async (executablePath: string): Promise<Browser> => {
+const launch = async (options: ChromiumLaunch): Promise<Browser> => {
   const { launch: launchBrowser } = await import("puppeteer-core");
-  const browser = await launchBrowser(pdfLaunchOptions(executablePath));
-  browser.on("disconnected", () => { browserPromise = null; });
+  const browser = await launchBrowser({ ...options, args: [...options.args] });
+  browser.on("disconnected", () => { browserPromise = null; browserKey = null; });
   return browser;
 };
 
-const sharedBrowser = (executablePath: string) => {
-  browserPromise ??= launch(executablePath).catch((error: unknown) => { browserPromise = null; throw error; });
+/** Navigateur partagé ; relancé si les options de lancement changent. */
+const sharedBrowser = async (options: ChromiumLaunch) => {
+  const key = JSON.stringify(options);
+  if (browserPromise && browserKey !== key) await closePdfBrowser();
+  if (!browserPromise) {
+    browserKey = key;
+    browserPromise = launch(options).catch((error: unknown) => { browserPromise = null; browserKey = null; throw error; });
+  }
   return browserPromise;
 };
 
@@ -53,11 +57,12 @@ const sharedBrowser = (executablePath: string) => {
 export const closePdfBrowser = async () => {
   const pending = browserPromise;
   browserPromise = null;
+  browserKey = null;
   if (pending) await (await pending.catch(() => null))?.close().catch(() => undefined);
 };
 
-const renderWith = async (executablePath: string, html: string, options: PdfRenderOptions, timeoutMs: number) => {
-  const browser = await sharedBrowser(executablePath);
+const renderWith = async (launchOptions: ChromiumLaunch, html: string, options: PdfRenderOptions, timeoutMs: number) => {
+  const browser = await sharedBrowser(launchOptions);
   const page = await browser.newPage();
   try {
     await page.setJavaScriptEnabled(false);
@@ -74,18 +79,32 @@ const renderWith = async (executablePath: string, html: string, options: PdfRend
   }
 };
 
-export const makePuppeteerPdfRenderer = (executablePath = chromiumExecutablePath()): PdfRendererShape => ({
-  render: (html, options = {}) => {
-    if (!executablePath) return Effect.fail(new DocumentRenderError({ reason: "unavailable" }));
-    const timeoutMs = options.timeoutMs ?? timeoutFromEnv();
-    return Effect.tryPromise({
-      try: () => renderWith(executablePath, html, options, timeoutMs),
-      catch: (cause) => new DocumentRenderError({ reason: isTimeout(cause) ? "timeout" : "render", cause }),
-    }).pipe(
-      Effect.timeoutOrElse({ duration: Duration.millis(timeoutMs + 1_000), orElse: () => Effect.fail(new DocumentRenderError({ reason: "timeout" })) }),
-    );
-  },
-});
+/**
+ * Adaptateur à partir d'un `ChromiumLauncher` (ou, pour les tests, d'un chemin de binaire local).
+ */
+export const makePuppeteerPdfRenderer = (
+  launcher: ChromiumLauncherShape | string | null = chromiumExecutablePath(),
+): PdfRendererShape => {
+  const source = typeof launcher === "object" && launcher !== null ? launcher : makeLocalChromiumLauncher(launcher);
+  return {
+    render: (html, options = {}) => {
+      const timeoutMs = options.timeoutMs ?? timeoutFromEnv();
+      return source.resolve.pipe(
+        Effect.flatMap((launchOptions) => Effect.tryPromise({
+          try: () => renderWith(launchOptions, html, options, timeoutMs),
+          catch: (cause) => new DocumentRenderError({ reason: isTimeout(cause) ? "timeout" : "render", cause }),
+        })),
+        Effect.timeoutOrElse({ duration: Duration.millis(timeoutMs + 1_000), orElse: () => Effect.fail(new DocumentRenderError({ reason: "timeout" })) }),
+      );
+    },
+  };
+};
 
-/** Couche de production : Puppeteer si Chromium est configuré, sinon échec `unavailable` à l'appel. */
-export const PuppeteerPdfRendererLive = Layer.sync(PdfRenderer, () => makePuppeteerPdfRenderer());
+/** Adaptateur branché sur le `ChromiumLauncher` du contexte. */
+export const PuppeteerPdfRenderer = Layer.effect(PdfRenderer, Effect.gen(function* () {
+  const launcher = yield* ChromiumLauncher;
+  return makePuppeteerPdfRenderer(launcher);
+}));
+
+/** Couche de production : Chromium local ou serverless selon l'environnement (`ChromiumLauncherLive`). */
+export const PuppeteerPdfRendererLive = PuppeteerPdfRenderer.pipe(Layer.provide(ChromiumLauncherLive));

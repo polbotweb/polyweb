@@ -11,7 +11,8 @@ Bloc générique (`src/core/documents`) pour produire des PDF (devis, factures, 
 | `escapeHtml`, `sanitizePrintCss` | Échappement des valeurs ; retrait des `@import` et `url()` non `data:` du CSS (thème) |
 | `PdfRendererUnavailable` | Couche par défaut : échec `reason: "unavailable"` |
 | `makeMemoryPdfRenderer()` | Moteur de test (enregistre le HTML) |
-| `src/lib/pdf/puppeteer.ts` | Adaptateur Puppeteer (`puppeteer-core`) : `PuppeteerPdfRendererLive`, `closePdfBrowser()` |
+| `src/lib/pdf/puppeteer.ts` | Adaptateur Puppeteer (`puppeteer-core`) : `PuppeteerPdfRenderer` (requiert `ChromiumLauncher`), `PuppeteerPdfRendererLive`, `closePdfBrowser()` |
+| `src/lib/pdf/chromium.ts` | Couche `ChromiumLauncher` : `LocalChromiumLive`, `ServerlessChromiumLive`, `ChromiumLauncherLive` (choix selon l'environnement) |
 
 Un module fournit un gabarit pur (HTML) puis passe par le port, par exemple les ventes :
 `renderSalesDocumentHtml(doc, { locale, sellerName, themeCss })` → `renderSalesDocumentPdf(doc, options)`.
@@ -24,6 +25,19 @@ Un module fournit un gabarit pur (HTML) puis passe par le port, par exemple les 
 - **Aucune ressource distante** : interception réseau (seuls `data:` et `about:` passent) en plus de la CSP. Les polices sont celles installées sur la machine (aucun webfont distant).
 - **Délai borné** : `setContent` / `page.pdf` limités à `PDF_RENDER_TIMEOUT_MS` (défaut 15 000), et `Effect.timeoutOrElse` au-dessus → `DocumentRenderError{ reason: "timeout" }`.
 - `--no-sandbox` par défaut (conteneurs / CI) ; `PDF_CHROMIUM_SANDBOX=1` réactive le bac à sable.
+
+## Sélection du Chromium (`ChromiumLauncher`)
+
+| Mode | Quand | Chromium | Lancement |
+|---|---|---|---|
+| `local` | par défaut (dev, CI, Docker, VPS) | binaire de l'environnement (`PDF_CHROMIUM_PATH` / `PUPPETEER_EXECUTABLE_PATH`) | `headless: true`, `pipe: true`, options ci-dessus |
+| `serverless` | `VERCEL=1` ou `AWS_LAMBDA_FUNCTION_NAME` défini | `@sparticuz/chromium` (importé dynamiquement, seulement dans ce mode) | `headless: "shell"`, `pipe: true`, `chromium.args` |
+
+- `PDF_CHROMIUM_MODE=local|serverless` force le mode (valeur inconnue ignorée).
+- `ChromiumLauncherLive` est une `Layer.suspend` : le choix est fait à la construction de la couche, pas à l'import.
+- Les options serverless sont résolues une seule fois (décompression vers `/tmp`), un échec est retenté au rendu suivant ; il est converti en `DocumentRenderError{ reason: "unavailable" }` (503).
+- Le navigateur partagé est relancé si les options de lancement changent.
+- Tests : `tests/unit/pdf-chromium.test.ts` (choix du mode, options, cache et nouvelle tentative, injection par couche), avec un module `@sparticuz/chromium` simulé.
 
 Erreurs (`DocumentRenderError.reason`) : `unavailable` (pas de Chromium configuré), `timeout`, `render`.
 
@@ -44,7 +58,7 @@ Codes : 401 / 403 / 404 / 429 ; 503 si Chromium indisponible, 504 en cas de dél
 | `PDF_CHROMIUM_SANDBOX` | `1` pour garder le bac à sable Chromium |
 
 - **Serveur / conteneur Node** : installer Chromium et ses dépendances (ex. Debian/Ubuntu `apt-get install chromium`, ou `npx playwright install --with-deps chromium`) et des polices couvrant les langues servies (dont l'arabe : `fonts-noto-core` / `fonts-dejavu`).
-- **Vercel (serverless)** : pas de Chromium dans le runtime. L'option habituelle est `@sparticuz/chromium` (binaire compressé adapté à Lambda) avec `puppeteer-core`. **Non ajouté** : nouvelle dépendance soumise à validation. Sans Chromium, la route répond 503 et le reste de l'application fonctionne.
+- **Vercel (serverless)** : pas de Chromium dans le runtime ; le mode `serverless` utilise `@sparticuz/chromium` (binaire compressé, environ 67 Mo, décompressé dans `/tmp` au premier rendu). Le traçage de fichiers de `@astrojs/vercel` copie `bin/` dans la fonction (vérifié avec `ASTRO_ADAPTER=vercel astro build`) ; aucune option `includeFiles` n'est nécessaire. Aucun `PDF_CHROMIUM_PATH` à définir.
 
 ## CI
 
