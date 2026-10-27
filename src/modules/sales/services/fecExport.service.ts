@@ -173,7 +173,7 @@ export const fecExportOf = (id: string) =>
 export const listFecExports = (input: { readonly organizationId?: string | null; readonly limit?: number; readonly offset?: number } = {}) =>
   dbTry("sales.fec.list", () => getDrizzle().select().from(salesFecExports)
     .where(input.organizationId === undefined ? undefined : tenantOf(salesFecExports.organizationId, input.organizationId))
-    .orderBy(desc(salesFecExports.period), asc(salesFecExports.organizationId), desc(salesFecExports.createdAt))
+    .orderBy(desc(salesFecExports.period), asc(salesFecExports.organizationId), desc(salesFecExports.createdAt), desc(salesFecExports.id))
     .limit(Math.min(Math.max(input.limit ?? 50, 1), 200)).offset(Math.max(input.offset ?? 0, 0)));
 
 /** Liste du back-office (tous tenants, RBAC global) : nom du tenant et de l'auteur (null = cron). */
@@ -186,7 +186,7 @@ export const listFecExportsForAdmin = (limit = 200) =>
   }).from(salesFecExports)
     .leftJoin(organization, eq(organization.id, salesFecExports.organizationId))
     .leftJoin(user, eq(user.id, salesFecExports.generatedBy))
-    .orderBy(desc(salesFecExports.period), sql`${organization.name} asc nulls first`)
+    .orderBy(desc(salesFecExports.period), sql`${organization.name} asc nulls first`, asc(salesFecExports.organizationId), desc(salesFecExports.id))
     .limit(Math.min(Math.max(limit, 1), 500)));
 
 /** Adaptateur Promise (pages Astro). */

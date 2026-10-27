@@ -159,6 +159,9 @@ describe('grand livre de stock', () => {
     const transfers = page.rows.filter((row) => row.source === 'transfer');
     expect(transfers).toHaveLength(2);
     expect(transfers[0].createdAt.getTime()).toBe(transfers[1].createdAt.getTime());
+    // Ordre produit stable : created_at desc puis id desc (départage déterministe des ex-aequo).
+    const again = await run(inventoryLoader.ledger(orgId, filters()));
+    expect(again.rows.map((row) => row.id)).toEqual(page.rows.map((row) => row.id));
     const out = transfers.find((row) => row.kind === 'transfer_out');
     const into = transfers.find((row) => row.kind === 'transfer_in');
     expect(out).toMatchObject({ kind: 'transfer_out', source: 'transfer', createdBy: counter, userName: 'Inventory counter', sku: 'BOX-2', warehouseCode: 'INV-A', delta: -1 });

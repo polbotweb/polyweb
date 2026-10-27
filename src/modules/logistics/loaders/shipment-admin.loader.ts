@@ -60,9 +60,9 @@ export const logisticsAdminList = (organizationId: string | null, params: URLSea
   const page = Math.max(1, state.page ?? 1);
   const direction = state.sort?.direction === "asc" ? asc : desc;
   const order =
-    state.sort?.id === "number" ? [direction(logistics.number), desc(logistics.createdAt)]
-      : state.sort?.id === "shippedAt" ? [direction(logistics.shippedAt), desc(logistics.createdAt)]
-        : [direction(logistics.createdAt)];
+    state.sort?.id === "number" ? [direction(logistics.number), desc(logistics.createdAt), desc(logistics.id)]
+      : state.sort?.id === "shippedAt" ? [direction(logistics.shippedAt), desc(logistics.createdAt), desc(logistics.id)]
+        : [direction(logistics.createdAt), direction(logistics.id)];
   const where = and(...logisticsAdminConditions(organizationId, filters));
   return dbTry("logistics.adminList", async () => {
     const db = getDrizzle();
