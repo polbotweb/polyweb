@@ -11,7 +11,7 @@ import { organization, user } from "@database/schemas/auth.schema";
 import { sales } from "@/modules/sales/schema";
 import { productVariants } from "@/modules/shop/schema";
 import { SHIPMENT_STATUSES } from "../domain/workflow";
-import { MOVEMENT_KINDS } from "../domain/stock";
+import { MOVEMENT_KINDS, RESERVATION_STATUSES } from "../domain/stock";
 
 export const logisticsWarehouses = pgTable("logistics_warehouses", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -98,6 +98,30 @@ export const logisticsStockMovements = pgTable("logistics_stock_movements", {
   index("logistics_stock_movements_level_idx").on(table.warehouseId, table.itemId),
   index("logistics_stock_movements_shipment_idx").on(table.shipmentId),
   check("logistics_stock_movements_delta_non_zero", sql`${table.delta} <> 0`),
+]);
+
+/**
+ * Réservations de stock (tunnel de vente) : quantité bloquée sur un article d'un entrepôt jusqu'au
+ * paiement (`consumed` → mouvement `issue`), à l'échéance ou à l'annulation (`released`).
+ * Disponible = niveau (somme des mouvements) − réservations `active` non échues.
+ */
+export const logisticsStockReservations = pgTable("logistics_stock_reservations", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: text("organization_id").references(() => organization.id, { onDelete: "cascade" }),
+  warehouseId: text("warehouse_id").notNull().references(() => logisticsWarehouses.id, { onDelete: "no action" }),
+  itemId: text("item_id").notNull().references(() => logisticsItems.id, { onDelete: "no action" }),
+  quantity: integer("quantity").notNull(),
+  /** Origine de la réservation, ex. `order:<id>` (idempotence et libération groupée). */
+  reference: text("reference").notNull(),
+  status: text("status", { enum: RESERVATION_STATUSES }).default("active").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
+}, (table) => [
+  index("logistics_stock_reservations_active_idx").on(table.warehouseId, table.itemId).where(sql`${table.status} = 'active'`),
+  index("logistics_stock_reservations_reference_idx").on(table.reference),
+  index("logistics_stock_reservations_expiry_idx").on(table.expiresAt).where(sql`${table.status} = 'active'`),
+  check("logistics_stock_reservations_quantity_positive", sql`${table.quantity} > 0`),
 ]);
 
 /** Révisions (core/revision) : une ligne par écriture d'expédition. */

@@ -7,7 +7,7 @@
  * Erreurs de domaine → BAD_REQUEST ; une référence d'un autre tenant → NOT_FOUND (sans fuite).
  */
 import { Effect } from "effect";
-import { and, asc, eq, inArray, isNull, ne, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, lte, ne, sql, type SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { getDrizzle } from "@database/drizzle";
 import { dbTry } from "@/lib/effect/run";
@@ -19,14 +19,14 @@ import type { LockOwner } from "@/core/locks/policy";
 import { sales } from "@/modules/sales/schema";
 import { productVariants } from "@/modules/shop/schema";
 import {
-  logistics, logisticsItems, logisticsShipmentLines, logisticsShipmentRevisions, logisticsStockMovements, logisticsWarehouses,
+  logistics, logisticsItems, logisticsShipmentLines, logisticsShipmentRevisions, logisticsStockMovements, logisticsStockReservations, logisticsWarehouses,
 } from "../schema";
 import { logisticsLock } from "../locks";
 import { assignsNumber, isEditable, shipmentWorkflow, stockEffect, type ShipmentStatus } from "../domain/workflow";
 import { aggregateBySku, ensureAvailable, MANUAL_MOVEMENT_KINDS, signedQuantity, validateSku } from "../domain/stock";
 import { validateShipment, validateWarehouse, type ShipmentLineInput } from "../domain/shipment";
 import { DEFAULT_SHIPMENT_NUMBERING, SHIPMENT_NUMBERING_KEY } from "../domain/numbering";
-import type { InsufficientStockError, InvalidMovementError, InvalidShipmentError, InvalidWarehouseError } from "../domain/errors";
+import { InsufficientStockError as InsufficientStockErrorClass, type InsufficientStockError, type InvalidMovementError, type InvalidShipmentError, type InvalidWarehouseError } from "../domain/errors";
 
 export type ShipmentRow = typeof logistics.$inferSelect;
 export type WarehouseRow = typeof logisticsWarehouses.$inferSelect;
@@ -62,6 +62,21 @@ const levelOf = (executor: Executor, warehouseId: string, itemId: string) =>
       .where(and(eq(logisticsStockMovements.warehouseId, warehouseId), eq(logisticsStockMovements.itemId, itemId))),
   ).pipe(Effect.map((rows) => Number(rows[0]?.level ?? 0)));
 
+/** Quantité réservée (réservations `active` non échues), hors réservations de `excludeReference`. */
+const reservedOf = (executor: Executor, warehouseId: string, itemId: string, now: Date, excludeReference?: string | null) =>
+  dbTry("logistics.stock.reserved", () =>
+    executor.select({ reserved: sql<number>`coalesce(sum(${logisticsStockReservations.quantity}), 0)::int` }).from(logisticsStockReservations)
+      .where(and(
+        eq(logisticsStockReservations.warehouseId, warehouseId), eq(logisticsStockReservations.itemId, itemId),
+        eq(logisticsStockReservations.status, "active"), gt(logisticsStockReservations.expiresAt, now),
+        excludeReference ? ne(logisticsStockReservations.reference, excludeReference) : undefined,
+      )),
+  ).pipe(Effect.map((rows) => Number(rows[0]?.reserved ?? 0)));
+
+/** Disponible = niveau − réservations actives des autres demandes. */
+const availableOf = (executor: Executor, warehouseId: string, itemId: string, now: Date, excludeReference?: string | null) =>
+  Effect.map(Effect.all([levelOf(executor, warehouseId, itemId), reservedOf(executor, warehouseId, itemId, now, excludeReference)]), ([level, reserved]) => level - reserved);
+
 interface MovementWrite {
   readonly organizationId: string | null;
   readonly warehouseId: string;
@@ -70,14 +85,19 @@ interface MovementWrite {
   readonly quantity: number;
   readonly shipmentId?: string | null;
   readonly reference?: string | null;
+  /** Sortie qui consomme les réservations de cette référence (elles ne la bloquent pas). */
+  readonly consumesReservation?: string | null;
 }
 
-/** Écrit un mouvement (entrepôt déjà verrouillé par l'appelant) ; refuse un stock négatif. */
-const writeMovement = (executor: Executor, input: MovementWrite, authorId: string) =>
+/**
+ * Écrit un mouvement (entrepôt déjà verrouillé par l'appelant) ; une sortie ne peut entamer ni le
+ * stock négatif ni les quantités réservées par d'autres demandes (tunnel de vente).
+ */
+const writeMovement = (executor: Executor, input: MovementWrite, authorId: string | null) =>
   Effect.gen(function* () {
     const { kind, delta } = yield* domain(signedQuantity(input.kind, input.quantity));
     if (delta < 0) {
-      const available = yield* levelOf(executor, input.warehouseId, input.item.id);
+      const available = yield* availableOf(executor, input.warehouseId, input.item.id, new Date(), input.consumesReservation);
       yield* domain(ensureAvailable(input.item.sku, available, delta));
     }
     const [row] = yield* dbTry("logistics.movement.insert", () =>
@@ -212,6 +232,118 @@ export const logisticsStockPort = {
   findItemBySku: (tx: DbTransaction, sku: string, organizationId: string | null) => findItemBySku(tx, sku, organizationId),
   receive: (tx: DbTransaction, input: { readonly organizationId: string | null; readonly warehouseId: string; readonly item: ItemRow; readonly quantity: number; readonly reference: string }, authorId: string) =>
     writeMovement(tx, { ...input, kind: "receipt" }, authorId),
+
+  /**
+   * Réserve, dans la transaction de l'appelant, le stock des variantes boutique suivies en
+   * Logistics (article lié par `variantId` dans le tenant). Les entrepôts actifs du tenant sont
+   * verrouillés dans l'ordre de leur id (pas d'interblocage) ; chaque article est réservé en
+   * entier dans le premier entrepôt (ordre des codes) qui le couvre. Une variante sans article
+   * lié n'est pas suivie en stock (aucune réservation). Échec → `InsufficientStockError`.
+   */
+  reserveVariants: (tx: DbTransaction, input: {
+    readonly organizationId: string | null;
+    readonly reference: string;
+    readonly expiresAt: Date;
+    readonly lines: readonly { readonly variantId: string; readonly sku: string; readonly quantity: number }[];
+    readonly now?: Date;
+  }) =>
+    Effect.gen(function* () {
+      const now = input.now ?? new Date();
+      const variantIds = [...new Set(input.lines.map((line) => line.variantId))];
+      if (variantIds.length === 0) return [];
+      const items = yield* dbTry("logistics.reserve.items", () =>
+        tx.select().from(logisticsItems).where(and(inArray(logisticsItems.variantId, variantIds), sameTenant(logisticsItems.organizationId, input.organizationId))).orderBy(asc(logisticsItems.sku)));
+      const tracked = input.lines.filter((line) => items.some((item) => item.variantId === line.variantId));
+      if (tracked.length === 0) return [];
+      const warehouses = yield* dbTry("logistics.reserve.warehouses", () =>
+        tx.select().from(logisticsWarehouses)
+          .where(and(eq(logisticsWarehouses.active, true), sameTenant(logisticsWarehouses.organizationId, input.organizationId)))
+          .orderBy(asc(logisticsWarehouses.id)).for("update"));
+      const byCode = [...warehouses].sort((a, b) => a.code.localeCompare(b.code));
+      const reserved: (typeof logisticsStockReservations.$inferSelect)[] = [];
+      for (const line of tracked) {
+        // Un SKU logistique par variante : on prend le premier article lié (ordre SKU, déterministe).
+        const item = items.find((candidate) => candidate.variantId === line.variantId)!;
+        let best = 0;
+        let chosen: WarehouseRow | null = null;
+        for (const warehouse of byCode) {
+          const available = yield* availableOf(tx, warehouse.id, item.id, now);
+          if (available >= line.quantity) { chosen = warehouse; break; }
+          best = Math.max(best, available);
+        }
+        if (!chosen) return yield* Effect.fail(new InsufficientStockErrorClass({ sku: line.sku, available: Math.max(0, best), requested: line.quantity }));
+        const [row] = yield* dbTry("logistics.reserve.insert", () =>
+          tx.insert(logisticsStockReservations).values({
+            organizationId: input.organizationId, warehouseId: chosen.id, itemId: item.id, quantity: line.quantity, reference: input.reference, expiresAt: input.expiresAt,
+          }).returning());
+        reserved.push(row!);
+      }
+      return reserved;
+    }),
+
+  /** Libère les réservations actives d'une référence (annulation, échéance, échec de paiement). */
+  releaseReservations: (tx: DbTransaction, reference: string) =>
+    dbTry("logistics.reserve.release", () =>
+      tx.update(logisticsStockReservations).set({ status: "released" })
+        .where(and(eq(logisticsStockReservations.reference, reference), eq(logisticsStockReservations.status, "active"))).returning({ id: logisticsStockReservations.id })),
+
+  /**
+   * Convertit les réservations d'une référence en sorties de stock (`issue`) — paiement reçu.
+   * Idempotent (les réservations `consumed` sont ignorées). Une réservation libérée entre-temps
+   * (échéance) est retentée sur le stock disponible ; si le stock manque, la sortie n'est pas
+   * écrite et le SKU est renvoyé dans `shortages` (jamais d'échec : le paiement est acquis).
+   */
+  consumeReservations: (tx: DbTransaction, input: { readonly organizationId: string | null; readonly reference: string; readonly movementReference: string }) =>
+    Effect.gen(function* () {
+      const rows = yield* dbTry("logistics.reserve.forConsume", () =>
+        tx.select().from(logisticsStockReservations)
+          .where(and(eq(logisticsStockReservations.reference, input.reference), ne(logisticsStockReservations.status, "consumed"), sameTenant(logisticsStockReservations.organizationId, input.organizationId)))
+          .orderBy(asc(logisticsStockReservations.warehouseId), asc(logisticsStockReservations.id)));
+      const shortages: string[] = [];
+      const issued: MovementRow[] = [];
+      for (const warehouseId of [...new Set(rows.map((row) => row.warehouseId))].sort()) yield* lockWarehouse(tx, warehouseId, input.organizationId);
+      for (const reservation of rows) {
+        const [item] = yield* dbTry("logistics.reserve.item", () => tx.select().from(logisticsItems).where(eq(logisticsItems.id, reservation.itemId)).limit(1));
+        const movement = yield* Effect.result(writeMovement(tx, {
+          organizationId: input.organizationId, warehouseId: reservation.warehouseId, item: item!, kind: "issue", quantity: reservation.quantity,
+          reference: input.movementReference, consumesReservation: input.reference,
+        }, null));
+        if (movement._tag === "Failure") {
+          if (movement.failure._tag !== "ActionFailure" || movement.failure.code !== "BAD_REQUEST") return yield* Effect.fail(movement.failure);
+          shortages.push(item!.sku);
+          continue;
+        }
+        issued.push(movement.success);
+        yield* dbTry("logistics.reserve.consume", () => tx.update(logisticsStockReservations).set({ status: "consumed" }).where(eq(logisticsStockReservations.id, reservation.id)));
+      }
+      return { issued, shortages };
+    }),
+
+  /** Libère les réservations actives échues (balayage périodique) ; renvoie les références touchées. */
+  releaseExpiredReservations: (now: Date = new Date()) =>
+    dbTry("logistics.reserve.sweep", () =>
+      getDrizzle().update(logisticsStockReservations).set({ status: "released" })
+        .where(and(eq(logisticsStockReservations.status, "active"), lte(logisticsStockReservations.expiresAt, now)))
+        .returning({ reference: logisticsStockReservations.reference })),
+
+  /** Disponible (niveau − réservations) par variante suivie, tous entrepôts actifs du tenant (lecture). */
+  availabilityByVariant: (organizationId: string | null, variantIds: readonly string[], now: Date = new Date()) =>
+    Effect.gen(function* () {
+      const result = new Map<string, number>();
+      if (variantIds.length === 0) return result;
+      const db = getDrizzle();
+      const items = yield* dbTry("logistics.availability.items", () =>
+        db.select().from(logisticsItems).where(and(inArray(logisticsItems.variantId, [...variantIds]), sameTenant(logisticsItems.organizationId, organizationId))).orderBy(asc(logisticsItems.sku)));
+      const warehouses = yield* dbTry("logistics.availability.warehouses", () =>
+        db.select({ id: logisticsWarehouses.id }).from(logisticsWarehouses).where(and(eq(logisticsWarehouses.active, true), sameTenant(logisticsWarehouses.organizationId, organizationId))));
+      for (const item of items) {
+        if (!item.variantId || result.has(item.variantId)) continue;
+        let best = 0;
+        for (const warehouse of warehouses) best = Math.max(best, yield* availableOf(db, warehouse.id, item.id, now));
+        result.set(item.variantId, best);
+      }
+      return result;
+    }),
 };
 
 export const logisticsService = {

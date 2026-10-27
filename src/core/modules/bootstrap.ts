@@ -21,6 +21,7 @@ import { registerWebhookDispatcher } from "@/modules/webhooks/subscribe";
 import { registerSearchIndexer } from "@/lib/search/indexer";
 import { registerBookingPayments } from "@/modules/bookings/payments";
 import { registerSalesPayments } from "@/modules/sales/payments";
+import { registerShopPayments } from "@/modules/shop/payments";
 
 let bootstrapped = false;
 
@@ -50,5 +51,6 @@ export function bootstrapModules(): void {
   // Objets payables en ligne (core/payments) : sans effet tant que PAYMENTS_ENABLED est faux.
   registerBookingPayments();
   registerSalesPayments();
+  registerShopPayments();
   bootstrapped = true;
 }

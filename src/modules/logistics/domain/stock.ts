@@ -10,6 +10,10 @@ export type MovementKind = (typeof MOVEMENT_KINDS)[number];
 /** Mouvements saisis à la main dans l'admin (les autres sont produits par les expéditions / transferts). */
 export const MANUAL_MOVEMENT_KINDS = ["receipt", "issue", "adjustment"] as const satisfies readonly MovementKind[];
 
+/** Statuts d'une réservation de stock (tunnel de vente). */
+export const RESERVATION_STATUSES = ["active", "consumed", "released"] as const;
+export type ReservationStatus = (typeof RESERVATION_STATUSES)[number];
+
 const OUTBOUND: readonly MovementKind[] = ["issue", "transfer_out", "shipment"];
 const INBOUND: readonly MovementKind[] = ["receipt", "transfer_in", "return"];
 

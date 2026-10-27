@@ -17,6 +17,8 @@ export const orderWorkflow: WorkflowDefinition<OrderStatus> = {
     { from: "PENDING_PAYMENT", to: "PAID" },
     { from: "PENDING_PAYMENT", to: "CANCELLED" },
     { from: "PENDING_PAYMENT", to: "EXPIRED" },
+    // Paiement confirmé après l'échéance (webhook tardif) : le paiement est acquis.
+    { from: "EXPIRED", to: "PAID" },
     { from: "PAID", to: "SHIPPED" },
     { from: "PAID", to: "REFUNDED" },
     { from: "SHIPPED", to: "DELIVERED" },
