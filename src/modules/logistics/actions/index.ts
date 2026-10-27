@@ -8,7 +8,9 @@ import { Effect } from "effect";
 import { effectHandler } from "@/lib/effect/action";
 import { lockOwnerFrom } from "@/core/locks/service";
 import { lockLocaleFrom } from "@/core/locks/errors";
-import { requireLogisticsPermission, requireLogisticsResourcePermission } from "../permissions";
+import { logAuditEventEffect, extractIp } from "@/lib/audit";
+import { requireInventoryPermission, requireLogisticsPermission, requireLogisticsResourcePermission } from "../permissions";
+import { inventoryService } from "../services/inventory.service";
 import { logisticsService } from "../services/logistics.service";
 import { SHIPMENT_STATUSES } from "../domain/workflow";
 import { MANUAL_MOVEMENT_KINDS } from "../domain/stock";
@@ -19,6 +21,7 @@ const idInput = z.object({ id: z.uuid() });
 const orgInput = { organizationId: z.string().nullable().default(null) };
 const optionalText = (max: number) => z.string().max(max).nullable().default(null);
 const sku = z.string().trim().min(1).max(64);
+const auditOf = (context: { request: Request; clientAddress?: string }) => ({ ipAddress: extractIp(context.request.headers, context.clientAddress), userAgent: context.request.headers.get("user-agent") });
 const ownerOf = (userId: string, context: { locals: { session?: { id: string } | null } }) => lockOwnerFrom(userId, context.locals.session?.id);
 
 const warehouseFields = {
@@ -102,6 +105,47 @@ export const logisticsActions = {
     handler: effectHandler((input, context) => Effect.gen(function* () {
       const user = yield* requireLogisticsPermission(context, ["update"], input.organizationId);
       return yield* logisticsService.transfer(input, user.id);
+    })),
+  }),
+
+  // Inventaires : ouverture, saisie des comptages, validation (ajustements d'écart), annulation.
+  openInventory: defineAction({
+    input: z.object({ ...orgInput, warehouseId: z.uuid(), note: optionalText(1000) }),
+    handler: effectHandler((input, context) => Effect.gen(function* () {
+      const user = yield* requireLogisticsPermission(context, ["update"], input.organizationId);
+      const count = yield* inventoryService.open(input, user.id);
+      yield* logAuditEventEffect({ userId: user.id, action: "LOGISTICS_INVENTORY_OPEN", resource: "logistics_inventory", resourceId: count.id, metadata: { number: count.number, warehouseId: count.warehouseId }, ...auditOf(context) });
+      return { id: count.id, number: count.number };
+    })),
+  }),
+  recordInventoryCounts: defineAction({
+    input: idInput.extend({ entries: z.array(z.object({ lineId: z.uuid(), counted: z.string().max(12).nullable() })).min(1).max(5000) }),
+    handler: effectHandler((input, context) => Effect.gen(function* () {
+      const { user, organizationId } = yield* requireInventoryPermission(context, ["update"], input.id);
+      const result = yield* inventoryService.recordCounts(input.id, organizationId, input.entries, user.id);
+      yield* logAuditEventEffect({ userId: user.id, action: "LOGISTICS_INVENTORY_COUNT", resource: "logistics_inventory", resourceId: input.id, metadata: { lines: result.updated }, ...auditOf(context) });
+      return result;
+    })),
+  }),
+  validateInventory: defineAction({
+    input: idInput,
+    handler: effectHandler((input, context) => Effect.gen(function* () {
+      const { user, organizationId } = yield* requireInventoryPermission(context, ["update"], input.id);
+      const result = yield* inventoryService.validate(input.id, organizationId, user.id);
+      yield* logAuditEventEffect({
+        userId: user.id, action: "LOGISTICS_INVENTORY_VALIDATE", resource: "logistics_inventory", resourceId: input.id,
+        metadata: { number: result.count.number, counted: result.counted, adjustments: result.adjustments, netVariance: result.netVariance }, ...auditOf(context),
+      });
+      return { id: input.id, adjustments: result.adjustments, netVariance: result.netVariance };
+    })),
+  }),
+  cancelInventory: defineAction({
+    input: idInput,
+    handler: effectHandler((input, context) => Effect.gen(function* () {
+      const { user, organizationId } = yield* requireInventoryPermission(context, ["update"], input.id);
+      const count = yield* inventoryService.cancel(input.id, organizationId);
+      yield* logAuditEventEffect({ userId: user.id, action: "LOGISTICS_INVENTORY_CANCEL", resource: "logistics_inventory", resourceId: input.id, metadata: { number: count.number }, ...auditOf(context) });
+      return { id: input.id };
     })),
   }),
 

@@ -19,7 +19,7 @@ import type { LockOwner } from "@/core/locks/policy";
 import { sales } from "@/modules/sales/schema";
 import { productVariants } from "@/modules/shop/schema";
 import {
-  logistics, logisticsItems, logisticsShipmentLines, logisticsShipmentRevisions, logisticsStockMovements, logisticsStockReservations, logisticsWarehouses,
+  logistics, logisticsInventoryCountLines, logisticsItems, logisticsShipmentLines, logisticsShipmentRevisions, logisticsStockMovements, logisticsStockReservations, logisticsWarehouses,
 } from "../schema";
 import { logisticsLock } from "../locks";
 import { assignsNumber, isEditable, shipmentWorkflow, stockEffect, type ShipmentStatus } from "../domain/workflow";
@@ -472,8 +472,9 @@ export const logisticsService = {
       Effect.gen(function* () {
         const used = yield* dbTry("logistics.item.used", () =>
           tx.select({ id: logisticsStockMovements.id }).from(logisticsStockMovements).where(eq(logisticsStockMovements.itemId, id)).limit(1)
-            .union(tx.select({ id: logisticsShipmentLines.id }).from(logisticsShipmentLines).where(eq(logisticsShipmentLines.itemId, id)).limit(1)));
-        if (used[0]) return yield* fail("CONFLICT", "Article utilisé (stock ou expédition) : suppression impossible.");
+            .union(tx.select({ id: logisticsShipmentLines.id }).from(logisticsShipmentLines).where(eq(logisticsShipmentLines.itemId, id)).limit(1))
+            .union(tx.select({ id: logisticsInventoryCountLines.id }).from(logisticsInventoryCountLines).where(eq(logisticsInventoryCountLines.itemId, id)).limit(1)));
+        if (used[0]) return yield* fail("CONFLICT", "Article utilisé (stock, expédition ou inventaire) : suppression impossible.");
         const rows = yield* dbTry("logistics.item.delete", () => tx.delete(logisticsItems).where(eq(logisticsItems.id, id)).returning({ id: logisticsItems.id }));
         return rows[0] ? { id } : yield* fail("NOT_FOUND", "Article introuvable.");
       })),

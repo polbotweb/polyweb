@@ -1,5 +1,5 @@
 {
-  "id": "7c4572da-019c-46f1-8996-c8f08308db29",
+  "id": "7ca0518f-58b1-41ae-8afa-ce8fe9e5a147",
   "prevId": "41318455-ff8e-4848-9cb6-91c7222930b6",
   "version": "7",
   "dialect": "postgresql",
@@ -20345,7 +20345,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "logistics_inventory_count_lines_counted_by_user_id_fk": {

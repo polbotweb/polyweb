@@ -8,14 +8,15 @@ import type { ActionAPIContext } from "astro:actions";
 import { Effect } from "effect";
 import { eq } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
-import { requireTenantPermission, requireTenantResourcePermission } from "@/lib/effect/action";
-import { logistics, logisticsItems, logisticsStockMovements, logisticsWarehouses } from "../schema";
+import { actionTry, requireTenantPermission, requireTenantResourcePermission } from "@/lib/effect/action";
+import { fail } from "@/lib/effect/failure";
+import { logistics, logisticsInventoryCounts, logisticsItems, logisticsStockMovements, logisticsWarehouses } from "../schema";
 
 export const LOGISTICS_PERMISSIONS = ["create", "read", "update", "delete"] as const;
 export type LogisticsPermission = (typeof LOGISTICS_PERMISSIONS)[number];
 
 /** Ressources du module dont l'organisation se lit en base. */
-export const LOGISTICS_RESOURCES = { shipment: logistics, warehouse: logisticsWarehouses, item: logisticsItems, movement: logisticsStockMovements } as const;
+export const LOGISTICS_RESOURCES = { shipment: logistics, warehouse: logisticsWarehouses, item: logisticsItems, movement: logisticsStockMovements, inventory: logisticsInventoryCounts } as const;
 export type LogisticsResource = keyof typeof LOGISTICS_RESOURCES;
 
 /** Données de l'organisation `organizationId` (`null` = plateforme) : création, actions groupées. */
@@ -29,6 +30,17 @@ export const requireLogisticsResourcePermission = (context: ActionAPIContext, pe
     getDrizzle().select({ organizationId: table.organizationId }).from(table).where(eq(table.id, id)).limit(1),
   );
 };
+
+/** Inventaire existant : garde tenant sur SON organisation, renvoyée pour borner le service. */
+export const requireInventoryPermission = (context: ActionAPIContext, permissions: readonly LogisticsPermission[], id: string) =>
+  Effect.gen(function* () {
+    if (!context.locals.user) return yield* fail("UNAUTHORIZED", "Vous devez être connecté pour effectuer cette action.");
+    const [row] = yield* actionTry("logistics.inventory.organization", () =>
+      getDrizzle().select({ organizationId: logisticsInventoryCounts.organizationId }).from(logisticsInventoryCounts).where(eq(logisticsInventoryCounts.id, id)).limit(1));
+    if (!row) return yield* fail("NOT_FOUND", "Inventaire introuvable.");
+    const user = yield* requireTenantPermission(context, { logistics: [...permissions] }, row.organizationId ?? null);
+    return { user, organizationId: row.organizationId ?? null };
+  });
 
 /** Page back-office : RBAC global (`userHasPermission`) ; toute erreur → refus. */
 export const hasLogisticsPermissionEffect = (context: Pick<ActionAPIContext, "locals">, permissions: readonly LogisticsPermission[]): Effect.Effect<boolean> => {

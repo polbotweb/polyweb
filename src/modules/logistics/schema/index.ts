@@ -182,7 +182,9 @@ export const logisticsInventoryCounts = pgTable("logistics_inventory_counts", {
 export const logisticsInventoryCountLines = pgTable("logistics_inventory_count_lines", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   countId: text("count_id").notNull().references(() => logisticsInventoryCounts.id, { onDelete: "cascade" }),
-  itemId: text("item_id").notNull().references(() => logisticsItems.id, { onDelete: "no action" }),
+  // cascade : seule la suppression du tenant l'exerce (deux niveaux de cascade sous l'organisation) ;
+  // la suppression d'un article inventorié est refusée par le service (`deleteItem`).
+  itemId: text("item_id").notNull().references(() => logisticsItems.id, { onDelete: "cascade" }),
   sku: text("sku").notNull(),
   expected: integer("expected").notNull(),
   counted: integer("counted"),
