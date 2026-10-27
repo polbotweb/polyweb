@@ -15,6 +15,7 @@ import { Button } from "@atoms/button";
 import { Input } from "@atoms/input";
 import { Label } from "@atoms/label";
 import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import { ScrollRegion } from "@molecules/ScrollRegion";
 
 interface Props { locale: Locale; baseUrl: string; view: DashboardView }
 const { locale, baseUrl, view } = Astro.props;
@@ -111,7 +112,7 @@ const num = "p-2 text-end tabular-nums";
 
     <section aria-labelledby="dash-periods" class="grid gap-2">
       <h2 id="dash-periods" class="text-xl font-semibold">{t.revenueTable}</h2>
-      <div class="overflow-x-auto">
+      <ScrollRegion labelledby="dash-periods">
         <table class="w-full text-start text-base" data-testid="dashboard-periods">
           <caption class="sr-only">{t.revenueTable}</caption>
           <thead>
@@ -156,7 +157,7 @@ const num = "p-2 text-end tabular-nums";
             </tr>
           </tfoot>
         </table>
-      </div>
+      </ScrollRegion>
     </section>
 
     {data.stock && (
@@ -177,7 +178,7 @@ const num = "p-2 text-end tabular-nums";
         {data.stock.low.length === 0 ? (
           <p data-testid="dashboard-no-low">{t.noLow}</p>
         ) : (
-          <div class="overflow-x-auto">
+          <ScrollRegion labelledby="dash-low">
             <table class="w-full text-start text-base" data-testid="dashboard-low-stock">
               <caption class="sr-only">{fill(t.lowTitle, { n: integer.format(filters.lowStockThreshold) })}</caption>
               <thead>
@@ -205,7 +206,7 @@ const num = "p-2 text-end tabular-nums";
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </section>
     )}

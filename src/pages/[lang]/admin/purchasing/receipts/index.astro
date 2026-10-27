@@ -6,6 +6,7 @@ import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
 import { requirePermission } from "@lib/auth-guards";
 import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
 import { loadReceipts } from "@/modules/purchasing/loaders";
+import { ScrollRegion } from "@molecules/ScrollRegion";
 
 export const prerender = false;
 const result = await requirePermission(Astro, { purchasing: ["read"] });
@@ -25,12 +26,12 @@ const date = (value: Date) => new Intl.DateTimeFormat(locale, { dateStyle: "medi
         <a class="inline-flex min-h-11 items-center px-3 underline" href={baseAdminUrl}>{t.admin.back}</a>
       </div>
       {receipts.length === 0 ? <p class="text-sm text-muted-foreground">{t.admin.noReceipts}</p> : (
-        <div class="overflow-x-auto">
+        <ScrollRegion label={t.admin.receipts}>
           <table class="w-full text-sm" data-testid="purchasing-receipt-list">
             <thead><tr class="border-b"><th scope="col" class="py-2 text-start">{t.fields.number}</th><th scope="col" class="py-2 text-start">{t.admin.orders}</th><th scope="col" class="py-2 text-start">{t.fields.receivedAt}</th><th scope="col" class="py-2 text-start">{t.fields.supplierReference}</th></tr></thead>
             <tbody>{receipts.map((r) => <tr class="border-b"><td class="py-2 font-mono">{r.number}</td><td class="py-2"><a class="underline" href={`${baseAdminUrl}/${r.orderId}`}>{r.orderNumber ?? r.orderTitle}</a></td><td class="py-2">{date(r.receivedAt)}</td><td class="py-2">{r.supplierReference ?? ""}</td></tr>)}</tbody>
           </table>
-        </div>
+        </ScrollRegion>
       )}
     </main>
   </AuthLayout>

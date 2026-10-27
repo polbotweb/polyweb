@@ -10,6 +10,7 @@ import { Input } from '@atoms/input';
 import { NativeSelect, NativeSelectOption } from '@atoms/native-select';
 import { safeUrl } from '@lib/sanitize';
 import { DataView } from '@molecules/DataView';
+import { ScrollRegion } from '@molecules/ScrollRegion';
 
 interface Props {
   t: AuthTranslations;
@@ -55,7 +56,7 @@ function isoDate(d: Date | string | null) {
   </Fragment>
 
   <!-- ─── Table view ─── -->
-  <div slot="table" class="rounded-md border overflow-x-auto">
+  <ScrollRegion slot="table" label={ta.tabs.organizations} class="rounded-md border">
     <Table>
       <TableHeader>
         <TableRow>
@@ -108,7 +109,7 @@ function isoDate(d: Date | string | null) {
         )}
       </TableBody>
     </Table>
-  </div>
+  </ScrollRegion>
 
   <!-- ─── Cards view (mobile) ─── -->
   <div slot="cards" class="grid gap-3" id="admin-orgs-cards">

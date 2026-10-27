@@ -10,6 +10,7 @@ import { Button } from "@atoms/button";
 import { Input } from "@atoms/input";
 import { Label } from "@atoms/label";
 import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import { ScrollRegion } from "@molecules/ScrollRegion";
 
 interface Props {
   locale: Locale; baseUrl: string; rows: readonly OrderRow[]; total: number; invalidDate: boolean;
@@ -51,7 +52,7 @@ const statusLabel = getCheckoutTranslations(locale).statuses;
 {rows.length === 0 ? (
   <p data-testid="orders-empty">{t.empty}</p>
 ) : (
-  <div class="overflow-x-auto">
+  <ScrollRegion label={t.title}>
     <table class="w-full text-start text-base" data-testid="orders-table">
       <caption class="sr-only">{t.title}</caption>
       <thead>
@@ -75,5 +76,5 @@ const statusLabel = getCheckoutTranslations(locale).statuses;
         ))}
       </tbody>
     </table>
-  </div>
+  </ScrollRegion>
 )}

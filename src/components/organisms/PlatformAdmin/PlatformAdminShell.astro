@@ -22,7 +22,7 @@ const adminSite = await getAdminSite(Astro).catch(() => null);
     <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <header class="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 class="font-heading text-2xl font-semibold">{title}</h1>
+          <h1 id="platform-admin-title" class="font-heading text-2xl font-semibold">{title}</h1>
           {adminSite && <p class="text-muted-foreground text-xs" data-admin-site={adminSite.slug}>Site : <a class="hover:underline" href={getPlatformAdminUrl(locale, 'sites')}>{adminSite.name}</a></p>}
         </div>
         <div class="flex flex-wrap gap-2"><slot name="actions" /></div>

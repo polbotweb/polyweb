@@ -9,6 +9,7 @@ import { crudResources } from '@/generated/crud';
 import { handleCrud } from '@/core/crud/engine';
 import { getDrizzle } from '@database/drizzle';
 import Button from '@atoms/button/Button.astro';
+import { ScrollRegion } from '@molecules/ScrollRegion';
 
 export const prerender = false;
 const result = await requireAdmin(Astro);
@@ -25,7 +26,7 @@ const fmt = (v: unknown) => v === null || v === undefined ? '—' : v instanceof
 ---
 <PlatformAdminShell t={authT} locale={locale} section="crud" title={`CRUD — ${def.id}`}>
   <p class="text-muted-foreground text-sm">{rows.meta.total} élément(s) · table <code>{def.tableName}</code></p>
-  <div class="overflow-x-auto rounded-xl border">
+  <ScrollRegion labelledby="platform-admin-title" class="rounded-xl border">
     <table class="w-full text-sm">
       <thead class="bg-muted/50"><tr>{visible.map((c) => <th class="px-3 py-2 text-start">{c.key}</th>)}<th class="px-3 py-2"><span class="sr-only">Actions</span></th></tr></thead>
       <tbody>
@@ -37,7 +38,7 @@ const fmt = (v: unknown) => v === null || v === undefined ? '—' : v instanceof
         ))}
       </tbody>
     </table>
-  </div>
+  </ScrollRegion>
   {def.access.create !== 'disabled' && (
     <form class="grid gap-3 rounded-xl border p-4 sm:grid-cols-2" data-crud-form data-resource={def.id}>
       <h2 class="font-medium sm:col-span-2">Créer</h2>

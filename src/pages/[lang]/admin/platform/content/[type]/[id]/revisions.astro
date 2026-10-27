@@ -14,6 +14,7 @@ import { getEntry } from '@/modules/content/domain/entries';
 import { listRevisions, getRevision, diffSnapshots, rawSnapshotDiff, restoreRevision } from '@/modules/content/domain/revisions';
 import { createPreviewToken, PREVIEW_TTL_CHOICES } from '@/modules/content/domain/preview';
 import { runApp } from '@/lib/effect/http';
+import { ScrollRegion } from '@molecules/ScrollRegion';
 
 export const prerender = false;
 const result = await requirePermission(Astro, { contentEntry: ['read'] });
@@ -92,7 +93,7 @@ const canRestore = await userCan(user.id, { contentEntry: ['update'] });
         </tbody>
       </table>
     )}
-    {showRaw && <pre class="overflow-x-auto rounded-md border p-3 text-xs">{raw.map((p) => p.added ? <ins class="bg-success/20 no-underline">{p.value}</ins> : p.removed ? <del class="bg-error/20">{p.value}</del> : <span>{p.value}</span>)}</pre>}
+    {showRaw && <ScrollRegion labelledby="diff-h" class="rounded-md border"><pre class="p-3 text-xs">{raw.map((p) => p.added ? <ins class="bg-success/20 no-underline">{p.value}</ins> : p.removed ? <del class="bg-error/20">{p.value}</del> : <span>{p.value}</span>)}</pre></ScrollRegion>}
   </section>
 
   <section aria-labelledby="revs-h" class="grid gap-2">
