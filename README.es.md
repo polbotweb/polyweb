@@ -491,6 +491,7 @@ migrations/
   0039_sales_seller_profiles.sql
   0040_shop_orders.sql
   0041_core_refunds.sql
+  0042_shop_returns.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -530,6 +531,7 @@ migrations/
     0039_snapshot.json
     0040_snapshot.json
     0041_snapshot.json
+    0042_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -735,6 +737,7 @@ schemas.ts
 - `0039_sales_seller_profiles.sql`
 - `0040_shop_orders.sql`
 - `0041_core_refunds.sql`
+- `0042_shop_returns.sql`
 
 ### Comandos
 
@@ -1369,6 +1372,7 @@ shop/
   admin/
     orders.ts
     resource.ts
+    returns.ts
   capabilities.ts
   client/
     init.ts
@@ -1378,11 +1382,13 @@ shop/
     errors.ts
     orders.ts
     pricing.ts
+    returns.ts
     workflow.ts
   i18n/
     checkout.ts
     index.ts
     orders-admin.ts
+    returns.ts
   loaders/
     index.ts
     product-admin.loader.ts
@@ -1400,10 +1406,12 @@ shop/
   schema/
     index.ts
     orders.ts
+    returns.ts
   services/
     cart.service.ts
     order.service.ts
     product.service.ts
+    return.service.ts
   taxonomy.ts
 sites/
   domain/
@@ -1473,6 +1481,7 @@ src/pages/
     platform/
     purchasing/
     refunds.ts
+    returns/
     roles.astro
     sales/
     services/

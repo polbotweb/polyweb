@@ -31,5 +31,6 @@ export * from "../modules/sales/schema";
 export * from "../modules/crm/schema";
 export * from "../modules/logistics/schema";
 export * from "../modules/shop/schema/orders";
+export * from "../modules/shop/schema/returns";
 export * from "../modules/purchasing/schema";
 export * from "../modules/bookings/schema";

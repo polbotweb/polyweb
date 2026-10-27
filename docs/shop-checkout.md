@@ -83,6 +83,7 @@ sont déduites du disponible pour les autres sorties Logistics.
 - Fiche : lignes, totaux, paiement, transitions autorisées (expédier, livrer, annuler une commande
   non payée), lien facultatif vers un document Sales (facture) et une expédition Logistics.
 - Audit : `SHOP_ORDER_CREATE`, `SHOP_ORDER_TRANSITION`, `SHOP_ORDER_LINK`.
+- Retours clients (RMA) d'une commande livrée : voir [shop-returns.md](shop-returns.md).
 
 > ⚠️ Une expédition Logistics liée et passée `SHIPPED` **avec des lignes** décrémenterait le stock
 > une seconde fois (déjà sorti au paiement) : lier une expédition sans lignes, ou ne pas en lier.

@@ -1,0 +1,85 @@
+---
+/**
+ * Retours sur la page publique de commande : demandes existantes et formulaire (commande livrée),
+ * POST classique sans JS vers la page elle-même, jeton signé en champ caché.
+ */
+import type { Locale } from "@i18n/config";
+import type { Effect } from "effect";
+import type { publicOrderReturns } from "@/modules/shop/public/flow";
+import type { ReturnNotice } from "@/modules/shop/public/pages";
+import { RETURN_NOTE_MAX, RETURN_REASONS } from "@/modules/shop/domain/returns";
+import { fill } from "@/modules/shop/i18n/checkout";
+import { getReturnTranslations } from "@/modules/shop/i18n/returns";
+import { formatDateTime, formatMinor } from "@/modules/shop/public/format";
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import { Textarea } from "@atoms/textarea";
+import PublicNotice from "@/components/bookings/public/PublicNotice.astro";
+
+interface Props {
+  locale: Locale; token: string; currency: string;
+  returns: Effect.Success<ReturnType<typeof publicOrderReturns>>;
+  notice: ReturnNotice; values: { reason: string; note: string; quantities: Record<string, string> } | null;
+}
+const { locale, token, currency, returns, notice, values } = Astro.props;
+const t = getReturnTranslations(locale);
+const money = (minor: number, cur: string) => formatMinor(minor, cur, locale);
+const invalid = notice?.kind === "error" && notice.text !== "rateLimited" && notice.text !== "generic" && notice.text !== "notEligible";
+---
+{(returns.existing.length > 0 || returns.returnable.length > 0 || notice) && (
+  <section id="order-returns" class="grid gap-4 text-foreground" aria-labelledby="order-returns-title" data-testid="order-returns">
+    <h2 id="order-returns-title" class="text-xl font-semibold">{t.title}</h2>
+    {notice && (
+      <PublicNotice kind={notice.kind} id="return-notice">
+        <p>{t.notices[notice.text]}{notice.number && <> (<span dir="ltr">{notice.number}</span>)</>}</p>
+      </PublicNotice>
+    )}
+    {returns.existing.length > 0 && (
+      <div class="grid gap-2">
+        <h3 class="text-lg font-semibold">{t.yours}</h3>
+        <ul class="grid gap-1" data-testid="order-return-list">
+          {returns.existing.map((row) => (
+            <li>
+              <span dir="ltr">{row.number}</span> — {t.statuses[row.status]} — {formatDateTime(row.createdAt, locale)}
+              {row.status === "REFUNDED" && <> — {t.refundAmount} : {money(row.refundMinor ?? 0, row.currency)}</>}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+    {returns.returnable.length > 0 && (returns.open ? (
+      <form method="post" action="#order-returns" class="grid gap-4 rounded-lg border-2 border-border p-5" aria-describedby="return-intro" data-testid="return-form">
+        <input type="hidden" name="t" value={token} />
+        <input type="hidden" name="intent" value="return" />
+        <p id="return-intro">{t.intro}</p>
+        <fieldset class="grid gap-3">
+          <legend class="font-semibold">{t.admin.lines}</legend>
+          {returns.returnable.map(({ line, remaining }) => (
+            <div class="grid gap-1">
+              <Label for={`rq-${line.id}`}>{fill(t.quantityFor, { name: line.description })}</Label>
+              <Input
+                id={`rq-${line.id}`} name={`qty:${line.id}`} type="number" inputmode="numeric" min={0} max={remaining} step={1} class="max-w-32"
+                value={values?.quantities[line.id] ?? "0"} disabled={remaining === 0} aria-describedby={`rq-${line.id}-hint`} aria-invalid={invalid ? "true" : undefined}
+              />
+              <p id={`rq-${line.id}-hint`} class="text-sm">{fill(t.ordered, { n: line.quantity, left: remaining })} — {money(line.unitPriceMinor, currency)}</p>
+            </div>
+          ))}
+        </fieldset>
+        <div class="grid gap-1">
+          <Label for="return-reason">{t.reason}</Label>
+          <NativeSelect id="return-reason" name="reason" required>
+            {RETURN_REASONS.map((reason) => <NativeSelectOption value={reason} selected={values?.reason === reason}>{t.reasons[reason]}</NativeSelectOption>)}
+          </NativeSelect>
+        </div>
+        <div class="grid gap-1">
+          <Label for="return-note">{t.note}</Label>
+          <Textarea id="return-note" name="note" rows={3} maxlength={RETURN_NOTE_MAX} aria-describedby="return-note-hint" defaultValue={values?.note ?? ""} />
+          <p id="return-note-hint" class="text-sm">{t.noteHint}</p>
+        </div>
+        <div><Button type="submit">{t.submit}</Button></div>
+      </form>
+    ) : <p data-testid="return-none">{t.nothingReturnable}</p>)}
+  </section>
+)}

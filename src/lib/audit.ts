@@ -37,6 +37,7 @@ export type AuditAction =
   | "SEARCH_REINDEX"
   | "BOOKING_PUBLIC_CREATE" | "BOOKING_PUBLIC_CANCEL"
   | "SHOP_ORDER_CREATE" | "SHOP_ORDER_TRANSITION" | "SHOP_ORDER_LINK"
+  | "SHOP_RETURN_REQUEST" | "SHOP_RETURN_TRANSITION" | "SHOP_RETURN_INSPECT" | "SHOP_RETURN_REFUND"
   // Action groupée générique (core/bulk) des modules générés : l'opération est dans metadata.operation.
   | "BULK_ACTION";
 

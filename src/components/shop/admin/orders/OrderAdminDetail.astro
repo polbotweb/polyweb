@@ -15,10 +15,13 @@ import PublicNotice from "@/components/bookings/public/PublicNotice.astro";
 import { ScrollRegion } from "@molecules/ScrollRegion";
 import RefundPanel from "@/components/refunds/RefundPanel.astro";
 import type { RefundPanelView } from "@/core/refunds/admin";
+import type { OrderReturnRow } from "@/modules/shop/schema/returns";
+import { getReturnTranslations } from "@/modules/shop/i18n/returns";
 
 interface Line { id: string; sku: string; description: string; quantity: number; unitPriceMinor: number; lineTotalMinor: number }
-interface Props { locale: Locale; baseUrl: string; order: OrderRow; lines: readonly Line[]; canUpdate: boolean; notice: AdminNotice; refunds: RefundPanelView | null }
-const { locale, baseUrl, order, lines, canUpdate, notice, refunds } = Astro.props;
+interface Props { locale: Locale; baseUrl: string; order: OrderRow; lines: readonly Line[]; canUpdate: boolean; notice: AdminNotice; refunds: RefundPanelView | null; returns: readonly OrderReturnRow[] }
+const { locale, baseUrl, order, lines, canUpdate, notice, refunds, returns } = Astro.props;
+const rt = getReturnTranslations(locale);
 const t = getOrdersAdminTranslations(locale);
 const ct = getCheckoutTranslations(locale);
 const money = (minor: number) => formatMinor(minor, order.currency, locale);
@@ -95,6 +98,16 @@ const when = (d: Date | null) => (d ? formatDateTime(d, locale) : "—");
       </div>
       <div><Button type="submit">{t.saveLinks}</Button></div>
     </form>
+  )}
+  {returns.length > 0 && (
+    <section aria-labelledby="oa-returns" class="grid gap-2" data-testid="order-admin-returns">
+      <h2 id="oa-returns" class="text-xl font-semibold">{rt.admin.orderReturns}</h2>
+      <ul class="grid gap-1">
+        {returns.map((r) => (
+          <li><a href={`${baseUrl.replace(/\/orders$/, "/returns")}/${r.id}`} class="underline underline-offset-4 hover:no-underline" dir="ltr">{r.number}</a> — {rt.statuses[r.status]} — {when(r.createdAt)}</li>
+        ))}
+      </ul>
+    </section>
   )}
   {refunds && <RefundPanel locale={locale} view={refunds} defaultReason="return" />}
 </div>

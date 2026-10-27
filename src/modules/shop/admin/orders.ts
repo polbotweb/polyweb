@@ -13,6 +13,7 @@ import { orderLinesOf, orderService, ORDERS_PAGE_SIZE, SHOP_ORDER_PAYMENT_PURPOS
 import { hasShopPermission } from "../permissions";
 import { SHOP_PUBLIC_ORGANIZATION } from "../public/flow";
 import { refundPanelView } from "@/core/refunds/admin";
+import { returnService } from "../services/return.service";
 
 export type AdminNotice = { readonly kind: "success" | "error"; readonly key: "done" | "forbidden" | "notFound" | "conflict" | "generic" | "invalidDate" } | null;
 
@@ -85,5 +86,6 @@ export async function orderAdminDetail(Astro: AstroGlobal) {
   if (!order) return null;
   const lines = await runApp(orderLinesOf(order.id));
   const refunds = await refundPanelView(Astro, `${SHOP_ORDER_PAYMENT_PURPOSE}:${order.id}`);
-  return { order, lines, canUpdate, notice, refunds };
+  const returns = await runApp(returnService.forOrder(order.id));
+  return { order, lines, canUpdate, notice, refunds, returns };
 }

@@ -1,0 +1,31 @@
+---
+/** Back-office plateforme : fiche d'un retour client (RMA) — cycle de vie, inspection, remboursement. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { requirePermission } from "@lib/auth-guards";
+import ReturnAdminDetail from "@/components/shop/admin/returns/ReturnAdminDetail.astro";
+import { returnAdminDetail } from "@/modules/shop/admin/returns";
+import { fill } from "@/modules/shop/i18n/checkout";
+import { getReturnTranslations } from "@/modules/shop/i18n/returns";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { shop: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getReturnTranslations(locale).admin;
+const view = await returnAdminDetail(Astro);
+if (view instanceof Response) return view;
+if (!view) return new Response(null, { status: 404 });
+Astro.response.headers.set("cache-control", "private, no-store");
+const heading = fill(t.detailTitle, { number: view.returnRow.number });
+---
+<BaseLayout title={heading} description={t.listTitle}>
+  <AuthLayout title={heading}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="returns" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <h1 class="text-2xl font-semibold" data-testid="return-admin-heading">{heading}</h1>
+      <ReturnAdminDetail locale={locale} baseUrl={`/${locale}/admin/returns`} ordersUrl={`/${locale}/admin/orders`} {...view} />
+    </main>
+  </AuthLayout>
+</BaseLayout>

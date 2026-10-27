@@ -5,6 +5,7 @@ import type { AdminSubpage } from '@i18n/utils';
 import { getModuleLabel } from '@/core/localization/module-labels';
 import { PLATFORM_SECTIONS, getPlatformLabel, getPlatformAdminUrl, type PlatformSection } from '@/core/localization/platform-labels';
 import PuzzleIcon from '@tabler/icons/outline/puzzle.svg';
+import ArrowBackUpIcon from '@tabler/icons/outline/arrow-back-up.svg';
 import ArrowLeftIcon from '@tabler/icons/outline/arrow-left.svg';
 import ChartBarIcon from '@tabler/icons/outline/chart-bar.svg';
 import UsersIcon from '@tabler/icons/outline/users.svg';
@@ -25,6 +26,7 @@ import TruckDeliveryIcon from '@tabler/icons/outline/truck-delivery.svg';
 import ShoppingCartIcon from '@tabler/icons/outline/shopping-cart.svg';
 import PackageIcon from '@tabler/icons/outline/package.svg';
 import { getOrdersAdminTranslations } from '@/modules/shop/i18n/orders-admin';
+import { getReturnTranslations } from '@/modules/shop/i18n/returns';
 import ReportAnalyticsIcon from '@tabler/icons/outline/report-analytics.svg';
 import { getDashboardTranslations } from '@/modules/dashboard/i18n';
 import CalendarEventIcon from '@tabler/icons/outline/calendar-event.svg';
@@ -49,6 +51,7 @@ const cmsItems: { id: AdminSubpage; title: string; url: string; icon: typeof Set
   { id: 'dashboard', title: getDashboardTranslations(locale).title, url: getAdminUrl(locale, 'dashboard'), icon: ReportAnalyticsIcon },
   { id: 'sales', title: getModuleLabel('sales', locale), url: getAdminUrl(locale, 'sales'), icon: FileInvoiceIcon },
   { id: 'orders', title: getOrdersAdminTranslations(locale).title, url: getAdminUrl(locale, 'orders'), icon: PackageIcon },
+  { id: 'returns', title: getReturnTranslations(locale).admin.listTitle, url: getAdminUrl(locale, 'returns'), icon: ArrowBackUpIcon },
   { id: 'crm', title: getModuleLabel('crm', locale), url: getAdminUrl(locale, 'crm'), icon: AddressBookIcon },
   { id: 'logistics', title: getModuleLabel('logistics', locale), url: getAdminUrl(locale, 'logistics'), icon: TruckDeliveryIcon },
   { id: 'purchasing', title: getModuleLabel('purchasing', locale), url: getAdminUrl(locale, 'purchasing'), icon: ShoppingCartIcon },

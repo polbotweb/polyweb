@@ -1,0 +1,128 @@
+---
+/** Fiche d'un retour (admin) : demande, lignes, actions du cycle de vie, inspection, remboursement. */
+import type { Locale } from "@i18n/config";
+import type { Effect } from "effect";
+import type { returnService } from "@/modules/shop/services/return.service";
+import type { ReturnAdminNotice } from "@/modules/shop/admin/returns";
+import { canTransition } from "@/core/workflow";
+import { getRefundsTranslations } from "@/core/refunds/i18n";
+import { RETURN_NOTE_MAX, returnWorkflow, type ReturnStatus } from "@/modules/shop/domain/returns";
+import { fill } from "@/modules/shop/i18n/checkout";
+import { getReturnTranslations } from "@/modules/shop/i18n/returns";
+import { formatDateTime, formatMinor } from "@/modules/shop/public/format";
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { Textarea } from "@atoms/textarea";
+import PublicNotice from "@/components/bookings/public/PublicNotice.astro";
+import { ScrollRegion } from "@molecules/ScrollRegion";
+
+type Found = NonNullable<Effect.Success<ReturnType<typeof returnService.byId>>>;
+interface Props extends Found { locale: Locale; baseUrl: string; ordersUrl: string; canUpdate: boolean; canRefund: boolean; notice: ReturnAdminNotice }
+const { locale, baseUrl, ordersUrl, returnRow: r, order, lines, refund, canUpdate, canRefund, notice } = Astro.props;
+const t = getReturnTranslations(locale);
+const a = t.admin;
+const rt = getRefundsTranslations(locale);
+const money = (minor: number) => formatMinor(minor, r.currency, locale);
+const when = (d: Date | null) => (d ? formatDateTime(d, locale) : "—");
+const can = (to: ReturnStatus) => canUpdate && canTransition(returnWorkflow, r.status, to);
+const simple = [
+  { intent: "approve", to: "APPROVED", label: a.approve, outline: false },
+  { intent: "receive", to: "RECEIVED", label: a.receive, outline: false },
+  { intent: "cancel", to: "CANCELLED", label: a.cancel, outline: true },
+] as const;
+const canReject = can("REJECTED");
+const canInspect = can("INSPECTED");
+---
+<div class="flex flex-col gap-6">
+  <p class="flex flex-wrap gap-4">
+    <a href={baseUrl} class="underline underline-offset-4 hover:no-underline">← {a.backToList}</a>
+    <a href={`${ordersUrl}/${order.id}`} class="underline underline-offset-4 hover:no-underline">{a.order} <span dir="ltr">{order.number}</span></a>
+  </p>
+  {notice && <PublicNotice kind={notice.kind} id="return-admin-notice"><p>{a.notices[notice.key]}</p></PublicNotice>}
+  <dl class="grid gap-x-4 gap-y-2 rounded-lg border-2 border-border p-4 sm:grid-cols-[max-content_1fr]" data-testid="return-admin-summary">
+    <dt class="font-semibold">{t.status}</dt><dd data-testid="return-admin-status">{t.statuses[r.status]}</dd>
+    <dt class="font-semibold">{t.createdOn}</dt><dd>{when(r.createdAt)}</dd>
+    <dt class="font-semibold">{a.customer}</dt><dd>{order.customerName} — <span dir="ltr">{order.email}</span></dd>
+    <dt class="font-semibold">{t.reason}</dt><dd>{t.reasons[r.reason]}</dd>
+    {r.customerNote && <><dt class="font-semibold">{a.customerNote}</dt><dd class="whitespace-pre-line">{r.customerNote}</dd></>}
+    {r.adminNote && <><dt class="font-semibold">{a.adminNote}</dt><dd class="whitespace-pre-line">{r.adminNote}</dd></>}
+    <dt class="font-semibold">{t.statuses.APPROVED}</dt><dd>{when(r.approvedAt)}</dd>
+    <dt class="font-semibold">{t.statuses.RECEIVED}</dt><dd>{when(r.receivedAt)}</dd>
+    <dt class="font-semibold">{t.statuses.INSPECTED}</dt><dd>{when(r.inspectedAt)}</dd>
+    {r.refundMinor !== null && <><dt class="font-semibold">{t.refundAmount}</dt><dd data-testid="return-admin-refund">{money(r.refundMinor)}</dd></>}
+    {refund && <><dt class="font-semibold">{a.refundStatus}</dt><dd data-testid="return-admin-refund-status">{rt.statuses[refund.status]}</dd></>}
+  </dl>
+  <form method="post" class="grid gap-4" aria-labelledby="ra-lines" data-testid="return-inspect">
+    <h2 id="ra-lines" class="text-xl font-semibold">{a.lines}</h2>
+    <ScrollRegion labelledby="ra-lines">
+      <table class="w-full text-base">
+        <thead><tr class="border-b-2 border-border">
+          <th scope="col" class="p-2 text-start">{a.item}</th><th scope="col" class="p-2 text-end">{a.requested}</th>
+          <th scope="col" class="p-2 text-end">{a.accepted}</th><th scope="col" class="p-2 text-end">{a.restocked}</th>
+        </tr></thead>
+        <tbody>{lines.map(({ line, orderLine }) => (
+          <tr class="border-b border-border">
+            <th scope="row" class="p-2 text-start font-normal">{orderLine.description} (<span dir="ltr">{orderLine.sku}</span>) — {money(orderLine.unitPriceMinor)}</th>
+            <td class="p-2 text-end">{line.quantity}</td>
+            {canInspect ? (
+              <>
+                <td class="p-2 text-end">
+                  <Label for={`acc-${line.id}`} class="sr-only">{fill(a.acceptedFor, { name: orderLine.description })}</Label>
+                  <Input id={`acc-${line.id}`} name={`accepted:${line.id}`} type="number" inputmode="numeric" min={0} max={line.quantity} step={1} value={String(line.quantity)} class="ms-auto max-w-24" aria-describedby="ra-hint" />
+                </td>
+                <td class="p-2 text-end">
+                  <Label for={`res-${line.id}`} class="sr-only">{fill(a.restockedFor, { name: orderLine.description })}</Label>
+                  <Input id={`res-${line.id}`} name={`restocked:${line.id}`} type="number" inputmode="numeric" min={0} max={line.quantity} step={1} value={String(line.quantity)} class="ms-auto max-w-24" aria-describedby="ra-hint" />
+                </td>
+              </>
+            ) : (
+              <>
+                <td class="p-2 text-end">{line.acceptedQuantity ?? "—"}</td>
+                <td class="p-2 text-end">{line.restockedQuantity ?? "—"}{line.condition && <> ({a.conditions[line.condition]})</>}</td>
+              </>
+            )}
+          </tr>
+        ))}</tbody>
+      </table>
+    </ScrollRegion>
+    {canInspect && (
+      <>
+        <p id="ra-hint">{a.inspectHint}</p>
+        <input type="hidden" name="intent" value="inspect" />
+        <div class="grid gap-1">
+          <Label for="ra-inspect-note">{a.adminNote}</Label>
+          <Textarea id="ra-inspect-note" name="adminNote" rows={2} maxlength={RETURN_NOTE_MAX} />
+        </div>
+        <div><Button type="submit" data-testid="return-inspect-submit">{a.inspect}</Button></div>
+      </>
+    )}
+  </form>
+  {(simple.some((s) => can(s.to)) || canReject || canRefund) && (
+    <section aria-labelledby="ra-actions" class="grid gap-3">
+      <h2 id="ra-actions" class="text-xl font-semibold">{a.actions}</h2>
+      <div class="flex flex-wrap gap-2">
+        {simple.filter((s) => can(s.to)).map((s) => (
+          <form method="post">
+            <input type="hidden" name="intent" value={s.intent} />
+            <Button type="submit" variant={s.outline ? "outline" : "default"} data-testid={`return-${s.intent}`}>{s.label}</Button>
+          </form>
+        ))}
+        {canRefund && (
+          <form method="post">
+            <input type="hidden" name="intent" value="refund" />
+            <Button type="submit" data-testid="return-refund">{a.refund} {r.refundMinor !== null && money(r.refundMinor)}</Button>
+          </form>
+        )}
+      </div>
+      {canReject && (
+        <form method="post" class="grid gap-2 rounded-lg border-2 border-border p-4" data-testid="return-reject-form">
+          <input type="hidden" name="intent" value="reject" />
+          <Label for="ra-reject-note">{a.adminNote}</Label>
+          <Textarea id="ra-reject-note" name="adminNote" rows={2} maxlength={RETURN_NOTE_MAX} />
+          <div><Button type="submit" variant="outline" data-testid="return-reject">{a.reject}</Button></div>
+        </form>
+      )}
+    </section>
+  )}
+</div>

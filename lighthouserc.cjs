@@ -30,6 +30,8 @@ let adminCookie = '';
 let shopCartCookie = '';
 let shopOrder = null;
 let shopSlugs = null;
+// Commande livrée avec une demande de retour (RMA) : suivi public, fiche commande et retours admin.
+let shopReturn = null;
 if (fs.existsSync(COOKIES_PATH)) {
   const data = JSON.parse(fs.readFileSync(COOKIES_PATH, 'utf-8'));
   userCookie = data.userCookie ?? '';
@@ -37,6 +39,7 @@ if (fs.existsSync(COOKIES_PATH)) {
   shopCartCookie = data.shopCartCookie ?? '';
   shopOrder = data.shopOrder ?? null;
   shopSlugs = data.shopSlugs ?? null;
+  shopReturn = data.shopReturn ?? null;
 }
 
 // ── Route definitions per locale ─────────────────────────────────────
@@ -85,6 +88,7 @@ const shopUrls = [];
 for (const lang of locales) {
   if (shopCartCookie) shopUrls.push(`${BASE}/${lang}/shop/cart`, `${BASE}/${lang}/shop/checkout`);
   if (shopOrder) shopUrls.push(`${BASE}/${lang}/shop/order/${encodeURIComponent(shopOrder.id)}?t=${encodeURIComponent(shopOrder.token)}`);
+  if (shopReturn) shopUrls.push(`${BASE}/${lang}/shop/order/${encodeURIComponent(shopReturn.orderId)}?t=${encodeURIComponent(shopReturn.token)}`);
 }
 
 // Lighthouse doesn't support per-URL headers in the config file,
@@ -108,6 +112,9 @@ for (const lang of locales) {
   adminUrls.push(`${BASE}/${lang}/admin/dashboard`);
   adminUrls.push(`${BASE}/${lang}/admin/orders`);
   if (shopOrder) adminUrls.push(`${BASE}/${lang}/admin/orders/${encodeURIComponent(shopOrder.id)}`);
+  // Retours (RMA) : liste, fiche du retour seedé, fiche de sa commande (section retours).
+  adminUrls.push(`${BASE}/${lang}/admin/returns`);
+  if (shopReturn) adminUrls.push(`${BASE}/${lang}/admin/returns/${encodeURIComponent(shopReturn.id)}`, `${BASE}/${lang}/admin/orders/${encodeURIComponent(shopReturn.orderId)}`);
 }
 
 module.exports = {

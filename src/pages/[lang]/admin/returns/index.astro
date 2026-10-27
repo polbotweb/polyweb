@@ -1,0 +1,30 @@
+---
+/** Back-office plateforme : retours clients (RMA) du Shop — filtres statut / recherche, pagination. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import AdminPagination from "@molecules/AdminPagination/AdminPagination.astro";
+import { requirePermission } from "@lib/auth-guards";
+import ReturnsAdminList from "@/components/shop/admin/returns/ReturnsAdminList.astro";
+import { returnsAdminList } from "@/modules/shop/admin/returns";
+import { getReturnTranslations } from "@/modules/shop/i18n/returns";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { shop: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getReturnTranslations(locale).admin;
+const view = await returnsAdminList(Astro);
+Astro.response.headers.set("cache-control", "private, no-store");
+---
+<BaseLayout title={t.listTitle} description={t.listIntro}>
+  <AuthLayout title={t.listTitle}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="returns" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <h1 class="text-2xl font-semibold">{t.listTitle}</h1>
+      <p>{t.listIntro}</p>
+      <ReturnsAdminList locale={locale} baseUrl={`/${locale}/admin/returns`} {...view} />
+      {view.totalPages > 1 && <AdminPagination currentPage={view.page} totalPages={view.totalPages} baseUrl={Astro.url} />}
+    </main>
+  </AuthLayout>
+</BaseLayout>

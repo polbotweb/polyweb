@@ -295,6 +295,13 @@
       "when": 1793117423052,
       "tag": "0041_core_refunds",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1793118774895,
+      "tag": "0042_shop_returns",
+      "breakpoints": true
     }
   ]
 }
