@@ -16,6 +16,8 @@ export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 export const ACTIVE_STATUSES: readonly BookingStatus[] = ["REQUESTED", "CONFIRMED", "CHECKED_IN"];
 export const EDITABLE_STATUSES: readonly BookingStatus[] = ["REQUESTED", "CONFIRMED"];
 export const FINAL_STATUSES: readonly BookingStatus[] = ["COMPLETED", "CANCELLED", "NO_SHOW", "EXPIRED"];
+/** Statuts posés uniquement par le système (échéance de paiement), jamais proposés ni acceptés manuellement. */
+export const SYSTEM_STATUSES: readonly BookingStatus[] = ["EXPIRED"];
 
 export const bookingWorkflow: WorkflowDefinition<BookingStatus> = {
   states: BOOKING_STATUSES,
@@ -34,9 +36,9 @@ export const bookingWorkflow: WorkflowDefinition<BookingStatus> = {
 export const isActive = (status: BookingStatus) => ACTIVE_STATUSES.includes(status);
 export const isEditable = (status: BookingStatus) => EDITABLE_STATUSES.includes(status);
 
-/** Transitions proposées depuis `from`, dans l'ordre du cycle. */
+/** Transitions manuelles proposées depuis `from`, dans l'ordre du cycle (hors statuts système). */
 export const nextStatuses = (from: BookingStatus): readonly BookingStatus[] =>
-  BOOKING_STATUSES.filter((to) => bookingWorkflow.transitions.some((t) => t.from === from && t.to === to));
+  BOOKING_STATUSES.filter((to) => !SYSTEM_STATUSES.includes(to) && bookingWorkflow.transitions.some((t) => t.from === from && t.to === to));
 
 /** Numéro attribué à la confirmation (sans trou, `core/numbering`). */
 export const assignsNumber = (from: BookingStatus, to: BookingStatus) => from === "REQUESTED" && to === "CONFIRMED";

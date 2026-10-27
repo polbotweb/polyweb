@@ -19,7 +19,7 @@ import type { LockOwner } from "@/core/locks/policy";
 import { freeSlots, localDate, zonedToUtc, type Interval, type WeeklyWindow } from "@/core/scheduling";
 import { bookings, bookingsResources, bookingsRevisions } from "../schema";
 import { bookingsLock } from "../locks";
-import { ACTIVE_STATUSES, assignsNumber, bookingWorkflow, isEditable, reoccupiesSlot, type BookingStatus } from "../domain/workflow";
+import { ACTIVE_STATUSES, assignsNumber, bookingWorkflow, isEditable, reoccupiesSlot, SYSTEM_STATUSES, type BookingStatus } from "../domain/workflow";
 import { validateResource } from "../domain/resource";
 import { checkSlot, validateBooking } from "../domain/booking";
 import { BOOKING_NUMBERING_KEY, DEFAULT_BOOKING_NUMBERING } from "../domain/numbering";
@@ -262,7 +262,7 @@ export const bookingsService = {
       return yield* dbTransaction("bookings.transition", (tx) =>
         Effect.gen(function* () {
           const current = yield* findBooking(tx, id, true);
-          if (!canTransition(bookingWorkflow, current.status, to)) return yield* fail("BAD_REQUEST", `Transition invalide : ${current.status} → ${to}.`);
+          if (SYSTEM_STATUSES.includes(to) || !canTransition(bookingWorkflow, current.status, to)) return yield* fail("BAD_REQUEST", `Transition invalide : ${current.status} → ${to}.`);
           if (reoccupiesSlot(current.status, to)) {
             const resource = yield* lockResource(tx, current.resourceId, current.organizationId);
             yield* assertSlot(tx, resource, { start: current.startsAt, end: current.endsAt }, id);

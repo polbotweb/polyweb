@@ -45,7 +45,7 @@ describe("bookings domain", () => {
   });
 
   it("cycle de vie et numérotation", () => {
-    expect(nextStatuses("REQUESTED")).toEqual(["CONFIRMED", "CANCELLED"]);
+    expect(nextStatuses("REQUESTED")).toEqual(["CONFIRMED", "CANCELLED"]); // EXPIRED : statut système (échéance d’acompte)
     expect(nextStatuses("CONFIRMED")).toEqual(["REQUESTED", "CHECKED_IN", "CANCELLED", "NO_SHOW"]);
     expect(nextStatuses("COMPLETED")).toEqual([]);
     expect(canTransition(bookingWorkflow, "CHECKED_IN", "COMPLETED")).toBe(true);
