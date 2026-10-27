@@ -144,30 +144,42 @@ function collectPa11y() {
   const data = readJsonSafe(JSON_PATHS.pa11y);
   if (!data) return null;
 
-  const urls = Object.keys(data.results || {});
+  const results = data.results || {};
+  const urls = Object.keys(results);
   const passes = data.passes || 0;
   const errors = data.errors || 0;
-  const ok = errors === 0;
+  // pa11y-ci 5 ne compte PAS dans `errors` une URL qui n'a pas pu être auditée
+  // (timeout de navigation, crash) : elle est seulement rangée dans results[url] = [error].
+  // Toute URL au tableau non vide est donc non propre → rouge, sans exception.
+  const nonCleanUrls = urls.filter((u) => Array.isArray(results[u]) && results[u].length > 0);
+  const runErrorUrls = nonCleanUrls.filter((u) => results[u].some((i) => !i.code));
+  const ok = urls.length > 0 && errors === 0 && nonCleanUrls.length === 0 && passes === urls.length;
 
-  // Group issues by rule
+  // Group issues by rule (issues sans code = erreur d'exécution de l'audit)
   const byRule = {};
-  for (const issues of Object.values(data.results || {})) {
+  for (const issues of Object.values(results)) {
     if (!Array.isArray(issues)) continue;
     for (const issue of issues) {
-      byRule[issue.code] = (byRule[issue.code] || 0) + 1;
+      const rule = issue.code || 'execution-error';
+      byRule[rule] = (byRule[rule] || 0) + 1;
     }
   }
   const ruleLines = Object.entries(byRule)
     .sort((a, b) => b[1] - a[1])
     .map(([code, n]) => `  • ${code}: ${n} occurrence(s)`);
+  const urlLines = nonCleanUrls.map((u) => `  ✗ ${u}${runErrorUrls.includes(u) ? ` — non auditée : ${results[u][0].message || 'erreur'}` : ''}`);
+
+  const extra = [];
+  if (errors) extra.push(`${errors} issue(s) across ${Object.keys(byRule).length} rule(s)`);
+  if (runErrorUrls.length) extra.push(`${runErrorUrls.length} URL(s) not audited (run error)`);
 
   return {
     key: 'pa11y',
     title: 'Accessibility Audit (Pa11y — WCAG 2.1 AAA)',
     ok,
-    summary: `${passes}/${urls.length} URLs clean${errors ? `, ${errors} issue(s) across ${Object.keys(byRule).length} rule(s)` : ''}`,
-    detail: ok ? [] : ruleLines,
-    metrics: { urls: urls.length, passes, errors, rules: Object.keys(byRule).length },
+    summary: `${passes}/${urls.length} URLs clean${extra.length ? `, ${extra.join(', ')}` : ''}`,
+    detail: ok ? [] : [...urlLines, ...ruleLines],
+    metrics: { urls: urls.length, passes, errors, notAudited: runErrorUrls.length, rules: Object.keys(byRule).length },
   };
 }
 
@@ -184,8 +196,9 @@ function collectLighthouse() {
   for (const r of rows) {
     if (r.includes('❌')) below++;
   }
-  const ok = below === 0;
   const pages = rows.length;
+  // Aucune page parsée = rien n'a été audité → jamais vert.
+  const ok = pages > 0 && below === 0;
 
   return {
     key: 'lighthouse',

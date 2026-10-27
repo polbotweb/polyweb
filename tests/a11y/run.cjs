@@ -101,13 +101,18 @@ function savePa11yReport(jsonStr) {
   lines.push('');
 
   const passes = data.passes || 0;
-  const failures = data.errors || 0;
   const results = data.results || {};
   const urls = Object.keys(results);
+  // pa11y-ci 5 : une URL qui n'a pas pu être auditée (timeout de navigation, crash)
+  // est rangée dans results[url] = [error] SANS incrémenter `errors`. Une URL est donc
+  // « non propre » dès que son tableau est non vide, quelle que soit la cause.
+  const nonCleanUrls = urls.filter(u => Array.isArray(results[u]) && results[u].length > 0);
+  const runErrorUrls = nonCleanUrls.filter(u => results[u].some(i => !i.code));
+  const allClean = urls.length > 0 && nonCleanUrls.length === 0 && passes === urls.length;
 
   lines.push(`  Total URLs tested:  ${urls.length}`);
-  lines.push(`  Passed:             ${passes}/${urls.length}  ${passes === urls.length ? '✅' : '⚠️'}`);
-  lines.push(`  Failed:             ${failures}/${urls.length}`);
+  lines.push(`  Passed:             ${passes}/${urls.length}  ${allClean ? '✅' : '❌'}`);
+  lines.push(`  Failed:             ${nonCleanUrls.length}/${urls.length}${runErrorUrls.length ? `  (dont ${runErrorUrls.length} non auditée(s) : erreur d'exécution)` : ''}`);
   lines.push('');
   lines.push(hr2);
 
@@ -119,7 +124,7 @@ function savePa11yReport(jsonStr) {
     if (!Array.isArray(issues) || issues.length === 0) continue;
     failedUrls.push({ url, count: issues.length });
     for (const issue of issues) {
-      const rule = issue.code || 'unknown';
+      const rule = issue.code || 'execution-error';
       if (!errorsByRule[rule]) errorsByRule[rule] = [];
       errorsByRule[rule].push({ url, ...issue });
     }
@@ -183,7 +188,7 @@ function savePa11yReport(jsonStr) {
 
   // Print summary to console too
   console.log('');
-  console.log(`  Pa11y: ${passes}/${urls.length} URLs passed ${passes === urls.length ? '✅' : '⚠️'}`);
+  console.log(`  Pa11y: ${passes}/${urls.length} URLs passed ${allClean ? '✅' : '❌'}`);
   if (failedUrls.length > 0) {
     for (const { url, count } of failedUrls) {
       console.log(`    ❌ ${url} (${count} issue${count > 1 ? 's' : ''})`);
@@ -191,7 +196,7 @@ function savePa11yReport(jsonStr) {
   }
   console.log('');
 
-  return failures > 0;
+  return !allClean;
 }
 
 /** Copy Lighthouse reports to tests/reports/ and generate text summary */
