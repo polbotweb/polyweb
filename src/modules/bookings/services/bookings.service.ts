@@ -136,7 +136,12 @@ export interface GuestBookingInput extends GuestInput {
   readonly resourceId: string;
   /** Instant ISO du début d'un créneau proposé par `freeSlots`. */
   readonly startsAt: string;
+  /** Paiement en ligne disponible : l'acompte de la ressource est alors exigé (sinon demande classique). */
+  readonly requireDeposit?: boolean;
 }
+
+/** Délai de paiement de l'acompte d'une réservation publique (créneau retenu pendant ce temps). */
+export const DEPOSIT_WINDOW_MINUTES = 60;
 
 
 export const bookingsService = {
@@ -212,6 +217,9 @@ export const bookingsService = {
           organizationId: input.organizationId, resourceId: resource.id, startsAt: start, endsAt: end, slug,
           title: `${guest.customerName} — ${resource.name}`.slice(0, 200), customerName: guest.customerName, customerEmail: guest.customerEmail,
           customerPhone: guest.customerPhone, partySize: guest.partySize, notes: guest.notes,
+          ...(input.requireDeposit && resource.depositMinor > 0
+            ? { depositMinor: resource.depositMinor, depositCurrency: resource.depositCurrency, paymentDueAt: new Date(now.getTime() + DEPOSIT_WINDOW_MINUTES * 60_000) }
+            : {}),
         }).returning());
         return { booking: row!, resource };
       })),

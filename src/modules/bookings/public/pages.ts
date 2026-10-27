@@ -10,9 +10,10 @@ import { runApp, runAppResult } from "@/lib/effect/http";
 import { extractIp } from "@/lib/audit";
 import { formTimestampToken } from "@/modules/forms/domain/forms";
 import type { GuestField } from "../domain/guest";
-import { bookableRange, cancelGuestBooking, guestBooking, manageUrlPath, publicBasePath, publicDay, publicResource, publicResources, resolveTenant, submitGuestBooking, type PublicTenant } from "./flow";
+import { bookableRange, cancelGuestBooking, guestBooking, manageUrlPath, publicBasePath, publicDay, publicResource, publicResources, payGuestDeposit, resolveTenant, submitGuestBooking, type PublicTenant } from "./flow";
+import { depositDue } from "../payments";
 
-export type NoticeKey = "errorSummary" | "slotTaken" | "rateLimited" | "generic" | "notCancellable" | "cancelled" | "created";
+export type NoticeKey = "errorSummary" | "slotTaken" | "rateLimited" | "generic" | "notCancellable" | "cancelled" | "created" | "paymentReturn" | "payUnavailable";
 export type Notice = { readonly kind: "success" | "error"; readonly text: NoticeKey } | null;
 const str = (fd: FormData, key: string) => {
   const v = fd.get(key);
@@ -55,6 +56,8 @@ export async function resourcePage(Astro: AstroGlobal, tenant: PublicTenant) {
     }));
     if (r.ok) {
       if (r.value.kind === "discarded") return Astro.redirect(`${base}/${encodeURIComponent(resource.code)}?sent=1`, 303);
+      // Acompte : page de paiement hébergée du fournisseur (retour sur la page de suivi).
+      if (r.value.payUrl) return Astro.redirect(r.value.payUrl, 303);
       return Astro.redirect(`${manageUrlPath(locale, tenant, r.value.id, r.value.token)}&created=1${r.value.emailSent ? "" : "&mail=0"}`, 303);
     }
     const e = r.error as { _tag?: string; fields?: readonly GuestField[]; retryAfterSeconds?: number; code?: string };
@@ -97,6 +100,14 @@ export async function managePage(Astro: AstroGlobal, tenant: PublicTenant) {
   if (Astro.request.method === "POST") {
     const fd = await Astro.request.formData();
     token = str(fd, "t") || token;
+    if (str(fd, "intent") === "pay") {
+      const pay = await runAppResult(payGuestDeposit(tenant, id, token, locale));
+      if (pay.ok && pay.value) return Astro.redirect(pay.value, 303);
+      Astro.response.status = pay.ok ? 409 : 500;
+      notice = { kind: "error", text: "payUnavailable" };
+    }
+  }
+  if (Astro.request.method === "POST" && !notice) {
     const r = await runAppResult(cancelGuestBooking(tenant, id, token, meta));
     if (r.ok && r.value) return Astro.redirect(`${manageUrlPath(locale, tenant, id, token)}&cancelled=1`, 303);
     if (r.ok) {
@@ -113,5 +124,6 @@ export async function managePage(Astro: AstroGlobal, tenant: PublicTenant) {
   const q = Astro.url.searchParams;
   if (!notice && booking && q.get("cancelled") === "1") notice = { kind: "success", text: "cancelled" };
   if (!notice && booking && q.get("created") === "1") notice = { kind: "success", text: "created" };
-  return { locale, tenant, base, booking, token, cancellable, notice, mailFailed: q.get("mail") === "0" };
+  if (!notice && booking && q.get("paid") === "1" && !booking.depositPaidAt) notice = { kind: "success", text: "paymentReturn" };
+  return { locale, tenant, base, booking, token, cancellable, notice, mailFailed: q.get("mail") === "0", payable: !!booking && depositDue(booking) };
 }

@@ -19,6 +19,7 @@ import { serviceInternalLinkResolver } from "@/lib/services/services-internal-li
 import { registerSearchResource } from "@/core/search/registry";
 import { registerWebhookDispatcher } from "@/modules/webhooks/subscribe";
 import { registerSearchIndexer } from "@/lib/search/indexer";
+import { registerBookingPayments } from "@/modules/bookings/payments";
 
 let bootstrapped = false;
 
@@ -45,5 +46,7 @@ export function bootstrapModules(): void {
   registerInternalLinkResolver(serviceInternalLinkResolver);
   registerWebhookDispatcher();
   registerSearchIndexer();
+  // Objets payables en ligne (core/payments) : sans effet tant que PAYMENTS_ENABLED est faux.
+  registerBookingPayments();
   bootstrapped = true;
 }

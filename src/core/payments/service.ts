@@ -25,7 +25,7 @@ import { dbTransaction, type DbTransaction } from '@/lib/effect/transaction';
 import { PaymentAmountMismatchError, PaymentsUnavailableError, UnsupportedAmountError } from './errors';
 import { PaymentGateway } from './gateway';
 import type { PaymentEventKind, PaymentProvider, VerifiedPaymentEvent } from './provider';
-import { paymentPurpose, type PaymentPurposeHandler } from './purposes';
+import { paymentPurpose, registeredPaymentHandlers, type PaymentPurposeHandler } from './purposes';
 import { formatReference, parseReference } from './reference';
 import { canTransitionPayment } from './transitions';
 
@@ -232,11 +232,11 @@ export const handleWebhook = (rawBody: string, headers: Headers, now = new Date(
 
 // --- Échéances --------------------------------------------------------------------------
 
-/** Expire les paiements `created`/`pending` échus (au plus `limit`) ; renvoie le nombre traité. */
+/** Expire les paiements `created`/`pending`/`failed` échus (au plus `limit`) ; renvoie le nombre traité. */
 export const expireDuePayments = (now = new Date(), limit = 100) =>
   Effect.gen(function* () {
     const due = yield* dbTry('payments.due', () =>
-      getDrizzle().select({ id: payments.id }).from(payments).where(and(inArray(payments.status, ['created', 'pending']), lt(payments.expiresAt, now))).limit(limit));
+      getDrizzle().select({ id: payments.id }).from(payments).where(and(inArray(payments.status, ['created', 'pending', 'failed']), lt(payments.expiresAt, now))).limit(limit));
     let expired = 0;
     for (const { id } of due) {
       const done = yield* dbTransaction('payments.expire', (tx) =>
@@ -251,7 +251,11 @@ export const expireDuePayments = (now = new Date(), limit = 100) =>
         yield* announce(done, 'expired', 'cron');
       }
     }
-    return { expired };
+    let swept = 0;
+    for (const handler of registeredPaymentHandlers()) {
+      if (handler.sweep) swept += yield* handler.sweep(now).pipe(Effect.withSpan('payments.sweep', { attributes: { 'payments.purpose': handler.purpose } }));
+    }
+    return { expired, swept };
   }).pipe(Effect.withSpan('payments.expireDuePayments'));
 
 /** Paiements d'un objet (ex. historique d'une facture), du plus récent au plus ancien. */

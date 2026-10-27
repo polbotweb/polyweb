@@ -20,6 +20,8 @@ export interface PaymentPurposeHandler {
   readonly onFailed?: PaymentReaction;
   readonly onExpired?: PaymentReaction;
   readonly onRefunded?: PaymentReaction;
+  /** Balayage périodique propre au module (cron `/api/cron/payments-expire`) ; renvoie le nombre traité. */
+  readonly sweep?: (now: Date) => Effect.Effect<number, DbError>;
 }
 
 const registry = new Map<string, PaymentPurposeHandler>();
@@ -33,3 +35,5 @@ export const registerPaymentPurpose = (handler: PaymentPurposeHandler): void => 
 export const paymentPurpose = (purpose: string): PaymentPurposeHandler | undefined => registry.get(purpose);
 
 export const registeredPaymentPurposes = (): readonly string[] => [...registry.keys()].sort();
+
+export const registeredPaymentHandlers = (): readonly PaymentPurposeHandler[] => [...registry.values()];
