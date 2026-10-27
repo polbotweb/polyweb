@@ -85,6 +85,39 @@ async function createAndAuth(seed: { email: string; password: string; name: stri
   return cookies;
 }
 
+/** Ressource publique (plateforme) pour auditer le parcours de réservation visiteur. */
+export const A11Y_RESOURCE_CODE = 'A11YROOM';
+
+async function deleteBookingResource() {
+  const { getDrizzle } = await import('../../src/database/drizzle');
+  const { bookings, bookingsResources } = await import('../../src/modules/bookings/schema');
+  const { and, eq, isNull } = await import('drizzle-orm');
+  const db = getDrizzle();
+  const rows = await db
+    .select({ id: bookingsResources.id })
+    .from(bookingsResources)
+    .where(and(eq(bookingsResources.code, A11Y_RESOURCE_CODE), isNull(bookingsResources.organizationId)));
+  for (const { id } of rows) {
+    await db.delete(bookings).where(eq(bookings.resourceId, id)).catch(() => {});
+    await db.delete(bookingsResources).where(eq(bookingsResources.id, id)).catch(() => {});
+  }
+}
+
+async function seedBookingResource() {
+  const { getDrizzle } = await import('../../src/database/drizzle');
+  const { bookingsResources } = await import('../../src/modules/bookings/schema');
+  await deleteBookingResource();
+  await getDrizzle().insert(bookingsResources).values({
+    code: A11Y_RESOURCE_CODE,
+    name: 'A11y room',
+    kind: 'room',
+    capacity: 4,
+    timezone: 'UTC',
+    slotMinutes: 60,
+    windows: [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, start: '00:00', end: '24:00' })),
+  });
+}
+
 async function setup() {
   process.env.NODE_ENV = 'test';
 
@@ -124,6 +157,9 @@ async function setup() {
     ? adminSetCookie.map((h) => h.split(';')[0]).join('; ')
     : adminCookie;
 
+  await seedBookingResource();
+  console.log(`[a11y] Booking resource ${A11Y_RESOURCE_CODE} seeded`);
+
   const data = { userCookie, adminCookie: freshAdminCookie };
   writeFileSync(COOKIES_PATH, JSON.stringify(data, null, 2));
   console.log(`[a11y] Cookies written to ${COOKIES_PATH}`);
@@ -135,6 +171,7 @@ async function teardown() {
   console.log('[a11y] Cleaning up seed users…');
   await deleteUser(SEED_USER.email);
   await deleteUser(SEED_ADMIN.email);
+  await deleteBookingResource();
 
   if (existsSync(COOKIES_PATH)) {
     unlinkSync(COOKIES_PATH);

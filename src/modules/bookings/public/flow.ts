@@ -16,13 +16,14 @@ import { RateLimitedError } from "@/lib/effect/errors";
 import { dbTry } from "@/lib/effect/run";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { logAuditEventEffect } from "@/lib/audit";
-import { formatZoned, localDate } from "@/core/scheduling";
+import { localDate } from "@/core/scheduling";
 import { Mailer } from "@smtp/mailer";
 import { checkTimestampToken } from "@/modules/forms/domain/forms";
 import { bookingsLoader } from "../loaders/bookings.loader";
 import { bookingsService } from "../services/bookings.service";
 import { addIsoDays, BOOKING_HORIZON_DAYS, guestToken, InvalidGuestError, isBookableDate, validateGuest, verifyGuestToken, type GuestField } from "../domain/guest";
 import { guestConfirmationEmail } from "./email";
+import { formatSlot } from "./format";
 
 import { manageUrlPath, type PublicTenant } from "./paths";
 
@@ -77,9 +78,6 @@ export type SubmitOutcome = { readonly kind: "created"; readonly id: string; rea
 const RATE_LIMIT = { window: 600, max: Number(process.env.BOOKING_RATE_LIMIT ?? 10) };
 const ipHashOf = (ip: string | null) => (ip ? createHash("sha256").update(`polyweb:${ip}`).digest("hex").slice(0, 32) : null);
 
-/** Créneau formaté pour l'humain, dans le fuseau de la ressource. */
-export const formatSlot = (start: Date, end: Date, zone: string, locale: Locale) =>
-  `${formatZoned(start, zone, locale, { dateStyle: "full", timeStyle: "short" })} – ${formatZoned(end, zone, locale, { timeStyle: "short" })}`;
 
 export const submitGuestBooking = (tenant: PublicTenant, resource: Resource, raw: GuestSubmission, meta: SubmissionMeta) =>
   Effect.gen(function* () {
@@ -109,6 +107,7 @@ export const submitGuestBooking = (tenant: PublicTenant, resource: Resource, raw
     const mailer = yield* Mailer;
     // Un échec d'envoi ne remet pas en cause la réservation (le lien est aussi affiché à l'écran).
     const sent = yield* mailer.send({ to: booking.customerEmail!, subject: mail.subject, html: mail.html, text: mail.text }).pipe(
+      Effect.timeout("10 seconds"),
       Effect.as(true), Effect.tapError((e) => Effect.logWarning("booking confirmation email failed", e)), Effect.catch(() => Effect.succeed(false)));
     yield* logAuditEventEffect({ action: "BOOKING_PUBLIC_CREATE", resource: "booking", resourceId: booking.id, metadata: { organizationId: tenant.organizationId, resourceId: resource.id, emailSent: sent }, ipAddress: meta.ip, userAgent: meta.userAgent });
     return { kind: "created", id: booking.id, token, emailSent: sent } satisfies SubmitOutcome as SubmitOutcome;
