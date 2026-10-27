@@ -23,6 +23,7 @@ export type SalesTranslations = {
   kinds: Record<SalesDocumentKind, string>;
   statuses: Record<SalesStatus, string>;
   supplyTypes: { goods: string; services: string };
+  seller: { title: string; intro: string; legalName: string; vatNumber: string; legalId: string; legalIdScheme: string; legalIdHint: string; addressLine1: string; addressLine2: string; postcode: string; city: string; country: string; email: string; iban: string; bic: string; save: string; saved: string; link: string };
 };
 
 const translations: Record<Locale, SalesTranslations> = {
@@ -38,6 +39,7 @@ const translations: Record<Locale, SalesTranslations> = {
     kinds: { quote: "Devis", invoice: "Facture", credit_note: "Avoir" },
     statuses: { DRAFT: "Brouillon", SENT: "Envoyé", ACCEPTED: "Accepté", REJECTED: "Refusé", EXPIRED: "Expiré", CONVERTED: "Converti", ISSUED: "Émise", PARTIALLY_PAID: "Partiellement payée", PAID: "Payée", CREDITED: "Créditée", CANCELLED: "Annulé" },
     supplyTypes: { goods: "Biens", services: "Services" },
+    seller: { title: "Profil vendeur", intro: "Identité légale imprimée sur les factures et reprise dans le XML Factur-X (EN 16931). Sans profil, les PDF sont générés sans XML Factur-X.", legalName: "Raison sociale", vatNumber: "N° de TVA intracommunautaire", legalId: "Identifiant légal (SIREN…)", legalIdScheme: "Schéma de l'identifiant (ISO 6523)", legalIdHint: "« 0002 » pour un SIREN (9 chiffres, clé vérifiée).", addressLine1: "Adresse (ligne 1)", addressLine2: "Adresse (ligne 2)", postcode: "Code postal", city: "Ville", country: "Pays (ISO, 2 lettres)", email: "E-mail de facturation", iban: "IBAN", bic: "BIC", save: "Enregistrer", saved: "Profil vendeur enregistré.", link: "Profil vendeur (Factur-X)" },
   },
   en: {
     meta: { description: "Quotes, invoices, credit notes, payments and reminders." },
@@ -51,6 +53,7 @@ const translations: Record<Locale, SalesTranslations> = {
     kinds: { quote: "Quote", invoice: "Invoice", credit_note: "Credit note" },
     statuses: { DRAFT: "Draft", SENT: "Sent", ACCEPTED: "Accepted", REJECTED: "Rejected", EXPIRED: "Expired", CONVERTED: "Converted", ISSUED: "Issued", PARTIALLY_PAID: "Partially paid", PAID: "Paid", CREDITED: "Credited", CANCELLED: "Cancelled" },
     supplyTypes: { goods: "Goods", services: "Services" },
+    seller: { title: "Seller profile", intro: "Legal identity printed on invoices and carried in the Factur-X XML (EN 16931). Without a profile, PDFs are generated without Factur-X XML.", legalName: "Legal name", vatNumber: "VAT number", legalId: "Legal identifier (SIREN…)", legalIdScheme: "Identifier scheme (ISO 6523)", legalIdHint: "\"0002\" for a French SIREN (9 digits, checksum verified).", addressLine1: "Address (line 1)", addressLine2: "Address (line 2)", postcode: "Postcode", city: "City", country: "Country (ISO, 2 letters)", email: "Billing e-mail", iban: "IBAN", bic: "BIC", save: "Save", saved: "Seller profile saved.", link: "Seller profile (Factur-X)" },
   },
   es: {
     meta: { description: "Presupuestos, facturas, abonos, cobros y recordatorios." },
@@ -64,6 +67,7 @@ const translations: Record<Locale, SalesTranslations> = {
     kinds: { quote: "Presupuesto", invoice: "Factura", credit_note: "Abono" },
     statuses: { DRAFT: "Borrador", SENT: "Enviado", ACCEPTED: "Aceptado", REJECTED: "Rechazado", EXPIRED: "Caducado", CONVERTED: "Convertido", ISSUED: "Emitida", PARTIALLY_PAID: "Pagada parcialmente", PAID: "Pagada", CREDITED: "Abonada", CANCELLED: "Cancelado" },
     supplyTypes: { goods: "Bienes", services: "Servicios" },
+    seller: { title: "Perfil del vendedor", intro: "Identidad legal impresa en las facturas e incluida en el XML Factur-X (EN 16931). Sin perfil, los PDF se generan sin XML Factur-X.", legalName: "Razón social", vatNumber: "NIF-IVA", legalId: "Identificador legal (SIREN…)", legalIdScheme: "Esquema del identificador (ISO 6523)", legalIdHint: "«0002» para un SIREN francés (9 dígitos, dígito de control verificado).", addressLine1: "Dirección (línea 1)", addressLine2: "Dirección (línea 2)", postcode: "Código postal", city: "Ciudad", country: "País (ISO, 2 letras)", email: "Correo de facturación", iban: "IBAN", bic: "BIC", save: "Guardar", saved: "Perfil del vendedor guardado.", link: "Perfil del vendedor (Factur-X)" },
   },
   ar: {
     meta: { description: "عروض الأسعار والفواتير والإشعارات الدائنة والتحصيلات والتذكيرات." },
@@ -77,6 +81,7 @@ const translations: Record<Locale, SalesTranslations> = {
     kinds: { quote: "عرض سعر", invoice: "فاتورة", credit_note: "إشعار دائن" },
     statuses: { DRAFT: "مسودة", SENT: "مُرسَل", ACCEPTED: "مقبول", REJECTED: "مرفوض", EXPIRED: "منتهي", CONVERTED: "مُحوَّل", ISSUED: "صادرة", PARTIALLY_PAID: "مدفوعة جزئيًا", PAID: "مدفوعة", CREDITED: "مُلغاة بإشعار دائن", CANCELLED: "ملغى" },
     supplyTypes: { goods: "سلع", services: "خدمات" },
+    seller: { title: "ملف البائع", intro: "الهوية القانونية المطبوعة على الفواتير والمضمنة في ملف XML لـ Factur-X ‏(EN 16931). بدون ملف، تُنشأ ملفات PDF دون XML Factur-X.", legalName: "الاسم القانوني", vatNumber: "رقم ضريبة القيمة المضافة", legalId: "المعرّف القانوني (SIREN…)", legalIdScheme: "مخطط المعرّف (ISO 6523)", legalIdHint: "«0002» لرقم SIREN الفرنسي (9 أرقام، مع التحقق من رقم التدقيق).", addressLine1: "العنوان (السطر 1)", addressLine2: "العنوان (السطر 2)", postcode: "الرمز البريدي", city: "المدينة", country: "البلد (ISO، حرفان)", email: "البريد الإلكتروني للفوترة", iban: "IBAN", bic: "BIC", save: "حفظ", saved: "تم حفظ ملف البائع.", link: "ملف البائع (Factur-X)" },
   },
 };
 

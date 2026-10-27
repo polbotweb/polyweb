@@ -37,12 +37,15 @@ const bulkOperations = bulkBarOperations(salesDocumentAdminResource.list?.bulkAc
     <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <h1 class="text-2xl font-semibold">{t.admin.title}</h1>
+        <div class="flex flex-wrap gap-2">
+          <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/seller`} data-testid="sales-seller-profile">{t.seller.link}</a>
         {canCreate && (
           <div class="flex flex-wrap gap-2">
             <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/new?kind=quote`} data-testid="sales-new-quote">{t.admin.newQuote}</a>
             <a class="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-primary-foreground" href={`${baseAdminUrl}/new?kind=invoice`} data-testid="sales-new-invoice">{t.admin.newInvoice}</a>
           </div>
         )}
+        </div>
       </div>
       <SalesAdminList items={list.items} locale={locale} viewBaseUrl={baseAdminUrl} bulkOperations={bulkOperations} canForceReleaseLock={canForceReleaseLock} baseUrl={Astro.url} facets={facets} savedViews={savedViews} />
       {list.totalPages > 1 && <AdminPagination currentPage={list.page} totalPages={list.totalPages} baseUrl={Astro.url} />}

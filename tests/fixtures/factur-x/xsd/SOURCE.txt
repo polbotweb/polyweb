@@ -1,0 +1,5 @@
+Factur-X 1.09 (EN 16931 profile) XML schemas, vendored verbatim for test-only XSD validation.
+Origin: https://github.com/akretion/factur-x (facturx/xsd_and_schematron/facturx-en16931)
+Commit: d78fb342b353386b3993ba61e732e4eef3f628a0
+Publisher: FNFE-MPE / FeRD (Factur-X / ZUGFeRD). UN/CEFACT CII D16B schema subset.
+Used only by tests/helpers/factur-x-xsd.ts (xmllint-wasm). Not shipped in the application bundle.
