@@ -89,9 +89,9 @@ export async function managePage(Astro: AstroGlobal, tenant: PublicTenant) {
   const meta = { ip: extractIp(Astro.request.headers, Astro.clientAddress), userAgent: Astro.request.headers.get("user-agent") };
   let token = Astro.url.searchParams.get("t") ?? "";
   let notice: Notice = null;
-  // Le lien contient un secret : jamais en cache, jamais transmis en Referer, jamais indexé.
+  // Le lien contient un secret : jamais en cache, jamais transmis en Referer à un tiers, jamais indexé.
   privatePage(Astro);
-  // Referrer-Policy : écrasé par le middleware, d’où la balise <meta name="referrer"> dans la page.
+  // Referrer-Policy : écrasé par le middleware, d’où la balise <meta name="referrer" content="same-origin"> dans la page.
   Astro.response.headers.set("x-robots-tag", "noindex, nofollow");
 
   if (Astro.request.method === "POST") {

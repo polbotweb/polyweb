@@ -13,6 +13,7 @@ if (view instanceof Response) return view;
 const t = getBookingsPublicTranslations(view.locale);
 ---
 <BaseLayout title={t.manageTitle} description={t.manageTitle} canonical={view.base}>
-  <meta slot="head" name="referrer" content="no-referrer" />
+  {/* same-origin : le jeton ne part jamais vers un tiers ; no-referrer enverrait « Origin: null » et ferait refuser le POST d’annulation. */}
+  <meta slot="head" name="referrer" content="same-origin" />
   <ManageView {...view} />
 </BaseLayout>
