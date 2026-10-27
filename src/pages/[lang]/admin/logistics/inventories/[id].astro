@@ -1,0 +1,89 @@
+---
+/** Back-office plateforme : un inventaire — saisie des quantités comptées, validation (ajustements d'écart) ou annulation. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { ScrollRegion } from "@molecules/ScrollRegion";
+import { requirePermission } from "@lib/auth-guards";
+import { countSummary, MAX_COUNTED_QUANTITY } from "@/modules/logistics/domain/inventory";
+import { getLogisticsTranslations } from "@/modules/logistics/i18n";
+import { loadInventoryCount } from "@/modules/logistics/loaders";
+import { hasLogisticsPermission } from "@/modules/logistics/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { logistics: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getLogisticsTranslations(locale);
+const ti = t.inventory;
+const baseAdminUrl = `/${locale}/admin/logistics`;
+const count = await loadInventoryCount(Astro.params.id ?? "", null);
+if (!count) return new Response(null, { status: 404 });
+const editable = count.status === "OPEN" && (await hasLogisticsPermission(Astro, ["update"]));
+const summary = countSummary(count.lines);
+const when = (value: Date | null) => (value ? new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" }).format(value) : t.admin.none);
+const signed = (value: number | null) => (value === null ? t.admin.none : value > 0 ? `+${value}` : String(value));
+const title = `${ti.title} ${count.number}`;
+---
+<BaseLayout title={title} description={t.meta.description}>
+  <AuthLayout title={title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="logistics" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold"><span class="font-mono">{count.number}</span> — {count.warehouseCode}</h1>
+        <a class="inline-flex min-h-11 items-center px-3 underline" href={`${baseAdminUrl}/inventories`}>{ti.backToList}</a>
+      </div>
+      <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[max-content_1fr]" data-testid="logistics-inventory-summary">
+        <dt class="font-medium">{t.fields.status}</dt><dd data-inventory-status>{t.inventoryStatuses[count.status]}</dd>
+        <dt class="font-medium">{t.fields.warehouse}</dt><dd>{count.warehouseCode} — {count.warehouseName}</dd>
+        <dt class="font-medium">{ti.createdBy}</dt><dd>{count.createdByName ?? t.admin.none} · {when(count.createdAt)}</dd>
+        {count.status === "VALIDATED" && <dt class="font-medium">{ti.validatedBy}</dt><dd>{count.validatedByName ?? t.admin.none} · {when(count.validatedAt)}</dd>}
+        {count.status === "CANCELLED" && <dt class="font-medium">{t.inventoryStatuses.CANCELLED}</dt><dd>{when(count.cancelledAt)}</dd>}
+        {count.note && <dt class="font-medium">{ti.note}</dt><dd class="whitespace-pre-line">{count.note}</dd>}
+        <dt class="font-medium">{ti.counted}</dt><dd>{summary.counted} / {summary.total}</dd>
+        {count.status === "VALIDATED" && <dt class="font-medium">{ti.netVariance}</dt><dd>{signed(summary.netVariance)} ({summary.discrepancies} {ti.discrepancies.toLowerCase()})</dd>}
+      </dl>
+      {!editable && count.status !== "OPEN" && <p class="text-sm text-muted-foreground">{ti.closedNote}</p>}
+      <form class="flex flex-col gap-4" data-logistics-form="inventoryCounts" data-id={count.id} data-done={ti.countsSaved} aria-labelledby="lg-inv-lines" novalidate>
+        <h2 id="lg-inv-lines" class="text-lg font-semibold">{ti.lines}</h2>
+        {editable && <p class="text-sm text-muted-foreground">{ti.countHint}</p>}
+        <ScrollRegion labelledby="lg-inv-lines">
+          <table class="w-full text-sm" data-testid="logistics-inventory-lines">
+            <thead><tr class="border-b">
+              <th scope="col" class="py-2 text-start">{t.fields.sku}</th><th scope="col" class="py-2 text-start">{t.fields.name}</th><th scope="col" class="py-2 text-end">{ti.expected}</th>
+              <th scope="col" class="py-2 text-end">{ti.counted}</th>
+              {count.status === "VALIDATED" && <th scope="col" class="py-2 text-end">{ti.system}</th><th scope="col" class="py-2 text-end">{ti.variance}</th>}
+            </tr></thead>
+            <tbody>{count.lines.map((line) => (
+              <tr class="border-b" data-inventory-line={line.sku}>
+                <td class="py-2 font-mono">{line.sku}</td><td class="py-2">{line.itemName}</td><td class="py-2 text-end">{line.expected}</td>
+                <td class="py-2 text-end">{editable
+                  ? <Input class="ms-auto w-28 text-end" type="number" inputmode="numeric" min={0} max={MAX_COUNTED_QUANTITY} step={1} value={line.counted ?? ""} data-count-line={line.id} aria-label={`${ti.counted} — ${line.sku}`} />
+                  : line.counted ?? <span class="text-muted-foreground">{ti.uncounted}</span>}</td>
+                {count.status === "VALIDATED" && <td class="py-2 text-end">{line.system ?? t.admin.none}</td><td class="py-2 text-end" data-variance>{signed(line.variance)}</td>}
+              </tr>
+            ))}</tbody>
+          </table>
+        </ScrollRegion>
+        <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+        {editable && (
+          <div class="flex flex-wrap gap-3">
+            <Button type="submit" value="save" data-testid="logistics-inventory-save">{ti.saveCounts}</Button>
+            <Button type="submit" value="validate" variant="secondary" data-confirm={ti.confirmValidate} data-done={ti.validated} data-testid="logistics-inventory-validate">{ti.validate}</Button>
+            <Button type="submit" value="cancel" variant="outline" data-confirm={ti.confirmCancel} data-done={ti.cancelled} data-testid="logistics-inventory-cancel">{ti.cancel}</Button>
+          </div>
+        )}
+      </form>
+      {count.status === "VALIDATED" && <a class="inline-flex min-h-11 items-center self-start underline" href={`${baseAdminUrl}/movements?source=inventory&warehouse=${count.warehouseId}`}>{ti.ledger}</a>}
+    </main>
+  </AuthLayout>
+</BaseLayout>
+
+<script>
+  import { initLogistics } from "@/modules/logistics/client/init";
+
+  initLogistics();
+  document.addEventListener("astro:after-swap", initLogistics);
+</script>

@@ -1,0 +1,80 @@
+---
+/** Back-office plateforme : inventaires physiques par entrepôt (liste + ouverture). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Button } from "@atoms/button";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import { Textarea } from "@atoms/textarea";
+import { ScrollRegion } from "@molecules/ScrollRegion";
+import { requirePermission } from "@lib/auth-guards";
+import { getLogisticsTranslations } from "@/modules/logistics/i18n";
+import { loadInventoryCounts, loadItems, loadWarehouses } from "@/modules/logistics/loaders";
+import { hasLogisticsPermission } from "@/modules/logistics/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { logistics: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getLogisticsTranslations(locale);
+const ti = t.inventory;
+const baseAdminUrl = `/${locale}/admin/logistics`;
+const [counts, warehouses, items, canUpdate] = await Promise.all([loadInventoryCounts(null), loadWarehouses(null), loadItems(null), hasLogisticsPermission(Astro, ["update"])]);
+const openWarehouses = new Set(counts.filter((c) => c.status === "OPEN").map((c) => c.warehouseId));
+const available = warehouses.filter((w) => w.active && !openWarehouses.has(w.id));
+const when = (value: Date) => new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" }).format(value);
+---
+<BaseLayout title={ti.title} description={t.meta.description}>
+  <AuthLayout title={ti.title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="logistics" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{ti.title}</h1>
+        <nav class="flex flex-wrap gap-2" aria-label={t.admin.title}>
+          <a class="inline-flex min-h-11 items-center px-3 underline" href={`${baseAdminUrl}/movements`}>{ti.ledger}</a>
+          <a class="inline-flex min-h-11 items-center px-3 underline" href={`${baseAdminUrl}/stock`}>{ti.back}</a>
+        </nav>
+      </div>
+      {counts.length === 0 ? <p class="text-sm text-muted-foreground">{ti.none}</p> : (
+        <ScrollRegion label={ti.listLabel}>
+          <table class="w-full text-sm" data-testid="logistics-inventory-list">
+            <caption class="sr-only">{ti.listLabel}</caption>
+            <thead><tr class="border-b">
+              <th scope="col" class="py-2 text-start">{ti.number}</th><th scope="col" class="py-2 text-start">{t.fields.warehouse}</th><th scope="col" class="py-2 text-start">{t.fields.status}</th>
+              <th scope="col" class="py-2 text-start">{ti.createdAt}</th><th scope="col" class="py-2 text-end">{ti.counted}</th><th scope="col" class="py-2 text-end">{ti.discrepancies}</th>
+            </tr></thead>
+            <tbody>{counts.map((c) => (
+              <tr class="border-b" data-inventory-row={c.number}>
+                <td class="py-2 font-mono"><a class="inline-flex min-h-11 items-center underline" href={`${baseAdminUrl}/inventories/${c.id}`}>{c.number}</a></td>
+                <td class="py-2 font-mono">{c.warehouseCode}</td><td class="py-2">{t.inventoryStatuses[c.status]}</td><td class="py-2">{when(c.createdAt)}</td>
+                <td class="py-2 text-end">{c.counted} / {c.lines}</td><td class="py-2 text-end">{c.status === "VALIDATED" ? c.discrepancies : t.admin.none}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </ScrollRegion>
+      )}
+      {canUpdate && (
+        <section class="flex flex-col gap-3" aria-labelledby="lg-inv-open">
+          <h2 id="lg-inv-open" class="text-lg font-semibold">{ti.open}</h2>
+          {items.length === 0 ? <p class="text-sm text-muted-foreground">{ti.noItems}</p> : available.length === 0 ? <p class="text-sm text-muted-foreground">{t.admin.noWarehouses}</p> : (
+            <form class="flex max-w-xl flex-col gap-3 rounded-md border p-4" data-logistics-form="inventory" data-organization-id="" data-done={ti.opened} data-view-base-url={`${baseAdminUrl}/inventories`} aria-labelledby="lg-inv-open" novalidate>
+              <p class="text-sm text-muted-foreground">{ti.openHint}</p>
+              <div class="grid gap-2"><Label for="lg-inv-warehouse">{t.fields.warehouse}</Label><NativeSelect id="lg-inv-warehouse" name="warehouseId">{available.map((w) => <NativeSelectOption value={w.id}>{w.code} — {w.name}</NativeSelectOption>)}</NativeSelect></div>
+              <div class="grid gap-2"><Label for="lg-inv-note">{ti.note}</Label><Textarea id="lg-inv-note" name="note" maxlength={1000} rows={2} /></div>
+              <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+              <div><Button type="submit" data-testid="logistics-inventory-open">{ti.open}</Button></div>
+            </form>
+          )}
+        </section>
+      )}
+    </main>
+  </AuthLayout>
+</BaseLayout>
+
+<script>
+  import { initLogistics } from "@/modules/logistics/client/init";
+
+  initLogistics();
+  document.addEventListener("astro:after-swap", initLogistics);
+</script>

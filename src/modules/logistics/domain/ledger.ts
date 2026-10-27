@@ -22,6 +22,8 @@ export interface LedgerFilters {
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Identifiant uuid (paramètre d'URL) : écarte une valeur arbitraire avant la requête. */
+export const isUuid = (value: string) => UUID.test(value);
 const USER_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 

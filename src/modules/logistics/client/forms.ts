@@ -1,5 +1,5 @@
 /**
- * Formulaires logistics (expédition, entrepôt, article, mouvement, transfert, suivi) : lecture
+ * Formulaires logistics (expédition, entrepôt, article, mouvement, transfert, suivi, inventaire) : lecture
  * des champs au format des actions puis appel de l'action `logistics.*` désignée par
  * `data-logistics-form`, puis redirection (fiche) ou rechargement.
  */
@@ -46,9 +46,27 @@ export const readWarehouseForm = (form: HTMLFormElement) => ({
 
 export const readItemForm = (form: HTMLFormElement) => ({ sku: text(form, "sku").toUpperCase(), name: text(form, "name"), variantId: nullable(text(form, "variantId")) });
 
+/** Saisies d'inventaire `[data-count-line]` → `{ lineId, counted }` (vide = non compté). */
+export const readInventoryCounts = (form: ParentNode) =>
+  [...form.querySelectorAll<HTMLInputElement>("input[data-count-line]")].map((input) => ({ lineId: input.dataset.countLine ?? "", counted: nullable(input.value.trim()) }));
+
 const org = (form: HTMLFormElement) => form.dataset.organizationId || null;
 
-const submitters: Record<string, (form: HTMLFormElement) => Promise<ActionResult>> = {
+/** Inventaire : enregistrer les comptages, puis (selon le bouton) valider ou annuler. */
+async function submitInventory(form: HTMLFormElement, intent: string): Promise<ActionResult> {
+  const id = form.dataset.id ?? "";
+  if (intent === "cancel") return actions.logistics.cancelInventory({ id });
+  const entries = readInventoryCounts(form);
+  const invalidLine = entries.findIndex((entry) => entry.counted !== null && !/^\d{1,8}$/.test(entry.counted));
+  if (invalidLine >= 0) return invalid(form, `input[data-count-line="${entries[invalidLine]!.lineId}"]`);
+  if (entries.length > 0) {
+    const saved = await actions.logistics.recordInventoryCounts({ id, entries });
+    if (saved.error || intent !== "validate") return saved;
+  }
+  return actions.logistics.validateInventory({ id });
+}
+
+const submitters: Record<string, (form: HTMLFormElement, intent: string) => Promise<ActionResult>> = {
   shipment: async (form) => {
     const values = readShipmentForm(form);
     if (values.lines.length === 0) return invalid(form, "[data-line] [name=sku]");
@@ -80,6 +98,8 @@ const submitters: Record<string, (form: HTMLFormElement) => Promise<ActionResult
       sku: text(form, "sku").toUpperCase(), quantity, reference: nullable(text(form, "reference")),
     });
   },
+  inventory: (form) => actions.logistics.openInventory({ organizationId: org(form), warehouseId: text(form, "warehouseId"), note: nullable(text(form, "note")) }),
+  inventoryCounts: submitInventory,
   tracking: (form) => actions.logistics.updateTracking({ id: form.dataset.id ?? "", carrier: nullable(text(form, "carrier")), trackingNumber: nullable(text(form, "trackingNumber")) }),
 };
 
@@ -106,18 +126,22 @@ export function initLogisticsForms(): void {
     const errorBox = form.querySelector<HTMLElement>("[data-form-error]");
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      // Bouton émetteur : intention (`value`), confirmation (`data-confirm`) et message (`data-done`) propres.
+      const emitter = (event as SubmitEvent).submitter as HTMLButtonElement | null;
+      const intent = emitter?.value ?? "";
+      if (emitter?.dataset.confirm && !window.confirm(emitter.dataset.confirm)) return;
       if (errorBox) errorBox.hidden = true;
       form.querySelectorAll("[aria-invalid]").forEach((input) => input.removeAttribute("aria-invalid"));
-      const submit = form.querySelector<HTMLButtonElement>("button[type=submit]");
-      if (submit) submit.disabled = true;
-      const result = await submitters[form.dataset.logisticsForm ?? ""]?.(form);
-      if (submit) submit.disabled = false;
+      const buttons = [...form.querySelectorAll<HTMLButtonElement>("button[type=submit]")];
+      buttons.forEach((button) => { button.disabled = true; });
+      const result = await submitters[form.dataset.logisticsForm ?? ""]?.(form, intent);
+      buttons.forEach((button) => { button.disabled = false; });
       if (!result) return;
       if (result.error) {
         if (errorBox) { errorBox.textContent = result.error.message; errorBox.hidden = false; errorBox.focus(); }
         return;
       }
-      toast.success(form.dataset.done ?? "");
+      toast.success(emitter?.dataset.done ?? form.dataset.done ?? "");
       const { viewBaseUrl = "", id = "" } = form.dataset;
       const created = result.data && typeof result.data === "object" && "id" in result.data ? String(result.data.id) : "";
       window.location.assign(viewBaseUrl ? `${viewBaseUrl}/${id || created}` : window.location.pathname);

@@ -9,7 +9,7 @@ import { getDrizzle } from "@database/drizzle";
 import { dbTry, runOrThrow } from "@/lib/effect/run";
 import { user } from "@database/schemas/auth.schema";
 import { logisticsInventoryCountLines, logisticsInventoryCounts, logisticsItems, logisticsStockMovements, logisticsWarehouses } from "../schema";
-import { LEDGER_PAGE_SIZE, ledgerDateRange, likePrefix, type LedgerFilters } from "../domain/ledger";
+import { isUuid, LEDGER_PAGE_SIZE, ledgerDateRange, likePrefix, type LedgerFilters } from "../domain/ledger";
 import type { InventoryCountStatus } from "../domain/inventory";
 
 type Movement = typeof logisticsStockMovements.$inferSelect;
@@ -106,6 +106,7 @@ export const inventoryLoader = {
   /** Inventaire et ses lignes (ordre SKU) ; null si absent ou hors tenant. */
   count: (id: string, organizationId: string | null) =>
     Effect.gen(function* () {
+      if (!isUuid(id)) return null;
       const db = getDrizzle();
       const creator = aliasedTable(user, "creator");
       const validator = aliasedTable(user, "validator");
