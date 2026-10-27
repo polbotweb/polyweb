@@ -1,13 +1,30 @@
 ════════════════════════════════════════════════════════════════════════════════
   PA11Y ACCESSIBILITY REPORT — WCAG 2.1 AAA
-  Generated: 2026-10-26 22:19:18
+  Generated: 2026-10-27 01:27:35
 ════════════════════════════════════════════════════════════════════════════════
 
-  Total URLs tested:  60
-  Passed:             60/60  ✅
-  Failed:             0/60
+  Total URLs tested:  68
+  Passed:             67/68  ⚠️
+  Failed:             0/68
 
 ────────────────────────────────────────────────────────────────────────────────
+
+  ISSUES BY RULE:
+────────────────────────────────────────────────────────────────────────────────
+  unknown  (1 occurrence)
+
+════════════════════════════════════════════════════════════════════════════════
+  DETAILED FAILURES
+════════════════════════════════════════════════════════════════════════════════
+
+  URL: http://localhost:4321/en/auth/sign-in
+  Issues: 1
+────────────────────────────────────────────────────────────────────────────────
+    Rule:     N/A
+    Message:  Navigation timeout of 30000 ms exceeded
+    Selector: N/A
+    Context:  N/A
+
 
 ════════════════════════════════════════════════════════════════════════════════
   PASSING URLS
@@ -17,6 +34,8 @@
   ✅ http://localhost:4321/fr/contact
   ✅ http://localhost:4321/fr/mentions-legales
   ✅ http://localhost:4321/fr/blog
+  ✅ http://localhost:4321/fr/bookings
+  ✅ http://localhost:4321/fr/bookings/A11YROOM
   ✅ http://localhost:4321/fr/auth/connexion
   ✅ http://localhost:4321/fr/auth/inscription
   ✅ http://localhost:4321/fr/auth/mot-de-passe-oublie
@@ -25,7 +44,8 @@
   ✅ http://localhost:4321/en/contact
   ✅ http://localhost:4321/en/legal-notice
   ✅ http://localhost:4321/en/blog
-  ✅ http://localhost:4321/en/auth/sign-in
+  ✅ http://localhost:4321/en/bookings
+  ✅ http://localhost:4321/en/bookings/A11YROOM
   ✅ http://localhost:4321/en/auth/sign-up
   ✅ http://localhost:4321/en/auth/forgot-password
   ✅ http://localhost:4321/es/
@@ -33,6 +53,8 @@
   ✅ http://localhost:4321/es/contacto
   ✅ http://localhost:4321/es/aviso-legal
   ✅ http://localhost:4321/es/blog
+  ✅ http://localhost:4321/es/bookings
+  ✅ http://localhost:4321/es/bookings/A11YROOM
   ✅ http://localhost:4321/es/auth/iniciar-sesion
   ✅ http://localhost:4321/es/auth/registro
   ✅ http://localhost:4321/es/auth/contrasena-olvidada
@@ -41,6 +63,8 @@
   ✅ http://localhost:4321/ar/%D8%A7%D8%AA%D8%B5%D9%84-%D8%A8%D9%86%D8%A7
   ✅ http://localhost:4321/ar/%D8%A7%D9%84%D8%B4%D8%B1%D9%88%D8%B7-%D8%A7%D9%84%D9%82%D8%A7%D9%86%D9%88%D9%86%D9%8A%D8%A9
   ✅ http://localhost:4321/ar/blog
+  ✅ http://localhost:4321/ar/bookings
+  ✅ http://localhost:4321/ar/bookings/A11YROOM
   ✅ http://localhost:4321/ar/auth/%D8%AA%D8%B3%D8%AC%D9%8A%D9%84-%D8%A7%D9%84%D8%AF%D8%AE%D9%88%D9%84
   ✅ http://localhost:4321/ar/auth/%D8%A7%D9%86%D8%B4%D8%A7%D8%A1-%D8%AD%D8%B3%D8%A7%D8%A8
   ✅ http://localhost:4321/ar/auth/%D9%86%D8%B3%D9%8A%D8%AA-%D9%83%D9%84%D9%85%D8%A9-%D8%A7%D9%84%D9%85%D8%B1%D9%88%D8%B1
@@ -74,5 +98,5 @@
   ✅ http://localhost:4321/ar/admin/blog
 
 ════════════════════════════════════════════════════════════════════════════════
-  END OF REPORT — 60/60 passed
+  END OF REPORT — 67/68 passed
 ════════════════════════════════════════════════════════════════════════════════
