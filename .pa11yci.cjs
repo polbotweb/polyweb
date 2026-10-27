@@ -140,6 +140,8 @@ for (const lang of locales) {
     adminUrls.push({ url: `${BASE}/${lang}/admin/logistics/inventories/${encodeURIComponent(logistics.openCountId)}`, headers: { Cookie: adminCookie } });
     adminUrls.push({ url: `${BASE}/${lang}/admin/logistics/inventories/${encodeURIComponent(logistics.validatedCountId)}`, headers: { Cookie: adminCookie } });
   }
+  // Exports FEC : liste (export prêt + export en échec seedés) et formulaire de génération.
+  adminUrls.push({ url: `${BASE}/${lang}/admin/sales/fec`, headers: { Cookie: adminCookie } });
 }
 
 module.exports = {

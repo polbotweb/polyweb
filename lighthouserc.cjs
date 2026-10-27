@@ -121,6 +121,8 @@ for (const lang of locales) {
   // Logistique : inventaires (liste, en cours, validé) et grand livre de stock.
   adminUrls.push(`${BASE}/${lang}/admin/logistics/inventories`, `${BASE}/${lang}/admin/logistics/movements`);
   if (logistics) adminUrls.push(`${BASE}/${lang}/admin/logistics/inventories/${encodeURIComponent(logistics.openCountId)}`, `${BASE}/${lang}/admin/logistics/inventories/${encodeURIComponent(logistics.validatedCountId)}`);
+  // Exports FEC (liste avec un export prêt et un export en échec seedés, formulaire de génération).
+  adminUrls.push(`${BASE}/${lang}/admin/sales/fec`);
 }
 
 module.exports = {

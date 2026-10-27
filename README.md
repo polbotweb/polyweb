@@ -493,6 +493,7 @@ migrations/
   0041_core_refunds.sql
   0042_shop_returns.sql
   0043_logistics_inventory.sql
+  0044_sales_fec_exports.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -534,6 +535,7 @@ migrations/
     0041_snapshot.json
     0042_snapshot.json
     0043_snapshot.json
+    0044_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -741,6 +743,7 @@ schemas.ts
 - `0041_core_refunds.sql`
 - `0042_shop_returns.sql`
 - `0043_logistics_inventory.sql`
+- `0044_sales_fec_exports.sql`
 
 ### Commands
 
@@ -1283,6 +1286,7 @@ sales/
   client/
     document-actions.ts
     document-form.ts
+    fec-export-form.ts
     init.ts
     seller-profile-form.ts
   documents/
@@ -1293,6 +1297,7 @@ sales/
     credit.ts
     einvoice.ts
     errors.ts
+    fec.ts
     lines.ts
     numbering.ts
     payments.ts
@@ -1318,6 +1323,7 @@ sales/
   schema/
     index.ts
   services/
+    fecExport.service.ts
     salesDocument.service.ts
     sellerProfile.service.ts
 services/
