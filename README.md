@@ -482,6 +482,7 @@ migrations/
   0036_bookings.sql
   0037_bookings_guest_phone.sql
   0038_core_payments.sql
+  0039_sales_seller_profiles.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -518,6 +519,7 @@ migrations/
     0036_snapshot.json
     0037_snapshot.json
     0038_snapshot.json
+    0039_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -716,6 +718,7 @@ schemas.ts
 - `0036_bookings.sql`
 - `0037_bookings_guest_phone.sql`
 - `0038_core_payments.sql`
+- `0039_sales_seller_profiles.sql`
 
 ### Commands
 
@@ -862,6 +865,14 @@ documents/
   html.ts
   index.ts
   renderer.ts
+einvoice/
+  cii.ts
+  errors.ts
+  icc.ts
+  index.ts
+  model.ts
+  pdfa.ts
+  validate.ts
 engagement/
   index.ts
 events/
@@ -1227,17 +1238,20 @@ sales/
     document-actions.ts
     document-form.ts
     init.ts
+    seller-profile-form.ts
   documents/
     index.ts
     pdf.ts
     template.ts
   domain/
     credit.ts
+    einvoice.ts
     errors.ts
     lines.ts
     numbering.ts
     payments.ts
     reminders.ts
+    seller-profile.ts
     workflow.ts
   i18n/
     index.ts
@@ -1246,6 +1260,7 @@ sales/
     index.ts
     salesDocument-admin.loader.ts
     salesDocument.loader.ts
+    sellerProfile.loader.ts
   locks.ts
   module.ts
   payments.ts
@@ -1257,6 +1272,7 @@ sales/
     index.ts
   services/
     salesDocument.service.ts
+    sellerProfile.service.ts
 services/
   actions/
     index.ts

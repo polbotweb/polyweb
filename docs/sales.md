@@ -29,13 +29,14 @@ Tables `sales_documents`, `sales_document_lines`, `sales_payments`, `sales_remin
 - `/{lang}/admin/sales` : liste filtrable (type, statut), actions groupées.
 - `/{lang}/admin/sales/new?kind=quote|invoice` et `/{lang}/admin/sales/{id}/edit` : formulaire avec lignes dynamiques (brouillons uniquement).
 - `/{lang}/admin/sales/{id}` : détail, totaux, transitions autorisées, conversion, avoir, relance, encaissement, documents liés.
-- `/{lang}/admin/sales/{id}/pdf` : téléchargement du PDF — voir [documents-pdf.md](documents-pdf.md) (Chromium requis à l'exécution).
+- `/{lang}/admin/sales/{id}/pdf` : téléchargement du PDF — voir [documents-pdf.md](documents-pdf.md) (Chromium requis à l'exécution). Factures et avoirs émis : PDF/A-3B Factur-X EN 16931 — voir [factur-x.md](factur-x.md) (en-tête `X-Factur-X`).
+- `/{lang}/admin/sales/seller` : profil vendeur (raison sociale, TVA, SIREN, adresse, IBAN/BIC) du tenant.
 
 Traductions fr / en / es / ar (`i18n/`), interface RTL en arabe.
 
 ## Tests
 
-`tests/unit/sales/domain.test.ts`, `tests/unit/sales/pdf-template.test.ts`, `tests/integration/sales-module.test.ts`, `tests/integration/sales-pdf.test.ts`.
+`tests/unit/sales/domain.test.ts`, `tests/unit/sales/pdf-template.test.ts`, `tests/integration/sales-module.test.ts`, `tests/integration/sales-pdf.test.ts`, `tests/unit/sales/einvoice.test.ts`, `tests/integration/sales-seller-profile.test.ts`.
 
 ## Paiement en ligne
 
