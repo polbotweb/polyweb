@@ -20,6 +20,7 @@ import { registerSearchResource } from "@/core/search/registry";
 import { registerWebhookDispatcher } from "@/modules/webhooks/subscribe";
 import { registerSearchIndexer } from "@/lib/search/indexer";
 import { registerBookingPayments } from "@/modules/bookings/payments";
+import { registerSalesPayments } from "@/modules/sales/payments";
 
 let bootstrapped = false;
 
@@ -48,5 +49,6 @@ export function bootstrapModules(): void {
   registerSearchIndexer();
   // Objets payables en ligne (core/payments) : sans effet tant que PAYMENTS_ENABLED est faux.
   registerBookingPayments();
+  registerSalesPayments();
   bootstrapped = true;
 }

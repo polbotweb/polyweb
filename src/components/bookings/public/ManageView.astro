@@ -3,7 +3,7 @@
 import type { Locale } from "@i18n/config";
 import type { BookingDetail } from "@/modules/bookings/loaders/bookings.loader";
 import { getBookingsTranslations } from "@/modules/bookings/i18n";
-import { getBookingsPublicTranslations } from "@/modules/bookings/i18n/public";
+import { fill, getBookingsPublicTranslations } from "@/modules/bookings/i18n/public";
 import { formatDue, formatMinor, formatSlot } from "@/modules/bookings/public/format";
 import type { Notice } from "@/modules/bookings/public/pages";
 import { Button } from "@atoms/button";
@@ -40,7 +40,7 @@ const deposit = booking && booking.depositMinor > 0 ? formatMinor(booking.deposi
         <form method="post" class="grid gap-3" data-testid="pay-deposit">
           <input type="hidden" name="t" value={token} />
           <input type="hidden" name="intent" value="pay" />
-          <p id="bk-pay-note" class="text-foreground">{t.depositDue.replace("{amount}", deposit).replace("{time}", formatDue(booking.paymentDueAt, tz, locale))}</p>
+          <p id="bk-pay-note" class="text-foreground">{fill(t.depositDue, { amount: deposit, time: formatDue(booking.paymentDueAt, tz, locale) })}</p>
           <div><Button type="submit" aria-describedby="bk-pay-note">{t.payDeposit}</Button></div>
         </form>
       )}

@@ -1,0 +1,41 @@
+---
+/** Paiement d'une facture par lien signé (client) : récapitulatif, restant dû, bouton de paiement. */
+import type { Locale } from "@i18n/config";
+import type { SalesDocumentRow } from "@/modules/sales/services/salesDocument.service";
+import { getSalesPayTranslations } from "@/modules/sales/i18n/pay";
+import { formatMoney, isCurrencyCode } from "@/core/money";
+import { amountDue } from "@/modules/sales/domain/payments";
+import type { PayNotice } from "@/modules/sales/public/pay-page";
+import { Button } from "@atoms/button";
+import PublicNotice from "@/components/bookings/public/PublicNotice.astro";
+
+interface Props { locale: Locale; invoice: SalesDocumentRow | null; token: string; payable: boolean; notice: PayNotice }
+const { locale, invoice, token, payable, notice } = Astro.props;
+const t = getSalesPayTranslations(locale);
+const code = invoice?.currency.toUpperCase() ?? "";
+const due = !invoice ? "" : isCurrencyCode(code) ? formatMoney({ amountMinor: amountDue(invoice), currency: code }, locale) : `${amountDue(invoice)} ${invoice.currency}`;
+const dueDate = invoice?.dueDate ? new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(new Date(`${invoice.dueDate}T12:00:00Z`)) : null;
+---
+<section class="mx-auto grid max-w-3xl gap-6 px-4 py-12" aria-labelledby="pay-title">
+  <h1 id="pay-title" class="font-heading text-3xl font-semibold text-foreground">{t.title}</h1>
+  {notice && <PublicNotice kind={notice.kind} id="pay-notice"><p>{t[notice.text]}</p></PublicNotice>}
+  {!invoice ? (
+    <p class="text-foreground" data-testid="invalid-link">{t.invalidLink}</p>
+  ) : (
+    <>
+      <dl class="grid gap-x-6 gap-y-3 rounded-lg border-2 border-border p-5 text-foreground sm:grid-cols-[max-content_1fr]" data-testid="invoice-summary">
+        <dt class="font-semibold">{t.invoice}</dt><dd dir="ltr" class="text-start">{invoice.number ?? invoice.slug}</dd>
+        <dt class="font-semibold">{t.customer}</dt><dd>{invoice.customerName}</dd>
+        {dueDate && <><dt class="font-semibold">{t.dueDate}</dt><dd>{dueDate}</dd></>}
+        <dt class="font-semibold">{t.amountDue}</dt><dd data-testid="amount-due">{due}</dd>
+      </dl>
+      {payable ? (
+        <form method="post" class="grid gap-3" data-testid="pay-invoice">
+          <input type="hidden" name="t" value={token} />
+          <p id="pay-note" class="text-foreground">{t.secureNote}</p>
+          <div><Button type="submit" aria-describedby="pay-note">{t.pay.split("{amount}").join(due)}</Button></div>
+        </form>
+      ) : <p class="text-foreground" data-testid="invoice-settled">{t.settled}</p>}
+    </>
+  )}
+</section>

@@ -1,0 +1,17 @@
+---
+/** Paiement en ligne d'une facture — lien signé (`?t=`) envoyé au client ; actif si PAYMENTS_ENABLED. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PayInvoiceView from "@/components/sales/public/PayInvoiceView.astro";
+import { getSalesPayTranslations } from "@/modules/sales/i18n/pay";
+import { payInvoicePage } from "@/modules/sales/public/pay-page";
+
+export const prerender = false;
+const view = await payInvoicePage(Astro);
+if (view instanceof Response) return view;
+const t = getSalesPayTranslations(view.locale);
+---
+<BaseLayout title={t.title} description={t.title}>
+  {/* same-origin : le jeton ne part jamais vers un tiers (Referer). */}
+  <meta slot="head" name="referrer" content="same-origin" />
+  <PayInvoiceView {...view} />
+</BaseLayout>
