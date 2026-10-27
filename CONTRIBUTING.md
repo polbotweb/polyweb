@@ -45,7 +45,7 @@ Visit `http://localhost:4321` — hot reload enabled ✓
 | --------- | --------- |
 | `pnpm dev` | Start dev server (Astro + auto-reload) |
 | `pnpm check` | TypeScript check (`astro check`) |
-| `pnpm lint` | Run ESLint |
+| `pnpm lint` | Run ESLint (`--max-warnings 0`: any warning fails lint) |
 | `pnpm lint:fix` | ESLint auto-fix |
 | `pnpm test` | Vitest (unit + integration) |
 | `pnpm test:watch` | Vitest watch mode |
