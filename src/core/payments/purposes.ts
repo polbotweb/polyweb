@@ -1,6 +1,7 @@
 /**
  * Registre des objets de paiement (`purpose`) : chaque module propriétaire enregistre ses
- * réactions (payé, échoué, expiré, remboursé). Elles s'exécutent DANS la transaction qui
+ * réactions (payé, échoué, expiré). Les remboursements ont leur propre registre
+ * (core/refunds, `registerRefundHandler`). Elles s'exécutent DANS la transaction qui
  * applique l'événement fournisseur : l'effet métier et la trace d'idempotence sont
  * validés ou annulés ensemble. Une règle métier non satisfaite (ex. facture déjà soldée)
  * ne doit pas échouer — journaliser et réussir — sinon le fournisseur réessaierait sans fin ;
@@ -19,7 +20,6 @@ export interface PaymentPurposeHandler {
   readonly onSucceeded?: PaymentReaction;
   readonly onFailed?: PaymentReaction;
   readonly onExpired?: PaymentReaction;
-  readonly onRefunded?: PaymentReaction;
   /** Balayage périodique propre au module (cron `/api/cron/payments-expire`) ; renvoie le nombre traité. */
   readonly sweep?: (now: Date) => Effect.Effect<number, DbError>;
 }

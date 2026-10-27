@@ -6,21 +6,33 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Effect, Schema } from 'effect';
 import { MoneySchema } from '@/core/money';
-import { WebhookSignatureError } from './errors';
+import { PaymentProviderError, WebhookSignatureError } from './errors';
 import type { PaymentProvider, VerifiedPaymentEvent } from './provider';
 
 export const MOCK_SIGNATURE_HEADER = 'x-polyweb-mock-signature';
+/** Montants « magiques » du mock (tests) : refus fournisseur / remboursement asynchrone. */
+export const MOCK_REFUND_DECLINED_MINOR = 13;
+export const MOCK_REFUND_PENDING_MINOR = 17;
 
 export const signMockPayload = (rawBody: string, secret: string) => createHmac('sha256', secret).update(rawBody, 'utf8').digest('hex');
+
+const MockRefund = Schema.Struct({
+  providerRefundId: Schema.String,
+  status: Schema.Literals(['pending', 'succeeded', 'failed', 'cancelled']),
+  refundId: Schema.NullOr(Schema.String),
+  amount: MoneySchema,
+  failureReason: Schema.NullOr(Schema.String),
+});
 
 const MockEvent = Schema.Struct({
   eventId: Schema.String,
   type: Schema.String,
-  kind: Schema.Literals(['succeeded', 'failed', 'expired', 'refunded', 'ignored']),
+  kind: Schema.Literals(['succeeded', 'failed', 'expired', 'refund', 'ignored']),
   paymentId: Schema.NullOr(Schema.String),
   providerPaymentId: Schema.NullOr(Schema.String),
   sessionId: Schema.NullOr(Schema.String),
   amount: Schema.NullOr(MoneySchema),
+  refund: Schema.optional(Schema.NullOr(MockRefund)),
 });
 const decodeMockEvent = Schema.decodeUnknownEffect(Schema.fromJsonString(MockEvent));
 
@@ -36,7 +48,12 @@ export const makeMockProvider = (secret: string): PaymentProvider => ({
       url: `${request.successUrl}${request.successUrl.includes('?') ? '&' : '?'}mock_session=mock_cs_${request.paymentId}`,
     }),
   createPaymentIntent: (request) => Effect.succeed({ intentId: `mock_pi_${request.paymentId}`, clientSecret: `mock_pi_${request.paymentId}_secret`, status: 'requires_payment_method' }),
-  refund: (request) => Effect.succeed({ refundId: `mock_re_${request.providerPaymentId}` }),
+  // Remboursement immédiat et déterministe (clé `refund:<id>` → `mock_re_<id>`) ; un montant
+  // de 13 unités mineures simule un refus fournisseur, 17 un remboursement asynchrone (`pending`).
+  refund: (request) =>
+    request.amount.amountMinor === MOCK_REFUND_DECLINED_MINOR
+      ? Effect.fail(new PaymentProviderError({ provider: 'mock', operation: 'refund.create', cause: 'declined', retryable: false }))
+      : Effect.succeed({ providerRefundId: `mock_re_${request.refundId}`, status: request.amount.amountMinor === MOCK_REFUND_PENDING_MINOR ? 'pending' : 'succeeded' }),
   verifyWebhook: (rawBody, signature) =>
     Effect.gen(function* () {
       const expected = Buffer.from(signMockPayload(rawBody, secret), 'utf8');

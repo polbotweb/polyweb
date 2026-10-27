@@ -11,9 +11,10 @@ import { organization } from "./auth.schema";
  *
  * Brique core/payments (docs/payments.md) : `reference` = `<purpose>:<subjectId>`
  * (ex. `booking-deposit:<id>`, `sales-invoice:<id>`), montant en unités mineures
- * (core/money), échéance `expiresAt` du lien de paiement.
+ * (core/money), échéance `expiresAt` du lien de paiement. Remboursements : core/refunds
+ * (`partially_refunded` / `refunded`, docs/refunds.md).
  */
-export const PAYMENT_STATUSES = ["created", "pending", "paid", "failed", "cancelled", "refunded", "expired"] as const;
+export const PAYMENT_STATUSES = ["created", "pending", "paid", "failed", "cancelled", "partially_refunded", "refunded", "expired"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 export const payments = pgTable(

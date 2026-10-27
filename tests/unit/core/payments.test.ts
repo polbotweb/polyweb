@@ -6,7 +6,7 @@ import {
   normalizeStripeEvent, parseReference, providerFromEnv, registerPaymentPurpose, paymentPurpose, signMockPayload, toStripeAmount,
   type StripeClientLike,
 } from '@/core/payments';
-import { checkoutCompleted, checkoutExpired, chargeRefunded, customerCreated, intentFailed, intentSucceeded } from '../../fixtures/payments/stripe-events';
+import { checkoutCompleted, checkoutExpired, chargeRefunded, customerCreated, intentFailed, intentSucceeded, refundEvent } from '../../fixtures/payments/stripe-events';
 
 const run = <A, E>(effect: Effect.Effect<A, E>) => Effect.runPromise(effect);
 const failure = async <A, E>(effect: Effect.Effect<A, E>) => {
@@ -24,7 +24,7 @@ const fakeClient = () => {
   const client = {
     checkout: { sessions: { create: vi.fn(async () => ({ id: 'cs_test_1', url: 'https://checkout.stripe.test/c/cs_test_1' })) } },
     paymentIntents: { create: vi.fn(async () => ({ id: 'pi_test_1', client_secret: 'pi_test_1_secret_x', status: 'requires_payment_method' as const })) },
-    refunds: { create: vi.fn(async () => ({ id: 're_test_1' })) },
+    refunds: { create: vi.fn(async (): Promise<{ id: string; status: string | null }> => ({ id: 're_test_1', status: 'succeeded' })) },
   };
   return client satisfies StripeClientLike;
 };
@@ -61,11 +61,18 @@ describe('core/payments — normalisation des événements Stripe', () => {
     expect(normalizeStripeEvent(asEvent(checkoutCompleted(id, 4200, 'eur', 'unpaid'))).kind).toBe('ignored');
     expect(normalizeStripeEvent(asEvent(checkoutExpired(id)))).toMatchObject({ kind: 'expired', providerPaymentId: null });
   });
-  it('payment intents, remboursement total seulement, types inconnus ignorés', () => {
+  it('payment intents, remboursements `refund.*`, `charge.refunded` et types inconnus ignorés', () => {
     expect(normalizeStripeEvent(asEvent(intentSucceeded(id)))).toMatchObject({ kind: 'succeeded', providerPaymentId: `pi_test_${id}` });
     expect(normalizeStripeEvent(asEvent(intentFailed(id))).kind).toBe('failed');
-    expect(normalizeStripeEvent(asEvent(chargeRefunded(id))).kind).toBe('refunded');
-    expect(normalizeStripeEvent(asEvent(chargeRefunded(id, false))).kind).toBe('ignored');
+    expect(normalizeStripeEvent(asEvent(chargeRefunded(id))).kind).toBe('ignored');
+    expect(normalizeStripeEvent(asEvent(refundEvent(id, { amount: 1500 })))).toMatchObject({
+      kind: 'refund', paymentId: id, providerPaymentId: `pi_test_${id}`, amount: { amountMinor: 1500, currency: 'EUR' },
+      refund: { providerRefundId: `re_test_${id}`, status: 'succeeded', refundId: `rf-${id}`, amount: { amountMinor: 1500, currency: 'EUR' }, failureReason: null },
+    });
+    expect(normalizeStripeEvent(asEvent(refundEvent(id, { type: 'refund.created', status: 'pending', refundId: null }))).refund).toMatchObject({ status: 'pending', refundId: null });
+    expect(normalizeStripeEvent(asEvent(refundEvent(id, { type: 'refund.failed', status: 'failed', failureReason: 'expired_or_canceled_card' }))).refund).toMatchObject({ status: 'failed', failureReason: 'expired_or_canceled_card' });
+    expect(normalizeStripeEvent(asEvent(refundEvent(id, { status: 'canceled' }))).refund?.status).toBe('cancelled');
+    expect(normalizeStripeEvent(asEvent(refundEvent(id, { status: 'requires_action' }))).refund?.status).toBe('pending');
     expect(normalizeStripeEvent(asEvent(customerCreated()))).toMatchObject({ kind: 'ignored', paymentId: null, eventId: 'evt_cus' });
   });
 });
@@ -87,7 +94,23 @@ describe('core/payments — adaptateur Stripe (client simulé)', () => {
     const provider = makeStripeProvider({ client, webhookSecret: SECRET });
     expect(await run(provider.createPaymentIntent(request))).toEqual({ intentId: 'pi_test_1', clientSecret: 'pi_test_1_secret_x', status: 'requires_payment_method' });
     expect((client.paymentIntents.create.mock.calls[0] as unknown[] | undefined)?.[1]).toEqual({ idempotencyKey: `intent:${request.paymentId}` });
-    expect(await run(provider.refund({ providerPaymentId: 'pi_test_1', idempotencyKey: 'refund:1' }))).toEqual({ refundId: 're_test_1' });
+    const refundRequest = { refundId: 'rf-1', paymentId: request.paymentId, providerPaymentId: 'pi_test_1', amount: { amountMinor: 1500, currency: 'EUR' as const }, reason: 'requested_by_customer' as const, idempotencyKey: 'refund:rf-1' };
+    expect(await run(provider.refund({ ...refundRequest, accountId: 'acct_123' }))).toEqual({ providerRefundId: 're_test_1', status: 'succeeded' });
+    const [params, options] = client.refunds.create.mock.calls[0] as unknown as [Stripe.RefundCreateParams, Stripe.RequestOptions];
+    expect(params).toEqual({ payment_intent: 'pi_test_1', amount: 1500, metadata: { refund_id: 'rf-1', payment_id: request.paymentId }, reason: 'requested_by_customer' });
+    expect(options).toEqual({ idempotencyKey: 'refund:rf-1', stripeAccount: 'acct_123' });
+    client.refunds.create.mockResolvedValueOnce({ id: 're_test_2', status: 'pending' });
+    expect(await run(provider.refund({ ...refundRequest, reason: null, idempotencyKey: 'refund:rf-2' }))).toEqual({ providerRefundId: 're_test_2', status: 'pending' });
+    expect((client.refunds.create.mock.calls[1] as unknown as [Stripe.RefundCreateParams])[0]).not.toHaveProperty('reason');
+  });
+  it('classe les erreurs de remboursement : définitives (non rejouables) ou incertaines', async () => {
+    const client = fakeClient();
+    const provider = makeStripeProvider({ client, webhookSecret: SECRET });
+    const refundRequest = { refundId: 'rf-3', paymentId: request.paymentId, providerPaymentId: 'pi_test_1', amount: { amountMinor: 1500, currency: 'EUR' as const }, reason: null, idempotencyKey: 'refund:rf-3' };
+    client.refunds.create.mockRejectedValueOnce(Stripe.errors.StripeError.generate({ type: 'invalid_request_error', statusCode: 400, code: 'charge_already_refunded', message: 'x' }));
+    expect((await failure(provider.refund(refundRequest)))?.retryable).toBe(false);
+    client.refunds.create.mockRejectedValueOnce(Stripe.errors.StripeError.generate({ type: 'api_error', statusCode: 500, message: 'x' }));
+    expect((await failure(provider.refund(refundRequest)))?.retryable).not.toBe(false);
   });
   it('assainit les erreurs Stripe (aucune donnée de requête)', async () => {
     const client = fakeClient();

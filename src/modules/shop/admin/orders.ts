@@ -9,9 +9,10 @@ import { Effect } from "effect";
 import { runApp, runAppResult } from "@/lib/effect/http";
 import { extractIp, logAuditEventEffect } from "@/lib/audit";
 import { isOrderStatus, ORDER_STATUSES, type OrderStatus } from "../domain/orders";
-import { orderLinesOf, orderService, ORDERS_PAGE_SIZE, type OrderAdminFilters } from "../services/order.service";
+import { orderLinesOf, orderService, ORDERS_PAGE_SIZE, SHOP_ORDER_PAYMENT_PURPOSE, type OrderAdminFilters } from "../services/order.service";
 import { hasShopPermission } from "../permissions";
 import { SHOP_PUBLIC_ORGANIZATION } from "../public/flow";
+import { refundPanelView } from "@/core/refunds/admin";
 
 export type AdminNotice = { readonly kind: "success" | "error"; readonly key: "done" | "forbidden" | "notFound" | "conflict" | "generic" | "invalidDate" } | null;
 
@@ -83,5 +84,6 @@ export async function orderAdminDetail(Astro: AstroGlobal) {
   const order = await runApp(orderService.byId(id, SHOP_PUBLIC_ORGANIZATION));
   if (!order) return null;
   const lines = await runApp(orderLinesOf(order.id));
-  return { order, lines, canUpdate, notice };
+  const refunds = await refundPanelView(Astro, `${SHOP_ORDER_PAYMENT_PURPOSE}:${order.id}`);
+  return { order, lines, canUpdate, notice, refunds };
 }

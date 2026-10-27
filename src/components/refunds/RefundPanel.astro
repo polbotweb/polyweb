@@ -1,0 +1,80 @@
+---
+/**
+ * Panneau « Remboursements » des fiches admin (commande, réservation, facture) : reste remboursable
+ * par paiement, historique, formulaire sans JS (POST `/[lang]/admin/refunds`, nonce d'idempotence).
+ * Données : `refundPanelView` (core/refunds/admin) ; rien n'est rendu sans paiement visible.
+ */
+import type { Locale } from "@i18n/config";
+import { REFUND_REASONS } from "@database/schemas/refunds.schema";
+import type { RefundPanelView } from "@/core/refunds/admin";
+import { getRefundsTranslations } from "@/core/refunds/i18n";
+import { currencyExponent, formatMoney, isCurrencyCode } from "@/core/money";
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import PublicNotice from "@/components/bookings/public/PublicNotice.astro";
+import { ScrollRegion } from "@molecules/ScrollRegion";
+
+interface Props { locale: Locale; view: RefundPanelView; defaultReason?: (typeof REFUND_REASONS)[number] }
+const { locale, view, defaultReason = "requested_by_customer" } = Astro.props;
+const t = getRefundsTranslations(locale);
+const money = (minor: number, currency: string) => (isCurrencyCode(currency) ? formatMoney({ amountMinor: minor, currency }, locale) : `${minor} ${currency}`);
+const decimal = (minor: number, currency: string) => { const e = isCurrencyCode(currency) ? currencyExponent(currency) : 2; return (minor / 10 ** e).toFixed(e); };
+const date = (d: Date) => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Paris" }).format(d);
+const errorNotice = view.notice !== null && !["done", "pending"].includes(view.notice);
+---
+<section id="refunds" aria-labelledby="refunds-title" class="grid gap-4" data-testid="refund-panel">
+  <h2 id="refunds-title" class="text-xl font-semibold">{t.title}</h2>
+  {view.notice && <PublicNotice kind={errorNotice ? "error" : "success"} id="refund-notice"><p data-testid="refund-notice">{t.notices[view.notice]}</p></PublicNotice>}
+  {view.entries.map(({ payment, summary, refunds, canRefund }, index) => (
+    <article class="grid gap-3 rounded-lg border-2 border-border p-4" aria-labelledby={`refund-pay-${index}`}>
+      <h3 id={`refund-pay-${index}`} class="text-lg font-semibold">{t.payment.replace("{date}", date(payment.paidAt ?? payment.createdAt))}</h3>
+      <dl class="grid gap-x-4 gap-y-1 sm:grid-cols-[max-content_1fr]">
+        <dt class="font-semibold">{t.captured}</dt><dd>{money(summary.captured, summary.currency)}</dd>
+        <dt class="font-semibold">{t.refunded}</dt><dd data-testid="refund-refunded">{money(summary.refunded, summary.currency)}</dd>
+        {summary.pending > 0 && <><dt class="font-semibold">{t.inProgress}</dt><dd>{money(summary.pending, summary.currency)}</dd></>}
+        <dt class="font-semibold">{t.remaining}</dt><dd data-testid="refund-remaining">{money(summary.remaining, summary.currency)}</dd>
+      </dl>
+      {refunds.length === 0 ? <p>{t.noRefund}</p> : (
+        <ScrollRegion labelledby={`refund-pay-${index}`}>
+          <table class="w-full text-base">
+            <caption class="sr-only">{t.history}</caption>
+            <thead><tr class="border-b-2 border-border">
+              <th scope="col" class="p-2 text-start">{t.date}</th><th scope="col" class="p-2 text-end">{t.amount}</th>
+              <th scope="col" class="p-2 text-start">{t.status}</th><th scope="col" class="p-2 text-start">{t.reason}</th>
+            </tr></thead>
+            <tbody>{refunds.map((r) => (
+              <tr class="border-b border-border"><td class="p-2">{date(r.createdAt)}</td><td class="p-2 text-end">{money(r.amount, r.currency)}</td><td class="p-2">{t.statuses[r.status]}</td><td class="p-2">{t.reasons[r.reason]}</td></tr>
+            ))}</tbody>
+          </table>
+        </ScrollRegion>
+      )}
+      {summary.remaining === 0 && <p>{t.fullyRefunded}</p>}
+      {canRefund && (
+        <form method="post" action={`/${locale}/admin/refunds`} class="grid gap-3 sm:grid-cols-2" data-testid="refund-form">
+          <input type="hidden" name="paymentId" value={payment.id} />
+          <input type="hidden" name="nonce" value={view.nonce} />
+          <input type="hidden" name="returnTo" value={view.returnTo} />
+          <div class="grid gap-1">
+            <Label for={`refund-amount-${index}`}>{t.amount} ({summary.currency})</Label>
+            <Input id={`refund-amount-${index}`} name="amount" inputmode="decimal" required maxlength={20} dir="ltr" value={decimal(summary.remaining, summary.currency)} aria-describedby={`refund-amount-hint-${index}`} />
+            <p id={`refund-amount-hint-${index}`} class="text-base">{t.amountHint}</p>
+          </div>
+          <div class="grid gap-1">
+            <Label for={`refund-reason-${index}`}>{t.reason}</Label>
+            <NativeSelect id={`refund-reason-${index}`} name="reason">
+              {REFUND_REASONS.map((r) => <NativeSelectOption value={r} selected={r === defaultReason}>{t.reasons[r]}</NativeSelectOption>)}
+            </NativeSelect>
+          </div>
+          <div class="grid gap-1 sm:col-span-2">
+            <Label for={`refund-note-${index}`}>{t.note}</Label>
+            <Input id={`refund-note-${index}`} name="note" maxlength={500} aria-describedby={`refund-note-hint-${index}`} />
+            <p id={`refund-note-hint-${index}`} class="text-base">{t.noteHint}</p>
+          </div>
+          <div><Button type="submit" data-testid="refund-submit">{t.submit}</Button></div>
+        </form>
+      )}
+    </article>
+  ))}
+</section>

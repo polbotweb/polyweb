@@ -1,7 +1,7 @@
 /**
  * Machine d'états d'un paiement (core/payments).
  *
- *   created → pending → paid → refunded
+ *   created → pending → paid → partially_refunded → refunded   (core/refunds)
  *                    ↘ failed ⇄ pending
  *                    ↘ expired / cancelled
  *
@@ -13,7 +13,8 @@ import type { PaymentStatus } from '@database/schemas/payments.schema';
 export const PAYMENT_TRANSITIONS: Readonly<Record<PaymentStatus, readonly PaymentStatus[]>> = {
   created: ['pending', 'cancelled', 'paid', 'failed', 'expired'],
   pending: ['paid', 'failed', 'cancelled', 'expired'],
-  paid: ['refunded'],
+  paid: ['partially_refunded', 'refunded'],
+  partially_refunded: ['refunded'],
   failed: ['pending', 'paid', 'expired'],
   cancelled: [],
   refunded: [],

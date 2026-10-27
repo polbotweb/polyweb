@@ -319,6 +319,53 @@ export const logisticsStockPort = {
       return { issued, shortages };
     }),
 
+  /**
+   * Remet en stock (mouvements `return`), dans la transaction de l'appelant, ce qui a été sorti
+   * sous `issueReference` (ex. numéro de commande) : remboursement d'une commande non expédiée,
+   * réception d'un retour client. Chaque quantité revient dans l'entrepôt d'où elle est sortie ;
+   * le cumul des retours `returnReference` ne dépasse jamais le sorti (rejeu sans effet).
+   * `lines` absent : tout le reste ; sinon quantités par variante, bornées au reste.
+   */
+  returnIssued: (tx: DbTransaction, input: {
+    readonly organizationId: string | null;
+    readonly issueReference: string;
+    readonly returnReference: string;
+    readonly lines?: readonly { readonly variantId: string; readonly quantity: number }[];
+  }, authorId: string | null) =>
+    Effect.gen(function* () {
+      const issued = yield* dbTry("logistics.return.issued", () =>
+        tx.select({ warehouseId: logisticsStockMovements.warehouseId, itemId: logisticsStockMovements.itemId, delta: logisticsStockMovements.delta })
+          .from(logisticsStockMovements)
+          .where(and(eq(logisticsStockMovements.kind, "issue"), eq(logisticsStockMovements.reference, input.issueReference), sameTenant(logisticsStockMovements.organizationId, input.organizationId)))
+          .orderBy(asc(logisticsStockMovements.warehouseId), asc(logisticsStockMovements.createdAt), asc(logisticsStockMovements.id)));
+      if (issued.length === 0) return [];
+      for (const warehouseId of [...new Set(issued.map((row) => row.warehouseId))].sort()) yield* lockWarehouse(tx, warehouseId, input.organizationId);
+      // Lu APRÈS le verrou : deux remises en stock concurrentes ne peuvent pas dépasser le sorti.
+      const returned = yield* dbTry("logistics.return.done", () =>
+        tx.select({ warehouseId: logisticsStockMovements.warehouseId, itemId: logisticsStockMovements.itemId, delta: logisticsStockMovements.delta })
+          .from(logisticsStockMovements)
+          .where(and(eq(logisticsStockMovements.kind, "return"), eq(logisticsStockMovements.reference, input.returnReference), sameTenant(logisticsStockMovements.organizationId, input.organizationId))));
+      const key = (warehouseId: string, itemId: string) => `${warehouseId}\u0000${itemId}`;
+      const remaining = new Map<string, number>();
+      for (const row of issued) remaining.set(key(row.warehouseId, row.itemId), (remaining.get(key(row.warehouseId, row.itemId)) ?? 0) - row.delta);
+      for (const row of returned) remaining.set(key(row.warehouseId, row.itemId), (remaining.get(key(row.warehouseId, row.itemId)) ?? 0) - row.delta);
+      const items = yield* dbTry("logistics.return.items", () => tx.select().from(logisticsItems).where(inArray(logisticsItems.id, [...new Set(issued.map((row) => row.itemId))])));
+      const wanted = input.lines ? new Map<string, number>() : null;
+      for (const line of input.lines ?? []) if (line.quantity > 0) wanted!.set(line.variantId, (wanted!.get(line.variantId) ?? 0) + line.quantity);
+      const written: MovementRow[] = [];
+      for (const [slot, left] of remaining) {
+        if (left <= 0) continue;
+        const [warehouseId, itemId] = slot.split("\u0000") as [string, string];
+        const item = items.find((candidate) => candidate.id === itemId)!;
+        const budget = wanted ? (item.variantId ? wanted.get(item.variantId) ?? 0 : 0) : left;
+        const quantity = Math.min(left, budget);
+        if (quantity <= 0) continue;
+        if (wanted && item.variantId) wanted.set(item.variantId, budget - quantity);
+        written.push(yield* writeMovement(tx, { organizationId: input.organizationId, warehouseId, item, kind: "return", quantity, reference: input.returnReference }, authorId));
+      }
+      return written;
+    }),
+
   /** Libère les réservations actives échues (balayage périodique) ; renvoie les références touchées. */
   releaseExpiredReservations: (now: Date = new Date()) =>
     dbTry("logistics.reserve.sweep", () =>

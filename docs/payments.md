@@ -26,7 +26,7 @@ devise par défaut, compte Stripe connecté, libellé de relevé, durée de vali
 ## Modèle
 
 - `payments` : un paiement par tentative, `reference = <purpose>:<subjectId>`, statut
-  (`pending` → `succeeded` | `failed` | `expired` | `cancelled` ; `refunded`), montant/devise,
+  (`created` → `pending` → `paid` | `failed` | `expired` | `cancelled` ; `partially_refunded`, `refunded`), montant/devise,
   identifiants fournisseur, échéance, clé d'idempotence.
 - `payment_events` : trace d'idempotence unique `(provider, event_id)`.
 - Transitions autorisées : `transitions.ts` (`canTransitionPayment`).
@@ -73,8 +73,14 @@ manuel. Seules les erreurs base remontent (rollback, le fournisseur réessaie).
 
 ### Boutique
 
-Le module boutique n'a ni panier ni commandes : le paiement de commande attend une décision
-d'architecture (modèle panier/commande) et n'est pas implémenté ici.
+Paiement de commande (objet `shop-order`) : voir [shop-checkout.md](shop-checkout.md).
+
+## Remboursements
+
+Les événements `refund.created|updated|failed` (kind `refund`) sont délégués à
+[`core/refunds`](refunds.md) (`setRefundEventSink`) ; `charge.refunded` est ignoré (doublon).
+Le cron `/api/cron/payments-expire` rejoue aussi les remboursements incertains
+(`resumeStaleRefunds`). Détails : [refunds.md](refunds.md).
 
 ## Tests
 

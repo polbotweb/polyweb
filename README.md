@@ -261,6 +261,8 @@ platform/
   FieldsEditor.astro
 purchasing/
   admin/
+refunds/
+  RefundPanel.astro
 sales/
   SalesCard.astro
   SalesDetail.astro
@@ -488,6 +490,7 @@ migrations/
   0038_core_payments.sql
   0039_sales_seller_profiles.sql
   0040_shop_orders.sql
+  0041_core_refunds.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -526,6 +529,7 @@ migrations/
     0038_snapshot.json
     0039_snapshot.json
     0040_snapshot.json
+    0041_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -542,6 +546,7 @@ schemas/
   page.schema.ts
   payments.schema.ts
   plugins.schema.ts
+  refunds.schema.ts
   saved-views.schema.ts
   search.schema.ts
   services-engagement.schema.ts
@@ -653,6 +658,9 @@ schemas.ts
 - `payment_events`: `id`, `provider`, `eventId`, `type`, `paymentId`, `processedAt`
 - `payment_settings`: `id`, `organizationId`, `enabled`, `defaultCurrency`, `stripeAccountId`, `statementDescriptor`, `checkoutExpiryMinutes`, `createdAt`, `updatedAt`
 
+**refunds.schema.ts**
+- `refunds`: `id`, `organizationId`, `paymentId`, `reference`, `provider`, `providerRefundId`, `status`, `amount`, `currency`, `reason`, `note`, `idempotencyKey`, `requestedBy`, `metadata`, `failureReason`, `createdAt`, `updatedAt`, `succeededAt`, `failedAt`
+
 **content.schema.ts**
 - `sites`: `id`, `slug`, `name`, `domains`, `defaultLocale`, `locales`, `organizationId`, `isDefault`, `settings`, `createdAt`, `updatedAt`
 - `content_types`: `id`, `siteId`, `slug`, `name`, `description`, `fields`, `settings`, `createdAt`, `updatedAt`
@@ -726,6 +734,7 @@ schemas.ts
 - `0038_core_payments.sql`
 - `0039_sales_seller_profiles.sql`
 - `0040_shop_orders.sql`
+- `0041_core_refunds.sql`
 
 ### Commands
 
@@ -930,6 +939,7 @@ payments/
   provider.ts
   purposes.ts
   reference.ts
+  refund-sink.ts
   service.ts
   stripe.ts
   transitions.ts
@@ -943,6 +953,14 @@ presentation/
 preview/
   draft-preview.ts
   index.ts
+refunds/
+  admin.ts
+  errors.ts
+  i18n.ts
+  index.ts
+  registry.ts
+  service.ts
+  transitions.ts
 revision/
   index.ts
 scheduling/
@@ -1041,6 +1059,7 @@ bookings/
     format.ts
     pages.ts
     paths.ts
+  refunds.ts
   schema/
     index.ts
   services/
@@ -1285,6 +1304,7 @@ sales/
     index.ts
   public/
     pay-page.ts
+  refunds.ts
   schema/
     index.ts
   services/
@@ -1376,6 +1396,7 @@ shop/
     flow.ts
     format.ts
     pages.ts
+  refunds.ts
   schema/
     index.ts
     orders.ts
@@ -1451,6 +1472,7 @@ src/pages/
     pages.astro
     platform/
     purchasing/
+    refunds.ts
     roles.astro
     sales/
     services/

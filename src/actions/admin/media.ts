@@ -1,4 +1,4 @@
-import { defineAction, ActionError } from "astro:actions";
+import { defineAction, ActionError, type ActionAPIContext } from "astro:actions";
 import { z } from "astro/zod";
 import { eq, and, isNull } from "drizzle-orm";
 import { rename } from "node:fs/promises";
@@ -46,7 +46,7 @@ function mediaFileScope(organizationId: string | null) {
 type MediaPermissions = Parameters<typeof requireActionPermission>[1];
 
 /** Admin global : passe ; contexte organisation : owner/admin du membre ; puis RBAC better-auth. */
-const requireMediaPermission = (context: Parameters<typeof requireActionPermission>[0], tenant: MediaTenantContext, permissions: MediaPermissions) =>
+const requireMediaPermission = (context: ActionAPIContext, tenant: MediaTenantContext, permissions: MediaPermissions) =>
   Effect.gen(function* () {
     const user = context.locals.user;
     if (!user) return yield* fail("UNAUTHORIZED", "Vous devez être connecté pour effectuer cette action.");

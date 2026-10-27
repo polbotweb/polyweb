@@ -49,13 +49,39 @@ export interface PaymentIntentResult {
 }
 
 export interface RefundRequest extends ProviderTenantOptions {
+  /** Identifiant interne du remboursement (core/refunds) : métadonnée `refund_id`. */
+  readonly refundId: string;
+  readonly paymentId: string;
   readonly providerPaymentId: string;
-  readonly amount?: Money;
+  /** Toujours explicite (jamais « le reste » implicite) : core/refunds en a vérifié le plafond. */
+  readonly amount: Money;
+  readonly reason: ProviderRefundReason | null;
   readonly idempotencyKey: string;
 }
 
-/** Issue normalisée d'un événement fournisseur vérifié. */
-export type PaymentEventKind = 'succeeded' | 'failed' | 'expired' | 'refunded' | 'ignored';
+/** Motifs transmis au fournisseur (sous-ensemble Stripe) ; les autres motifs restent internes. */
+export type ProviderRefundReason = 'requested_by_customer' | 'duplicate' | 'fraudulent';
+
+/** Statut normalisé d'un remboursement chez le fournisseur. */
+export type ProviderRefundStatus = 'pending' | 'succeeded' | 'failed' | 'cancelled';
+
+export interface RefundResult {
+  readonly providerRefundId: string;
+  readonly status: ProviderRefundStatus;
+}
+
+/** Remboursement décrit par un événement fournisseur (`refund.created|updated|failed`). */
+export interface VerifiedRefund {
+  readonly providerRefundId: string;
+  readonly status: ProviderRefundStatus;
+  /** `refund_id` posé en métadonnée par core/refunds (null : remboursement initié chez le fournisseur). */
+  readonly refundId: string | null;
+  readonly amount: Money;
+  readonly failureReason: string | null;
+}
+
+/** Issue normalisée d'un événement fournisseur vérifié (`refund` : traité par core/refunds). */
+export type PaymentEventKind = 'succeeded' | 'failed' | 'expired' | 'refund' | 'ignored';
 
 export interface VerifiedPaymentEvent {
   readonly provider: PaymentProviderName;
@@ -69,6 +95,8 @@ export interface VerifiedPaymentEvent {
   readonly sessionId: string | null;
   /** Montant encaissé, en unités mineures ISO (null si non applicable). */
   readonly amount: Money | null;
+  /** Présent si `kind = 'refund'`. */
+  readonly refund?: VerifiedRefund | null;
 }
 
 export interface PaymentProvider {
@@ -77,7 +105,7 @@ export interface PaymentProvider {
   readonly signatureHeader: string;
   readonly createCheckoutSession: (request: CheckoutRequest) => Effect.Effect<CheckoutSession, PaymentProviderError | UnsupportedAmountError>;
   readonly createPaymentIntent: (request: PaymentIntentRequest) => Effect.Effect<PaymentIntentResult, PaymentProviderError | UnsupportedAmountError>;
-  readonly refund: (request: RefundRequest) => Effect.Effect<{ readonly refundId: string }, PaymentProviderError | UnsupportedAmountError>;
+  readonly refund: (request: RefundRequest) => Effect.Effect<RefundResult, PaymentProviderError | UnsupportedAmountError>;
   /** Vérifie la signature sur le corps BRUT (octets reçus, jamais re-sérialisés). */
   readonly verifyWebhook: (rawBody: string, signature: string | null) => Effect.Effect<VerifiedPaymentEvent, WebhookSignatureError>;
 }

@@ -6,5 +6,6 @@ export * from './transitions';
 export * from './purposes';
 export * from './gateway';
 export * from './service';
-export { makeMockProvider, mockWebhookBody, signMockPayload, MOCK_SIGNATURE_HEADER } from './mock';
-export { makeStripeProvider, makeStripeClient, normalizeStripeEvent, toStripeAmount, fromStripeAmount, type StripeClientLike, type StripeWebhookVerifier } from './stripe';
+export * from './refund-sink';
+export { makeMockProvider, mockWebhookBody, signMockPayload, MOCK_SIGNATURE_HEADER, MOCK_REFUND_DECLINED_MINOR, MOCK_REFUND_PENDING_MINOR } from './mock';
+export { makeStripeProvider, makeStripeClient, normalizeStripeEvent, stripeRefundStatus, toStripeAmount, fromStripeAmount, type StripeClientLike, type StripeWebhookVerifier } from './stripe';

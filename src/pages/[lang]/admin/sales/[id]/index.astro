@@ -20,7 +20,9 @@ import { getSalesTranslations } from "@/modules/sales/i18n";
 import { loadSalesDocument } from "@/modules/sales/loaders";
 import { hasSalesPermission } from "@/modules/sales/permissions";
 import { isPaymentsEnabled } from "@/core/payments";
-import { isPayableInvoice, payLinkUrl } from "@/modules/sales/payments";
+import { isPayableInvoice, payLinkUrl, SALES_PAYMENT_PURPOSE } from "@/modules/sales/payments";
+import RefundPanel from "@/components/refunds/RefundPanel.astro";
+import { refundPanelView } from "@/core/refunds/admin";
 import { getSalesPayTranslations } from "@/modules/sales/i18n/pay";
 import { runApp } from "@/lib/effect/http";
 import { ScrollRegion } from "@molecules/ScrollRegion";
@@ -55,6 +57,8 @@ const today = new Date().toISOString().slice(0, 10);
 // Lien de paiement en ligne : réservé aux droits d'encaissement, uniquement si le paiement en ligne est actif.
 const payLink = canPayment && isPaymentsEnabled() && isPayableInvoice(doc) ? await runApp(payLinkUrl(locale, doc.id)) : null;
 const payT = getSalesPayTranslations(locale);
+const refundView = isInvoice ? await refundPanelView(Astro, `${SALES_PAYMENT_PURPOSE}:${doc.id}`) : null;
+if (refundView) Astro.response.headers.set("cache-control", "private, no-store");
 ---
 <BaseLayout title={heading} description={t.meta.description}>
   <AuthLayout title={heading}>
@@ -138,6 +142,8 @@ const payT = getSalesPayTranslations(locale);
           )}
         </section>
       )}
+
+      {refundView && <RefundPanel locale={locale} view={refundView} />}
 
       {doc.related.length > 0 && (
         <section aria-labelledby="sales-related">

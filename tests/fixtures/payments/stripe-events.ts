@@ -24,3 +24,10 @@ export const chargeRefunded = (paymentId: string, refunded = true) =>
   base(`evt_ch_ref_${paymentId}`, 'charge.refunded', { id: `ch_test_${paymentId}`, object: 'charge', amount_refunded: refunded ? 4200 : 1000, refunded, currency: 'eur', payment_intent: `pi_test_${paymentId}`, metadata: { payment_id: paymentId } });
 
 export const customerCreated = () => base('evt_cus', 'customer.created', { id: 'cus_1', object: 'customer' });
+
+export const refundEvent = (paymentId: string, options: { type?: 'refund.created' | 'refund.updated' | 'refund.failed'; status?: string; amount?: number; refundId?: string | null; providerRefundId?: string; failureReason?: string | null } = {}) =>
+  base(`evt_${options.type ?? 'refund.updated'}_${options.providerRefundId ?? `re_test_${paymentId}`}_${options.status ?? 'succeeded'}`, options.type ?? 'refund.updated', {
+    id: options.providerRefundId ?? `re_test_${paymentId}`, object: 'refund', amount: options.amount ?? 4200, currency: 'eur', status: options.status ?? 'succeeded',
+    payment_intent: `pi_test_${paymentId}`, failure_reason: options.failureReason ?? null,
+    metadata: { payment_id: paymentId, ...(options.refundId === null ? {} : { refund_id: options.refundId ?? `rf-${paymentId}` }) },
+  });

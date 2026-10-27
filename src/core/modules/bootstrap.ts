@@ -22,6 +22,10 @@ import { registerSearchIndexer } from "@/lib/search/indexer";
 import { registerBookingPayments } from "@/modules/bookings/payments";
 import { registerSalesPayments } from "@/modules/sales/payments";
 import { registerShopPayments } from "@/modules/shop/payments";
+import { registerRefundsCore } from "@/core/refunds";
+import { registerBookingRefunds } from "@/modules/bookings/refunds";
+import { registerSalesRefunds } from "@/modules/sales/refunds";
+import { registerShopRefunds } from "@/modules/shop/refunds";
 
 let bootstrapped = false;
 
@@ -52,5 +56,10 @@ export function bootstrapModules(): void {
   registerBookingPayments();
   registerSalesPayments();
   registerShopPayments();
+  // Remboursements (core/refunds) : webhooks fournisseur + réactions par objet.
+  registerRefundsCore();
+  registerBookingRefunds();
+  registerSalesRefunds();
+  registerShopRefunds();
   bootstrapped = true;
 }
