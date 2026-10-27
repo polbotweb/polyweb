@@ -1,6 +1,6 @@
 ════════════════════════════════════════════════════════════════════════════════
   VITEST UNIT & INTEGRATION TEST REPORT
-  Generated: 2026-10-27 10:20:26
+  Generated: 2026-10-27 12:39:17
 ════════════════════════════════════════════════════════════════════════════════
 
   ✅ tests/integration/audit.test.ts  (8/8 passed)
@@ -165,7 +165,6 @@
   ✅ tests/integration/loaders/site-media-admin-effect.test.ts  (3/3 passed)
   ✅ tests/integration/locks/core-locks-pg.test.ts  (8/8 passed)
   ✅ tests/integration/observability/observability.test.ts  (5/5 passed)
-  ✅ tests/integration/storage/s3.test.ts  (4/4 passed)
   ✅ tests/integration/platform/api-v1.test.ts  (8/8 passed)
   ✅ tests/integration/platform/blocks-media.test.ts  (2/2 passed)
   ✅ tests/integration/platform/content.test.ts  (5/5 passed)
@@ -175,19 +174,12 @@
   ✅ tests/integration/platform/sites.test.ts  (5/5 passed)
   ✅ tests/integration/platform/webhooks.test.ts  (6/6 passed)
   ✅ tests/integration/search/search.test.ts  (4/5 passed, 1 skipped)
+  ✅ tests/integration/storage/s3.test.ts  (4/4 passed)
   ✅ tests/unit/blog/status-transitions.test.ts  (17/17 passed)
   ✅ tests/unit/bookings/admin-resource.test.ts  (3/3 passed)
   ✅ tests/unit/bookings/domain.test.ts  (5/5 passed)
   ✅ tests/unit/bookings/guest.test.ts  (7/7 passed)
   ✅ tests/unit/bookings/scheduling.test.ts  (5/5 passed)
-  ✅ tests/unit/cms/admin-filter-contract.test.ts  (2/2 passed)
-  ✅ tests/unit/cms/admin-module-contract.test.ts  (3/3 passed)
-  ✅ tests/unit/cms/capabilities.test.ts  (2/2 passed)
-  ✅ tests/unit/cms/module-boundaries.test.ts  (2/2 passed)
-  ✅ tests/unit/cms/module-contract.test.ts  (4/4 passed)
-  ✅ tests/unit/cms/module-registry.test.ts  (2/2 passed)
-  ✅ tests/unit/cms/resource-contract.test.ts  (6/6 passed)
-  ✅ tests/unit/cms/workflow.test.ts  (4/4 passed)
   ✅ tests/unit/core/category-taxonomy.test.ts  (5/5 passed)
   ✅ tests/unit/core/documents.test.ts  (9/9 passed)
   ✅ tests/unit/core/einvoice-pdfa.test.ts  (4/4 passed)
@@ -197,14 +189,22 @@
   ✅ tests/unit/core/payments.test.ts  (14/14 passed)
   ✅ tests/unit/crm/admin-resource.test.ts  (3/3 passed)
   ✅ tests/unit/crm/domain.test.ts  (9/9 passed)
+  ✅ tests/unit/cms/admin-filter-contract.test.ts  (2/2 passed)
+  ✅ tests/unit/cms/admin-module-contract.test.ts  (3/3 passed)
+  ✅ tests/unit/cms/capabilities.test.ts  (2/2 passed)
+  ✅ tests/unit/cms/module-boundaries.test.ts  (2/2 passed)
+  ✅ tests/unit/cms/module-contract.test.ts  (4/4 passed)
+  ✅ tests/unit/cms/module-registry.test.ts  (2/2 passed)
+  ✅ tests/unit/cms/resource-contract.test.ts  (6/6 passed)
+  ✅ tests/unit/cms/workflow.test.ts  (4/4 passed)
   ✅ tests/unit/dashboard/metrics.test.ts  (3/3 passed)
   ✅ tests/unit/dashboard/period.test.ts  (8/8 passed)
-  ✅ tests/unit/effect/foundation.test.ts  (4/4 passed)
   ✅ tests/unit/database/migration-sql.test.ts  (12/12 passed)
   ✅ tests/unit/database/seed-data-contract.test.ts  (2/2 passed)
   ✅ tests/unit/database/seed-manifest.test.ts  (3/3 passed)
   ✅ tests/unit/database/services-data-invariants.test.ts  (5/5 passed)
   ✅ tests/unit/database/services-data-shape.test.ts  (1/1 passed)
+  ✅ tests/unit/effect/foundation.test.ts  (4/4 passed)
   ✅ tests/unit/logistics/admin-resource.test.ts  (3/3 passed)
   ✅ tests/unit/logistics/domain.test.ts  (9/9 passed)
   ✅ tests/unit/modules/tax-domain.test.ts  (16/16 passed)
@@ -239,7 +239,7 @@
   Passed:        1988  ✅
   Failed:        0  
   Skipped:       1
-  Duration:      41s
+  Duration:      39s
 
 ════════════════════════════════════════════════════════════════════════════════
   END OF REPORT — 1988/1989 passed
