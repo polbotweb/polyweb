@@ -1,6 +1,6 @@
 ════════════════════════════════════════════════════════════════════════════════
   VITEST UNIT & INTEGRATION TEST REPORT
-  Generated: 2026-10-26 22:07:17
+  Generated: 2026-10-27 01:12:30
 ════════════════════════════════════════════════════════════════════════════════
 
   ✅ tests/integration/audit.test.ts  (8/8 passed)
@@ -15,6 +15,7 @@
   ✅ tests/integration/blog-facets.test.ts  (3/3 passed)
   ✅ tests/integration/blog-internal-link.test.ts  (8/8 passed)
   ✅ tests/integration/bookings-module.test.ts  (6/6 passed)
+  ✅ tests/integration/bookings-public.test.ts  (12/12 passed)
   ✅ tests/integration/category-taxonomy.test.ts  (10/10 passed)
   ✅ tests/integration/cms-admin.test.ts  (14/14 passed)
   ✅ tests/integration/consent-cms.test.ts  (25/25 passed)
@@ -152,13 +153,12 @@
   ✅ tests/unit/upload-api.test.ts  (9/9 passed)
   ✅ tests/unit/upload.test.ts  (24/24 passed)
   ✅ tests/integration/backup/backup.test.ts  (6/6 passed)
+  ✅ tests/integration/effect/db.test.ts  (3/3 passed)
   ✅ tests/integration/loaders/blog-loader-effect.test.ts  (8/8 passed)
   ✅ tests/integration/loaders/navigation-consent-effect.test.ts  (3/3 passed)
   ✅ tests/integration/loaders/page-loader-effect.test.ts  (4/4 passed)
   ✅ tests/integration/loaders/site-media-admin-effect.test.ts  (3/3 passed)
-  ✅ tests/integration/effect/db.test.ts  (3/3 passed)
   ✅ tests/integration/locks/core-locks-pg.test.ts  (8/8 passed)
-  ✅ tests/integration/observability/observability.test.ts  (5/5 passed)
   ✅ tests/integration/platform/api-v1.test.ts  (8/8 passed)
   ✅ tests/integration/platform/blocks-media.test.ts  (2/2 passed)
   ✅ tests/integration/platform/content.test.ts  (5/5 passed)
@@ -167,10 +167,13 @@
   ✅ tests/integration/platform/preview.test.ts  (3/3 passed)
   ✅ tests/integration/platform/sites.test.ts  (5/5 passed)
   ✅ tests/integration/platform/webhooks.test.ts  (6/6 passed)
+  ✅ tests/integration/observability/observability.test.ts  (5/5 passed)
   ✅ tests/integration/search/search.test.ts  (4/5 passed, 1 skipped)
   ✅ tests/integration/storage/s3.test.ts  (4/4 passed)
+  ✅ tests/unit/blog/status-transitions.test.ts  (17/17 passed)
   ✅ tests/unit/bookings/admin-resource.test.ts  (3/3 passed)
   ✅ tests/unit/bookings/domain.test.ts  (4/4 passed)
+  ✅ tests/unit/bookings/guest.test.ts  (7/7 passed)
   ✅ tests/unit/bookings/scheduling.test.ts  (5/5 passed)
   ✅ tests/unit/cms/admin-filter-contract.test.ts  (2/2 passed)
   ✅ tests/unit/cms/admin-module-contract.test.ts  (3/3 passed)
@@ -180,11 +183,6 @@
   ✅ tests/unit/cms/module-registry.test.ts  (2/2 passed)
   ✅ tests/unit/cms/resource-contract.test.ts  (6/6 passed)
   ✅ tests/unit/cms/workflow.test.ts  (4/4 passed)
-  ✅ tests/unit/blog/status-transitions.test.ts  (17/17 passed)
-  ✅ tests/unit/core/category-taxonomy.test.ts  (5/5 passed)
-  ✅ tests/unit/core/documents.test.ts  (9/9 passed)
-  ✅ tests/unit/core/money.test.ts  (29/29 passed)
-  ✅ tests/unit/core/numbering.test.ts  (3/3 passed)
   ✅ tests/unit/crm/admin-resource.test.ts  (3/3 passed)
   ✅ tests/unit/crm/domain.test.ts  (9/9 passed)
   ✅ tests/unit/database/migration-sql.test.ts  (12/12 passed)
@@ -193,6 +191,10 @@
   ✅ tests/unit/database/services-data-invariants.test.ts  (5/5 passed)
   ✅ tests/unit/database/services-data-shape.test.ts  (1/1 passed)
   ✅ tests/unit/effect/foundation.test.ts  (4/4 passed)
+  ✅ tests/unit/core/category-taxonomy.test.ts  (5/5 passed)
+  ✅ tests/unit/core/documents.test.ts  (9/9 passed)
+  ✅ tests/unit/core/money.test.ts  (29/29 passed)
+  ✅ tests/unit/core/numbering.test.ts  (3/3 passed)
   ✅ tests/unit/logistics/admin-resource.test.ts  (3/3 passed)
   ✅ tests/unit/logistics/domain.test.ts  (9/9 passed)
   ✅ tests/unit/modules/tax-domain.test.ts  (16/16 passed)
@@ -220,12 +222,12 @@
   SUMMARY
 ════════════════════════════════════════════════════════════════════════════════
 
-  Total tests:   1865
-  Passed:        1864  ✅
+  Total tests:   1884
+  Passed:        1883  ✅
   Failed:        0  
   Skipped:       1
-  Duration:      34s
+  Duration:      35s
 
 ════════════════════════════════════════════════════════════════════════════════
-  END OF REPORT — 1864/1865 passed
+  END OF REPORT — 1883/1884 passed
 ════════════════════════════════════════════════════════════════════════════════

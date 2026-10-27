@@ -1,9 +1,9 @@
 
-> polyweb@0.0.1 lint /workspace/n-qa
+> polyweb@0.0.1 lint /workspace/n-qa3
 > eslint "src/**/*.{js,ts,astro}"
 
 
-/workspace/n-qa/src/components/blog/PostCard.astro
+/workspace/n-qa3/src/components/blog/PostCard.astro
   159:3  warning  Unused CSS selector `.post-card`                                      astro/no-unused-css-selector
   179:3  warning  Unused CSS selector `.post-card__image`                               astro/no-unused-css-selector
   187:3  warning  Unused CSS selector `.post-card__link:hover .post-card__image`        astro/no-unused-css-selector
@@ -24,11 +24,11 @@
   349:3  warning  Unused CSS selector `.post-card--modern .post-card__image-wrap`       astro/no-unused-css-selector
   354:3  warning  Unused CSS selector `.post-card--modern .post-card__badges`           astro/no-unused-css-selector
 
-/workspace/n-qa/src/components/blog/sidebars/NewsletterSidebar.astro
+/workspace/n-qa3/src/components/blog/sidebars/NewsletterSidebar.astro
   146:3  warning  Unused CSS selector `.newsletter-sidebar__input`  astro/no-unused-css-selector
   167:5  warning  Unused CSS selector `.newsletter-sidebar__input`  astro/no-unused-css-selector
 
-/workspace/n-qa/src/layouts/BaseLayout.astro
+/workspace/n-qa3/src/layouts/BaseLayout.astro
   133:6  warning  Unused eslint-disable directive (no problems were reported from 'astro/no-set-html-directive')
 
 ✖ 22 problems (0 errors, 22 warnings)

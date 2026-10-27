@@ -1,122 +1,138 @@
 ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
   LIGHTHOUSE CI PERFORMANCE & QUALITY REPORT
-  Generated: 2026-10-26 22:32:20
-  Pages audited: 52
+  Generated: 2026-10-27 01:42:52
+  Pages audited: 60
 ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
   CATEGORY SCORES
 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
   Page                                    Perf  A11y  BP    SEO
   ──────────────────────────────────────────────────────────────────────────────────────────────────────────
-  ✅ ar--admin--blog                       96    100   96    100
-  ✅ ar--admin--navigation                 97    100   96    100
+  ✅ ar--admin--blog                       97    100   96    100
+  ✅ ar--admin--navigation                 98    100   96    100
   ✅ ar--admin--site                       96    100   96    100
   ✅ ar--admin--stats                      98    100   96    100
-  ✅ ar--admin--theme                      96    100   96    100
+  ✅ ar--admin--theme                      97    100   96    100
   ✅ ar--auth--انشاء-حساب                  99    100   96    100
   ✅ ar--auth--تسجيل-الدخول                99    100   96    100
   ✅ ar--auth--نسيت-كلمة-المرور            99    100   96    100
   ✅ ar--blog                              99    100   96    100
+  ✅ ar--bookings--A11YROOM                99    100   96    100
+  ✅ ar--bookings                          99    100   96    100
   ✅ ar--home                              97    100   96    100
   ✅ ar--اتصل-بنا                          99    100   96    100
   ✅ ar--الشروط-القانونية                  99    100   96    100
   ✅ ar--من-نحن                            99    100   96    100
-  ✅ en--about                             99    100   96    100
+  ✅ en--about                             98    100   96    100
   ✅ en--admin--blog                       97    100   96    100
-  ✅ en--admin--navigation                 97    100   96    100
+  ✅ en--admin--navigation                 98    100   96    100
   ✅ en--admin--site                       96    100   96    100
-  ✅ en--admin--stats                      99    100   96    100
+  ✅ en--admin--stats                      98    100   96    100
   ✅ en--admin--theme                      96    100   96    100
   ✅ en--auth--forgot-password             99    100   96    100
   ✅ en--auth--sign-in                     99    100   96    100
   ✅ en--auth--sign-up                     99    100   96    100
   ✅ en--blog                              99    100   96    100
+  ✅ en--bookings--A11YROOM                99    100   96    100
+  ✅ en--bookings                          99    100   96    100
   ✅ en--contact                           99    100   96    100
   ✅ en--home                              97    100   96    100
-  ✅ en--legal-notice                      99    100   96    100
-  ✅ es--acerca-de                         98    100   96    100
+  ✅ en--legal-notice                      100   100   96    100
+  ✅ es--acerca-de                         99    100   96    100
   ✅ es--admin--blog                       96    100   96    100
   ✅ es--admin--navigation                 97    100   96    100
   ✅ es--admin--site                       96    100   96    100
-  ✅ es--admin--stats                      98    100   96    100
+  ✅ es--admin--stats                      99    100   96    100
   ✅ es--admin--theme                      96    100   96    100
   ✅ es--auth--contrasena-olvidada         99    100   96    100
   ✅ es--auth--iniciar-sesion              99    100   96    100
   ✅ es--auth--registro                    99    100   96    100
   ✅ es--aviso-legal                       99    100   96    100
   ✅ es--blog                              99    100   96    100
+  ✅ es--bookings--A11YROOM                99    100   96    100
+  ✅ es--bookings                          100   100   96    100
   ✅ es--contacto                          99    100   96    100
   ✅ es--home                              97    100   96    100
   ✅ fr--a-propos                          99    100   96    100
   ✅ fr--admin--blog                       96    100   96    100
-  ✅ fr--admin--navigation                 97    100   96    100
+  ✅ fr--admin--navigation                 98    100   96    100
   ✅ fr--admin--site                       96    100   96    100
-  ✅ fr--admin--stats                      99    100   96    100
-  ✅ fr--admin--theme                      97    100   96    100
+  ✅ fr--admin--stats                      98    100   96    100
+  ✅ fr--admin--theme                      96    100   96    100
   ✅ fr--auth--connexion                   99    100   96    100
   ✅ fr--auth--inscription                 99    100   96    100
   ✅ fr--auth--mot-de-passe-oublie         99    100   96    100
   ✅ fr--blog                              99    100   96    100
+  ✅ fr--bookings--A11YROOM                99    100   96    100
+  ✅ fr--bookings                          100   100   96    100
   ✅ fr--contact                           99    100   96    100
-  ✅ fr--home                              98    100   96    100
+  ✅ fr--home                              97    100   96    100
   ✅ fr--mentions-legales                  99    100   96    100
 
   CORE WEB VITALS
 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
   Page                                    FCP       LCP       SI        TBT       CLS
   ──────────────────────────────────────────────────────────────────────────────────────────────────────────
-  ar--admin--blog                         🟢928ms   🟢1.2s    🟢928ms   🟢0ms     🟢0.000   
-  ar--admin--navigation                   🟢851ms   🟢1.1s    🟢851ms   🟢0ms     🟢0.000   
-  ar--admin--site                         🟢892ms   🟢1.3s    🟢892ms   🟢0ms     🟢0.000   
-  ar--admin--stats                        🟢806ms   🟢1.0s    🟢806ms   🟢0ms     🟢0.000   
-  ar--admin--theme                        🟢972ms   🟢1.2s    🟢972ms   🟢0ms     🟢0.000   
-  ar--auth--انشاء-حساب                    🟢687ms   🟢807ms   🟢687ms   🟢0ms     🟢0.000   
-  ar--auth--تسجيل-الدخول                  🟢646ms   🟢846ms   🟢646ms   🟢0ms     🟢0.000   
-  ar--auth--نسيت-كلمة-المرور              🟢672ms   🟢812ms   🟢672ms   🟢0ms     🟢0.000   
-  ar--blog                                🟢645ms   🟢845ms   🟢645ms   🟢0ms     🟢0.000   
-  ar--home                                🟢680ms   🟢1.2s    🟢957ms   🟢0ms     🟢0.000   
-  ar--اتصل-بنا                            🟢651ms   🟢811ms   🟢805ms   🟢0ms     🟢0.000   
-  ar--الشروط-القانونية                    🟢652ms   🟢812ms   🟢652ms   🟢0ms     🟢0.000   
-  ar--من-نحن                              🟢583ms   🟢863ms   🟢583ms   🟢0ms     🟢0.000   
-  en--about                               🟢624ms   🟢916ms   🟢624ms   🟢0ms     🟢0.000   
-  en--admin--blog                         🟢927ms   🟢1.1s    🟢927ms   🟢0ms     🟢0.000   
-  en--admin--navigation                   🟢807ms   🟢1.1s    🟢807ms   🟢0ms     🟢0.000   
-  en--admin--site                         🟢952ms   🟢1.3s    🟢952ms   🟢0ms     🟢0.000   
-  en--admin--stats                        🟢754ms   🟢934ms   🟢754ms   🟢0ms     🟢0.000   
-  en--admin--theme                        🟢932ms   🟢1.2s    🟢932ms   🟢0ms     🟢0.000   
-  en--auth--forgot-password               🟢691ms   🟢891ms   🟢691ms   🟢0ms     🟢0.000   
-  en--auth--sign-in                       🟢686ms   🟢886ms   🟢686ms   🟢0ms     🟢0.000   
-  en--auth--sign-up                       🟢650ms   🟢890ms   🟢650ms   🟢0ms     🟢0.000   
-  en--blog                                🟢628ms   🟢848ms   🟢628ms   🟢0ms     🟢0.000   
-  en--contact                             🟢631ms   🟢811ms   🟢708ms   🟢0ms     🟢0.000   
-  en--home                                🟢659ms   🟢1.2s    🟢856ms   🟢0ms     🟢0.000   
-  en--legal-notice                        🟢651ms   🟢811ms   🟢651ms   🟢0ms     🟢0.000   
-  es--acerca-de                           🟢623ms   🟢1.1s    🟢623ms   🟢0ms     🟢0.000   
-  es--admin--blog                         🟢967ms   🟢1.2s    🟢967ms   🟢0ms     🟢0.000   
-  es--admin--navigation                   🟢853ms   🟢1.1s    🟢853ms   🟢0ms     🟢0.000   
-  es--admin--site                         🟢950ms   🟢1.2s    🟢950ms   🟢0ms     🟢0.000   
-  es--admin--stats                        🟢754ms   🟢974ms   🟢754ms   🟢0ms     🟢0.000   
+  ar--admin--blog                         🟢927ms   🟢1.1s    🟢927ms   🟢0ms     🟢0.000   
+  ar--admin--navigation                   🟢843ms   🟢1.0s    🟢843ms   🟢0ms     🟢0.000   
+  ar--admin--site                         🟢925ms   🟢1.2s    🟢925ms   🟢0ms     🟢0.000   
+  ar--admin--stats                        🟢810ms   🟢1.0s    🟢810ms   🟢0ms     🟢0.000   
+  ar--admin--theme                        🟢925ms   🟢1.1s    🟢925ms   🟢0ms     🟢0.000   
+  ar--auth--انشاء-حساب                    🟢686ms   🟢806ms   🟢686ms   🟢0ms     🟢0.000   
+  ar--auth--تسجيل-الدخول                  🟢684ms   🟢884ms   🟢684ms   🟢0ms     🟢0.000   
+  ar--auth--نسيت-كلمة-المرور              🟢690ms   🟢810ms   🟢690ms   🟢0ms     🟢0.000   
+  ar--blog                                🟢649ms   🟢849ms   🟢649ms   🟢0ms     🟢0.000   
+  ar--bookings--A11YROOM                  🟢609ms   🟢769ms   🟢609ms   🟢0ms     🟢0.000   
+  ar--bookings                            🟢591ms   🟢771ms   🟢591ms   🟢0ms     🟢0.000   
+  ar--home                                🟢659ms   🟢1.2s    🟢927ms   🟢0ms     🟢0.000   
+  ar--اتصل-بنا                            🟢653ms   🟢813ms   🟢808ms   🟢0ms     🟢0.000   
+  ar--الشروط-القانونية                    🟢650ms   🟢810ms   🟢650ms   🟢0ms     🟢0.000   
+  ar--من-نحن                              🟢636ms   🟢894ms   🟢636ms   🟢0ms     🟢0.000   
+  en--about                               🟢622ms   🟢1.1s    🟢622ms   🟢0ms     🟢0.000   
+  en--admin--blog                         🟢926ms   🟢1.1s    🟢926ms   🟢0ms     🟢0.000   
+  en--admin--navigation                   🟢810ms   🟢1.0s    🟢810ms   🟢0ms     🟢0.000   
+  en--admin--site                         🟢932ms   🟢1.3s    🟢932ms   🟢0ms     🟢0.000   
+  en--admin--stats                        🟢770ms   🟢970ms   🟢770ms   🟢0ms     🟢0.000   
+  en--admin--theme                        🟢973ms   🟢1.2s    🟢973ms   🟢0ms     🟢0.000   
+  en--auth--forgot-password               🟢689ms   🟢889ms   🟢689ms   🟢0ms     🟢0.000   
+  en--auth--sign-in                       🟢647ms   🟢807ms   🟢647ms   🟢0ms     🟢0.000   
+  en--auth--sign-up                       🟢687ms   🟢807ms   🟢687ms   🟢0ms     🟢0.000   
+  en--blog                                🟢648ms   🟢848ms   🟢648ms   🟢0ms     🟢0.000   
+  en--bookings--A11YROOM                  🟢612ms   🟢772ms   🟢612ms   🟢0ms     🟢0.000   
+  en--bookings                            🟢612ms   🟢772ms   🟢612ms   🟢0ms     🟢0.000   
+  en--contact                             🟢614ms   🟢814ms   🟢784ms   🟢0ms     🟢0.009   
+  en--home                                🟢664ms   🟢1.2s    🟢853ms   🟢0ms     🟢0.000   
+  en--legal-notice                        🟢614ms   🟢734ms   🟢614ms   🟢0ms     🟢0.000   
+  es--acerca-de                           🟢629ms   🟢884ms   🟢629ms   🟢0ms     🟢0.000   
+  es--admin--blog                         🟢931ms   🟢1.2s    🟢931ms   🟢0ms     🟢0.000   
+  es--admin--navigation                   🟢850ms   🟢1.1s    🟢850ms   🟢0ms     🟢0.000   
+  es--admin--site                         🟢936ms   🟢1.2s    🟢936ms   🟢0ms     🟢0.000   
+  es--admin--stats                        🟢752ms   🟢892ms   🟢752ms   🟢0ms     🟢0.000   
   es--admin--theme                        🟢970ms   🟢1.2s    🟢970ms   🟢0ms     🟢0.000   
-  es--auth--contrasena-olvidada           🟢694ms   🟢854ms   🟢694ms   🟢0ms     🟢0.000   
-  es--auth--iniciar-sesion                🟢686ms   🟢846ms   🟢686ms   🟢0ms     🟢0.000   
-  es--auth--registro                      🟢650ms   🟢810ms   🟢650ms   🟢0ms     🟢0.000   
-  es--aviso-legal                         🟢615ms   🟢735ms   🟢615ms   🟢0ms     🟢0.000   
-  es--blog                                🟢644ms   🟢844ms   🟢644ms   🟢0ms     🟢0.000   
-  es--contacto                            🟢654ms   🟢814ms   🟢702ms   🟢0ms     🟢0.000   
-  es--home                                🟢668ms   🟢1.2s    🟢836ms   🟢0ms     🟢0.000   
-  fr--a-propos                            🟢621ms   🟢911ms   🟢621ms   🟢0ms     🟢0.000   
-  fr--admin--blog                         🟢924ms   🟢1.2s    🟢924ms   🟢0ms     🟢0.000   
-  fr--admin--navigation                   🟢851ms   🟢1.1s    🟢851ms   🟢0ms     🟢0.000   
-  fr--admin--site                         🟢933ms   🟢1.2s    🟢933ms   🟢0ms     🟢0.000   
-  fr--admin--stats                        🟢755ms   🟢935ms   🟢755ms   🟢0ms     🟢0.000   
-  fr--admin--theme                        🟢932ms   🟢1.1s    🟢932ms   🟢0ms     🟢0.000   
-  fr--auth--connexion                     🟢684ms   🟢844ms   🟢684ms   🟢0ms     🟢0.000   
-  fr--auth--inscription                   🟢651ms   🟢811ms   🟢651ms   🟢0ms     🟢0.000   
-  fr--auth--mot-de-passe-oublie           🟢687ms   🟢807ms   🟢687ms   🟢0ms     🟢0.000   
+  es--auth--contrasena-olvidada           🟢684ms   🟢804ms   🟢684ms   🟢0ms     🟢0.000   
+  es--auth--iniciar-sesion                🟢684ms   🟢884ms   🟢684ms   🟢0ms     🟢0.000   
+  es--auth--registro                      🟢690ms   🟢810ms   🟢690ms   🟢0ms     🟢0.000   
+  es--aviso-legal                         🟢649ms   🟢809ms   🟢649ms   🟢0ms     🟢0.000   
+  es--blog                                🟢626ms   🟢846ms   🟢626ms   🟢0ms     🟢0.000   
+  es--bookings--A11YROOM                  🟢610ms   🟢770ms   🟢610ms   🟢0ms     🟢0.000   
+  es--bookings                            🟢532ms   🟢732ms   🟢532ms   🟢0ms     🟢0.000   
+  es--contacto                            🟢649ms   🟢809ms   🟢700ms   🟢0ms     🟢0.000   
+  es--home                                🟢664ms   🟢1.2s    🟢842ms   🟢0ms     🟢0.000   
+  fr--a-propos                            🟢627ms   🟢921ms   🟢627ms   🟢0ms     🟢0.000   
+  fr--admin--blog                         🟢928ms   🟢1.2s    🟢928ms   🟢0ms     🟢0.000   
+  fr--admin--navigation                   🟢846ms   🟢1.0s    🟢846ms   🟢0ms     🟢0.000   
+  fr--admin--site                         🟢892ms   🟢1.3s    🟢892ms   🟢0ms     🟢0.000   
+  fr--admin--stats                        🟢773ms   🟢973ms   🟢773ms   🟢0ms     🟢0.000   
+  fr--admin--theme                        🟢967ms   🟢1.2s    🟢967ms   🟢0ms     🟢0.000   
+  fr--auth--connexion                     🟢645ms   🟢805ms   🟢645ms   🟢0ms     🟢0.000   
+  fr--auth--inscription                   🟢691ms   🟢891ms   🟢691ms   🟢0ms     🟢0.000   
+  fr--auth--mot-de-passe-oublie           🟢684ms   🟢804ms   🟢684ms   🟢0ms     🟢0.000   
   fr--blog                                🟢650ms   🟢850ms   🟢650ms   🟢0ms     🟢0.000   
-  fr--contact                             🟢652ms   🟢812ms   🟢708ms   🟢0ms     🟢0.000   
-  fr--home                                🟢723ms   🟢1.1s    🟢903ms   🟢0ms     🟢0.000   
-  fr--mentions-legales                    🟢631ms   🟢811ms   🟢631ms   🟢0ms     🟢0.000   
+  fr--bookings--A11YROOM                  🟢608ms   🟢768ms   🟢608ms   🟢0ms     🟢0.000   
+  fr--bookings                            🟢532ms   🟢732ms   🟢532ms   🟢0ms     🟢0.000   
+  fr--contact                             🟢653ms   🟢813ms   🟢709ms   🟢0ms     🟢0.000   
+  fr--home                                🟢687ms   🟢1.2s    🟢909ms   🟢0ms     🟢0.000   
+  fr--mentions-legales                    🟢649ms   🟢809ms   🟢649ms   🟢0ms     🟢0.000   
 
   Thresholds: 🟢 Good  🟡 Needs Improvement  🔴 Poor
     Largest Contentful Paint: 🟢 ≤2500ms  🟡 ≤4000ms  🔴 >4000ms
@@ -129,13 +145,13 @@
   SUMMARY
 ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-  Performance          >= 90:  52/52  ✅
-  Accessibility        >= 90:  52/52  ✅
-  Best-practices       >= 90:  52/52  ✅
-  Seo                  >= 90:  52/52  ✅
+  Performance          >= 90:  60/60  ✅
+  Accessibility        >= 90:  60/60  ✅
+  Best-practices       >= 90:  60/60  ✅
+  Seo                  >= 90:  60/60  ✅
 
   Averages:
-    Performance          98.0
+    Performance          98.2
     Accessibility        100.0
     Best-practices       96.0
     Seo                  100.0
@@ -147,20 +163,18 @@
   📄 ar--admin--blog
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 623 KiB)
-     50  Largest Contentful Paint element (1,210 ms)
+      0  Enable text compression (Est savings of 624 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused CSS (Est savings of 13 KiB)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
      50  Avoid an excessive DOM size (1,890 elements)
-     89  Largest Contentful Paint (1.2 s)
 
   📄 ar--admin--navigation
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 546 KiB)
+      0  Enable text compression (Est savings of 547 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Avoid an excessive DOM size (1,433 elements)
@@ -168,19 +182,17 @@
   📄 ar--admin--site
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Largest Contentful Paint element (1,270 ms)
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 665 KiB)
+      0  Enable text compression (Est savings of 666 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
      50  Avoid an excessive DOM size (1,947 elements)
-     87  Largest Contentful Paint (1.3 s)
 
   📄 ar--admin--stats
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 481 KiB)
+      0  Enable text compression (Est savings of 482 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Avoid an excessive DOM size (1,150 elements)
@@ -188,12 +200,11 @@
   📄 ar--admin--theme
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 665 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
      50  Avoid an excessive DOM size (2,405 elements)
-     88  First Contentful Paint (1.0 s)
 
   📄 ar--auth--انشاء-حساب
   ──────────────────────────────────────────────────────────────────────
@@ -207,7 +218,7 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 93 KiB)
-      0  Enable text compression (Est savings of 308 KiB)
+      0  Enable text compression (Est savings of 309 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -215,33 +226,51 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 93 KiB)
-      0  Enable text compression (Est savings of 302 KiB)
+      0  Enable text compression (Est savings of 303 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
   📄 ar--blog
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 288 KiB)
+      0  Enable text compression (Est savings of 289 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
+
+  📄 ar--bookings--A11YROOM
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 270 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+
+  📄 ar--bookings
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 255 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
 
   📄 ar--home
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 358 KiB)
+      0  Enable text compression (Est savings of 359 KiB)
       0  Properly size images (Est savings of 174 KiB)
+     50  Largest Contentful Paint element (1,210 ms)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Avoid an excessive DOM size (896 elements)
+     89  Largest Contentful Paint (1.2 s)
 
   📄 ar--اتصل-بنا
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 296 KiB)
+      0  Enable text compression (Est savings of 297 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -249,7 +278,7 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 305 KiB)
+      0  Enable text compression (Est savings of 306 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -265,61 +294,61 @@
   📄 en--about
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 301 KiB)
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 302 KiB)
       0  Properly size images (Est savings of 292 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 en--admin--blog
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 619 KiB)
+      0  Enable text compression (Est savings of 620 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused CSS (Est savings of 13 KiB)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
      50  Avoid an excessive DOM size (1,890 elements)
 
   📄 en--admin--navigation
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 544 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
      50  Avoid an excessive DOM size (1,433 elements)
 
   📄 en--admin--site
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Largest Contentful Paint element (1,250 ms)
-      0  Enable text compression (Est savings of 662 KiB)
+      0  Largest Contentful Paint element (1,270 ms)
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 663 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
      50  Avoid an excessive DOM size (1,947 elements)
-     88  Largest Contentful Paint (1.3 s)
-     89  First Contentful Paint (1.0 s)
+     87  Largest Contentful Paint (1.3 s)
 
   📄 en--admin--stats
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 480 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
      50  Avoid an excessive DOM size (1,150 elements)
 
   📄 en--admin--theme
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 663 KiB)
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 664 KiB)
      50  Largest Contentful Paint element (1,210 ms)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
      50  Avoid an excessive DOM size (2,405 elements)
+     88  First Contentful Paint (1.0 s)
      89  Largest Contentful Paint (1.2 s)
 
   📄 en--auth--forgot-password
@@ -334,7 +363,7 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 93 KiB)
-      0  Enable text compression (Est savings of 306 KiB)
+      0  Enable text compression (Est savings of 307 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -342,23 +371,39 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 93 KiB)
-      0  Enable text compression (Est savings of 302 KiB)
+      0  Enable text compression (Est savings of 303 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
   📄 en--blog
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 287 KiB)
+      0  Enable text compression (Est savings of 288 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+
+  📄 en--bookings--A11YROOM
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 269 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+
+  📄 en--bookings
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 254 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 en--contact
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 293 KiB)
+      0  Enable text compression (Est savings of 294 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -366,49 +411,44 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 357 KiB)
+      0  Enable text compression (Est savings of 358 KiB)
       0  Properly size images (Est savings of 174 KiB)
-     50  Largest Contentful Paint element (1,220 ms)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Avoid an excessive DOM size (896 elements)
-     89  Largest Contentful Paint (1.2 s)
 
   📄 en--legal-notice
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 300 KiB)
+      0  Enable text compression (Est savings of 301 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 es--acerca-de
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 301 KiB)
+      0  Enable text compression (Est savings of 302 KiB)
       0  Properly size images (Est savings of 292 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 es--admin--blog
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused CSS (Est savings of 13 KiB)
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 620 KiB)
-     50  Largest Contentful Paint element (1,210 ms)
+      0  Enable text compression (Est savings of 621 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Avoid an excessive DOM size (1,890 elements)
-     88  First Contentful Paint (1.0 s)
-     89  Largest Contentful Paint (1.2 s)
 
   📄 es--admin--navigation
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 544 KiB)
+      0  Enable text compression (Est savings of 545 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Avoid an excessive DOM size (1,433 elements)
@@ -417,11 +457,13 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 663 KiB)
+      0  Enable text compression (Est savings of 664 KiB)
+     50  Largest Contentful Paint element (1,220 ms)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Avoid an excessive DOM size (1,947 elements)
      89  First Contentful Paint (0.9 s)
+     89  Largest Contentful Paint (1.2 s)
 
   📄 es--admin--stats
   ──────────────────────────────────────────────────────────────────────
@@ -436,7 +478,7 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 663 KiB)
+      0  Enable text compression (Est savings of 664 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Avoid an excessive DOM size (2,405 elements)
@@ -446,7 +488,7 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 93 KiB)
-      0  Enable text compression (Est savings of 300 KiB)
+      0  Enable text compression (Est savings of 301 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -454,7 +496,7 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 93 KiB)
-      0  Enable text compression (Est savings of 306 KiB)
+      0  Enable text compression (Est savings of 307 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -462,22 +504,38 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 93 KiB)
-      0  Enable text compression (Est savings of 302 KiB)
+      0  Enable text compression (Est savings of 303 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
   📄 es--aviso-legal
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 302 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 es--blog
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 287 KiB)
+      0  Enable text compression (Est savings of 288 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+
+  📄 es--bookings--A11YROOM
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 269 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+
+  📄 es--bookings
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 254 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
@@ -516,7 +574,7 @@
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 621 KiB)
-     50  Largest Contentful Paint element (1,200 ms)
+     50  Largest Contentful Paint element (1,210 ms)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused CSS (Est savings of 13 KiB)
@@ -526,28 +584,28 @@
   📄 fr--admin--navigation
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 545 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
      50  Avoid an excessive DOM size (1,433 elements)
 
   📄 fr--admin--site
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Largest Contentful Paint element (1,270 ms)
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 663 KiB)
-     50  Largest Contentful Paint element (1,210 ms)
+      0  Enable text compression (Est savings of 664 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Avoid an excessive DOM size (1,947 elements)
-     89  Largest Contentful Paint (1.2 s)
+     87  Largest Contentful Paint (1.3 s)
 
   📄 fr--admin--stats
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 480 KiB)
+      0  Enable text compression (Est savings of 481 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Avoid an excessive DOM size (1,150 elements)
@@ -555,17 +613,18 @@
   📄 fr--admin--theme
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 664 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
      50  Avoid an excessive DOM size (2,405 elements)
+     88  First Contentful Paint (1.0 s)
 
   📄 fr--auth--connexion
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 93 KiB)
-      0  Enable text compression (Est savings of 306 KiB)
+      0  Enable text compression (Est savings of 307 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -573,7 +632,7 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 93 KiB)
-      0  Enable text compression (Est savings of 302 KiB)
+      0  Enable text compression (Est savings of 303 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -581,7 +640,7 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 93 KiB)
-      0  Enable text compression (Est savings of 300 KiB)
+      0  Enable text compression (Est savings of 301 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -589,6 +648,22 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Enable text compression (Est savings of 288 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+
+  📄 fr--bookings--A11YROOM
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 269 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+
+  📄 fr--bookings
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 254 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
@@ -605,7 +680,7 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 358 KiB)
+      0  Enable text compression (Est savings of 359 KiB)
       0  Properly size images (Est savings of 174 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
@@ -615,67 +690,75 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 302 KiB)
+      0  Enable text compression (Est savings of 303 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
 ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
   PAGES PASSING ALL GATES
 ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
-  ✅ ar--admin--blog  (96/100/96/100)
-  ✅ ar--admin--navigation  (97/100/96/100)
+  ✅ ar--admin--blog  (97/100/96/100)
+  ✅ ar--admin--navigation  (98/100/96/100)
   ✅ ar--admin--site  (96/100/96/100)
   ✅ ar--admin--stats  (98/100/96/100)
-  ✅ ar--admin--theme  (96/100/96/100)
+  ✅ ar--admin--theme  (97/100/96/100)
   ✅ ar--auth--انشاء-حساب  (99/100/96/100)
   ✅ ar--auth--تسجيل-الدخول  (99/100/96/100)
   ✅ ar--auth--نسيت-كلمة-المرور  (99/100/96/100)
   ✅ ar--blog  (99/100/96/100)
+  ✅ ar--bookings--A11YROOM  (99/100/96/100)
+  ✅ ar--bookings  (99/100/96/100)
   ✅ ar--home  (97/100/96/100)
   ✅ ar--اتصل-بنا  (99/100/96/100)
   ✅ ar--الشروط-القانونية  (99/100/96/100)
   ✅ ar--من-نحن  (99/100/96/100)
-  ✅ en--about  (99/100/96/100)
+  ✅ en--about  (98/100/96/100)
   ✅ en--admin--blog  (97/100/96/100)
-  ✅ en--admin--navigation  (97/100/96/100)
+  ✅ en--admin--navigation  (98/100/96/100)
   ✅ en--admin--site  (96/100/96/100)
-  ✅ en--admin--stats  (99/100/96/100)
+  ✅ en--admin--stats  (98/100/96/100)
   ✅ en--admin--theme  (96/100/96/100)
   ✅ en--auth--forgot-password  (99/100/96/100)
   ✅ en--auth--sign-in  (99/100/96/100)
   ✅ en--auth--sign-up  (99/100/96/100)
   ✅ en--blog  (99/100/96/100)
+  ✅ en--bookings--A11YROOM  (99/100/96/100)
+  ✅ en--bookings  (99/100/96/100)
   ✅ en--contact  (99/100/96/100)
   ✅ en--home  (97/100/96/100)
-  ✅ en--legal-notice  (99/100/96/100)
-  ✅ es--acerca-de  (98/100/96/100)
+  ✅ en--legal-notice  (100/100/96/100)
+  ✅ es--acerca-de  (99/100/96/100)
   ✅ es--admin--blog  (96/100/96/100)
   ✅ es--admin--navigation  (97/100/96/100)
   ✅ es--admin--site  (96/100/96/100)
-  ✅ es--admin--stats  (98/100/96/100)
+  ✅ es--admin--stats  (99/100/96/100)
   ✅ es--admin--theme  (96/100/96/100)
   ✅ es--auth--contrasena-olvidada  (99/100/96/100)
   ✅ es--auth--iniciar-sesion  (99/100/96/100)
   ✅ es--auth--registro  (99/100/96/100)
   ✅ es--aviso-legal  (99/100/96/100)
   ✅ es--blog  (99/100/96/100)
+  ✅ es--bookings--A11YROOM  (99/100/96/100)
+  ✅ es--bookings  (100/100/96/100)
   ✅ es--contacto  (99/100/96/100)
   ✅ es--home  (97/100/96/100)
   ✅ fr--a-propos  (99/100/96/100)
   ✅ fr--admin--blog  (96/100/96/100)
-  ✅ fr--admin--navigation  (97/100/96/100)
+  ✅ fr--admin--navigation  (98/100/96/100)
   ✅ fr--admin--site  (96/100/96/100)
-  ✅ fr--admin--stats  (99/100/96/100)
-  ✅ fr--admin--theme  (97/100/96/100)
+  ✅ fr--admin--stats  (98/100/96/100)
+  ✅ fr--admin--theme  (96/100/96/100)
   ✅ fr--auth--connexion  (99/100/96/100)
   ✅ fr--auth--inscription  (99/100/96/100)
   ✅ fr--auth--mot-de-passe-oublie  (99/100/96/100)
   ✅ fr--blog  (99/100/96/100)
+  ✅ fr--bookings--A11YROOM  (99/100/96/100)
+  ✅ fr--bookings  (100/100/96/100)
   ✅ fr--contact  (99/100/96/100)
-  ✅ fr--home  (98/100/96/100)
+  ✅ fr--home  (97/100/96/100)
   ✅ fr--mentions-legales  (99/100/96/100)
 
 ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
-  END OF REPORT — 208/208 checks passed across 52 pages
+  END OF REPORT — 240/240 checks passed across 60 pages
   HTML reports available in: tests/reports/lighthouse/
 ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
