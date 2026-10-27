@@ -189,6 +189,56 @@ async function seedShop() {
   };
 }
 
+/**
+ * Logistique (tenant plateforme) : deux entrepôts, un article stocké, un inventaire validé (écart posté
+ * au grand livre) et un inventaire en cours (saisie des comptages) — pages inventaires et grand livre.
+ */
+export const A11Y_WAREHOUSE_CODES = ['A11Y-WH', 'A11Y-WH2'] as const;
+export const A11Y_LOGISTICS_SKU = 'A11Y-BOX';
+
+async function deleteLogisticsSeed() {
+  const { getDrizzle } = await import('../../src/database/drizzle');
+  const { logisticsInventoryCounts, logisticsItems, logisticsStockMovements, logisticsWarehouses } = await import('../../src/database/schemas');
+  const { and, eq, inArray, isNull } = await import('drizzle-orm');
+  const db = getDrizzle();
+  const warehouses = await db.select({ id: logisticsWarehouses.id }).from(logisticsWarehouses)
+    .where(and(inArray(logisticsWarehouses.code, [...A11Y_WAREHOUSE_CODES]), isNull(logisticsWarehouses.organizationId)));
+  const ids = warehouses.map((w) => w.id);
+  if (ids.length) {
+    await db.delete(logisticsInventoryCounts).where(inArray(logisticsInventoryCounts.warehouseId, ids));
+    await db.delete(logisticsStockMovements).where(inArray(logisticsStockMovements.warehouseId, ids));
+    await db.delete(logisticsWarehouses).where(inArray(logisticsWarehouses.id, ids));
+  }
+  await db.delete(logisticsItems).where(and(eq(logisticsItems.sku, A11Y_LOGISTICS_SKU), isNull(logisticsItems.organizationId))).catch(() => {});
+}
+
+async function seedLogistics(adminEmail: string) {
+  const { getDrizzle, schema } = await import('../../src/database/drizzle');
+  const { eq } = await import('drizzle-orm');
+  const { Effect } = await import('effect');
+  const { logisticsService } = await import('../../src/modules/logistics/services/logistics.service');
+  const { inventoryService } = await import('../../src/modules/logistics/services/inventory.service');
+  const { inventoryLoader } = await import('../../src/modules/logistics/loaders');
+  await deleteLogisticsSeed();
+  const [admin] = await getDrizzle().select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, adminEmail)).limit(1);
+  const authorId = admin!.id;
+  const run = <A, E>(effect: import('effect').Effect.Effect<A, E>) => Effect.runPromise(effect);
+  const [main, backup] = await Promise.all(A11Y_WAREHOUSE_CODES.map((code, index) =>
+    run(logisticsService.createWarehouse({ organizationId: null, code, name: index === 0 ? 'Entrepôt A11y' : 'Entrepôt A11y secours', country: 'FR' }))));
+  await run(logisticsService.createItem({ organizationId: null, sku: A11Y_LOGISTICS_SKU, name: 'Carton A11y' }));
+  await run(logisticsService.recordMovement({ organizationId: null, warehouseId: main!.id, sku: A11Y_LOGISTICS_SKU, kind: 'receipt', quantity: 12, reference: 'A11Y-PO' }, authorId));
+  await run(logisticsService.transfer({ organizationId: null, fromWarehouseId: main!.id, toWarehouseId: backup!.id, sku: A11Y_LOGISTICS_SKU, quantity: 2 }, authorId));
+  // Inventaire validé (écart −1) puis inventaire en cours avec un comptage saisi.
+  const validated = await run(inventoryService.open({ organizationId: null, warehouseId: main!.id, note: 'Inventaire A11y' }, authorId));
+  const validatedLine = (await run(inventoryLoader.count(validated.id, null)))!.lines.find((line) => line.sku === A11Y_LOGISTICS_SKU)!;
+  await run(inventoryService.recordCounts(validated.id, null, [{ lineId: validatedLine.id, counted: '9' }], authorId));
+  await run(inventoryService.validate(validated.id, null, authorId));
+  const open = await run(inventoryService.open({ organizationId: null, warehouseId: main!.id }, authorId));
+  const openLine = (await run(inventoryLoader.count(open.id, null)))!.lines.find((line) => line.sku === A11Y_LOGISTICS_SKU)!;
+  await run(inventoryService.recordCounts(open.id, null, [{ lineId: openLine.id, counted: '9' }], authorId));
+  return { logistics: { openCountId: open.id, validatedCountId: validated.id } };
+}
+
 async function setup() {
   process.env.NODE_ENV = 'test';
 
@@ -234,7 +284,10 @@ async function setup() {
   const shop = await seedShop();
   console.log(`[a11y] Shop product ${A11Y_SHOP_SKU}, guest cart and pending order seeded`);
 
-  const data = { userCookie, adminCookie: freshAdminCookie, ...shop };
+  const logistics = await seedLogistics(SEED_ADMIN.email);
+  console.log(`[a11y] Logistics warehouses ${A11Y_WAREHOUSE_CODES.join(', ')}, item ${A11Y_LOGISTICS_SKU} and stock counts seeded`);
+
+  const data = { userCookie, adminCookie: freshAdminCookie, ...shop, ...logistics };
   writeFileSync(COOKIES_PATH, JSON.stringify(data, null, 2));
   console.log(`[a11y] Cookies written to ${COOKIES_PATH}`);
 }
@@ -247,6 +300,7 @@ async function teardown() {
   await deleteUser(SEED_ADMIN.email);
   await deleteBookingResource();
   await deleteShopSeed();
+  await deleteLogisticsSeed();
 
   if (existsSync(COOKIES_PATH)) {
     unlinkSync(COOKIES_PATH);
