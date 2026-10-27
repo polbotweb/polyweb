@@ -1,0 +1,30 @@
+---
+/** Back-office plateforme : tableau de bord ERP (CA, encaissements, marges, stock). Lecture seule. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { requirePermission } from "@lib/auth-guards";
+import ErpDashboard from "@/components/dashboard/ErpDashboard.astro";
+import { dashboardView } from "@/modules/dashboard/admin/view";
+import { getDashboardTranslations } from "@/modules/dashboard/i18n";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { sales: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getDashboardTranslations(locale);
+const view = await dashboardView(Astro);
+Astro.response.headers.set("cache-control", "private, no-store");
+---
+<BaseLayout title={t.title} description={t.intro}>
+  <AuthLayout title={t.title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="dashboard" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+      <header class="grid gap-2">
+        <h1 class="text-2xl font-semibold">{t.title}</h1>
+        <p>{t.intro}</p>
+      </header>
+      <ErpDashboard locale={locale} baseUrl={`/${locale}/admin/dashboard`} view={view} />
+    </main>
+  </AuthLayout>
+</BaseLayout>
