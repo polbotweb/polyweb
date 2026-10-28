@@ -64,6 +64,7 @@ services:
       TRUST_PROXY: "true"
     volumes:
       - uploads:/app/public/uploads
+      - private_storage:/app/storage/private
       - logs:/app/logs
 
   # Optional: local mail catcher (UI on http://localhost:8025)
@@ -95,6 +96,7 @@ volumes:
   pgdata:
   s3data:
   uploads:
+  private_storage:
   logs:
   caddy_data:
   caddy_config:

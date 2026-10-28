@@ -239,6 +239,44 @@ async function seedLogistics(adminEmail: string) {
   return { logistics: { openCountId: open.id, validatedCountId: validated.id } };
 }
 
+/**
+ * Exports FEC : un tenant avec profil vendeur (export prêt, période sans écriture) et un tenant sans
+ * SIREN (export en échec motivé) ; fichiers en stockage privé, supprimés au nettoyage.
+ */
+export const A11Y_FEC_ORGS = ['a11y-fec-org', 'a11y-fec-nosiren'] as const;
+export const A11Y_FEC_PERIOD = '2000-01';
+
+async function deleteFecSeed() {
+  const { getDrizzle, schema } = await import('../../src/database/drizzle');
+  const { salesFecExports } = await import('../../src/database/schemas');
+  const { privateStorage } = await import('../../src/lib/storage/private');
+  const { Effect } = await import('effect');
+  const { inArray } = await import('drizzle-orm');
+  const db = getDrizzle();
+  const rows = await db.select({ storageKey: salesFecExports.storageKey }).from(salesFecExports).where(inArray(salesFecExports.organizationId, [...A11Y_FEC_ORGS]));
+  for (const row of rows) if (row.storageKey) await Effect.runPromise(Effect.ignore(privateStorage().remove(row.storageKey)));
+  // Cascade : profils vendeurs et exports du tenant.
+  await db.delete(schema.organization).where(inArray(schema.organization.id, [...A11Y_FEC_ORGS]));
+}
+
+async function seedFec() {
+  const { getDrizzle, schema } = await import('../../src/database/drizzle');
+  const { salesSellerProfiles } = await import('../../src/database/schemas');
+  const { Effect } = await import('effect');
+  const { PrivateStorage, privateStorage } = await import('../../src/lib/storage/private');
+  const { fecExportService } = await import('../../src/modules/sales/services/fecExport.service');
+  await deleteFecSeed();
+  const db = getDrizzle();
+  await db.insert(schema.organization).values([
+    { id: A11Y_FEC_ORGS[0], name: 'Tenant FEC A11y', slug: A11Y_FEC_ORGS[0], createdAt: new Date() },
+    { id: A11Y_FEC_ORGS[1], name: 'Tenant FEC sans SIREN', slug: A11Y_FEC_ORGS[1], createdAt: new Date() },
+  ]);
+  await db.insert(salesSellerProfiles).values({ organizationId: A11Y_FEC_ORGS[0], legalName: 'Vendeur A11y', legalId: '732829320', legalIdScheme: '0002', country: 'FR' });
+  for (const organizationId of A11Y_FEC_ORGS) {
+    await Effect.runPromise(fecExportService.generate({ organizationId, period: A11Y_FEC_PERIOD, authorId: null }).pipe(Effect.provideService(PrivateStorage, privateStorage())));
+  }
+}
+
 async function setup() {
   process.env.NODE_ENV = 'test';
 
@@ -287,6 +325,9 @@ async function setup() {
   const logistics = await seedLogistics(SEED_ADMIN.email);
   console.log(`[a11y] Logistics warehouses ${A11Y_WAREHOUSE_CODES.join(', ')}, item ${A11Y_LOGISTICS_SKU} and stock counts seeded`);
 
+  await seedFec();
+  console.log(`[a11y] FEC exports (${A11Y_FEC_PERIOD}) seeded for ${A11Y_FEC_ORGS.join(', ')}`);
+
   const data = { userCookie, adminCookie: freshAdminCookie, ...shop, ...logistics };
   writeFileSync(COOKIES_PATH, JSON.stringify(data, null, 2));
   console.log(`[a11y] Cookies written to ${COOKIES_PATH}`);
@@ -301,6 +342,7 @@ async function teardown() {
   await deleteBookingResource();
   await deleteShopSeed();
   await deleteLogisticsSeed();
+  await deleteFecSeed();
 
   if (existsSync(COOKIES_PATH)) {
     unlinkSync(COOKIES_PATH);

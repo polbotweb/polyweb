@@ -41,9 +41,9 @@ COPY --from=builder --chown=polyweb:polyweb /app/package.json ./package.json
 COPY --from=builder --chown=polyweb:polyweb /app/src/database/migrations ./src/database/migrations
 COPY --from=builder --chown=polyweb:polyweb /app/src/database/infra ./src/database/infra
 
-# Create directories for uploads and logs with correct ownership
-RUN mkdir -p /app/public/uploads /app/logs && \
-    chown -R polyweb:polyweb /app/public /app/logs
+# Create directories for uploads, private storage (FEC exports, never served) and logs with correct ownership
+RUN mkdir -p /app/public/uploads /app/storage/private /app/logs && \
+    chown -R polyweb:polyweb /app/public /app/storage /app/logs
 
 # Switch to non-root
 USER polyweb

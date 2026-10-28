@@ -154,7 +154,16 @@ describe('grand livre de stock', () => {
     await run(logisticsService.transfer({ organizationId: orgId, fromWarehouseId: main, toWarehouseId: backup, sku: 'BOX-2', quantity: 1, reference: 'TR-1' }, counter));
     const page = await run(inventoryLoader.ledger(orgId, filters()));
     expect(page.total).toBe(page.rows.length);
-    const [into, out] = page.rows;
+    // Les deux mouvements d'un transfert partagent le même created_at (même transaction, defaultNow) :
+    // l'ordre entre eux n'est départagé que par l'id (UUID aléatoire), donc on les retrouve par type.
+    const transfers = page.rows.filter((row) => row.source === 'transfer');
+    expect(transfers).toHaveLength(2);
+    expect(transfers[0].createdAt.getTime()).toBe(transfers[1].createdAt.getTime());
+    // Ordre produit stable : created_at desc puis id desc (départage déterministe des ex-aequo).
+    const again = await run(inventoryLoader.ledger(orgId, filters()));
+    expect(again.rows.map((row) => row.id)).toEqual(page.rows.map((row) => row.id));
+    const out = transfers.find((row) => row.kind === 'transfer_out');
+    const into = transfers.find((row) => row.kind === 'transfer_in');
     expect(out).toMatchObject({ kind: 'transfer_out', source: 'transfer', createdBy: counter, userName: 'Inventory counter', sku: 'BOX-2', warehouseCode: 'INV-A', delta: -1 });
     expect(into).toMatchObject({ kind: 'transfer_in', source: 'transfer', warehouseCode: 'INV-B', delta: 1 });
     const inventory = page.rows.find((row) => row.source === 'inventory')!;

@@ -101,3 +101,29 @@ describe('storage configuration', () => {
     expect(() => storageFromEnv({ STORAGE_DRIVER: 'ftp' })).toThrow();
   });
 });
+
+describe('S3 private storage (documents comptables)', () => {
+  it('bucket privé distinct : écriture/lecture sous préfixe, aucune URL publique', async () => {
+    const { privateStorageFromEnv } = await import('@/lib/storage/private');
+    const client = new S3Client({ endpoint, region: 'us-east-1', forcePathStyle: true, credentials: { accessKeyId: ACCESS_KEY, secretAccessKey: SECRET_KEY } });
+    await client.send(new CreateBucketCommand({ Bucket: 'polyweb-private' })).catch((e: { name?: string }) => {
+      if (e.name !== 'BucketAlreadyOwnedByYou' && e.name !== 'BucketAlreadyExists') throw e;
+    });
+    client.destroy();
+    const env = {
+      STORAGE_DRIVER: 's3', S3_BUCKET: 'polyweb', S3_PRIVATE_BUCKET: 'polyweb-private', S3_PRIVATE_PREFIX: 'tenant-a/', S3_ENDPOINT: endpoint, S3_REGION: 'us-east-1',
+      S3_ACCESS_KEY_ID: ACCESS_KEY, S3_SECRET_ACCESS_KEY: SECRET_KEY, S3_FORCE_PATH_STYLE: 'true', S3_PUBLIC_URL: 'https://cdn.example.test',
+    };
+    const priv = privateStorageFromEnv(env);
+    if (priv instanceof ConfigError) throw priv;
+    const bytes = new Uint8Array([0xa4, 0x0d, 0x0a]);
+    const put = await Effect.runPromise(priv.put('fec/org-1/2026-03/732829320FEC20260331.txt', bytes, { contentType: 'text/plain; charset=ISO-8859-15', cacheControl: 'private, no-store' }));
+    expect(put.url.startsWith('https://')).toBe(false);
+    expect([...await Effect.runPromise(priv.get('fec/org-1/2026-03/732829320FEC20260331.txt'))]).toEqual([...bytes]);
+    // Le bucket média public ne contient pas l'objet.
+    const media = storage();
+    expect((await Effect.runPromise(media.list('fec/'))).length).toBe(0);
+    await Effect.runPromise(priv.remove('fec/org-1/2026-03/732829320FEC20260331.txt'));
+    expect(await Effect.runPromise(priv.list('fec/'))).toEqual([]);
+  });
+});

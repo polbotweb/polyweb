@@ -31,6 +31,7 @@ Tables `sales_documents`, `sales_document_lines`, `sales_payments`, `sales_remin
 - `/{lang}/admin/sales/{id}` : détail, totaux, transitions autorisées, conversion, avoir, relance, encaissement, documents liés.
 - `/{lang}/admin/sales/{id}/pdf` : téléchargement du PDF — voir [documents-pdf.md](documents-pdf.md) (Chromium requis à l'exécution). Factures et avoirs émis : PDF/A-3B Factur-X EN 16931 — voir [factur-x.md](factur-x.md) (en-tête `X-Factur-X`).
 - `/{lang}/admin/sales/seller` : profil vendeur (raison sociale, TVA, SIREN, adresse, IBAN/BIC) du tenant.
+- `/{lang}/admin/sales/fec` : exports FEC mensuels par tenant (cron, stockage privé, téléchargement) — voir [fec.md](fec.md).
 
 Traductions fr / en / es / ar (`i18n/`), interface RTL en arabe.
 

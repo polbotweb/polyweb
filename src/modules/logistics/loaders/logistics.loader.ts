@@ -73,13 +73,13 @@ export const logisticsLoader = {
       getDrizzle().select({ movement: logisticsStockMovements, sku: logisticsItems.sku, warehouseCode: logisticsWarehouses.code }).from(logisticsStockMovements)
         .innerJoin(logisticsItems, eq(logisticsItems.id, logisticsStockMovements.itemId))
         .innerJoin(logisticsWarehouses, eq(logisticsWarehouses.id, logisticsStockMovements.warehouseId))
-        .where(tenant(logisticsStockMovements.organizationId, organizationId)).orderBy(desc(logisticsStockMovements.createdAt)).limit(limit),
+        .where(tenant(logisticsStockMovements.organizationId, organizationId)).orderBy(desc(logisticsStockMovements.createdAt), desc(logisticsStockMovements.id)).limit(limit),
     ).pipe(Effect.map((rows): MovementListRow[] => rows.map((row) => ({ ...row.movement, sku: row.sku, warehouseCode: row.warehouseCode })))),
 
   /** Documents de vente du tenant rattachables à une expédition (factures et devis). */
   salesDocuments: (organizationId: string | null) =>
     dbTry("logistics.salesDocuments", () => getDrizzle().select({ id: sales.id, kind: sales.kind, title: sales.title, number: sales.number }).from(sales)
-      .where(tenant(sales.organizationId, organizationId)).orderBy(desc(sales.createdAt)).limit(200)),
+      .where(tenant(sales.organizationId, organizationId)).orderBy(desc(sales.createdAt), desc(sales.id)).limit(200)),
 };
 
 export const loadShipment = (id: string, organizationId: string | null) => runOrThrow(logisticsLoader.shipment(id, organizationId));

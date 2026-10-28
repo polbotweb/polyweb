@@ -1,0 +1,92 @@
+---
+/** Back-office plateforme : exports FEC mensuels par tenant (liste, téléchargement, génération manuelle). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { ScrollRegion } from "@molecules/ScrollRegion";
+import { requirePermission } from "@lib/auth-guards";
+import { getSalesTranslations } from "@/modules/sales/i18n";
+import { previousFecPeriod } from "@/modules/sales/domain/fec";
+import { loadFecExportsForAdmin } from "@/modules/sales/services/fecExport.service";
+import { hasSalesPermission } from "@/modules/sales/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { sales: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getSalesTranslations(locale);
+const tf = t.fec;
+const baseAdminUrl = `/${locale}/admin/sales`;
+const [exportsList, canGenerate] = await Promise.all([loadFecExportsForAdmin(), hasSalesPermission(Astro, ["issue"])]);
+const lastClosed = previousFecPeriod(new Date());
+const when = (value: Date | null) => (value ? new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" }).format(value) : t.fec.statuses.PENDING);
+const amount = (minor: number | null) => new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" }).format((minor ?? 0) / 100);
+---
+<BaseLayout title={tf.title} description={t.meta.description}>
+  <AuthLayout title={tf.title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="sales" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <h1 class="text-2xl font-semibold">{tf.title}</h1>
+      <p class="max-w-3xl text-muted-foreground">{tf.intro}</p>
+      {exportsList.length === 0 ? <p class="text-sm text-muted-foreground" data-testid="sales-fec-empty">{tf.none}</p> : (
+        <ScrollRegion label={tf.listLabel}>
+          <table class="w-full text-sm" data-testid="sales-fec-list">
+            <caption class="sr-only">{tf.listLabel}</caption>
+            <thead><tr class="border-b">
+              <th scope="col" class="py-2 text-start">{tf.period}</th><th scope="col" class="py-2 text-start">{tf.tenant}</th><th scope="col" class="py-2 text-start">{tf.status}</th>
+              <th scope="col" class="py-2 text-end">{tf.entries}</th><th scope="col" class="py-2 text-end">{tf.lines}</th><th scope="col" class="py-2 text-end">{tf.totals}</th>
+              <th scope="col" class="py-2 text-start">{tf.sha256}</th><th scope="col" class="py-2 text-start">{tf.generatedAt}</th><th scope="col" class="py-2 text-start">{tf.generatedBy}</th>
+              <th scope="col" class="py-2 text-start"><span class="sr-only">{tf.download}</span></th>
+            </tr></thead>
+            <tbody>{exportsList.map((row) => (
+              <tr class="border-b align-top" data-fec-row={`${row.organizationId ?? "platform"}:${row.period}`}>
+                <td class="py-2 font-mono">{row.period}</td>
+                <td class="py-2">{row.organizationName ?? tf.platform}</td>
+                <td class="py-2">
+                  <span data-fec-status={row.status}>{tf.statuses[row.status]}</span>
+                  {row.status === "FAILED" && row.error && <p class="mt-1 max-w-xs text-xs text-destructive"><span class="font-medium">{tf.error} :</span> {row.error}</p>}
+                </td>
+                <td class="py-2 text-end">{row.entryCount ?? "—"}</td>
+                <td class="py-2 text-end">{row.lineCount ?? "—"}</td>
+                <td class="py-2 text-end">{row.status === "READY" ? `${amount(row.debitMinor)} = ${amount(row.creditMinor)}` : "—"}</td>
+                <td class="py-2 font-mono text-xs">{row.sha256 ? <code title={row.sha256}>{row.sha256.slice(0, 12)}…</code> : "—"}</td>
+                <td class="py-2">{row.status === "READY" ? when(row.generatedAt) : when(row.attemptedAt)}</td>
+                <td class="py-2">{row.generatedByName ?? tf.cron}</td>
+                <td class="py-2">{row.status === "READY" && row.filename && (
+                  <a class="inline-flex min-h-11 items-center underline" href={`${baseAdminUrl}/fec/${row.id}/download`} download={row.filename} data-testid="sales-fec-download">
+                    {tf.download}<span class="sr-only"> — {row.filename}</span>
+                  </a>
+                )}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </ScrollRegion>
+      )}
+      {canGenerate && (
+        <section class="flex flex-col gap-3" aria-labelledby="sales-fec-generate">
+          <h2 id="sales-fec-generate" class="text-lg font-semibold">{tf.generate}</h2>
+          <form class="flex max-w-xl flex-col gap-3 rounded-md border p-4" data-fec-export-form data-organization-id="" data-done={tf.generated} data-failed={tf.failedPrefix} data-invalid={tf.invalidPeriod} aria-labelledby="sales-fec-generate" novalidate>
+            <p class="text-sm text-muted-foreground" id="sales-fec-period-hint">{tf.generateHint}</p>
+            <div class="grid gap-2">
+              <Label for="sales-fec-period">{tf.period} ({tf.platform})</Label>
+              <Input id="sales-fec-period" name="period" type="month" max={lastClosed} value={lastClosed} required aria-describedby="sales-fec-period-hint" />
+            </div>
+            <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+            <div><Button type="submit" data-testid="sales-fec-generate">{tf.generate}</Button></div>
+          </form>
+        </section>
+      )}
+      <a class="inline-flex min-h-11 items-center underline" href={baseAdminUrl}>{t.admin.back}</a>
+    </main>
+  </AuthLayout>
+</BaseLayout>
+
+<script>
+  import { initSales } from "@/modules/sales/client/init";
+
+  initSales();
+  document.addEventListener("astro:after-swap", initSales);
+</script>

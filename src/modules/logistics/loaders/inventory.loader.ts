@@ -82,7 +82,7 @@ export const inventoryLoader = {
     dbTry("logistics.ledger.users", () =>
       getDrizzle().selectDistinct({ id: user.id, name: user.name }).from(logisticsStockMovements)
         .innerJoin(user, eq(user.id, logisticsStockMovements.createdBy))
-        .where(tenant(logisticsStockMovements.organizationId, organizationId)).orderBy(asc(user.name)).limit(500)),
+        .where(tenant(logisticsStockMovements.organizationId, organizationId)).orderBy(asc(user.name), asc(user.id)).limit(500)),
 
   /** Inventaires du tenant (plus récents d'abord) avec avancement du comptage. */
   counts: (organizationId: string | null, options: { readonly status?: InventoryCountStatus | null; readonly warehouseId?: string | null } = {}) =>
