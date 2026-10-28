@@ -15,7 +15,7 @@ vi.mock('astro:actions', () => {
 });
 
 import { getDrizzle } from '@database/drizzle';
-import { eq, and, isNull, sql } from 'drizzle-orm';
+import { asc, eq, and, isNull, sql } from 'drizzle-orm';
 import { blogPosts, blogReports, blogPostTranslations, blogPostViewStats, user } from '@database/schemas';
 import { listBlogPostRevisions } from '@/actions/blog/post';
 import { updateBlogReport, getBlogModerationQueue } from '@/actions/blog/moderation';
@@ -62,6 +62,9 @@ describe('blog actions — integration (real DB)', () => {
       .from(blogPosts)
       .innerJoin(blogPostTranslations, eq(blogPostTranslations.postId, blogPosts.id))
       .where(and(isNull(blogPosts.organizationId), eq(blogPostTranslations.locale, 'fr')))
+      // Article de démo le plus ancien (seed) : d'autres fichiers créent puis suppriment des articles globaux
+      // en parallèle (ex. blog-bulk-core) ; un `limit(1)` sans ordre pouvait en choisir un, supprimé en cours de test.
+      .orderBy(asc(blogPosts.createdAt), asc(blogPosts.id))
       .limit(1);
     if (!post) throw new Error('No global blog post seeded — run db:seed-blog-demo');
     globalPostId = post.id;
