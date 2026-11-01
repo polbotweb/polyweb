@@ -149,6 +149,7 @@ for (const lang of locales) {
   }
   // Exports FEC : liste (export prêt + export en échec seedés) et formulaire de génération.
   adminUrls.push({ url: `${BASE}/${lang}/admin/sales/fec`, headers: { Cookie: adminCookie } });
+  adminUrls.push({ url: `${BASE}/${lang}/admin/sales/fx`, headers: { Cookie: adminCookie } });
   // Abonnements : liste (formules + abonnements), fiche formule (tarifs) et fiche abonnement.
   adminUrls.push({ url: `${BASE}/${lang}/admin/subscriptions`, headers: { Cookie: adminCookie } });
   if (subscriptionsSeed) {

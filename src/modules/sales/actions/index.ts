@@ -21,6 +21,7 @@ import { fecExportService } from "../services/fecExport.service";
 import { isClosedFecPeriod } from "../domain/fec";
 import { extractIp, logAuditEventEffect } from "@/lib/audit";
 import { PrivateStorage, privateStorage } from "@/lib/storage/private";
+import { deleteManualRate, setBaseCurrency, setManualRate } from "@/core/fx/service";
 
 const idInput = z.object({ id: z.uuid() });
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -175,6 +176,58 @@ export const salesActions = {
         ipAddress: extractIp(context.request.headers, context.clientAddress), userAgent: context.request.headers.get("user-agent"),
       });
       return result.status === "READY" ? { id: exportId, status: result.status } : { id: exportId, status: result.status, error: result.error };
+    })),
+  }),
+
+  /** Devise de tenue du tenant (refusée une fois verrouillée par une première émission) ; audit `FX_BASE_CURRENCY_SET`. */
+  setBaseCurrency: defineAction({
+    input: z.object({ organizationId: z.string().nullable().default(null), baseCurrency: z.string().refine(isCurrencyCode) }),
+    handler: effectHandler(({ organizationId, baseCurrency }, context) => Effect.gen(function* () {
+      const user = yield* requireSalesPermission(context, ["issue"], organizationId);
+      if (!isCurrencyCode(baseCurrency)) return yield* fail("BAD_REQUEST", "Devise inconnue.");
+      const settings = yield* setBaseCurrency(organizationId, baseCurrency).pipe(
+        Effect.catchTag("BaseCurrencyLockedError", () => fail("CONFLICT", "Devise de tenue verrouillée : des pièces ont déjà été émises.")),
+      );
+      yield* logAuditEventEffect({
+        userId: user.id, action: "FX_BASE_CURRENCY_SET", resource: "exchange_rate_settings", resourceId: organizationId ?? "platform",
+        metadata: { organizationId, baseCurrency }, ipAddress: extractIp(context.request.headers, context.clientAddress), userAgent: context.request.headers.get("user-agent"),
+      });
+      return { baseCurrency: settings.baseCurrency };
+    })),
+  }),
+
+  /** Forçage manuel d'un taux (prioritaire sur la BCE à date égale) ; audit `FX_RATE_SET`. */
+  setExchangeRate: defineAction({
+    input: z.object({
+      organizationId: z.string().nullable().default(null), from: z.string().refine(isCurrencyCode), to: z.string().refine(isCurrencyCode),
+      date: isoDate, rate: z.string().trim().regex(/^\d{1,9}([.,]\d{1,12})?$/).transform((value) => value.replace(",", ".")),
+    }),
+    handler: effectHandler(({ organizationId, from, to, date, rate }, context) => Effect.gen(function* () {
+      const user = yield* requireSalesPermission(context, ["issue"], organizationId);
+      if (!isCurrencyCode(from) || !isCurrencyCode(to)) return yield* fail("BAD_REQUEST", "Devise inconnue.");
+      const row = yield* setManualRate({ organizationId, from, to, date, rate, userId: user.id }).pipe(
+        Effect.catchTag("InvalidRateError", () => fail("BAD_REQUEST", "Taux invalide : nombre strictement positif, devises distinctes.")),
+      );
+      yield* logAuditEventEffect({
+        userId: user.id, action: "FX_RATE_SET", resource: "exchange_rate", resourceId: row?.id ?? null,
+        metadata: { organizationId, from, to, date, rate: row?.rate ?? rate }, ipAddress: extractIp(context.request.headers, context.clientAddress), userAgent: context.request.headers.get("user-agent"),
+      });
+      return { id: row?.id ?? null, rate: row?.rate ?? rate };
+    })),
+  }),
+
+  /** Suppression d'un forçage manuel (les taux BCE ne se suppriment pas) ; audit `FX_RATE_DELETE`. */
+  deleteExchangeRate: defineAction({
+    input: z.object({ organizationId: z.string().nullable().default(null), id: z.uuid() }),
+    handler: effectHandler(({ organizationId, id }, context) => Effect.gen(function* () {
+      const user = yield* requireSalesPermission(context, ["issue"], organizationId);
+      const deleted = yield* deleteManualRate(organizationId, id);
+      if (!deleted) return yield* fail("NOT_FOUND", "Forçage introuvable.");
+      yield* logAuditEventEffect({
+        userId: user.id, action: "FX_RATE_DELETE", resource: "exchange_rate", resourceId: id,
+        metadata: { organizationId }, ipAddress: extractIp(context.request.headers, context.clientAddress), userAgent: context.request.headers.get("user-agent"),
+      });
+      return { id };
     })),
   }),
 };

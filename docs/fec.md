@@ -10,7 +10,7 @@ des documents de vente et des règlements. Domaine pur : `domain/fec.ts` ; orche
   411 client, 706 produits HT et 44571 TVA collectée par taux ; avoir = sens inversé.
 - **BQ** (banque) : une écriture par encaissement (512 / 411) ou remboursement (sens inversé) daté du mois.
 - Tri déterministe (date, journal VE avant BQ, pièce, identifiant) ; `EcritureNum` = `<journal><AAAAMM><seq:5>`.
-- Chaque écriture est équilibrée, totaux débit = crédit vérifiés ; EUR uniquement (autre devise → échec motivé).
+- Chaque écriture est équilibrée, totaux débit = crédit vérifiés ; documents en devise exportés en contre-valeur EUR figée avec `Montantdevise`/`Idevise` (voir [multi-devises](./multi-currency.md)) ; devise de tenue autre que EUR → échec motivé.
 - Fichier `<SIREN>FEC<AAAAMMJJ>.txt` (date de clôture de la période), 18 colonnes, séparateur `|`, fins de ligne
   CRLF, encodage ISO 8859-15 ; les séparateurs et sauts de ligne des libellés sont neutralisés.
 - Le SIREN vient du profil vendeur du tenant (`legalId`, schéma `0002`) ; sans SIREN → export `FAILED` motivé.

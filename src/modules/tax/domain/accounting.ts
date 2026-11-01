@@ -15,6 +15,8 @@ export interface JournalLine {
   readonly label: string;
   readonly debit: Money;
   readonly credit: Money;
+  /** Montant d'origine en devise étrangère (FEC : `Montantdevise` / `Idevise`) ; débit/crédit restent en devise de tenue. */
+  readonly foreign?: Money;
 }
 
 export interface JournalEntry {
@@ -92,7 +94,8 @@ const fecText = (value: string) => value.replace(/[\t\r\n|]/g, " ").trim();
 /**
  * Fichier des écritures comptables (FEC) : 18 colonnes séparées par « | », dates AAAAMMJJ,
  * décimales à virgule, nom `<SIREN>FEC<AAAAMMJJ>.txt` (date de clôture). Devise de tenue : EUR
- * (Montantdevise / Idevise renseignés pour toute autre devise).
+ * obligatoire pour Debit / Credit ; `Montantdevise` / `Idevise` portent le montant d'origine
+ * (`line.foreign`) d'une pièce émise dans une autre devise.
  */
 export const toFec = (entries: readonly JournalEntry[], options: { readonly siren: string; readonly closingDate: string }) =>
   Effect.gen(function* () {
@@ -105,12 +108,12 @@ export const toFec = (entries: readonly JournalEntry[], options: { readonly sire
       const pieceDate = yield* fecDate(entry.pieceDate);
       const validDate = entry.validationDate ? yield* fecDate(entry.validationDate) : date;
       for (const line of entry.lines) {
-        const foreign = line.debit.currency !== "EUR";
-        const amount = line.debit.amountMinor !== 0 ? line.debit : line.credit;
+        if (line.debit.currency !== "EUR") return yield* Effect.fail(new AccountingExportError({ reason: "currency", value: line.debit.currency }));
+        const foreign = line.foreign && line.foreign.currency !== "EUR" ? line.foreign : null;
         rows.push([
           entry.journalCode, entry.journalLabel, entry.entryNumber, date, line.account, line.accountLabel, line.auxAccount ?? "", line.auxLabel ?? "",
           entry.pieceRef, pieceDate, line.label, fecAmount(line.debit), fecAmount(line.credit), "", "", validDate,
-          foreign ? fecAmount(amount) : "", foreign ? line.debit.currency : "",
+          foreign ? fecAmount(foreign) : "", foreign ? foreign.currency : "",
         ].map(fecText).join("|"));
       }
     }

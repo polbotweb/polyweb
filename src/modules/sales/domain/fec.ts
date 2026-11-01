@@ -7,12 +7,16 @@
  * - BQ : une écriture par encaissement (512 / 411) ou remboursement (sens inversé) daté du mois.
  * - Tri : date d'écriture, journal (VE avant BQ), référence de pièce, identifiant (déterministe) ;
  *   `EcritureNum` = `<journal><AAAAMM><seq:5>`, continu par journal dans la période.
- * - Devise de tenue EUR uniquement : tout montant dans une autre devise fait échouer l'export
- *   (pas de cours de change fiable à ce stade), plutôt que de produire un fichier faux.
+ * - Devise de tenue EUR : une pièce en devise étrangère est comptabilisée à sa contre-valeur figée
+ *   à l'émission (core/fx, colonnes `*_base_minor`), le montant d'origine en `Montantdevise` /
+ *   `Idevise`. Lignes par taux converties au taux figé puis ajustées (plus grosse ligne) pour égaler
+ *   exactement les totaux figés. Un règlement en devise est valorisé au taux figé de sa pièce
+ *   (pas d'écart de change 666/766 à ce stade). Sans contre-valeur EUR figée → échec explicite.
  */
 import { createHash } from "node:crypto";
 import { Data, Effect } from "effect";
-import { computeTaxTotals, type CurrencyCode, type Money } from "@/core/money";
+import { computeTaxTotals, type CurrencyCode, type Money, type TaxTotals } from "@/core/money";
+import { convertAt, parseRate } from "@/core/fx";
 import { assertBalanced, buildSaleEntry, type AccountingExportError, type JournalEntry, type UnbalancedEntryError } from "@/modules/tax/domain/accounting";
 import { isValidSiren } from "./seller-profile";
 
@@ -91,6 +95,16 @@ export interface FecDocument {
   readonly taxMinor: number;
   readonly grossMinor: number;
   readonly lines: readonly FecDocumentLine[];
+  /** Contre-valeur figée à l'émission (null pour une pièce en EUR antérieure au multi-devise). */
+  readonly fx?: FecFrozen | null;
+}
+
+export interface FecFrozen {
+  readonly baseCurrency: string;
+  readonly exchangeRate: string;
+  readonly netBaseMinor: number;
+  readonly taxBaseMinor: number;
+  readonly grossBaseMinor: number;
 }
 
 export interface FecPayment {
@@ -103,6 +117,8 @@ export interface FecPayment {
   readonly documentNumber: string;
   readonly customerName: string;
   readonly customerVatNumber: string | null;
+  /** Taux figé de la pièce réglée (règlement en devise étrangère). */
+  readonly fx?: FecFrozen | null;
 }
 
 export const FEC_ACCOUNTS = { receivable: "411000", revenue: "706000", vat: "445710", bank: "512000" } as const;
@@ -119,10 +135,46 @@ export const normalizeRate = (rate: string) => {
 export const customerAuxAccount = (name: string, vatNumber: string | null) =>
   `C${createHash("sha256").update(`${name.trim().toLowerCase().replace(/\s+/g, " ")}|${(vatNumber ?? "").replace(/\s+/g, "").toUpperCase()}`).digest("hex").slice(0, 10).toUpperCase()}`;
 
-const eur = (currency: string, what: string): Effect.Effect<CurrencyCode, FecExportError> =>
-  currency === "EUR" ? Effect.succeed("EUR") : Effect.fail(new FecExportError({ reason: "currency", detail: `${what} en ${currency}` }));
+const money = (amountMinor: number, currency: CurrencyCode = "EUR"): Money => ({ amountMinor, currency });
 
-const money = (amountMinor: number): Money => ({ amountMinor, currency: "EUR" });
+const frozenOf = (fx: FecFrozen | null | undefined, what: string) =>
+  fx && fx.baseCurrency === "EUR" ? parseRate(fx.exchangeRate).pipe(Effect.mapError(() => new FecExportError({ reason: "currency", detail: `${what} : taux figé invalide` })))
+    : Effect.fail(new FecExportError({ reason: "currency", detail: `${what} : aucune contre-valeur EUR figée` }));
+
+/** Ajuste la plus grosse ligne pour que la somme égale exactement `target` (écart d'arrondi). */
+const reconcile = (amounts: readonly number[], target: number) => {
+  const out = [...amounts];
+  if (out.length === 0) return out;
+  let largest = 0;
+  out.forEach((value, index) => { if (Math.abs(value) > Math.abs(out[largest]!)) largest = index; });
+  out[largest] = out[largest]! + target - out.reduce((sum, value) => sum + value, 0);
+  return out;
+};
+
+/** Totaux par taux en EUR (contre-valeur figée), conformes aux totaux figés du document. */
+const toBaseTotals = (totals: TaxTotals, frozen: FecFrozen | null | undefined, what: string) =>
+  Effect.gen(function* () {
+    const rate = yield* frozenOf(frozen, what);
+    const fx = frozen!;
+    const convert = (value: Money) => convertAt(value, "EUR", rate, "half-up").pipe(Effect.map((m) => m.amountMinor), Effect.mapError(() => new FecExportError({ reason: "currency", detail: `${what} : conversion impossible` })));
+    const bases = reconcile(yield* Effect.forEach(totals.byRate, (row) => convert(row.base)), fx.netBaseMinor);
+    const taxes = reconcile(yield* Effect.forEach(totals.byRate, (row) => convert(row.tax)), fx.taxBaseMinor);
+    return {
+      ...totals,
+      net: money(fx.netBaseMinor), tax: money(fx.taxBaseMinor), gross: money(fx.netBaseMinor + fx.taxBaseMinor),
+      byRate: totals.byRate.map((row, index) => ({ ...row, base: money(bases[index]!), tax: money(taxes[index]!) })),
+    } as TaxTotals;
+  });
+
+/** Ajoute le montant d'origine (`foreign`) aux lignes d'une écriture convertie, dans le même ordre que les totaux d'origine. */
+const withForeign = (entry: JournalEntry, original: TaxTotals): JournalEntry => {
+  const amounts = [
+    original.gross,
+    ...original.byRate.filter((row) => row.base.amountMinor !== 0).map((row) => row.base),
+    ...original.byRate.filter((row) => row.tax.amountMinor !== 0).map((row) => row.tax),
+  ];
+  return { ...entry, lines: entry.lines.map((line, index) => (amounts[index] ? { ...line, foreign: amounts[index] } : line)) };
+};
 
 interface Draft {
   readonly journal: "VE" | "BQ";
@@ -152,25 +204,31 @@ export const buildFecEntries = (input: { readonly period: FecPeriod; readonly do
     const drafts: Draft[] = [];
     for (const doc of input.documents) {
       if (!inPeriod(doc.issueDate)) continue;
-      const currency = yield* eur(doc.currency, `${doc.number}`);
-      const totals = yield* computeTaxTotals(doc.lines.map((line) => ({ net: money(line.netMinor), ratePercent: normalizeRate(line.ratePercent) })), { currency });
+      const currency = doc.currency as CurrencyCode;
+      const totals = yield* computeTaxTotals(doc.lines.map((line) => ({ net: money(line.netMinor, currency), ratePercent: normalizeRate(line.ratePercent) })), { currency });
       if (totals.net.amountMinor !== doc.netMinor || totals.tax.amountMinor !== doc.taxMinor || totals.gross.amountMinor !== doc.grossMinor) {
         return yield* Effect.fail(new FecExportError({ reason: "totals", detail: `${doc.number} : lignes ${totals.net.amountMinor}/${totals.tax.amountMinor}/${totals.gross.amountMinor} ≠ document ${doc.netMinor}/${doc.taxMinor}/${doc.grossMinor}` }));
       }
+      const foreign = currency !== "EUR";
+      const booked = foreign ? yield* toBaseTotals(totals, doc.fx, `${doc.number} en ${currency}`) : totals;
       drafts.push({
         journal: "VE", date: doc.issueDate, pieceRef: doc.number, sortId: doc.id,
         entry: (entryNumber) => buildSaleEntry({
           entryNumber, date: doc.issueDate, pieceRef: doc.number, customerAccount: customerAuxAccount(doc.customerName, doc.customerVatNumber), customerName: doc.customerName,
-          totals, creditNote: doc.kind === "credit_note", journalCode: FEC_JOURNALS.sales.code, journalLabel: FEC_JOURNALS.sales.label,
+          totals: booked, creditNote: doc.kind === "credit_note", journalCode: FEC_JOURNALS.sales.code, journalLabel: FEC_JOURNALS.sales.label,
           accounts: { receivable: FEC_ACCOUNTS.receivable, revenue: FEC_ACCOUNTS.revenue, vat: FEC_ACCOUNTS.vat },
-        }),
+        }).pipe(Effect.map((entry) => (foreign ? withForeign(entry, totals) : entry))),
       });
     }
     for (const payment of input.payments) {
       if (!inPeriod(payment.paidAt) || payment.amountMinor === 0) continue;
-      yield* eur(payment.currency, `règlement ${payment.documentNumber}`);
       const refund = payment.amountMinor < 0;
-      const amount = money(Math.abs(payment.amountMinor));
+      const original = money(Math.abs(payment.amountMinor), payment.currency as CurrencyCode);
+      const amount = payment.currency === "EUR" ? original
+        : yield* frozenOf(payment.fx, `règlement ${payment.documentNumber} en ${payment.currency}`).pipe(
+          Effect.flatMap((rate) => convertAt(original, "EUR", rate, "half-up").pipe(Effect.mapError(() => new FecExportError({ reason: "currency", detail: `règlement ${payment.documentNumber} : conversion impossible` })))),
+        );
+      const foreign = payment.currency === "EUR" ? {} : { foreign: original };
       const none = money(0);
       const label = `${refund ? "Remboursement" : "Règlement"} ${payment.documentNumber} ${payment.customerName}`;
       const aux = customerAuxAccount(payment.customerName, payment.customerVatNumber);
@@ -180,8 +238,8 @@ export const buildFecEntries = (input: { readonly period: FecPeriod; readonly do
           journalCode: FEC_JOURNALS.bank.code, journalLabel: FEC_JOURNALS.bank.label, entryNumber, entryDate: payment.paidAt,
           pieceRef: payment.reference?.trim() || payment.documentNumber, pieceDate: payment.paidAt,
           lines: [
-            { account: FEC_ACCOUNTS.bank, accountLabel: "Banque", label, debit: refund ? none : amount, credit: refund ? amount : none },
-            { account: FEC_ACCOUNTS.receivable, accountLabel: "Clients", auxAccount: aux, auxLabel: payment.customerName, label, debit: refund ? amount : none, credit: refund ? none : amount },
+            { account: FEC_ACCOUNTS.bank, accountLabel: "Banque", label, debit: refund ? none : amount, credit: refund ? amount : none, ...foreign },
+            { account: FEC_ACCOUNTS.receivable, accountLabel: "Clients", auxAccount: aux, auxLabel: payment.customerName, label, debit: refund ? amount : none, credit: refund ? none : amount, ...foreign },
           ],
         }),
       });

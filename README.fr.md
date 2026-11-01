@@ -282,6 +282,10 @@ shop/
   ShopDetail.astro
   admin/
   public/
+subscriptions/
+  PublicPlans.astro
+  SubscriptionsPortalSection.astro
+  admin/
 tax/
   TaxCard.astro
   TaxDetail.astro
@@ -498,6 +502,8 @@ migrations/
   0043_logistics_inventory.sql
   0044_sales_fec_exports.sql
   0045_customer_portal_links.sql
+  0046_subscriptions.sql
+  0047_exchange_rates.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -541,6 +547,8 @@ migrations/
     0043_snapshot.json
     0044_snapshot.json
     0045_snapshot.json
+    0046_snapshot.json
+    0047_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -549,6 +557,7 @@ schemas/
   blog.schema.ts
   consent.schema.ts
   content.schema.ts
+  exchange-rates.schema.ts
   forms.schema.ts
   media.schema.ts
   navigation.schema.ts
@@ -672,6 +681,10 @@ schemas.ts
 **refunds.schema.ts**
 - `refunds`: `id`, `organizationId`, `paymentId`, `reference`, `provider`, `providerRefundId`, `status`, `amount`, `currency`, `reason`, `note`, `idempotencyKey`, `requestedBy`, `metadata`, `failureReason`, `createdAt`, `updatedAt`, `succeededAt`, `failedAt`
 
+**exchange-rates.schema.ts**
+- `exchange_rates`: `id`, `organizationId`, `baseCurrency`, `quoteCurrency`, `rateDate`, `rate`, `source`, `createdBy`, `createdAt`, `updatedAt`
+- `exchange_rate_settings`: `id`, `organizationId`, `baseCurrency`, `lockedAt`, `lastFetchedAt`, `createdAt`, `updatedAt`
+
 **content.schema.ts**
 - `sites`: `id`, `slug`, `name`, `domains`, `defaultLocale`, `locales`, `organizationId`, `isDefault`, `settings`, `createdAt`, `updatedAt`
 - `content_types`: `id`, `siteId`, `slug`, `name`, `description`, `fields`, `settings`, `createdAt`, `updatedAt`
@@ -750,6 +763,8 @@ schemas.ts
 - `0043_logistics_inventory.sql`
 - `0044_sales_fec_exports.sql`
 - `0045_customer_portal_links.sql`
+- `0046_subscriptions.sql`
+- `0047_exchange_rates.sql`
 
 ### Commandes
 
@@ -914,6 +929,13 @@ filters/
   i18n.ts
   index.ts
   url-state.ts
+fx/
+  ecb.ts
+  errors.ts
+  freeze.ts
+  index.ts
+  rate.ts
+  service.ts
 index.ts
 localization/
   index.ts
@@ -958,6 +980,7 @@ payments/
   refund-sink.ts
   service.ts
   stripe.ts
+  subscription-sink.ts
   transitions.ts
 permissions/
   tenant.ts
@@ -1305,6 +1328,7 @@ sales/
     document-actions.ts
     document-form.ts
     fec-export-form.ts
+    fx-rates-form.ts
     init.ts
     seller-profile-form.ts
   documents/
@@ -1449,6 +1473,32 @@ sites/
   domain/
     sites.effect.ts
     sites.ts
+subscriptions/
+  actions/
+    index.ts
+  capabilities.ts
+  client/
+    forms.ts
+    init.ts
+  domain/
+    lifecycle.ts
+  format.ts
+  i18n/
+    index.ts
+  loaders/
+    index.ts
+  module.ts
+  permissions/
+    index.ts
+  public/
+    routes.ts
+  register.ts
+  schema/
+    index.ts
+  services/
+    subscription.service.ts
+    webhook.ts
+  taxonomy.ts
 tax/
   actions/
     bulk.ts
@@ -1502,6 +1552,7 @@ src/pages/
     index.astro
     invoices/
     orders/
+    subscriptions/
   admin/
     audit.astro
     blog/
@@ -1524,6 +1575,7 @@ src/pages/
     services/
     site.astro
     stats.astro
+    subscriptions/
     tax/
     theme.astro
     users.astro
@@ -1570,6 +1622,9 @@ src/pages/
     checkout.astro
     index.astro
     order/
+  subscriptions/
+    checkout.ts
+    index.astro
 api/
   admin/
     forms/
@@ -1582,6 +1637,7 @@ api/
   content-export.ts
   content-import.ts
   cron/
+    fx-rates.ts
     payments-expire.ts
     publish.ts
     search-reindex.ts

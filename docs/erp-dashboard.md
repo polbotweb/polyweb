@@ -66,3 +66,5 @@ est auditée par Pa11y et Lighthouse (`.pa11yci.cjs`, `lighthouserc.cjs`, URL ad
 - Unitaires : `tests/unit/dashboard/period.test.ts`, `tests/unit/dashboard/metrics.test.ts`.
 - Intégration (base réelle) : `tests/integration/erp-dashboard.test.ts` — agrégats, absence de
   double comptage facture/commande, avoirs, coûts moyens, isolation des tenants.
+
+Voir aussi : [multi-devises](./multi-currency.md) (taux BCE, ajustements manuels, gel du taux, FEC).

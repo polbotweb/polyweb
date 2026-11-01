@@ -41,6 +41,7 @@ export type AuditAction =
   | "SHOP_RETURN_REQUEST" | "SHOP_RETURN_TRANSITION" | "SHOP_RETURN_INSPECT" | "SHOP_RETURN_REFUND"
   | "LOGISTICS_INVENTORY_OPEN" | "LOGISTICS_INVENTORY_COUNT" | "LOGISTICS_INVENTORY_VALIDATE" | "LOGISTICS_INVENTORY_CANCEL"
   | "SALES_FEC_GENERATE" | "SALES_FEC_DOWNLOAD"
+  | "FX_BASE_CURRENCY_SET" | "FX_RATE_SET" | "FX_RATE_DELETE"
   // Action groupée générique (core/bulk) des modules générés : l'opération est dans metadata.operation.
   | "BULK_ACTION";
 

@@ -1,4 +1,4 @@
 
-> polyweb@0.0.1 lint /workspace/b3-subs
+> polyweb@0.0.1 lint /workspace/b3-fx
 > eslint "src/**/*.{js,ts,astro}" --max-warnings 0
 

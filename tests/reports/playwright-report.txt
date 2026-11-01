@@ -1,6 +1,6 @@
 ════════════════════════════════════════════════════════════════════════════════
   PLAYWRIGHT E2E TEST REPORT
-  Generated: 2026-11-01 13:53:26
+  Generated: 2026-11-01 16:13:14
 ════════════════════════════════════════════════════════════════════════════════
 
   ❌ a11y.spec.ts  (39/57 tests passed)
@@ -28,6 +28,7 @@
   ❌ purchasing-admin.spec.ts  (1/3 tests passed)
   ❌ sales-admin.spec.ts  (2/6 tests passed)
   ❌ sales-fec.spec.ts  (1/3 tests passed)
+  ❌ sales-fx.spec.ts  (1/3 tests passed)
   ❌ scroll-regions.spec.ts  (3/9 tests passed)
   ✅ services-lifecycle.spec.ts  (6/6 tests passed)
   ✅ services.spec.ts  (36/36 tests passed)
@@ -39,12 +40,12 @@
   SUMMARY
 ════════════════════════════════════════════════════════════════════════════════
 
-  Total tests:   384
-  Passed:        304  ✅
+  Total tests:   387
+  Passed:        305  ✅
   Failed:        0  
-  Skipped:       80
-  Duration:      644.4s
+  Skipped:       82
+  Duration:      637.9s
 
 ════════════════════════════════════════════════════════════════════════════════
-  END OF REPORT — 304/384 passed
+  END OF REPORT — 305/387 passed
 ════════════════════════════════════════════════════════════════════════════════

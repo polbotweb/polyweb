@@ -43,6 +43,18 @@ export const sales = pgTable("sales_documents", {
   supplyType: text("supply_type", { enum: SUPPLY_TYPES }).default("services").notNull(),
   ossRegistered: boolean("oss_registered").default(false).notNull(),
   currency: text("currency").default("EUR").notNull(),
+  /**
+   * Multi-devise (core/fx) : taux FIGÉ à l'émission, jamais recalculé — 1 `currency` =
+   * `exchange_rate` `base_currency` (devise de tenue), taux du jour `exchange_rate_date`
+   * (forçage manuel prioritaire sur la BCE). Nuls tant que le document est un brouillon
+   * ou s'il est déjà dans la devise de tenue (`gross_base_minor` = `gross_minor`).
+   */
+  baseCurrency: text("base_currency"),
+  exchangeRate: text("exchange_rate"),
+  exchangeRateDate: date("exchange_rate_date", { mode: "string" }),
+  netBaseMinor: bigint("net_base_minor", { mode: "number" }),
+  taxBaseMinor: bigint("tax_base_minor", { mode: "number" }),
+  grossBaseMinor: bigint("gross_base_minor", { mode: "number" }),
   issueDate: date("issue_date", { mode: "string" }),
   dueDate: date("due_date", { mode: "string" }),
   /** Devis : date limite de validité. */

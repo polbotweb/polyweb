@@ -117,6 +117,23 @@ describe('FEC — écritures', () => {
     expect(failure(buildFecEntries({ period: march, documents: [], payments: [payment({ currency: 'GBP' })] })).reason).toBe('currency');
   });
 
+  it('pièce et règlement en devise : contre-valeur EUR figée en Debit/Credit, origine en Montantdevise/Idevise', () => {
+    const fx = { baseCurrency: 'EUR', exchangeRate: '0.333333333333', netBaseMinor: 5000, taxBaseMinor: 758, grossBaseMinor: 5758 };
+    const doc = invoice({ currency: 'USD', fx });
+    const { entries, summary } = run(buildFecEntries({ period: march, documents: [doc], payments: [payment({ currency: 'USD', fx })] }));
+    const ve = entries[0]!;
+    // Lignes par taux converties puis ajustées : sommes = totaux figés, écriture équilibrée en EUR.
+    expect(ve.lines.map((l) => [l.debit.amountMinor, l.credit.amountMinor, l.foreign?.amountMinor, l.foreign?.currency])).toEqual([
+      [5758, 0, 17275, 'USD'], [0, 1667, 5000, 'USD'], [0, 3333, 10000, 'USD'], [0, 92, 275, 'USD'], [0, 666, 2000, 'USD'],
+    ]);
+    expect(summary.debitMinor).toBe(summary.creditMinor);
+    expect(entries[1]!.lines.map((l) => l.debit.amountMinor + l.credit.amountMinor)).toEqual([5758, 5758]);
+    const file = run(toFec(entries, { siren: SIREN, closingDate: march.lastDay }));
+    const row = file.content.split('\r\n')[1]!.split('|');
+    expect([row[11], row[12], row[16], row[17]]).toEqual(['57,58', '0,00', '172,75', 'USD']);
+    expect(failure(buildFecEntries({ period: march, documents: [invoice({ currency: 'USD', fx: { ...fx, baseCurrency: 'CHF' } })], payments: [] })).reason).toBe('currency');
+  });
+
   it('période vide : aucune écriture, sommaire à zéro', () => {
     expect(run(buildFecEntries({ period: march, documents: [], payments: [] })).summary).toEqual({ entryCount: 0, lineCount: 0, debitMinor: 0, creditMinor: 0 });
   });

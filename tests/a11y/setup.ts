@@ -277,6 +277,26 @@ async function seedFec() {
   }
 }
 
+/** Taux de change : un jour BCE et un forçage manuel plateforme (dates de 2000, hors fenêtre de fraîcheur réelle). */
+export const A11Y_FX_DATE = '2000-01-03';
+
+async function deleteFxSeed() {
+  const { getDrizzle } = await import('../../src/database/drizzle');
+  const { exchangeRates } = await import('../../src/database/schemas/exchange-rates.schema');
+  const { and, eq, isNull } = await import('drizzle-orm');
+  await getDrizzle().delete(exchangeRates).where(and(isNull(exchangeRates.organizationId), eq(exchangeRates.rateDate, A11Y_FX_DATE)));
+}
+
+async function seedFx() {
+  const { Effect } = await import('effect');
+  const { importEcbDays, setManualRate } = await import('../../src/core/fx/service');
+  const { parseEcbXml } = await import('../../src/core/fx/ecb');
+  await deleteFxSeed();
+  const xml = `<Cube><Cube time='${A11Y_FX_DATE}'><Cube currency='USD' rate='1.0090'/><Cube currency='GBP' rate='0.6275'/><Cube currency='JPY' rate='115.75'/></Cube></Cube>`;
+  await Effect.runPromise(Effect.flatMap(parseEcbXml(xml), importEcbDays));
+  await Effect.runPromise(setManualRate({ organizationId: null, from: 'USD', to: 'EUR', date: A11Y_FX_DATE, rate: '0.99' }));
+}
+
 /**
  * Portail client : tenant dédié avec une facture émise, une commande et une réservation rattachées
  * au compte SEED_USER (e-mail vérifié) — la page /[lang]/account est auditée avec du contenu réel.
@@ -421,6 +441,9 @@ async function setup() {
   await seedFec();
   console.log(`[a11y] FEC exports (${A11Y_FEC_PERIOD}) seeded for ${A11Y_FEC_ORGS.join(', ')}`);
 
+  await seedFx();
+  console.log(`[a11y] Exchange rates (${A11Y_FX_DATE}) seeded`);
+
   await seedPortal();
   console.log(`[a11y] Customer portal records seeded for ${SEED_USER.email}`);
 
@@ -442,6 +465,7 @@ async function teardown() {
   await deleteShopSeed();
   await deleteLogisticsSeed();
   await deleteFecSeed();
+  await deleteFxSeed();
   await deletePortalSeed();
   await deleteSubscriptionsSeed();
 

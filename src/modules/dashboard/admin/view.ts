@@ -25,8 +25,9 @@ export const dashboardView = async (astro: AstroGlobal, organizationId: string |
   const result = await runAppResult(Effect.all({
     revenue: dashboardService.revenue(organizationId, filters),
     receivables: dashboardService.receivables(organizationId, filters.currency, today, now),
+    equivalents: dashboardService.equivalents(organizationId, filters),
     stock: canSeeStock ? dashboardService.stock(organizationId, filters.currency, filters.lowStockThreshold, now) : Effect.succeed(null),
-  }, { concurrency: 3 }));
+  }, { concurrency: 4 }));
   return { filters, errors, today, canSeeStock, data: result.ok ? result.value : null };
 };
 

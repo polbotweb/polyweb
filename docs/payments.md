@@ -91,3 +91,5 @@ Aucun appel réel à Stripe : le SDK est remplacé par un client simulé
 (`tests/unit/payments/providers.test.ts`, événements dans `tests/fixtures/payments`) et les
 tests d'intégration utilisent le fournisseur mock signé
 (`tests/integration/payments.test.ts`, `tests/integration/sales-payments.test.ts`).
+
+Voir aussi : [multi-devises](./multi-currency.md) (taux BCE, ajustements manuels, gel du taux, FEC).
