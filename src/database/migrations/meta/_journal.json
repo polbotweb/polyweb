@@ -330,6 +330,13 @@
       "when": 1793539358284,
       "tag": "0046_subscriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1793547493900,
+      "tag": "0047_exchange_rates",
+      "breakpoints": true
     }
   ]
 }
