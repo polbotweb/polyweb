@@ -45,3 +45,5 @@ Lien de paiement signé par facture (fiche facture, droit `payment`) → page pu
 `/{lang}/pay/invoice/{id}` ; le webhook enregistre l'encaissement carte et recalcule le statut.
 Tests : `tests/unit/sales/pay-link.test.ts`, `tests/integration/sales-payments.test.ts`.
 Détails : [payments.md](payments.md).
+
+Voir aussi : [multi-devises](./multi-currency.md) (taux BCE, ajustements manuels, gel du taux, FEC).
