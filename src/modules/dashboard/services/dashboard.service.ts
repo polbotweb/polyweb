@@ -64,6 +64,26 @@ const invoiceRows = (organizationId: string | null, f: DashboardFilters) =>
     creditedGross: int(r.credited_gross), invoices: int(r.invoices), creditNotes: int(r.credit_notes),
   }))));
 
+/** Contre-valeur en devise de tenue (taux figé à l'émission), toutes devises de document, avoirs déduits. */
+export interface BaseEquivalentRow { readonly currency: string; readonly baseCurrency: string | null; readonly net: number; readonly netBase: number; readonly grossBase: number; readonly documents: number }
+const equivalentRows = (organizationId: string | null, f: DashboardFilters) =>
+  execute<{ currency: string; base_currency: string | null; net: string; net_base: string; gross_base: string; documents: number }>("equivalents", sql`
+    SELECT d.currency, d.base_currency,
+      coalesce(sum(CASE WHEN d.kind = 'credit_note' THEN -d.net_minor ELSE d.net_minor END), 0)::bigint AS net,
+      coalesce(sum(CASE WHEN d.kind = 'credit_note' THEN -d.net_base_minor ELSE d.net_base_minor END), 0)::bigint AS net_base,
+      coalesce(sum(CASE WHEN d.kind = 'credit_note' THEN -d.gross_base_minor ELSE d.gross_base_minor END), 0)::bigint AS gross_base,
+      count(*)::int AS documents
+    FROM sales_documents d
+    WHERE ${tenant(sql`d.organization_id`, organizationId)}
+      AND d.issue_date BETWEEN ${f.from}::date AND ${f.to}::date
+      AND ((d.kind = 'invoice' AND d.status IN (${list(COUNTED_INVOICE_STATUSES)})) OR (d.kind = 'credit_note' AND d.status = 'ISSUED'))
+    GROUP BY 1, 2
+    ORDER BY 1, 2 NULLS LAST`,
+  ).pipe(Effect.map((rows) => rows.map((r): BaseEquivalentRow => ({
+    currency: r.currency, baseCurrency: r.base_currency, net: int(r.net), netBase: r.base_currency === null ? 0 : int(r.net_base),
+    grossBase: r.base_currency === null ? 0 : int(r.gross_base), documents: int(r.documents),
+  }))));
+
 /**
  * Commandes boutique payées, à la date de paiement, **hors** commandes rattachées à une facture
  * comptée (pas de double comptage) ; coût d'achat des lignes produit (hors port) au coût moyen pondéré.
@@ -189,6 +209,9 @@ export const dashboardService = {
     ),
   receivables: (organizationId: string | null, currency: CurrencyCode, today: string, now: Date = new Date()) =>
     receivables(organizationId, currency, today, now).pipe(Effect.withSpan("dashboard.receivables")),
+  /** Contre-valeurs en devise de tenue par devise de document (documents sans taux figé : `baseCurrency` nul). */
+  equivalents: (organizationId: string | null, filters: DashboardFilters) =>
+    equivalentRows(organizationId, filters).pipe(Effect.withSpan("dashboard.equivalents")),
   /** Stock valorisé et alertes (disponible ≤ seuil). */
   stock: (organizationId: string | null, currency: CurrencyCode, threshold: number, now: Date = new Date()) =>
     stockRows(organizationId, currency, now).pipe(

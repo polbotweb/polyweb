@@ -160,6 +160,39 @@ const num = "p-2 text-end tabular-nums";
       </ScrollRegion>
     </section>
 
+    <section aria-labelledby="dash-equivalents" class="grid gap-2">
+      <h2 id="dash-equivalents" class="text-xl font-semibold">{t.equivalents}</h2>
+      <p class="text-sm">{t.equivalentsHint}</p>
+      {data.equivalents.length === 0 ? <p data-testid="dashboard-equivalents-empty">{t.noEquivalents}</p> : (
+        <ScrollRegion labelledby="dash-equivalents">
+          <table class="w-full text-start text-base" data-testid="dashboard-equivalents">
+            <caption class="sr-only">{t.equivalents}</caption>
+            <thead>
+              <tr class="border-b-2 border-border">
+                <th scope="col" class="p-2 text-start">{t.documentCurrency}</th>
+                <th scope="col" class={num}>{t.documents}</th>
+                <th scope="col" class={num}>{t.revenueNet}</th>
+                <th scope="col" class={num}>{t.baseNet}</th>
+                <th scope="col" class={num}>{t.baseGross}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.equivalents.map((r) => (
+                <tr class="border-b border-border" data-equivalent={`${r.currency}/${r.baseCurrency ?? "-"}`}>
+                  <th scope="row" class="p-2 text-start font-medium font-mono">{r.currency}</th>
+                  <td class={num}>{integer.format(r.documents)}</td>
+                  <td class={num}>{formatMinor(r.net, r.currency, locale)}</td>
+                  {r.baseCurrency === null
+                    ? <td class={num} colspan="2">{t.notFrozen}</td>
+                    : <><td class={num}>{formatMinor(r.netBase, r.baseCurrency, locale)}</td><td class={num}>{formatMinor(r.grossBase, r.baseCurrency, locale)}</td></>}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </ScrollRegion>
+      )}
+    </section>
+
     {data.stock && (
       <section aria-labelledby="dash-stock" class="grid gap-4" data-testid="dashboard-stock">
         <h2 id="dash-stock" class="text-xl font-semibold">{t.stock}</h2>

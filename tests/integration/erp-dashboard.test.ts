@@ -98,7 +98,8 @@ beforeAll(async () => {
   const c = await invoice(orgId, { status: 'ISSUED', issueDate: '2026-03-01', dueDate: '2099-01-01', netMinor: 1_000, taxMinor: 200, grossMinor: 1_200 });
   await invoice(orgId, { status: 'DRAFT', issueDate: '2026-03-02', netMinor: 99_000, grossMinor: 99_000 });
   await invoice(orgId, { status: 'CANCELLED', issueDate: '2026-03-02', netMinor: 88_000, grossMinor: 88_000 });
-  await invoice(orgId, { status: 'ISSUED', currency: 'USD', issueDate: '2026-03-02', dueDate: '2026-03-05', netMinor: 77_000, grossMinor: 77_000 });
+  await invoice(orgId, { status: 'ISSUED', currency: 'USD', issueDate: '2026-03-02', dueDate: '2026-03-05', netMinor: 77_000, grossMinor: 77_000,
+    baseCurrency: 'EUR', exchangeRate: '0.9', exchangeRateDate: '2026-03-02', netBaseMinor: 69_300, taxBaseMinor: 0, grossBaseMinor: 69_300 });
   const foreign = await invoice(otherOrg, { status: 'ISSUED', issueDate: '2026-01-05', dueDate: '2026-01-10', netMinor: 50_000, grossMinor: 60_000 });
   await db.insert(salesPayments).values([
     { organizationId: orgId, documentId: a, amountMinor: 12_000, currency: 'EUR', paidAt: '2026-01-20' },
@@ -167,6 +168,15 @@ describe('tableau de bord ERP', () => {
     expect(s.totals).toEqual({ items: 3, units: 13, reserved: 3, valuation: 4_900, uncosted: 0, lowCount: 2 });
     expect(s.truncated).toBe(false);
     expect((await run(dashboardService.stock(orgId, 'USD', 5))).totals.valuation).toBe(0);
+  });
+
+  it('donne les contre-valeurs en devise de tenue par devise (taux figé, avoirs déduits, documents non figés signalés)', async () => {
+    const rows = await run(dashboardService.equivalents(orgId, filters));
+    expect(rows).toEqual([
+      { currency: 'EUR', baseCurrency: null, net: 15_000, netBase: 0, grossBase: 0, documents: 4 },
+      { currency: 'USD', baseCurrency: 'EUR', net: 77_000, netBase: 69_300, grossBase: 69_300, documents: 1 },
+    ]);
+    expect(await run(dashboardService.equivalents(orgId, { ...filters, from: '2025-01-01', to: '2025-12-31' }))).toEqual([]);
   });
 
   it('isole les tenants', async () => {

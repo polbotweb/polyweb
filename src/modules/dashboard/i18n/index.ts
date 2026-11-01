@@ -10,6 +10,7 @@ export interface DashboardTranslations {
   grossMargin: string; shopMargin: string; rate: string; noRate: string; quarter: string;
   revenueTable: string; period: string; invoiced: string; credited: string; shop: string; purchases: string; total: string;
   uncostedUnits: string; method: string;
+  equivalents: string; equivalentsHint: string; noEquivalents: string; documentCurrency: string; documents: string; baseNet: string; baseGross: string; notFrozen: string;
   stock: string; stockValuation: string; units: string; reserved: string; items: string; lowTitle: string; noLow: string;
   sku: string; name: string; level: string; available: string; unitCost: string; valuation: string; uncostedItems: string; truncated: string;
 }
@@ -27,6 +28,7 @@ const fr: DashboardTranslations = {
   revenueTable: "Chiffre d’affaires, encaissements et marges par période", period: "Période", invoiced: "Facturé HT", credited: "Avoirs HT", shop: "Boutique HT",
   purchases: "Achats reçus HT", total: "Total",
   uncostedUnits: "{n} unité(s) vendue(s) en boutique sans coût d’achat connu : la marge boutique est surestimée d’autant.",
+  equivalents: "Contre-valeurs en devise de tenue", equivalentsHint: "Factures et avoirs émis sur la période, toutes devises, convertis au taux figé à l’émission (avoirs déduits).", noEquivalents: "Aucun document émis sur la période.", documentCurrency: "Devise du document", documents: "Documents", baseNet: "Contre-valeur HT", baseGross: "Contre-valeur TTC", notFrozen: "Taux non figé (document antérieur)",
   method: "Montants en {currency}, jours UTC. Factures à la date d’émission (avoirs déduits), commandes boutique à la date de paiement ; une commande liée à une facture n’est comptée qu’une fois, via la facture. Marge brute approchée = CA HT − achats reçus HT de la période.",
   stock: "Stock", stockValuation: "Valeur du stock (coût moyen pondéré)", units: "Unités en stock", reserved: "Unités réservées", items: "Articles",
   lowTitle: "Alertes de stock bas (disponible ≤ {n})", noLow: "Aucun article sous le seuil.", sku: "SKU", name: "Article", level: "Niveau", available: "Disponible",
@@ -46,6 +48,7 @@ const en: DashboardTranslations = {
   revenueTable: "Revenue, payments and margins by period", period: "Period", invoiced: "Invoiced excl. VAT", credited: "Credit notes excl. VAT", shop: "Shop excl. VAT",
   purchases: "Purchases received excl. VAT", total: "Total",
   uncostedUnits: "{n} unit(s) sold in the shop without a known purchase cost: the shop margin is overstated accordingly.",
+  equivalents: "Base-currency equivalents", equivalentsHint: "Invoices and credit notes issued in the period, all currencies, converted at the rate frozen on issue (credit notes deducted).", noEquivalents: "No documents issued in the period.", documentCurrency: "Document currency", documents: "Documents", baseNet: "Equivalent excl. VAT", baseGross: "Equivalent incl. VAT", notFrozen: "Rate not frozen (older document)",
   method: "Amounts in {currency}, UTC days. Invoices by issue date (credit notes deducted), shop orders by payment date; an order linked to an invoice is counted once, through the invoice. Approximate gross margin = revenue excl. VAT − purchases received excl. VAT in the period.",
   stock: "Stock", stockValuation: "Stock value (weighted average cost)", units: "Units in stock", reserved: "Reserved units", items: "Items",
   lowTitle: "Low-stock alerts (available ≤ {n})", noLow: "No item below the threshold.", sku: "SKU", name: "Item", level: "Level", available: "Available",
@@ -65,6 +68,7 @@ const es: DashboardTranslations = {
   revenueTable: "Facturación, cobros y márgenes por periodo", period: "Periodo", invoiced: "Facturado sin IVA", credited: "Abonos sin IVA", shop: "Tienda sin IVA",
   purchases: "Compras recibidas sin IVA", total: "Total",
   uncostedUnits: "{n} unidad(es) vendida(s) en la tienda sin coste de compra conocido: el margen de la tienda está sobrestimado.",
+  equivalents: "Contravalores en moneda contable", equivalentsHint: "Facturas y abonos emitidos en el periodo, en todas las monedas, convertidos al tipo fijado en la emisión (abonos deducidos).", noEquivalents: "Ningún documento emitido en el periodo.", documentCurrency: "Moneda del documento", documents: "Documentos", baseNet: "Contravalor sin IVA", baseGross: "Contravalor con IVA", notFrozen: "Tipo no fijado (documento anterior)",
   method: "Importes en {currency}, días UTC. Facturas por fecha de emisión (abonos deducidos), pedidos de la tienda por fecha de pago; un pedido vinculado a una factura se cuenta una sola vez, mediante la factura. Margen bruto aproximado = facturación sin IVA − compras recibidas sin IVA del periodo.",
   stock: "Stock", stockValuation: "Valor del stock (coste medio ponderado)", units: "Unidades en stock", reserved: "Unidades reservadas", items: "Artículos",
   lowTitle: "Alertas de stock bajo (disponible ≤ {n})", noLow: "Ningún artículo por debajo del umbral.", sku: "SKU", name: "Artículo", level: "Nivel", available: "Disponible",
@@ -84,6 +88,7 @@ const ar: DashboardTranslations = {
   revenueTable: "رقم الأعمال والتحصيلات والهوامش حسب الفترة", period: "الفترة", invoiced: "المفوتر دون ضريبة", credited: "الإشعارات الدائنة دون ضريبة", shop: "المتجر دون ضريبة",
   purchases: "المشتريات المستلمة دون ضريبة", total: "المجموع",
   uncostedUnits: "{n} وحدة مباعة في المتجر دون تكلفة شراء معروفة: هامش المتجر مُبالغ فيه بقدرها.",
+  equivalents: "القيم المقابلة بعملة المحاسبة", equivalentsHint: "الفواتير والإشعارات الدائنة الصادرة خلال الفترة بجميع العملات، محوّلة بالسعر المثبّت عند الإصدار (بعد خصم الإشعارات الدائنة).", noEquivalents: "لا توجد مستندات صادرة خلال الفترة.", documentCurrency: "عملة المستند", documents: "المستندات", baseNet: "القيمة المقابلة دون ضريبة", baseGross: "القيمة المقابلة شاملة الضريبة", notFrozen: "سعر غير مثبّت (مستند سابق)",
   method: "المبالغ بعملة {currency}، الأيام بتوقيت UTC. الفواتير حسب تاريخ الإصدار (بعد خصم الإشعارات الدائنة)، وطلبات المتجر حسب تاريخ الدفع؛ يُحتسب الطلب المرتبط بفاتورة مرة واحدة عبر الفاتورة. الهامش الإجمالي التقريبي = رقم الأعمال دون ضريبة − المشتريات المستلمة دون ضريبة خلال الفترة.",
   stock: "المخزون", stockValuation: "قيمة المخزون (متوسط التكلفة المرجح)", units: "الوحدات في المخزون", reserved: "الوحدات المحجوزة", items: "الأصناف",
   lowTitle: "تنبيهات المخزون المنخفض (المتاح ≤ {n})", noLow: "لا يوجد صنف دون الحد.", sku: "SKU", name: "الصنف", level: "المستوى", available: "المتاح",
