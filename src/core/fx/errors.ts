@@ -15,3 +15,13 @@ export class InvalidRateError extends Data.TaggedError('InvalidRateError')<{ rea
 export class RateNotFoundError extends Data.TaggedError('RateNotFoundError')<{ readonly from: string; readonly to: string; readonly date: string }> {
   override get message() { return `Aucun taux ${this.from}→${this.to} au ${this.date}`; }
 }
+
+/** Devise de tenue verrouillée (écritures déjà émises). */
+export class BaseCurrencyLockedError extends Data.TaggedError('BaseCurrencyLockedError')<{ readonly baseCurrency: string }> {
+  override get message() { return `Devise de tenue verrouillée (${this.baseCurrency})`; }
+}
+
+/** Récupération du flux BCE impossible (réseau, statut HTTP). */
+export class EcbFetchError extends Data.TaggedError('EcbFetchError')<{ readonly status?: number; readonly cause?: unknown }> {
+  override get message() { return `Flux BCE indisponible${this.status ? ` (HTTP ${this.status})` : ''}`; }
+}
