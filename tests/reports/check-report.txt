@@ -1,12 +1,12 @@
 
-> polyweb@0.0.1 check /workspace/b3-subs
+> polyweb@0.0.1 check /workspace/b3-fx
 > astro check
 
-13:41:12 [@astrojs/node] Enabling sessions with filesystem storage
-13:41:12 [content] Syncing content
-13:41:12 [content] Synced content
-13:41:12 [types] Generated 124ms
-13:41:12 [check] Getting diagnostics for Astro files in /workspace/b3-subs...
+16:01:16 [@astrojs/node] Enabling sessions with filesystem storage
+16:01:17 [content] Syncing content
+16:01:17 [content] Synced content
+16:01:17 [types] Generated 152ms
+16:01:17 [check] Getting diagnostics for Astro files in /workspace/b3-fx...
 [96msrc/actions/admin/pages.ts[0m:[93m4[0m:[93m38[0m - [93mwarning[0m[90m ts(6133): [0m'isNotNull' is declared but its value is never read.
 
 [7m4[0m import { eq, and, asc, desc, isNull, isNotNull, inArray, max } from "drizzle-orm";
@@ -230,6 +230,11 @@
 [7m27[0m   coverImageId: z.string().uuid().optional().nullable(),
 [7m  [0m [93m                           ~~~~[0m
 
+[96msrc/pages/[lang]/admin/sales/fx/index.astro[0m:[93m3[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'Effect' is declared but its value is never read.
+
+[7m3[0m import { Effect } from "effect";
+[7m [0m [93m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
 [96msrc/pages/[lang]/admin/services/new.astro[0m:[93m9[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'Locale' is declared but its value is never read.
 
 [7m9[0m import type { Locale } from "@i18n/config";
@@ -258,8 +263,8 @@
 [7m23[0m import { bookings, bookingsResources } from '@/modules/bookings/schema';
 [7m  [0m [93m                   ~~~~~~~~~~~~~~~~~[0m
 
-Result (1723 files): 
+Result (1740 files): 
 - 0 errors
 - 0 warnings
-- 57 hints
+- 58 hints
 
