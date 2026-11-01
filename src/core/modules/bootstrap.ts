@@ -10,6 +10,8 @@ import { salesModule } from "@/modules/sales/module";
 import { crmModule } from "@/modules/crm/module";
 import { logisticsModule } from "@/modules/logistics/module";
 import { purchasingModule } from "@/modules/purchasing/module";
+import { subscriptionsModule } from "@/modules/subscriptions/module";
+import { registerSubscriptions } from "@/modules/subscriptions/register";
 import { bookingsModule } from "@/modules/bookings/module";
 import { coursesModule } from "@/modules/courses/module";
 import { formationsModule } from "@/modules/formations/module";
@@ -41,6 +43,7 @@ export function bootstrapModules(): void {
   registerModule(crmModule);
   registerModule(logisticsModule);
   registerModule(purchasingModule);
+  registerModule(subscriptionsModule);
   registerModule(bookingsModule);
   registerModule(coursesModule);
   registerModule(formationsModule);
@@ -61,5 +64,7 @@ export function bootstrapModules(): void {
   registerBookingRefunds();
   registerSalesRefunds();
   registerShopRefunds();
+  // Abonnements : événements fournisseur `kind = subscription` (core/payments subscription-sink).
+  registerSubscriptions();
   bootstrapped = true;
 }

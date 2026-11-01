@@ -1,0 +1,26 @@
+---
+/** Ajout d'un tarif récurrent à une formule (montant TTC). Soumission : `modules/subscriptions/client/forms.ts`. */
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import type { Locale } from "@i18n/config";
+import { BILLING_INTERVALS } from "@/modules/subscriptions/domain/lifecycle";
+import { getSubscriptionsTranslations } from "@/modules/subscriptions/i18n";
+
+interface Props { locale: Locale; planId: string }
+const { locale, planId } = Astro.props as Props;
+const t = getSubscriptionsTranslations(locale);
+const labels: Record<(typeof BILLING_INTERVALS)[number], string> = { day: t.every(1, "day"), week: t.every(1, "week"), month: t.every(1, "month"), year: t.every(1, "year") };
+---
+<form class="flex flex-col gap-4" data-subscriptions-form="price" data-id={planId} data-done={t.admin.created} novalidate data-testid="sub-price-new">
+  <div class="grid gap-4 sm:grid-cols-5">
+    <div class="grid gap-2"><Label for="sub-price-amount">{t.fields.amount}</Label><Input id="sub-price-amount" name="amount" required inputmode="decimal" pattern="\d{1,9}([.,]\d{1,3})?" /></div>
+    <div class="grid gap-2"><Label for="sub-price-currency">{t.fields.currency}</Label><Input id="sub-price-currency" name="currency" required maxlength={3} pattern="[A-Za-z]{3}" value="EUR" /></div>
+    <div class="grid gap-2"><Label for="sub-price-interval">{t.fields.interval}</Label><NativeSelect id="sub-price-interval" name="interval">{BILLING_INTERVALS.map((i) => <NativeSelectOption value={i} selected={i === "month"}>{labels[i]}</NativeSelectOption>)}</NativeSelect></div>
+    <div class="grid gap-2"><Label for="sub-price-count">{t.fields.intervalCount}</Label><Input id="sub-price-count" name="intervalCount" type="number" min={1} max={12} value="1" /></div>
+    <div class="grid gap-2"><Label for="sub-price-trial">{t.fields.trialDays}</Label><Input id="sub-price-trial" name="trialDays" type="number" min={0} max={730} value="0" /></div>
+  </div>
+  <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+  <div><Button type="submit">{t.admin.newPrice}</Button></div>
+</form>

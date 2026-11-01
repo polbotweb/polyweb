@@ -82,6 +82,9 @@ Les événements `refund.created|updated|failed` (kind `refund`) sont délégué
 Le cron `/api/cron/payments-expire` rejoue aussi les remboursements incertains
 (`resumeStaleRefunds`). Détails : [refunds.md](refunds.md).
 
+Les événements d'abonnement (`kind = 'subscription'`) sont transmis au module abonnements
+(`setSubscriptionEventSink`) : voir [subscriptions.md](subscriptions.md).
+
 ## Tests
 
 Aucun appel réel à Stripe : le SDK est remplacé par un client simulé

@@ -1,0 +1,39 @@
+---
+/** Portail client : abonnements du compte connecté, avec résiliation / reprise (formulaires POST sans JS). */
+import type { Locale } from "@i18n/config";
+import { Button } from "@atoms/button";
+import { getSubscriptionsTranslations } from "@/modules/subscriptions/i18n";
+import { canCancel, canResume } from "@/modules/subscriptions/domain/lifecycle";
+import { dateLabel, priceLabel } from "@/modules/subscriptions/format";
+import type { PriceRow, SubscriptionRow } from "@/modules/subscriptions/services/subscription.service";
+
+interface Props { locale: Locale; items: { subscription: SubscriptionRow; planName: string; price: PriceRow }[] }
+const { locale, items } = Astro.props;
+const t = getSubscriptionsTranslations(locale);
+const th = "px-3 py-2 text-start font-semibold";
+const td = "px-3 py-2 align-top";
+---
+<section id="subscriptions" aria-labelledby="portal-subscriptions" class="grid gap-3" data-testid="portal-subscriptions">
+  <h2 id="portal-subscriptions" class="font-heading text-2xl font-semibold text-foreground">{t.portal.heading}</h2>
+  {items.length === 0 ? <p class="text-foreground">{t.portal.empty} <a class="underline underline-offset-4 hover:no-underline" href={`/${locale}/subscriptions`}>{t.portal.browse}</a></p> : (
+    <div class="break-words">
+      <table class="w-full border-collapse text-foreground">
+        <thead><tr class="border-b-2 border-border"><th scope="col" class={th}>{t.fields.plan}</th><th scope="col" class={th}>{t.fields.price}</th><th scope="col" class={th}>{t.fields.status}</th><th scope="col" class={th}>{t.fields.periodEnd}</th><th scope="col" class={th}><span class="sr-only">{t.fields.status}</span></th></tr></thead>
+        <tbody>
+          {items.map(({ subscription: s, planName, price }) => (
+            <tr class="border-b border-border" data-testid="portal-subscription-row">
+              <th scope="row" class={th}>{planName}</th>
+              <td class={td}>{priceLabel(price, locale)}</td>
+              <td class={td}>{t.statuses[s.status]}</td>
+              <td class={td}>{s.currentPeriodEnd ? `${s.cancelAtPeriodEnd ? t.portal.endsOn : t.portal.renewsOn} ${dateLabel(s.currentPeriodEnd, locale)}` : "—"}</td>
+              <td class={td}>
+                {canCancel(s) && <form method="post" action={`/${locale}/account/subscriptions/${s.id}/cancel`}><Button type="submit" variant="outline">{t.portal.cancel}</Button></form>}
+                {canResume(s) && <form method="post" action={`/${locale}/account/subscriptions/${s.id}/resume`}><Button type="submit" variant="outline">{t.portal.resume}</Button></form>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</section>

@@ -1,0 +1,29 @@
+---
+/** Formulaire de formule d'abonnement (création / édition). Soumission : `modules/subscriptions/client/forms.ts`. */
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import type { Locale } from "@i18n/config";
+import { SUPPLY_TYPES, TAX_CATEGORIES } from "@/modules/tax/domain/rules";
+import { getSubscriptionsTranslations } from "@/modules/subscriptions/i18n";
+import type { PlanRow } from "@/modules/subscriptions/services/subscription.service";
+
+interface Props { locale: Locale; organizationId?: string | null; viewBaseUrl?: string; plan?: PlanRow }
+const { locale, organizationId = null, viewBaseUrl = "", plan: p } = Astro.props as Props;
+const t = getSubscriptionsTranslations(locale);
+const id = p ? "sub-plan-edit" : "sub-plan-new";
+---
+<form class="flex max-w-3xl flex-col gap-4" data-subscriptions-form="plan" data-id={p?.id ?? ""} data-organization-id={organizationId ?? ""} data-view-base-url={viewBaseUrl} data-done={p ? t.admin.saved : t.admin.created} novalidate data-testid={id}>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div class="grid gap-2"><Label for={`${id}-name`}>{t.fields.name}</Label><Input id={`${id}-name`} name="name" required maxlength={200} value={p?.name ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${id}-slug`}>{t.fields.slug}</Label><Input id={`${id}-slug`} name="slug" required maxlength={80} pattern="[a-z0-9]+(-[a-z0-9]+)*" value={p?.slug ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${id}-tax`}>{t.fields.taxCategory}</Label><NativeSelect id={`${id}-tax`} name="taxCategory">{TAX_CATEGORIES.map((c) => <NativeSelectOption value={c} selected={(p?.taxCategory ?? "standard") === c}>{t.taxCategories[c]}</NativeSelectOption>)}</NativeSelect></div>
+    <div class="grid gap-2"><Label for={`${id}-supply`}>{t.fields.supplyType}</Label><NativeSelect id={`${id}-supply`} name="supplyType">{SUPPLY_TYPES.map((c) => <NativeSelectOption value={c} selected={(p?.supplyType ?? "services") === c}>{t.supplyTypes[c]}</NativeSelectOption>)}</NativeSelect></div>
+    <div class="grid gap-2"><Label for={`${id}-order`}>{t.fields.sortOrder}</Label><Input id={`${id}-order`} name="sortOrder" type="number" min={0} max={10000} value={String(p?.sortOrder ?? 0)} /></div>
+    <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" class="size-6" name="active" checked={p ? p.active : true} />{t.fields.active}</label>
+    <div class="grid gap-2 sm:col-span-2"><Label for={`${id}-desc`}>{t.fields.description}</Label><textarea id={`${id}-desc`} name="description" rows="3" maxlength="2000" class="rounded-md border bg-transparent px-3 py-2 text-sm">{p?.description ?? ""}</textarea></div>
+  </div>
+  <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+  <div><Button type="submit">{p ? t.admin.save : t.admin.create}</Button></div>
+</form>

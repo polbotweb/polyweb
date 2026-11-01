@@ -1,16 +1,8 @@
 import type { PolywebModuleCapabilityProviders } from "@/core/modules/module-contract";
 
-/**
- * Une entrée par capacité ACTIVÉE dans `module.ts`.
- *
- * La valeur nomme la table ou l'action qui porte concrètement la capacité.
- * `assertModuleCapabilityProviders` refuse un module qui active une capacité
- * sans fournisseur : c'est le garde-fou qui empêche une déclaration fantaisiste.
- */
+/** Une entrée par capacité ACTIVÉE dans `module.ts` (table ou service qui la porte). */
 export const subscriptionsCapabilityProviders = {
-  content: "subscriptions",
-  localization: "subscriptionsTranslations",
-  publication: "subscriptionsWorkflow",
-  revisions: "subscription_revisions",
-  locks: "subscription_locks",
+  content: "subscriptions + subscription_plans / subscription_prices",
+  taxonomy: "subscription_categories (core/taxonomy, subscriptionsCategoryTaxonomy — catégories des formules)",
+  audit: "logAuditEventEffect (SUBSCRIPTION_* : formules, tarifs, résiliation, reprise, changement de tarif)",
 } as unknown as PolywebModuleCapabilityProviders;

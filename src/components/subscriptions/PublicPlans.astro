@@ -1,0 +1,45 @@
+---
+/** Catalogue public des formules d'abonnement ; souscription par formulaire POST (session requise). */
+import type { Locale } from "@i18n/config";
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { getSubscriptionsTranslations } from "@/modules/subscriptions/i18n";
+import { priceLabel } from "@/modules/subscriptions/format";
+import type { PlanRow, PriceRow } from "@/modules/subscriptions/services/subscription.service";
+
+interface Props { locale: Locale; catalog: { plan: PlanRow; prices: PriceRow[] }[]; signedIn: boolean; canSubscribe: boolean; signInUrl: string; status: string | null }
+const { locale, catalog, signedIn, canSubscribe, signInUrl, status } = Astro.props;
+const t = getSubscriptionsTranslations(locale);
+const notice = status === "success" ? t.public.success : status === "cancelled" ? t.public.cancelled : status === "error" ? t.public.error : null;
+---
+<section class="mx-auto grid max-w-3xl gap-6 px-4 py-12" aria-labelledby="subscriptions-title">
+  <h1 id="subscriptions-title" class="font-heading text-3xl font-semibold text-foreground">{t.public.heading}</h1>
+  <p class="text-lg text-foreground">{t.public.intro}</p>
+  {notice && <output class="block rounded-md border-2 border-border p-4 text-foreground" data-testid="subscriptions-notice">{notice}</output>}
+  {catalog.length === 0 ? <p class="text-foreground">{t.public.empty}</p> : (
+    <ul class="grid gap-4" data-testid="subscription-plans">
+      {catalog.map(({ plan, prices }) => (
+        <li class="grid gap-3 rounded-lg border-2 border-border p-5">
+          <h2 class="text-xl font-semibold text-foreground">{plan.name}</h2>
+          {plan.description && <p class="text-foreground">{plan.description}</p>}
+          <ul class="grid gap-3">
+            {prices.map((price) => (
+              <li class="flex flex-wrap items-end gap-4">
+                <p class="text-lg font-semibold text-foreground">{priceLabel(price, locale)}{price.trialDays > 0 && <span class="font-normal"> · {price.trialDays} {t.public.trial}</span>}</p>
+                {canSubscribe && signedIn && (
+                  <form method="post" action={`/${locale}/subscriptions/checkout`} class="flex flex-wrap items-end gap-3">
+                    <input type="hidden" name="priceId" value={price.id} />
+                    <div class="grid gap-1"><Label for={`country-${price.id}`}>{t.public.country}</Label><Input id={`country-${price.id}`} name="country" required maxlength={2} pattern="[A-Za-z]{2}" autocomplete="country" class="w-24" /></div>
+                    <Button type="submit">{t.public.subscribe}<span class="sr-only"> — {plan.name}, {priceLabel(price, locale)}</span></Button>
+                  </form>
+                )}
+              </li>
+            ))}
+          </ul>
+        </li>
+      ))}
+    </ul>
+  )}
+  {canSubscribe && !signedIn && catalog.length > 0 && <p><a class="text-foreground underline underline-offset-4 hover:no-underline" href={signInUrl}>{t.public.loginToSubscribe}</a></p>}
+</section>

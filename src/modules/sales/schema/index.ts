@@ -56,6 +56,8 @@ export const sales = pgTable("sales_documents", {
   /** Mention légale de TVA (autoliquidation, exonération…), clé i18n. */
   taxMention: text("tax_mention"),
   reminderLevel: integer("reminder_level").default(0).notNull(),
+  /** Facture du fournisseur de paiement (ex. Stripe `in_…`) dont ce document est la contrepartie (abonnements). */
+  providerInvoiceId: text("provider_invoice_id"),
   notes: text("notes"),
   createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -67,6 +69,7 @@ export const sales = pgTable("sales_documents", {
   index("sales_documents_org_kind_status_idx").on(table.organizationId, table.kind, table.status),
   index("sales_documents_source_idx").on(table.sourceDocumentId),
   index("sales_documents_customer_user_idx").on(table.customerUserId),
+  uniqueIndex("sales_documents_provider_invoice_uidx").on(table.providerInvoiceId).where(sql`${table.providerInvoiceId} is not null`),
 ]);
 
 export const salesDocumentLines = pgTable("sales_document_lines", {

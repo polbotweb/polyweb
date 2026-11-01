@@ -4,6 +4,7 @@ import { getAuthUrl, getAdminUrl } from '@i18n/utils';
 import type { AdminSubpage } from '@i18n/utils';
 import { getModuleLabel } from '@/core/localization/module-labels';
 import { PLATFORM_SECTIONS, getPlatformLabel, getPlatformAdminUrl, type PlatformSection } from '@/core/localization/platform-labels';
+import RepeatIcon from '@tabler/icons/outline/repeat.svg';
 import PuzzleIcon from '@tabler/icons/outline/puzzle.svg';
 import ArrowBackUpIcon from '@tabler/icons/outline/arrow-back-up.svg';
 import ArrowLeftIcon from '@tabler/icons/outline/arrow-left.svg';
@@ -55,6 +56,7 @@ const cmsItems: { id: AdminSubpage; title: string; url: string; icon: typeof Set
   { id: 'crm', title: getModuleLabel('crm', locale), url: getAdminUrl(locale, 'crm'), icon: AddressBookIcon },
   { id: 'logistics', title: getModuleLabel('logistics', locale), url: getAdminUrl(locale, 'logistics'), icon: TruckDeliveryIcon },
   { id: 'purchasing', title: getModuleLabel('purchasing', locale), url: getAdminUrl(locale, 'purchasing'), icon: ShoppingCartIcon },
+  { id: 'subscriptions', title: getModuleLabel('subscriptions', locale), url: getAdminUrl(locale, 'subscriptions'), icon: RepeatIcon },
   { id: 'bookings', title: getModuleLabel('bookings', locale), url: getAdminUrl(locale, 'bookings'), icon: CalendarEventIcon },
   { id: 'site', title: t.admin.tabs.site, url: getAdminUrl(locale, 'site'), icon: SettingsIcon },
   { id: 'navigation', title: t.admin.tabs.navigation, url: getAdminUrl(locale, 'navigation'), icon: MenuIcon },

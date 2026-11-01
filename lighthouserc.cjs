@@ -32,6 +32,8 @@ let shopOrder = null;
 let shopSlugs = null;
 // Commande livrée avec une demande de retour (RMA) : suivi public, fiche commande et retours admin.
 let shopReturn = null;
+// Abonnements : formule plateforme et abonnement actif du compte seedé.
+let subscriptionsSeed = null;
 // Logistique : inventaires seedés (un en cours, un validé).
 let logistics = null;
 if (fs.existsSync(COOKIES_PATH)) {
@@ -42,6 +44,7 @@ if (fs.existsSync(COOKIES_PATH)) {
   shopOrder = data.shopOrder ?? null;
   shopSlugs = data.shopSlugs ?? null;
   shopReturn = data.shopReturn ?? null;
+  subscriptionsSeed = data.subscriptionsSeed ?? null;
   logistics = data.logistics ?? null;
 }
 
@@ -78,6 +81,8 @@ for (const lang of locales) {
   // A11YROOM is seeded by tests/a11y/setup.ts (open 24/7, so slots always render).
   publicUrls.push(`${BASE}/${lang}/bookings`);
   publicUrls.push(`${BASE}/${lang}/bookings/A11YROOM`);
+  // Catalogue public des abonnements (formule a11y-plan seedée).
+  publicUrls.push(`${BASE}/${lang}/subscriptions`);
   for (const pageId of ['sign-in', 'sign-up', 'forgot-password']) {
     publicUrls.push(`${BASE}/${lang}/auth/${authRoutes[pageId][lang]}`);
   }
@@ -125,6 +130,11 @@ for (const lang of locales) {
   if (logistics) adminUrls.push(`${BASE}/${lang}/admin/logistics/inventories/${encodeURIComponent(logistics.openCountId)}`, `${BASE}/${lang}/admin/logistics/inventories/${encodeURIComponent(logistics.validatedCountId)}`);
   // Exports FEC (liste avec un export prêt et un export en échec seedés, formulaire de génération).
   adminUrls.push(`${BASE}/${lang}/admin/sales/fec`);
+  adminUrls.push(`${BASE}/${lang}/admin/subscriptions`);
+  if (subscriptionsSeed) {
+    adminUrls.push(`${BASE}/${lang}/admin/subscriptions/plans/${encodeURIComponent(subscriptionsSeed.planId)}`);
+    adminUrls.push(`${BASE}/${lang}/admin/subscriptions/${encodeURIComponent(subscriptionsSeed.subscriptionId)}`);
+  }
 }
 
 module.exports = {

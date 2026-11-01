@@ -1,0 +1,65 @@
+---
+/** Back-office plateforme : abonnements — formules (création), abonnements clients. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { ScrollRegion } from "@molecules/ScrollRegion";
+import { requirePermission } from "@lib/auth-guards";
+import PlanForm from "@/components/subscriptions/admin/PlanForm.astro";
+import { getSubscriptionsTranslations } from "@/modules/subscriptions/i18n";
+import { loadPlans, loadSubscriptions } from "@/modules/subscriptions/loaders";
+import { hasSubscriptionsPermission } from "@/modules/subscriptions/permissions";
+import { dateLabel } from "@/modules/subscriptions/format";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { subscriptions: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getSubscriptionsTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/subscriptions`;
+const [plans, subscriptions, canCreate] = await Promise.all([loadPlans(null), loadSubscriptions(null), hasSubscriptionsPermission(Astro, ["create"])]);
+---
+<BaseLayout title={t.admin.title} description={t.meta.description}>
+  <AuthLayout title={t.admin.title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="subscriptions" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+      <h1 class="text-2xl font-semibold">{t.admin.title}</h1>
+      <p class="text-sm text-muted-foreground">{t.admin.invoicesNote}</p>
+      <section class="flex flex-col gap-4" aria-labelledby="sub-plans-heading">
+        <h2 id="sub-plans-heading" class="text-lg font-semibold">{t.admin.plans}</h2>
+        {plans.length === 0 ? <p class="text-sm text-muted-foreground">{t.admin.noPlans}</p> : (
+          <ScrollRegion label={t.admin.plansLabel}>
+            <table class="w-full text-sm" data-testid="subscriptions-plan-list">
+              <thead><tr class="border-b"><th scope="col" class="py-2 text-start">{t.fields.name}</th><th scope="col" class="py-2 text-start">{t.fields.slug}</th><th scope="col" class="py-2 text-start">{t.fields.taxCategory}</th><th scope="col" class="py-2 text-start">{t.fields.active}</th></tr></thead>
+              <tbody>{plans.map((p) => <tr class="border-b"><td class="py-2"><a class="underline" href={`${baseAdminUrl}/plans/${p.id}`}>{p.name}</a></td><td class="py-2 font-mono">{p.slug}</td><td class="py-2">{t.taxCategories[p.taxCategory]}</td><td class="py-2">{p.active ? "✓" : "—"}</td></tr>)}</tbody>
+            </table>
+          </ScrollRegion>
+        )}
+        {canCreate && (
+          <details class="rounded-md border p-4">
+            <summary class="min-h-11 cursor-pointer content-center font-medium">{t.admin.newPlan}</summary>
+            <div class="pt-4"><PlanForm locale={locale} viewBaseUrl={`${baseAdminUrl}/plans`} /></div>
+          </details>
+        )}
+      </section>
+      <section class="flex flex-col gap-4" aria-labelledby="sub-list-heading">
+        <h2 id="sub-list-heading" class="text-lg font-semibold">{t.admin.subscriptions}</h2>
+        {subscriptions.length === 0 ? <p class="text-sm text-muted-foreground">{t.admin.noSubscriptions}</p> : (
+          <ScrollRegion label={t.admin.subscriptionsLabel}>
+            <table class="w-full text-sm" data-testid="subscriptions-list">
+              <thead><tr class="border-b"><th scope="col" class="py-2 text-start">{t.fields.customer}</th><th scope="col" class="py-2 text-start">{t.fields.plan}</th><th scope="col" class="py-2 text-start">{t.fields.status}</th><th scope="col" class="py-2 text-start">{t.fields.periodEnd}</th><th scope="col" class="py-2 text-start">{t.fields.created}</th></tr></thead>
+              <tbody>{subscriptions.map(({ subscription: s, planName }) => <tr class="border-b"><td class="py-2"><a class="underline" href={`${baseAdminUrl}/${s.id}`}>{s.customerName}</a> <span class="text-muted-foreground">{s.customerEmail}</span></td><td class="py-2">{planName}</td><td class="py-2">{t.statuses[s.status]}{s.cancelAtPeriodEnd ? ` · ${t.fields.cancelAtPeriodEnd}` : ""}</td><td class="py-2">{dateLabel(s.currentPeriodEnd, locale)}</td><td class="py-2">{dateLabel(s.createdAt, locale)}</td></tr>)}</tbody>
+            </table>
+          </ScrollRegion>
+        )}
+      </section>
+    </main>
+  </AuthLayout>
+</BaseLayout>
+
+<script>
+  import { initSubscriptions } from "@/modules/subscriptions/client/init";
+
+  initSubscriptions();
+  document.addEventListener("astro:after-swap", initSubscriptions);
+</script>

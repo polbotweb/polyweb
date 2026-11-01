@@ -232,6 +232,35 @@ test('axe: /fr/admin/bookings (réservations, ressources, disponibilités) sans 
   }
 });
 
+test('axe: abonnements (admin, catalogue public, portail) sans violation grave, titres et cibles', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Parcours admin : Chromium');
+  const { getDrizzle, schema } = await import('../../src/database/drizzle');
+  const { subscriptionPlans, subscriptionPrices, subscriptions } = await import('../../src/modules/subscriptions/schema');
+  const { eq } = await import('drizzle-orm');
+  const { SEED_EMAIL } = await import('./global-setup');
+  const db = getDrizzle();
+  const suffix = Date.now().toString(36).slice(-6);
+  const [me] = await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, SEED_EMAIL)).limit(1);
+  const [plan] = await db.insert(subscriptionPlans).values({ slug: `a11y-sub-${suffix}`, name: `A11y formule ${suffix}`, description: 'Formule A11y' }).returning({ id: subscriptionPlans.id });
+  const [price] = await db.insert(subscriptionPrices).values({ planId: plan!.id, amountMinor: 1500, interval: 'month', trialDays: 7 }).returning({ id: subscriptionPrices.id });
+  const [sub] = await db.insert(subscriptions).values({ planId: plan!.id, priceId: price!.id, customerUserId: me!.id, customerEmail: SEED_EMAIL, customerName: 'A11y', customerCountry: 'FR', status: 'active', provider: 'stripe', providerSubscriptionId: `sub_a11y_${suffix}`, currentPeriodEnd: new Date(Date.now() + 86_400_000 * 10) }).returning({ id: subscriptions.id });
+  try {
+    await signInAsAdmin(page);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const paths = ['/fr/admin/subscriptions', `/fr/admin/subscriptions/plans/${plan!.id}`, `/fr/admin/subscriptions/${sub!.id}`, '/fr/subscriptions', '/fr/account', `/ar/admin/subscriptions/${sub!.id}`, '/ar/subscriptions'];
+    for (const path of paths) {
+      await page.goto(path, { waitUntil: 'networkidle' });
+      const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+      const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${path} ${v.id}: ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(' | ')}`);
+      const structure = await structureViolations(page);
+      expect([...serious, ...structure], [...serious, ...structure].join('\n')).toEqual([]);
+    }
+  } finally {
+    await db.delete(subscriptions).where(eq(subscriptions.planId, plan!.id));
+    await db.delete(subscriptionPlans).where(eq(subscriptionPlans.id, plan!.id));
+  }
+});
+
 /**
  * WCAG 2.5.5 (AAA, approuvé) : les commandes icônes de l'admin navigation font
  * au moins 44 × 44 px (axe ne vérifie que le seuil AA de 24 px).

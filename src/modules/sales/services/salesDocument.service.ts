@@ -298,6 +298,69 @@ export const issueRefundCreditNote = (tx: DbTransaction, invoiceId: string, inpu
     return { creditNote, issued: true, duplicate: false };
   });
 
+// ─── Factures de fournisseur de paiement (abonnements) ──────────────
+
+export interface ProviderInvoiceInput extends SalesPartyInput {
+  readonly organizationId: string | null;
+  /** Facture du fournisseur (ex. Stripe `in_…`) : clé d'unicité du document Sales. */
+  readonly providerInvoiceId: string;
+  readonly description: string;
+  readonly taxCategory: TaxCategory;
+  /** TTC facturé par le fournisseur (unités mineures). */
+  readonly grossMinor: number;
+}
+
+/**
+ * Facture Sales contrepartie d'une facture fournisseur, dans la transaction appelante (idempotent :
+ * une seule facture par `providerInvoiceId`). Une ligne unique dont le HT est trouvé par dichotomie
+ * (TTC croissant en HT) pour que le TTC égale exactement le montant fournisseur ; montant
+ * inatteignable (arrondi de TVA) → brouillon laissé à l'administration (`issued: false`), comme les avoirs.
+ */
+export const issueProviderInvoice = (tx: DbTransaction, input: ProviderInvoiceInput, today = salesToday()) =>
+  Effect.gen(function* () {
+    const [existing] = yield* dbTry("sales.providerInvoice.find", () => tx.select().from(sales).where(eq(sales.providerInvoiceId, input.providerInvoiceId)).limit(1).for("update"));
+    if (existing) return { invoice: existing, created: false, issued: existing.status !== "DRAFT" };
+    if (!Number.isSafeInteger(input.grossMinor) || input.grossMinor <= 0) return yield* fail("BAD_REQUEST", "Montant de facture fournisseur invalide.");
+    const party = { ...input, kind: "invoice" as const };
+    const rates = yield* tenantRates(input.organizationId);
+    const line = (unitPriceMinor: number): SalesLineInput => ({ description: input.description, quantity: "1", unitPriceMinor, discountPercent: "0", taxCategory: input.taxCategory });
+    const grossOf = (net: number) => Effect.map(price(party, [line(net)], today, rates), (priced) => priced.totals.gross.amountMinor);
+    let low = 0;
+    let high = input.grossMinor;
+    while (low < high) {
+      const mid = Math.ceil((low + high) / 2);
+      if ((yield* grossOf(mid)) <= input.grossMinor) low = mid;
+      else high = mid - 1;
+    }
+    const exact = low > 0 && (yield* grossOf(low)) === input.grossMinor;
+    const draft = yield* insertDraft(tx, { ...input, kind: "invoice", lines: [line(Math.max(low, 1))] }, null, today);
+    yield* dbTry("sales.providerInvoice.link", () => tx.update(sales).set({ providerInvoiceId: input.providerInvoiceId }).where(eq(sales.id, draft.id)));
+    if (!exact) return { invoice: { ...draft, providerInvoiceId: input.providerInvoiceId }, created: true, issued: false };
+    const invoice = yield* issue(tx, { ...draft, providerInvoiceId: input.providerInvoiceId }, NUMBERED_AT.invoice, today);
+    return { invoice, created: true, issued: true };
+  });
+
+/**
+ * Encaissement carte d'une facture fournisseur dans la transaction appelante (dédoublonné par
+ * référence). `false` si non imputable (brouillon, devise différente, trop-perçu) : journalisé par l'appelant.
+ */
+export const recordProviderInvoicePayment = (tx: DbTransaction, invoiceId: string, input: { readonly amountMinor: number; readonly currency: string; readonly reference: string; readonly paidAt: string }) =>
+  Effect.gen(function* () {
+    const invoice = yield* required(tx, invoiceId, true);
+    const [already] = yield* dbTry("sales.providerPayment.dedupe", () =>
+      tx.select({ id: salesPayments.id }).from(salesPayments).where(and(eq(salesPayments.documentId, invoice.id), eq(salesPayments.method, "card"), eq(salesPayments.reference, input.reference))).limit(1));
+    if (already) return true;
+    if (invoice.kind !== "invoice" || invoice.currency.toUpperCase() !== input.currency.toUpperCase()) return false;
+    const balance = { grossMinor: invoice.grossMinor, paidMinor: invoice.paidMinor, creditedMinor: invoice.creditedMinor };
+    const valid = yield* Effect.result(validatePayment(invoice.status, balance, input.amountMinor));
+    if (valid._tag === "Failure") return false;
+    yield* dbTry("sales.providerPayment.insert", () =>
+      tx.insert(salesPayments).values({ documentId: invoice.id, organizationId: invoice.organizationId, amountMinor: input.amountMinor, currency: invoice.currency, method: "card", paidAt: input.paidAt, reference: input.reference, createdBy: null }));
+    const paidMinor = invoice.paidMinor + input.amountMinor;
+    yield* dbTry("sales.providerPayment.apply", () => tx.update(sales).set({ paidMinor, status: invoiceStatusFromBalance({ ...balance, paidMinor }) }).where(eq(sales.id, invoice.id)));
+    return true;
+  });
+
 export const salesService = {
   create: (input: SalesDocumentInput, authorId: string, today = salesToday()) =>
     dbTransaction("sales.create", (tx) => insertDraft(tx, input, authorId, today)),

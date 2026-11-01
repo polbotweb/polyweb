@@ -333,6 +333,43 @@ async function seedPortal() {
   });
 }
 
+/**
+ * Abonnements : formule plateforme publiée avec un tarif mensuel (catalogue public, fiche admin) et un
+ * abonnement actif du compte seedé (portail, fiche admin). Aucun appel au fournisseur de paiement :
+ * l'identifiant fournisseur est fictif.
+ */
+export const A11Y_SUBSCRIPTION_PLAN = 'a11y-plan';
+
+async function deleteSubscriptionsSeed() {
+  const { getDrizzle } = await import('../../src/database/drizzle');
+  const { subscriptionPlans, subscriptions } = await import('../../src/modules/subscriptions/schema');
+  const { and, eq, isNull } = await import('drizzle-orm');
+  const db = getDrizzle();
+  const plans = await db.select({ id: subscriptionPlans.id }).from(subscriptionPlans)
+    .where(and(eq(subscriptionPlans.slug, A11Y_SUBSCRIPTION_PLAN), isNull(subscriptionPlans.organizationId)));
+  for (const { id } of plans) {
+    await db.delete(subscriptions).where(eq(subscriptions.planId, id)).catch(() => {});
+    await db.delete(subscriptionPlans).where(eq(subscriptionPlans.id, id)).catch(() => {});
+  }
+}
+
+async function seedSubscriptions() {
+  const { getDrizzle, schema } = await import('../../src/database/drizzle');
+  const { subscriptionPlans, subscriptionPrices, subscriptions } = await import('../../src/modules/subscriptions/schema');
+  const { eq } = await import('drizzle-orm');
+  await deleteSubscriptionsSeed();
+  const db = getDrizzle();
+  const [account] = await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, SEED_USER.email)).limit(1);
+  if (!account) throw new Error('[a11y] compte seed introuvable');
+  const [plan] = await db.insert(subscriptionPlans).values({ slug: A11Y_SUBSCRIPTION_PLAN, name: 'Formule A11y', description: 'Accès mensuel A11y' }).returning();
+  const [price] = await db.insert(subscriptionPrices).values({ planId: plan!.id, currency: 'EUR', amountMinor: 1200, interval: 'month', trialDays: 14 }).returning();
+  const [subscription] = await db.insert(subscriptions).values({
+    planId: plan!.id, priceId: price!.id, customerUserId: account.id, customerEmail: SEED_USER.email, customerName: SEED_USER.name,
+    customerCountry: 'FR', status: 'active', provider: 'stripe', providerSubscriptionId: 'sub_a11y_seed', currentPeriodEnd: new Date(Date.now() + 20 * 86_400_000),
+  }).returning();
+  return { subscriptionsSeed: { planId: plan!.id, subscriptionId: subscription!.id } };
+}
+
 async function setup() {
   process.env.NODE_ENV = 'test';
 
@@ -387,7 +424,10 @@ async function setup() {
   await seedPortal();
   console.log(`[a11y] Customer portal records seeded for ${SEED_USER.email}`);
 
-  const data = { userCookie, adminCookie: freshAdminCookie, ...shop, ...logistics };
+  const subs = await seedSubscriptions();
+  console.log(`[a11y] Subscription plan ${A11Y_SUBSCRIPTION_PLAN} and an active subscription seeded`);
+
+  const data = { userCookie, adminCookie: freshAdminCookie, ...shop, ...logistics, ...subs };
   writeFileSync(COOKIES_PATH, JSON.stringify(data, null, 2));
   console.log(`[a11y] Cookies written to ${COOKIES_PATH}`);
 }
@@ -403,6 +443,7 @@ async function teardown() {
   await deleteLogisticsSeed();
   await deleteFecSeed();
   await deletePortalSeed();
+  await deleteSubscriptionsSeed();
 
   if (existsSync(COOKIES_PATH)) {
     unlinkSync(COOKIES_PATH);

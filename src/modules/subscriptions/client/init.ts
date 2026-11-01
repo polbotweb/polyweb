@@ -1,16 +1,9 @@
 /**
- * Point d'entrée navigateur du domaine subscriptions.
- *
- * Un module client par feature, importé ici. Les composants n'importent QUE ce
- * fichier — jamais `astro:actions` directement — pour que sélecteurs et
- * actions restent regroupés et testables hors rendu.
+ * Point d'entrée navigateur du domaine subscriptions. Les composants n'importent QUE ce fichier —
+ * jamais `astro:actions` directement. Idempotent : premier rendu puis `astro:after-swap`.
  */
+import { initSubscriptionsForms } from "./forms";
 
-/**
- * Branche les comportements d'une page. Idempotent : appelé au premier rendu
- * puis à chaque `astro:after-swap`.
- */
 export function initSubscriptions(): void {
-  // TODO: appeler les modules client du domaine, par exemple
-  //   initSubscriptionsEngagementBar();
+  initSubscriptionsForms();
 }
