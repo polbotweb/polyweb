@@ -1,0 +1,68 @@
+---
+/** Back-office plateforme : fiche d'un abonnement client (résiliation, reprise, changement de tarif). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Button } from "@atoms/button";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import { requirePermission } from "@lib/auth-guards";
+import { getSubscriptionsTranslations } from "@/modules/subscriptions/i18n";
+import { loadPlan, loadPrices, loadSubscription } from "@/modules/subscriptions/loaders";
+import { hasSubscriptionsPermission } from "@/modules/subscriptions/permissions";
+import { canCancel, canChangePrice, canResume } from "@/modules/subscriptions/domain/lifecycle";
+import { dateLabel, priceLabel } from "@/modules/subscriptions/format";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { subscriptions: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getSubscriptionsTranslations(locale);
+const baseAdminUrl = `/${locale}/admin/subscriptions`;
+const sub = await loadSubscription(Astro.params.id ?? "");
+if (!sub || sub.organizationId !== null) return new Response(null, { status: 404 });
+const [plan, prices, canUpdate] = await Promise.all([loadPlan(sub.planId), loadPrices(sub.planId, true), hasSubscriptionsPermission(Astro, ["update"])]);
+const current = (await loadPrices(sub.planId)).find((p) => p.id === sub.priceId);
+const others = prices.filter((p) => p.id !== sub.priceId && p.currency === current?.currency);
+const rows: [string, string][] = [
+  [t.fields.customer, sub.customerName], [t.fields.email, sub.customerEmail], [t.fields.country, sub.customerCountry],
+  [t.fields.plan, plan?.name ?? "—"], [t.fields.price, current ? priceLabel(current, locale) : "—"],
+  [t.fields.status, t.statuses[sub.status]], [t.fields.periodEnd, dateLabel(sub.currentPeriodEnd, locale)],
+  [t.fields.cancelAtPeriodEnd, sub.cancelAtPeriodEnd ? "✓" : "—"], [t.fields.provider, sub.provider], [t.fields.created, dateLabel(sub.createdAt, locale)],
+];
+---
+<BaseLayout title={t.admin.detail} description={t.meta.description}>
+  <AuthLayout title={t.admin.detail}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="subscriptions" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8" data-subscriptions-record>
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{t.admin.detail} — {sub.customerName}</h1>
+        <div class="flex flex-wrap gap-2">
+          {canUpdate && canCancel(sub) && <Button type="button" variant="outline" data-subscriptions-op="cancel" data-id={sub.id} data-confirm={t.admin.confirmCancel}>{t.admin.cancel}</Button>}
+          {canUpdate && canResume(sub) && <Button type="button" variant="outline" data-subscriptions-op="resume" data-id={sub.id}>{t.admin.resume}</Button>}
+          <a class="inline-flex min-h-11 items-center px-3 underline" href={baseAdminUrl}>{t.admin.back}</a>
+        </div>
+      </div>
+      <p class="text-sm text-destructive" role="alert" tabindex="-1" data-subscriptions-error hidden></p>
+      <dl class="grid max-w-3xl gap-x-6 gap-y-2 text-sm sm:grid-cols-[max-content_1fr]" data-testid="subscription-detail">
+        {rows.map(([label, value]) => <><dt class="font-medium">{label}</dt><dd>{value}</dd></>)}
+      </dl>
+      {canUpdate && canChangePrice(sub) && others.length > 0 && (
+        <form class="flex max-w-3xl flex-col gap-4 rounded-md border p-4" data-subscriptions-form="change" data-id={sub.id} data-done={t.admin.saved} novalidate>
+          <h2 class="text-lg font-semibold">{t.admin.changePrice}</h2>
+          <div class="grid gap-2"><Label for="sub-change-price">{t.fields.price}</Label><NativeSelect id="sub-change-price" name="priceId">{others.map((p) => <NativeSelectOption value={p.id}>{priceLabel(p, locale)}</NativeSelectOption>)}</NativeSelect></div>
+          <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" class="size-6" name="prorate" checked />{t.admin.prorate}</label>
+          <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+          <div><Button type="submit">{t.admin.apply}</Button></div>
+        </form>
+      )}
+    </main>
+  </AuthLayout>
+</BaseLayout>
+
+<script>
+  import { initSubscriptions } from "@/modules/subscriptions/client/init";
+
+  initSubscriptions();
+  document.addEventListener("astro:after-swap", initSubscriptions);
+</script>

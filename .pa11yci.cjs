@@ -31,6 +31,8 @@ let shopOrder = null;
 let shopSlugs = null;
 // Commande livrée avec une demande de retour (RMA) : suivi public, fiche commande et retours admin.
 let shopReturn = null;
+// Abonnements : formule plateforme et abonnement actif du compte seedé.
+let subscriptionsSeed = null;
 // Logistique : inventaires seedés (un en cours, un validé) — pages inventaires et grand livre.
 let logistics = null;
 if (fs.existsSync(COOKIES_PATH)) {
@@ -42,6 +44,7 @@ if (fs.existsSync(COOKIES_PATH)) {
   shopSlugs = data.shopSlugs ?? null;
   logistics = data.logistics ?? null;
   shopReturn = data.shopReturn ?? null;
+  subscriptionsSeed = data.subscriptionsSeed ?? null;
 }
 
 // ── Route definitions per locale ─────────────────────────────────────
@@ -82,6 +85,8 @@ for (const lang of locales) {
   // A11YROOM is seeded by tests/a11y/setup.ts (open 24/7, so slots always render).
   publicUrls.push(`${BASE}/${lang}/bookings`);
   publicUrls.push(`${BASE}/${lang}/bookings/A11YROOM`);
+  // Catalogue public des abonnements (formule a11y-plan seedée).
+  publicUrls.push(`${BASE}/${lang}/subscriptions`);
   // Guest auth pages
   for (const pageId of ['sign-in', 'sign-up', 'forgot-password']) {
     publicUrls.push(`${BASE}/${lang}/auth/${authRoutes[pageId][lang]}`);
@@ -144,6 +149,12 @@ for (const lang of locales) {
   }
   // Exports FEC : liste (export prêt + export en échec seedés) et formulaire de génération.
   adminUrls.push({ url: `${BASE}/${lang}/admin/sales/fec`, headers: { Cookie: adminCookie } });
+  // Abonnements : liste (formules + abonnements), fiche formule (tarifs) et fiche abonnement.
+  adminUrls.push({ url: `${BASE}/${lang}/admin/subscriptions`, headers: { Cookie: adminCookie } });
+  if (subscriptionsSeed) {
+    adminUrls.push({ url: `${BASE}/${lang}/admin/subscriptions/plans/${encodeURIComponent(subscriptionsSeed.planId)}`, headers: { Cookie: adminCookie } });
+    adminUrls.push({ url: `${BASE}/${lang}/admin/subscriptions/${encodeURIComponent(subscriptionsSeed.subscriptionId)}`, headers: { Cookie: adminCookie } });
+  }
 }
 
 module.exports = {

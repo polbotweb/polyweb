@@ -12,6 +12,12 @@
  * - Montants : unités mineures ISO 4217 (core/money) converties en unités Stripe
  *   (ISK à 2 décimales chez Stripe, devises à 3 décimales multiples de 10).
  *
+ * - Abonnements : Checkout Session `mode: 'subscription'` (prix récurrent décrit en ligne,
+ *   métadonnée `subscription_id` sur la session ET l'abonnement, clé `subscription-checkout:<id>`),
+ *   changement de prix avec prorata (`proration_behavior`), résiliation fin de période /
+ *   immédiate, reprise ; événements `customer.subscription.*` et `invoice.paid|payment_failed`
+ *   normalisés en `kind = 'subscription'`.
+ *
  * Le client est injecté (`StripeClientLike`) : les tests fournissent un double, aucun
  * appel réseau vers l'API Stripe en test ou en CI.
  */
@@ -19,13 +25,17 @@ import Stripe from 'stripe';
 import { Duration, Effect } from 'effect';
 import { currencyExponent, isCurrencyCode, type Money } from '@/core/money';
 import { PaymentProviderError, UnsupportedAmountError, WebhookSignatureError } from './errors';
-import type { PaymentEventKind, PaymentProvider, ProviderRefundStatus, ProviderTenantOptions, VerifiedPaymentEvent } from './provider';
+import type { PaymentEventKind, PaymentProvider, ProviderRefundStatus, ProviderSubscriptionState, ProviderSubscriptionStatus, ProviderTenantOptions, RecurringPrice, VerifiedPaymentEvent, VerifiedSubscriptionEvent } from './provider';
 
 /** Sous-ensemble du client Stripe utilisé (facilite le double de test). */
 export interface StripeClientLike {
   readonly checkout: { readonly sessions: { create: (params: Stripe.Checkout.SessionCreateParams, options?: Stripe.RequestOptions) => Promise<Pick<Stripe.Checkout.Session, 'id' | 'url'>> } };
   readonly paymentIntents: { create: (params: Stripe.PaymentIntentCreateParams, options?: Stripe.RequestOptions) => Promise<Pick<Stripe.PaymentIntent, 'id' | 'client_secret' | 'status'>> };
   readonly refunds: { create: (params: Stripe.RefundCreateParams, options?: Stripe.RequestOptions) => Promise<Pick<Stripe.Refund, 'id' | 'status'>> };
+  readonly subscriptions: {
+    update: (id: string, params: Stripe.SubscriptionUpdateParams, options?: Stripe.RequestOptions) => Promise<Pick<Stripe.Subscription, 'id' | 'status' | 'cancel_at_period_end'>>;
+    cancel: (id: string, params?: Stripe.SubscriptionCancelParams, options?: Stripe.RequestOptions) => Promise<Pick<Stripe.Subscription, 'id' | 'status' | 'cancel_at_period_end'>>;
+  };
 }
 
 export interface StripeWebhookVerifier {
@@ -90,6 +100,52 @@ const metadataPaymentId = (metadata: Stripe.Metadata | null | undefined) => (typ
 export const stripeRefundStatus = (status: string | null | undefined): ProviderRefundStatus =>
   status === 'succeeded' ? 'succeeded' : status === 'failed' ? 'failed' : status === 'canceled' ? 'cancelled' : 'pending';
 
+/** Statut Stripe d'un abonnement → statut normalisé (`incomplete_expired` : résilié). */
+export const stripeSubscriptionStatus = (status: string | null | undefined): ProviderSubscriptionStatus => {
+  switch (status) {
+    case 'trialing': case 'active': case 'past_due': case 'unpaid': case 'paused': case 'incomplete': return status;
+    default: return 'cancelled';
+  }
+};
+
+const fromUnix = (value: number | null | undefined) => (typeof value === 'number' && value > 0 ? new Date(value * 1000) : null);
+const metadataSubscriptionId = (metadata: Stripe.Metadata | null | undefined) => (typeof metadata?.subscription_id === 'string' && metadata.subscription_id ? metadata.subscription_id : null);
+
+const subscriptionState = (sub: Pick<Stripe.Subscription, 'id' | 'status' | 'cancel_at_period_end'>): ProviderSubscriptionState => ({
+  providerSubscriptionId: sub.id, status: stripeSubscriptionStatus(sub.status), cancelAtPeriodEnd: sub.cancel_at_period_end,
+});
+
+/** Prix récurrent → `price_data` Stripe (montant converti, jamais d'objet Price persistant). */
+const stripeRecurringPrice = (price: RecurringPrice) =>
+  Effect.map(toStripeAmount(price.amount), (unitAmount) => ({
+    currency: price.amount.currency.toLowerCase(), unit_amount: unitAmount,
+    recurring: { interval: price.interval, interval_count: price.intervalCount },
+  }));
+
+const normalizeSubscriptionObject = (sub: Stripe.Subscription, action: VerifiedSubscriptionEvent['action']): VerifiedSubscriptionEvent => {
+  const item = sub.items?.data?.[0];
+  return {
+    action, subscriptionId: metadataSubscriptionId(sub.metadata), providerSubscriptionId: sub.id, providerCustomerId: idOf(sub.customer), providerItemId: item?.id ?? null, providerProductId: idOf(item?.price?.product as string | { id: string } | null | undefined),
+    status: stripeSubscriptionStatus(sub.status), cancelAtPeriodEnd: sub.cancel_at_period_end, currentPeriodEnd: fromUnix(item?.current_period_end), invoice: null,
+  };
+};
+
+const normalizeSubscriptionInvoice = (invoice: Stripe.Invoice, paid: boolean): VerifiedSubscriptionEvent | null => {
+  const details = invoice.parent?.subscription_details;
+  const providerSubscriptionId = idOf(details?.subscription);
+  const amount = fromStripeAmount(paid ? invoice.amount_paid : invoice.amount_due, invoice.currency);
+  if (!providerSubscriptionId || !invoice.id || !amount) return null;
+  const period = invoice.lines?.data?.[0]?.period;
+  return {
+    action: paid ? 'invoice_paid' : 'invoice_failed', subscriptionId: metadataSubscriptionId(details?.metadata), providerSubscriptionId, providerCustomerId: idOf(invoice.customer),
+    providerItemId: null, providerProductId: null, status: null, cancelAtPeriodEnd: null, currentPeriodEnd: fromUnix(period?.end),
+    invoice: {
+      providerInvoiceId: invoice.id, amount, periodStart: fromUnix(period?.start ?? invoice.period_start) ?? new Date(0), periodEnd: fromUnix(period?.end ?? invoice.period_end) ?? new Date(0),
+      attempt: invoice.attempt_count, nextAttemptAt: fromUnix(invoice.next_payment_attempt),
+    },
+  };
+};
+
 /** Normalise un événement Stripe vérifié (types non gérés → `ignored`). */
 export const normalizeStripeEvent = (event: Stripe.Event): VerifiedPaymentEvent => {
   const base = { provider: 'stripe' as const, eventId: event.id, type: event.type };
@@ -124,6 +180,17 @@ export const normalizeStripeEvent = (event: Stripe.Event): VerifiedPaymentEvent 
         ...base, kind: 'refund', paymentId: metadataPaymentId(refund.metadata), providerPaymentId: idOf(refund.payment_intent), sessionId: null, amount,
         refund: { providerRefundId: refund.id, status, refundId: typeof refund.metadata?.refund_id === 'string' && refund.metadata.refund_id ? refund.metadata.refund_id : null, amount, failureReason: refund.failure_reason ?? null },
       };
+    }
+    case 'customer.subscription.created':
+    case 'customer.subscription.updated':
+    case 'customer.subscription.deleted': {
+      const action = event.type === 'customer.subscription.created' ? 'created' : event.type === 'customer.subscription.deleted' ? 'deleted' : 'updated';
+      return { ...ignored, kind: 'subscription', subscription: normalizeSubscriptionObject(event.data.object, action) };
+    }
+    case 'invoice.paid':
+    case 'invoice.payment_failed': {
+      const subscription = normalizeSubscriptionInvoice(event.data.object, event.type === 'invoice.paid');
+      return subscription ? { ...ignored, kind: 'subscription', amount: subscription.invoice?.amount ?? null, subscription } : ignored;
     }
     default:
       return ignored;
@@ -200,6 +267,63 @@ export const makeStripeProvider = ({ client, webhookSecret, verifier = Stripe.we
       );
       return { providerRefundId: refund.id, status: stripeRefundStatus(refund.status) };
     }),
+
+  createSubscriptionCheckout: (request) =>
+    Effect.gen(function* () {
+      const priceData = yield* stripeRecurringPrice(request.price);
+      const metadata = { subscription_id: request.subscriptionId };
+      const session = yield* call('subscription.checkout', () =>
+        client.checkout.sessions.create(
+          {
+            mode: 'subscription',
+            line_items: [{ quantity: 1, price_data: { ...priceData, product_data: { name: request.price.productName.slice(0, 250) } } }],
+            success_url: request.successUrl,
+            cancel_url: request.cancelUrl,
+            client_reference_id: request.subscriptionId,
+            expires_at: Math.floor(request.expiresAt.getTime() / 1000),
+            ...(request.customerEmail ? { customer_email: request.customerEmail } : {}),
+            metadata,
+            subscription_data: { metadata },
+          },
+          requestOptions(`subscription-checkout:${request.subscriptionId}`, request),
+        ),
+      );
+      if (!session.url) return yield* new PaymentProviderError({ provider: 'stripe', operation: 'subscription.checkout', cause: 'missing session url' });
+      return { sessionId: session.id, url: session.url };
+    }),
+
+  changeSubscriptionPrice: (request) =>
+    Effect.gen(function* () {
+      const priceData = yield* stripeRecurringPrice(request.price);
+      const sub = yield* call('subscription.update', () =>
+        client.subscriptions.update(
+          request.providerSubscriptionId,
+          {
+            items: [{ id: request.providerItemId, price_data: { ...priceData, product: request.providerProductId } }],
+            proration_behavior: request.prorate ? 'create_prorations' : 'none',
+            metadata: { subscription_id: request.subscriptionId },
+          },
+          requestOptions(request.idempotencyKey, request),
+        ),
+      );
+      return subscriptionState(sub);
+    }),
+
+  cancelSubscription: (request) =>
+    Effect.map(
+      call('subscription.cancel', () =>
+        request.atPeriodEnd
+          ? client.subscriptions.update(request.providerSubscriptionId, { cancel_at_period_end: true }, requestOptions(request.idempotencyKey, request))
+          : client.subscriptions.cancel(request.providerSubscriptionId, {}, requestOptions(request.idempotencyKey, request)),
+      ),
+      subscriptionState,
+    ),
+
+  resumeSubscription: (request) =>
+    Effect.map(
+      call('subscription.resume', () => client.subscriptions.update(request.providerSubscriptionId, { cancel_at_period_end: false }, requestOptions(request.idempotencyKey, request))),
+      subscriptionState,
+    ),
 
   verifyWebhook: (rawBody, signature) =>
     Effect.gen(function* () {

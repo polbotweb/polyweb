@@ -323,6 +323,13 @@
       "when": 1793530236303,
       "tag": "0045_customer_portal_links",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1793539358284,
+      "tag": "0046_subscriptions",
+      "breakpoints": true
     }
   ]
 }

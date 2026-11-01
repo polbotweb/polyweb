@@ -9,6 +9,7 @@ const noNetwork = {
   checkout: { sessions: { create: () => Promise.reject(new Error('no network in tests')) } },
   paymentIntents: { create: () => Promise.reject(new Error('no network in tests')) },
   refunds: { create: () => Promise.reject(new Error('no network in tests')) },
+  subscriptions: { update: () => Promise.reject(new Error('no network in tests')), cancel: () => Promise.reject(new Error('no network in tests')) },
 };
 
 describe('payments module (façade core/payments)', () => {

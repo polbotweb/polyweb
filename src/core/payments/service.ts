@@ -28,6 +28,7 @@ import { PaymentGateway } from './gateway';
 import type { PaymentEventKind, PaymentProvider, VerifiedPaymentEvent } from './provider';
 import { paymentPurpose, registeredPaymentHandlers, type PaymentPurposeHandler } from './purposes';
 import { dispatchRefundEvent, type RefundEventOutcome } from './refund-sink';
+import { dispatchSubscriptionEvent, type SubscriptionEventOutcome } from './subscription-sink';
 import { formatReference, parseReference } from './reference';
 import { canTransitionPayment } from './transitions';
 
@@ -159,9 +160,10 @@ export const startPaymentIntent = (input: Omit<StartCheckoutInput, 'successUrl' 
 export type WebhookResult =
   | { readonly status: 'ignored' | 'duplicate' | 'unmatched'; readonly eventId: string }
   | { readonly status: 'refund'; readonly eventId: string; readonly outcome: RefundEventOutcome | 'ignored' }
+  | { readonly status: 'subscription'; readonly eventId: string; readonly outcome: SubscriptionEventOutcome | 'ignored' }
   | { readonly status: 'applied' | 'unchanged'; readonly eventId: string; readonly payment: Payment };
 
-type TransitionKind = Exclude<PaymentEventKind, 'ignored' | 'refund'>;
+type TransitionKind = Exclude<PaymentEventKind, 'ignored' | 'refund' | 'subscription'>;
 
 const TARGET: Record<TransitionKind, PaymentStatus> = { succeeded: 'paid', failed: 'failed', expired: 'expired' };
 
@@ -222,6 +224,7 @@ export const applyVerifiedEvent = (provider: PaymentProvider, event: VerifiedPay
     if (event.kind === 'ignored') return { status: 'ignored', eventId: event.eventId } satisfies WebhookResult as WebhookResult;
     // Remboursements : idempotence, plafond et réactions des modules portés par core/refunds.
     if (event.kind === 'refund') return { status: 'refund', eventId: event.eventId, outcome: yield* dispatchRefundEvent(provider, event) } satisfies WebhookResult as WebhookResult;
+    if (event.kind === 'subscription') return { status: 'subscription', eventId: event.eventId, outcome: yield* dispatchSubscriptionEvent(provider, event) } satisfies WebhookResult as WebhookResult;
     const kind = event.kind;
     const result = yield* dbTransaction('payments.webhook', (tx) =>
       Effect.gen(function* () {

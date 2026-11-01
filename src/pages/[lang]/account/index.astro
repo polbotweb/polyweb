@@ -6,16 +6,19 @@ import AuthSidebar from "@organisms/AuthSidebar/AuthSidebar.astro";
 import PortalView from "@/components/portal/PortalView.astro";
 import { getPortalTranslations } from "@/modules/portal/i18n";
 import { portalPage } from "@/modules/portal/public/pages";
+import SubscriptionsPortalSection from "@/components/subscriptions/SubscriptionsPortalSection.astro";
+import { loadCustomerSubscriptions } from "@/modules/subscriptions/loaders";
 
 export const prerender = false;
 const result = await portalPage(Astro);
 if ("redirect" in result) return result.redirect;
 const view = result;
 const t = getPortalTranslations(view.locale);
+const subscriptions = await loadCustomerSubscriptions(view.user.id);
 ---
 <BaseLayout title={t.title} description={t.intro}>
   <AuthLayout title={t.title}>
     <AuthSidebar slot="sidebar" t={view.authT} locale={view.locale} user={view.user} activeItem="account" />
-    <PortalView locale={view.locale} {...view.overview} />
+    <PortalView locale={view.locale} {...view.overview}><SubscriptionsPortalSection locale={view.locale} items={subscriptions} /></PortalView>
   </AuthLayout>
 </BaseLayout>

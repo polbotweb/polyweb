@@ -1,0 +1,19 @@
+---
+/** Abonnements — catalogue public des formules de la plateforme et souscription. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PublicPlans from "@/components/subscriptions/PublicPlans.astro";
+import { getAuthTranslations, getAuthUrl, toLocale } from "@i18n/utils";
+import { isPaymentsEnabled } from "@/core/payments";
+import { getSubscriptionsTranslations } from "@/modules/subscriptions/i18n";
+import { loadPublicCatalog } from "@/modules/subscriptions/loaders";
+
+export const prerender = false;
+const locale = toLocale(Astro.params.lang);
+const t = getSubscriptionsTranslations(locale);
+const [catalog, authT] = await Promise.all([loadPublicCatalog(null), getAuthTranslations(locale)]);
+const user = Astro.locals.user;
+const status = Astro.url.searchParams.get("status");
+---
+<BaseLayout title={t.meta.publicTitle} description={t.meta.publicDescription}>
+  <PublicPlans locale={locale} catalog={catalog} signedIn={Boolean(user && !user.banned)} canSubscribe={isPaymentsEnabled()} signInUrl={getAuthUrl(locale, "sign-in", authT)} status={status} />
+</BaseLayout>

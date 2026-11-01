@@ -36,6 +36,7 @@ import { salesActions } from "@/modules/sales/actions";
 import { crmActions } from "@/modules/crm/actions";
 import { logisticsActions } from "@/modules/logistics/actions";
 import { purchasingActions } from "@/modules/purchasing/actions";
+import { subscriptionsActions } from "@/modules/subscriptions/actions";
 import { bookingsActions } from "@/modules/bookings/actions";
 import { coursesActions } from "@/modules/courses/actions";
 import { formationsActions } from "@/modules/formations/actions";
@@ -60,6 +61,7 @@ export const server = {
   crm: crmActions,
   logistics: logisticsActions,
   purchasing: purchasingActions,
+  subscriptions: subscriptionsActions,
   bookings: bookingsActions,
   courses: coursesActions,
   formations: formationsActions,
