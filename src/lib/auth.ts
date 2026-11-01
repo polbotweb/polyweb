@@ -89,6 +89,12 @@ export const auth = betterAuth({
         void logAuditEvent({ action: 'EMAIL_SEND_FAILED', resource: 'email', metadata: { template: 'verify-email', to: user.email, error: String(err) } });
       });
     },
+    // Portail client : e-mail vérifié (inscription ou changement) → rattachement des documents invités à ce compte.
+    afterEmailVerification: async (user) => {
+      await Promise.all([import('@/lib/effect/http'), import('@/modules/portal/services/portal.service')])
+        .then(([{ runApp }, { attachVerifiedRecords }]) => runApp(attachVerifiedRecords(user.id)))
+        .catch((err: unknown) => console.error('[portal] attach after verification failed:', err));
+    },
   },
   user: {
     deleteUser: {

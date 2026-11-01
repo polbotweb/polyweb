@@ -259,6 +259,8 @@ platform/
   EntryView.astro
   FieldInput.astro
   FieldsEditor.astro
+portal/
+  PortalView.astro
 purchasing/
   admin/
 refunds/
@@ -345,6 +347,7 @@ commands/
   _effect.ts
   _migration-sql.ts
   _utils.ts
+  db.backfill-customer-links.ts
   db.backfill-variants.ts
   db.backup.ts
   db.baseline.ts
@@ -494,6 +497,7 @@ migrations/
   0042_shop_returns.sql
   0043_logistics_inventory.sql
   0044_sales_fec_exports.sql
+  0045_customer_portal_links.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -536,6 +540,7 @@ migrations/
     0042_snapshot.json
     0043_snapshot.json
     0044_snapshot.json
+    0045_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -744,6 +749,7 @@ schemas.ts
 - `0042_shop_returns.sql`
 - `0043_logistics_inventory.sql`
 - `0044_sales_fec_exports.sql`
+- `0045_customer_portal_links.sql`
 
 ### Commandes
 
@@ -760,6 +766,7 @@ schemas.ts
 | `pnpm db:sync` |
 | `pnpm db:cleanup-audit` |
 | `pnpm db:backfill-variants` |
+| `pnpm db:backfill-customer-links` |
 | `pnpm db:wait` |
 | `pnpm db:baseline` |
 | `pnpm db:backup` |
@@ -1245,6 +1252,17 @@ payments/
     transitions.ts
   index.ts
   module.ts
+portal/
+  domain/
+    ownership.ts
+  i18n/
+    index.ts
+  public/
+    links.ts
+    pages.ts
+    routes.ts
+  services/
+    portal.service.ts
 purchasing/
   actions/
     bulk.ts
@@ -1292,6 +1310,7 @@ sales/
   documents/
     index.ts
     pdf.ts
+    response.ts
     template.ts
   domain/
     credit.ts
@@ -1478,6 +1497,11 @@ src/pages/
     services/
   [slug].astro
   a-propos.astro
+  account/
+    bookings/
+    index.astro
+    invoices/
+    orders/
   admin/
     audit.astro
     blog/

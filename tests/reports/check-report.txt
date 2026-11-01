@@ -1,12 +1,12 @@
 
-> polyweb@0.0.1 check /workspace/p-audit
+> polyweb@0.0.1 check /workspace/b3-portal
 > astro check
 
-09:02:49 [@astrojs/node] Enabling sessions with filesystem storage
-09:02:50 [content] Syncing content
-09:02:50 [content] Synced content
-09:02:50 [types] Generated 209ms
-09:02:50 [check] Getting diagnostics for Astro files in /workspace/p-audit...
+11:23:34 [@astrojs/node] Enabling sessions with filesystem storage
+11:23:34 [content] Syncing content
+11:23:34 [content] Synced content
+11:23:34 [types] Generated 125ms
+11:23:34 [check] Getting diagnostics for Astro files in /workspace/b3-portal...
 [96msrc/actions/admin/pages.ts[0m:[93m4[0m:[93m38[0m - [93mwarning[0m[90m ts(6133): [0m'isNotNull' is declared but its value is never read.
 
 [7m4[0m import { eq, and, asc, desc, isNull, isNotNull, inArray, max } from "drizzle-orm";
@@ -258,7 +258,7 @@
 [7m23[0m import { bookings, bookingsResources } from '@/modules/bookings/schema';
 [7m  [0m [93m                   ~~~~~~~~~~~~~~~~~[0m
 
-Result (1675 files): 
+Result (1695 files): 
 - 0 errors
 - 0 warnings
 - 57 hints

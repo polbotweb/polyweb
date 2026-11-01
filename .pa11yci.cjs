@@ -110,6 +110,8 @@ for (const lang of locales) {
       headers: { Cookie: userCookie },
     });
   }
+  // Portail client (factures, commandes, réservations du compte seedé).
+  authedUrls.push({ url: `${BASE}/${lang}/account`, headers: { Cookie: userCookie } });
 }
 
 // Admin pages (admin cookie) — all admin routes

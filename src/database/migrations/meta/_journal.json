@@ -316,6 +316,13 @@
       "when": 1793123108155,
       "tag": "0044_sales_fec_exports",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1793530236303,
+      "tag": "0045_customer_portal_links",
+      "breakpoints": true
     }
   ]
 }

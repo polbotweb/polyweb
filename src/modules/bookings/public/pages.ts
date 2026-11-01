@@ -53,6 +53,7 @@ export async function resourcePage(Astro: AstroGlobal, tenant: PublicTenant) {
     date = str(fd, "date") || date;
     const r = await runAppResult(submitGuestBooking(tenant, resource, { ...values, _hp: str(fd, "_hp"), _ts: str(fd, "_ts") }, {
       ip: extractIp(Astro.request.headers, Astro.clientAddress), userAgent: Astro.request.headers.get("user-agent"), locale, now,
+      userId: Astro.locals.user && !Astro.locals.user.banned ? Astro.locals.user.id : null,
     }));
     if (r.ok) {
       if (r.value.kind === "discarded") return Astro.redirect(`${base}/${encodeURIComponent(resource.code)}?sent=1`, 303);

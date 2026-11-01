@@ -6,6 +6,8 @@
  * verrou d'édition via core/locks, révisions à chaque écriture.
  */
 import { Effect } from "effect";
+import { normalizeEmail } from "@/modules/portal/domain/ownership";
+import { verifiedAccountIdFor } from "@/modules/portal/services/portal.service";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { dbTry } from "@/lib/effect/run";
@@ -158,9 +160,12 @@ const draftSlug = (kind: SalesDocumentKind) => `${kind.replace("_", "-")}-${cryp
 const insertDraft = (executor: Executor, input: SalesDocumentInput & { readonly sourceDocumentId?: string | null }, authorId: string | null, date: string) =>
   Effect.gen(function* () {
     const priced = yield* price(input, input.lines, date);
+    // Portail client : rattachement au compte VÉRIFIÉ portant cet e-mail (sinon aucun).
+    const customerUserId = yield* verifiedAccountIdFor(input.customerEmail);
     const [row] = yield* dbTry("sales.create", () =>
       executor.insert(sales).values({
         ...partyColumns(input),
+        customerUserId,
         ...totalsColumns(priced),
         kind: input.kind,
         organizationId: input.organizationId,
@@ -308,7 +313,9 @@ export const salesService = {
           const party: SalesPartyInput = { ...partyOf(current), ...patch };
           const lines = patch.lines ?? (yield* salesLinesOf(tx, id)).map(toLineInput);
           const priced = yield* price({ ...party, kind: current.kind, organizationId: current.organizationId }, lines, today);
-          const [row] = yield* dbTry("sales.update", () => tx.update(sales).set({ ...partyColumns(party), ...totalsColumns(priced) }).where(eq(sales.id, id)).returning());
+          // E-mail client modifié : propriétaire recalculé (compte vérifié correspondant ou aucun).
+          const customerUserId = normalizeEmail(party.customerEmail) === normalizeEmail(current.customerEmail) ? current.customerUserId : yield* verifiedAccountIdFor(party.customerEmail);
+          const [row] = yield* dbTry("sales.update", () => tx.update(sales).set({ ...partyColumns(party), ...totalsColumns(priced), customerUserId }).where(eq(sales.id, id)).returning());
           yield* writeLines(tx, id, priced);
           yield* revision(tx, row, owner.userId, "Mise à jour");
           return row;

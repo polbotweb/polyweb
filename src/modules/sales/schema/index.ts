@@ -29,6 +29,12 @@ export const sales = pgTable("sales_documents", {
   sourceDocumentId: text("source_document_id").references((): AnyPgColumn => sales.id, { onDelete: "restrict" }),
   customerName: text("customer_name").notNull(),
   customerEmail: text("customer_email"),
+  /**
+   * Compte client propriétaire (portail) : posé à la création si un compte à l'e-mail VÉRIFIÉ
+   * correspondant (insensible à la casse) existe, sinon au moment de la vérification
+   * (`attachVerifiedRecords`) ou par `pnpm db:backfill-customer-links`. Jamais par e-mail non vérifié.
+   */
+  customerUserId: text("customer_user_id").references(() => user.id, { onDelete: "set null" }),
   customerAddress: text("customer_address"),
   customerCountry: text("customer_country").notNull(),
   customerType: text("customer_type", { enum: CUSTOMER_TYPES }).default("B2B").notNull(),
@@ -60,6 +66,7 @@ export const sales = pgTable("sales_documents", {
   uniqueIndex("sales_documents_org_kind_number_uidx").on(sql`coalesce(${table.organizationId}, '')`, table.kind, table.number).where(sql`${table.number} is not null`),
   index("sales_documents_org_kind_status_idx").on(table.organizationId, table.kind, table.status),
   index("sales_documents_source_idx").on(table.sourceDocumentId),
+  index("sales_documents_customer_user_idx").on(table.customerUserId),
 ]);
 
 export const salesDocumentLines = pgTable("sales_document_lines", {

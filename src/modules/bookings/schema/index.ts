@@ -50,6 +50,12 @@ export const bookings = pgTable("bookings", {
   endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
   customerName: text("customer_name").notNull(),
   customerEmail: text("customer_email"),
+  /**
+   * Compte client propriétaire (portail) : posé à la création si le client est connecté, sinon à
+   * la vérification de l'e-mail du compte (correspondance insensible à la casse) ou par
+   * `pnpm db:backfill-customer-links`. Jamais par e-mail non vérifié.
+   */
+  customerUserId: text("customer_user_id").references(() => user.id, { onDelete: "set null" }),
   /** Téléphone facultatif saisi par un visiteur (parcours public). */
   customerPhone: text("customer_phone"),
   partySize: integer("party_size").default(1).notNull(),
@@ -72,6 +78,7 @@ export const bookings = pgTable("bookings", {
   check("bookings_interval_valid", sql`${table.endsAt} > ${table.startsAt}`),
   check("bookings_party_size_positive", sql`${table.partySize} > 0`),
   index("bookings_payment_due_idx").on(table.status, table.paymentDueAt),
+  index("bookings_customer_user_idx").on(table.customerUserId),
 ]);
 
 /** Révisions (core/revision) : une ligne par écriture de réservation. */

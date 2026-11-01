@@ -49,6 +49,7 @@
     "qa": "node scripts/qa.mjs full",
     "qa:offline": "node scripts/qa.mjs offline",
     "db:backfill-variants": "npx tsx src/database/commands/db.backfill-variants.ts",
+    "db:backfill-customer-links": "npx tsx src/database/commands/db.backfill-customer-links.ts",
     "module:new": "tsx scripts/new-module.ts",
     "api:generate": "tsx scripts/api-generator.ts",
     "db:wait": "npx tsx src/database/commands/db.wait.ts",

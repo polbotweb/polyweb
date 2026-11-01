@@ -10,6 +10,7 @@ import type { AppUser } from '@/lib/types';
 
 import DashboardIcon from '@tabler/icons/outline/layout-dashboard.svg';
 import UserIcon from '@tabler/icons/outline/user.svg';
+import ReceiptIcon from '@tabler/icons/outline/receipt.svg';
 import ShieldIcon from '@tabler/icons/outline/shield.svg';
 import LogoutIcon from '@tabler/icons/outline/logout.svg';
 
@@ -29,12 +30,14 @@ import {
 } from '@atoms/sidebar';
 import { Avatar, AvatarImage, AvatarFallback } from '@atoms/avatar';
 import { safeUrl } from '@lib/sanitize';
+import { getPortalTranslations } from '@/modules/portal/i18n';
+import { portalPaths } from '@/modules/portal/public/links';
 
 interface Props {
   t: AuthTranslations;
   locale: Locale;
   user: AppUser;
-  activeItem?: 'dashboard' | 'profile' | 'organizations' | 'admin';
+  activeItem?: 'dashboard' | 'profile' | 'account' | 'organizations' | 'admin';
 }
 
 const { t, locale, user, activeItem } = Astro.props;
@@ -51,6 +54,7 @@ const initials = user?.name
 const navItems = [
   { id: 'dashboard' as const, title: t.userMenu.dashboard, url: dashboardUrl, icon: DashboardIcon },
   { id: 'profile' as const, title: t.userMenu.profile, url: profileUrl, icon: UserIcon },
+  { id: 'account' as const, title: getPortalTranslations(locale).title, url: portalPaths.home(locale), icon: ReceiptIcon },
 ];
 ---
 

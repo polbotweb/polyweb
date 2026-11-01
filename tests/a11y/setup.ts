@@ -277,6 +277,62 @@ async function seedFec() {
   }
 }
 
+/**
+ * Portail client : tenant dédié avec une facture émise, une commande et une réservation rattachées
+ * au compte SEED_USER (e-mail vérifié) — la page /[lang]/account est auditée avec du contenu réel.
+ */
+export const A11Y_PORTAL_ORG = 'a11y-portal-org';
+
+async function deletePortalSeed() {
+  const { getDrizzle, schema } = await import('../../src/database/drizzle');
+  const { sales } = await import('../../src/modules/sales/schema');
+  const { bookings, bookingsResources } = await import('../../src/modules/bookings/schema');
+  const { orders } = await import('../../src/modules/shop/schema/orders');
+  const { eq } = await import('drizzle-orm');
+  const db = getDrizzle();
+  await db.delete(orders).where(eq(orders.organizationId, A11Y_PORTAL_ORG)).catch(() => {});
+  await db.delete(bookings).where(eq(bookings.organizationId, A11Y_PORTAL_ORG)).catch(() => {});
+  await db.delete(bookingsResources).where(eq(bookingsResources.organizationId, A11Y_PORTAL_ORG)).catch(() => {});
+  await db.delete(sales).where(eq(sales.organizationId, A11Y_PORTAL_ORG)).catch(() => {});
+  await db.delete(schema.organization).where(eq(schema.organization.id, A11Y_PORTAL_ORG)).catch(() => {});
+}
+
+async function seedPortal() {
+  const { getDrizzle, schema } = await import('../../src/database/drizzle');
+  const { bookings, bookingsResources } = await import('../../src/modules/bookings/schema');
+  const { orders } = await import('../../src/modules/shop/schema/orders');
+  const { salesService } = await import('../../src/modules/sales/services/salesDocument.service');
+  const { appRuntime } = await import('../../src/lib/effect/runtime');
+  const { eq } = await import('drizzle-orm');
+  await deletePortalSeed();
+  const db = getDrizzle();
+  const [account] = await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, SEED_USER.email)).limit(1);
+  const [staff] = await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, SEED_ADMIN.email)).limit(1);
+  if (!account || !staff) throw new Error('[a11y] comptes seed introuvables');
+  await db.insert(schema.organization).values({ id: A11Y_PORTAL_ORG, name: 'Tenant portail A11y', slug: A11Y_PORTAL_ORG, createdAt: new Date() });
+  const day = '2026-03-02';
+  const doc = await appRuntime.runPromise(salesService.create({
+    kind: 'invoice', organizationId: A11Y_PORTAL_ORG, title: 'Facture portail A11y', customerName: SEED_USER.name, customerEmail: SEED_USER.email,
+    customerCountry: 'FR', customerType: 'B2C', sellerCountry: 'FR', supplyType: 'services', currency: 'EUR', paymentTermDays: 30,
+    lines: [{ description: 'Prestation', quantity: '1', unitPriceMinor: 12000, taxCategory: 'standard' }],
+  }, staff.id, day));
+  await appRuntime.runPromise(salesService.transition(doc.id, 'ISSUED', { userId: staff.id, sessionId: null }, 'fr', day));
+  await db.insert(orders).values({
+    organizationId: A11Y_PORTAL_ORG, number: 'A11Y-PORTAL-1', status: 'SHIPPED', locale: 'fr', email: SEED_USER.email, customerName: SEED_USER.name, userId: account.id,
+    addressLine1: '1 rue A11y', postcode: '75001', city: 'Paris', country: 'FR', shippingMethod: 'standard', shippingMinor: 0, currency: 'EUR',
+    netMinor: 2000, taxMinor: 400, grossMinor: 2400, taxTreatment: 'domestic', taxBreakdown: [], expiresAt: new Date(Date.now() + 86_400_000),
+  });
+  const [resource] = await db.insert(bookingsResources).values({
+    organizationId: A11Y_PORTAL_ORG, code: 'A11Y-PORTAL', name: 'Salle portail A11y', kind: 'room', capacity: 2, timezone: 'Europe/Paris', slotMinutes: 60, windows: [],
+  }).returning();
+  const start = new Date(Date.now() + 7 * 86_400_000);
+  start.setUTCHours(9, 0, 0, 0);
+  await db.insert(bookings).values({
+    organizationId: A11Y_PORTAL_ORG, resourceId: resource!.id, startsAt: start, endsAt: new Date(start.getTime() + 3_600_000), slug: 'a11y-portal-booking',
+    title: 'Réservation portail A11y', customerName: SEED_USER.name, customerEmail: SEED_USER.email, partySize: 1, customerUserId: account.id,
+  });
+}
+
 async function setup() {
   process.env.NODE_ENV = 'test';
 
@@ -328,6 +384,9 @@ async function setup() {
   await seedFec();
   console.log(`[a11y] FEC exports (${A11Y_FEC_PERIOD}) seeded for ${A11Y_FEC_ORGS.join(', ')}`);
 
+  await seedPortal();
+  console.log(`[a11y] Customer portal records seeded for ${SEED_USER.email}`);
+
   const data = { userCookie, adminCookie: freshAdminCookie, ...shop, ...logistics };
   writeFileSync(COOKIES_PATH, JSON.stringify(data, null, 2));
   console.log(`[a11y] Cookies written to ${COOKIES_PATH}`);
@@ -343,6 +402,7 @@ async function teardown() {
   await deleteShopSeed();
   await deleteLogisticsSeed();
   await deleteFecSeed();
+  await deletePortalSeed();
 
   if (existsSync(COOKIES_PATH)) {
     unlinkSync(COOKIES_PATH);
