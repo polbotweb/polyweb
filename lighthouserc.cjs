@@ -103,6 +103,8 @@ for (const lang of locales) {
   for (const pageId of ['dashboard', 'profile']) {
     authedUrls.push(`${BASE}/${lang}/auth/${authRoutes[pageId][lang]}`);
   }
+  // Portail client (factures, commandes, réservations du compte seedé).
+  authedUrls.push(`${BASE}/${lang}/account`);
 }
 
 const adminUrls = [];

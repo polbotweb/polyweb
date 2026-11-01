@@ -1,0 +1,145 @@
+---
+/** Espace client : factures, commandes, réservations, remboursements du compte connecté. */
+import type { Locale } from "@i18n/config";
+import type { PortalOverview } from "@/modules/portal/services/portal.service";
+import { fill, getPortalTranslations } from "@/modules/portal/i18n";
+import { portalPaths } from "@/modules/portal/public/links";
+import { getSalesTranslations } from "@/modules/sales/i18n";
+import { getCheckoutTranslations } from "@/modules/shop/i18n/checkout";
+import { getBookingsTranslations } from "@/modules/bookings/i18n";
+import { getRefundsTranslations } from "@/core/refunds/i18n";
+import { formatMinor, formatSlot } from "@/modules/bookings/public/format";
+
+type Invoice = PortalOverview["invoices"][number] & { payable: boolean };
+interface Props { locale: Locale; invoices: Invoice[]; orders: PortalOverview["orders"]; bookings: PortalOverview["bookings"]; refunds: PortalOverview["refunds"] }
+const { locale, invoices, orders, bookings, refunds } = Astro.props;
+const t = getPortalTranslations(locale);
+const sales = getSalesTranslations(locale);
+const orderStatuses = getCheckoutTranslations(locale).statuses;
+const bookingStatuses = getBookingsTranslations(locale).statuses;
+const refundT = getRefundsTranslations(locale);
+const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
+const day = (value: string | Date | null) => (value ? dateFmt.format(typeof value === "string" ? new Date(`${value}T00:00:00Z`) : value) : "—");
+const subjectOf = (reference: string) => {
+  const purpose = reference.slice(0, reference.indexOf(":"));
+  return purpose === "sales-invoice" ? t.subjects.invoice : purpose === "shop-order" ? t.subjects.order : t.subjects.booking;
+};
+const th = "px-3 py-2 text-start font-semibold";
+const td = "px-3 py-2 align-top";
+const link = "text-foreground underline underline-offset-4 hover:no-underline";
+const sections = [["portal-invoices", t.invoices], ["portal-orders", t.orders], ["portal-bookings", t.bookings], ["portal-refunds", t.refunds]] as const;
+---
+<section class="mx-auto grid w-full max-w-5xl gap-8 px-4 py-8" aria-labelledby="portal-title">
+  <header class="grid gap-2">
+    <h1 id="portal-title" class="font-heading text-3xl font-semibold text-foreground">{t.title}</h1>
+    <p class="text-foreground">{t.intro}</p>
+    <p class="text-sm text-foreground">{t.linkNote}</p>
+  </header>
+  <nav aria-label={t.nav}>
+    <ul class="flex flex-wrap gap-4">
+      {sections.map(([id, label]) => <li><a href={`#${id}`} class={link}>{label}</a></li>)}
+    </ul>
+  </nav>
+
+  <section aria-labelledby="portal-invoices" class="grid gap-3" data-testid="portal-invoices">
+    <h2 id="portal-invoices" class="font-heading text-2xl font-semibold text-foreground">{t.invoices}</h2>
+    {invoices.length === 0 ? <p class="text-foreground">{t.noInvoices}</p> : (
+      <div class="break-words">
+        <table class="w-full border-collapse text-foreground">
+          <thead><tr class="border-b-2 border-border"><th scope="col" class={th}>{t.number}</th><th scope="col" class={th}>{t.document}</th><th scope="col" class={th}>{t.date}</th><th scope="col" class={th}>{t.amount}</th><th scope="col" class={th}>{t.balance}</th><th scope="col" class={th}>{t.status}</th><th scope="col" class={th}>{t.actions}</th></tr></thead>
+          <tbody>
+            {invoices.map((invoice) => {
+              const ref = invoice.number ?? invoice.title;
+              const balance = Math.max(0, invoice.grossMinor - invoice.paidMinor - invoice.creditedMinor);
+              return (
+                <tr class="border-b border-border" data-testid="portal-invoice-row">
+                  <th scope="row" class={th} dir="ltr">{ref}</th>
+                  <td class={td}>{sales.kinds[invoice.kind]}</td>
+                  <td class={td}>{day(invoice.issueDate)}</td>
+                  <td class={td}>{formatMinor(invoice.grossMinor, invoice.currency, locale)}</td>
+                  <td class={td}>{invoice.kind === "invoice" ? formatMinor(balance, invoice.currency, locale) : "—"}</td>
+                  <td class={td}>{sales.statuses[invoice.status]}</td>
+                  <td class={td}>
+                    <ul class="grid gap-1">
+                      <li><a href={portalPaths.invoicePdf(locale, invoice.id)} class={link} download>{fill(t.downloadPdf, { ref })}</a></li>
+                      {invoice.payable && <li><a href={portalPaths.invoicePay(locale, invoice.id)} class={link}>{fill(t.pay, { ref })}</a></li>}
+                    </ul>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+
+  <section aria-labelledby="portal-orders" class="grid gap-3" data-testid="portal-orders">
+    <h2 id="portal-orders" class="font-heading text-2xl font-semibold text-foreground">{t.orders}</h2>
+    {orders.length === 0 ? <p class="text-foreground">{t.noOrders}</p> : (
+      <div class="break-words">
+        <table class="w-full border-collapse text-foreground">
+          <thead><tr class="border-b-2 border-border"><th scope="col" class={th}>{t.number}</th><th scope="col" class={th}>{t.date}</th><th scope="col" class={th}>{t.amount}</th><th scope="col" class={th}>{t.status}</th><th scope="col" class={th}>{t.actions}</th></tr></thead>
+          <tbody>
+            {orders.map((order) => (
+              <tr class="border-b border-border" data-testid="portal-order-row">
+                <th scope="row" class={th} dir="ltr">{order.number}</th>
+                <td class={td}>{day(order.createdAt)}</td>
+                <td class={td}>{formatMinor(order.grossMinor, order.currency, locale)}</td>
+                <td class={td}>{orderStatuses[order.status]}</td>
+                <td class={td}><a href={portalPaths.order(locale, order.id)} class={link}>{fill(t.viewOrder, { ref: order.number })}</a></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+
+  <section aria-labelledby="portal-bookings" class="grid gap-3" data-testid="portal-bookings">
+    <h2 id="portal-bookings" class="font-heading text-2xl font-semibold text-foreground">{t.bookings}</h2>
+    {bookings.length === 0 ? <p class="text-foreground">{t.noBookings}</p> : (
+      <div class="break-words">
+        <table class="w-full border-collapse text-foreground">
+          <thead><tr class="border-b-2 border-border"><th scope="col" class={th}>{t.number}</th><th scope="col" class={th}>{t.resource}</th><th scope="col" class={th}>{t.when}</th><th scope="col" class={th}>{t.status}</th><th scope="col" class={th}>{t.actions}</th></tr></thead>
+          <tbody>
+            {bookings.map((booking) => {
+              const ref = booking.number ?? booking.slug;
+              return (
+                <tr class="border-b border-border" data-testid="portal-booking-row">
+                  <th scope="row" class={th} dir="ltr">{ref}</th>
+                  <td class={td}>{booking.resourceName}</td>
+                  <td class={td}>{formatSlot(booking.startsAt, booking.endsAt, booking.timezone, locale)}</td>
+                  <td class={td}>{bookingStatuses[booking.status]}</td>
+                  <td class={td}><a href={portalPaths.booking(locale, booking.id)} class={link}>{fill(t.manageBooking, { ref })}</a></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+
+  <section aria-labelledby="portal-refunds" class="grid gap-3" data-testid="portal-refunds">
+    <h2 id="portal-refunds" class="font-heading text-2xl font-semibold text-foreground">{t.refunds}</h2>
+    {refunds.length === 0 ? <p class="text-foreground">{t.noRefunds}</p> : (
+      <div class="break-words">
+        <table class="w-full border-collapse text-foreground">
+          <thead><tr class="border-b-2 border-border"><th scope="col" class={th}>{t.date}</th><th scope="col" class={th}>{t.subject}</th><th scope="col" class={th}>{t.amount}</th><th scope="col" class={th}>{t.reason}</th><th scope="col" class={th}>{t.status}</th></tr></thead>
+          <tbody>
+            {refunds.map((refund) => (
+              <tr class="border-b border-border" data-testid="portal-refund-row">
+                <th scope="row" class={th}>{day(refund.succeededAt ?? refund.createdAt)}</th>
+                <td class={td}>{subjectOf(refund.reference)}</td>
+                <td class={td}>{formatMinor(refund.amount, refund.currency, locale)}</td>
+                <td class={td}>{refundT.reasons[refund.reason]}</td>
+                <td class={td}>{refundT.statuses[refund.status]}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+</section>

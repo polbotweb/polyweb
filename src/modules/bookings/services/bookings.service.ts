@@ -136,6 +136,8 @@ const bookingColumns = (tx: DbTransaction, input: BookingInput, organizationId: 
 
 /** Demande de réservation d'un visiteur : un créneau libre (instant de début) d'une ressource publique. */
 export interface GuestBookingInput extends GuestInput {
+  /** Compte client connecté (portail) : propriétaire de la réservation. */
+  readonly customerUserId?: string | null;
   readonly organizationId: string | null;
   readonly resourceId: string;
   /** Instant ISO du début d'un créneau proposé par `freeSlots`. */
@@ -220,7 +222,7 @@ export const bookingsService = {
         const [row] = yield* dbTry("bookings.guest.create", () => tx.insert(bookings).values({
           organizationId: input.organizationId, resourceId: resource.id, startsAt: start, endsAt: end, slug,
           title: `${guest.customerName} — ${resource.name}`.slice(0, 200), customerName: guest.customerName, customerEmail: guest.customerEmail,
-          customerPhone: guest.customerPhone, partySize: guest.partySize, notes: guest.notes,
+          customerPhone: guest.customerPhone, partySize: guest.partySize, notes: guest.notes, customerUserId: input.customerUserId ?? null,
           ...(input.requireDeposit && resource.depositMinor > 0
             ? { depositMinor: resource.depositMinor, depositCurrency: resource.depositCurrency, paymentDueAt: new Date(now.getTime() + DEPOSIT_WINDOW_MINUTES * 60_000) }
             : {}),

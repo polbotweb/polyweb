@@ -74,6 +74,8 @@ export interface SubmissionMeta {
   readonly userAgent: string | null;
   readonly locale: Locale;
   readonly now?: Date;
+  /** Utilisateur connecté : la réservation lui est rattachée (portail client). */
+  readonly userId?: string | null;
 }
 export type SubmitOutcome = { readonly kind: "created"; readonly id: string; readonly token: string; readonly emailSent: boolean; readonly payUrl: string | null } | { readonly kind: "discarded" };
 
@@ -99,7 +101,7 @@ export const submitGuestBooking = (tenant: PublicTenant, resource: Resource, raw
     if (!raw.startsAt) fields.push("slot");
     if (fields.length > 0) return yield* new InvalidGuestError({ fields });
 
-    const { booking } = yield* bookingsService.createGuestBooking({ ...input, organizationId: tenant.organizationId, resourceId: resource.id, startsAt: raw.startsAt!, requireDeposit: isPaymentsEnabled() }, now);
+    const { booking } = yield* bookingsService.createGuestBooking({ ...input, organizationId: tenant.organizationId, resourceId: resource.id, startsAt: raw.startsAt!, requireDeposit: isPaymentsEnabled(), customerUserId: meta.userId ?? null }, now);
     const config = yield* AppConfig;
     const token = guestToken(config.signingSecret, booking.id);
     const mail = guestConfirmationEmail({

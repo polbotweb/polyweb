@@ -1,6 +1,6 @@
 ════════════════════════════════════════════════════════════════════════════════
   VITEST UNIT & INTEGRATION TEST REPORT
-  Generated: 2026-11-01 09:04:25
+  Generated: 2026-11-01 11:25:01
 ════════════════════════════════════════════════════════════════════════════════
 
   ✅ tests/integration/audit.test.ts  (8/8 passed)
@@ -41,6 +41,7 @@
   ✅ tests/integration/pages-bulk-core.test.ts  (4/4 passed)
   ✅ tests/integration/pages-facets.test.ts  (5/5 passed)
   ✅ tests/integration/payments.test.ts  (7/7 passed)
+  ✅ tests/integration/portal.test.ts  (8/8 passed)
   ✅ tests/integration/purchasing-module.test.ts  (5/5 passed)
   ✅ tests/integration/refunds.test.ts  (12/12 passed)
   ✅ tests/integration/sales-fec.test.ts  (11/11 passed)
@@ -140,6 +141,7 @@
   ✅ tests/unit/pdf-puppeteer.test.ts  (3/3 passed)
   ✅ tests/unit/permissions.test.ts  (37/37 passed)
   ✅ tests/unit/port-guard.test.ts  (2/2 passed)
+  ✅ tests/unit/portal-ownership.test.ts  (6/6 passed)
   ✅ tests/unit/production-hardening.test.ts  (9/9 passed)
   ✅ tests/unit/rate-limit.test.ts  (9/9 passed)
   ✅ tests/unit/request-context.test.ts  (6/6 passed)
@@ -189,6 +191,10 @@
   ✅ tests/unit/cms/module-registry.test.ts  (2/2 passed)
   ✅ tests/unit/cms/resource-contract.test.ts  (6/6 passed)
   ✅ tests/unit/cms/workflow.test.ts  (4/4 passed)
+  ✅ tests/unit/bookings/admin-resource.test.ts  (3/3 passed)
+  ✅ tests/unit/bookings/domain.test.ts  (5/5 passed)
+  ✅ tests/unit/bookings/guest.test.ts  (7/7 passed)
+  ✅ tests/unit/bookings/scheduling.test.ts  (5/5 passed)
   ✅ tests/unit/core/category-taxonomy.test.ts  (5/5 passed)
   ✅ tests/unit/core/documents.test.ts  (9/9 passed)
   ✅ tests/unit/core/einvoice-pdfa.test.ts  (4/4 passed)
@@ -196,10 +202,6 @@
   ✅ tests/unit/core/money.test.ts  (29/29 passed)
   ✅ tests/unit/core/numbering.test.ts  (3/3 passed)
   ✅ tests/unit/core/payments.test.ts  (15/15 passed)
-  ✅ tests/unit/bookings/admin-resource.test.ts  (3/3 passed)
-  ✅ tests/unit/bookings/domain.test.ts  (5/5 passed)
-  ✅ tests/unit/bookings/guest.test.ts  (7/7 passed)
-  ✅ tests/unit/bookings/scheduling.test.ts  (5/5 passed)
   ✅ tests/unit/crm/admin-resource.test.ts  (3/3 passed)
   ✅ tests/unit/crm/domain.test.ts  (9/9 passed)
   ✅ tests/unit/dashboard/metrics.test.ts  (3/3 passed)
@@ -235,20 +237,20 @@
   ✅ tests/unit/services/urls.test.ts  (3/3 passed)
   ✅ tests/unit/services/validation.test.ts  (6/6 passed)
   ✅ tests/unit/services/workflow.test.ts  (3/3 passed)
-  ✅ tests/unit/webhooks/signing-ssrf.test.ts  (7/7 passed)
   ✅ tests/unit/shop/checkout-domain.test.ts  (12/12 passed)
   ✅ tests/unit/shop/returns-domain.test.ts  (7/7 passed)
+  ✅ tests/unit/webhooks/signing-ssrf.test.ts  (7/7 passed)
 
 ════════════════════════════════════════════════════════════════════════════════
   SUMMARY
 ════════════════════════════════════════════════════════════════════════════════
 
-  Total tests:   2070
-  Passed:        2069  ✅
+  Total tests:   2084
+  Passed:        2083  ✅
   Failed:        0  
   Skipped:       1
-  Duration:      46s
+  Duration:      39s
 
 ════════════════════════════════════════════════════════════════════════════════
-  END OF REPORT — 2069/2070 passed
+  END OF REPORT — 2083/2084 passed
 ════════════════════════════════════════════════════════════════════════════════
