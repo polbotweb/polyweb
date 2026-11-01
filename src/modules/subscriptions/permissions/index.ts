@@ -2,7 +2,7 @@
  * Gardes de permission Effect du domaine subscriptions, tenant-aware (core `permissions/tenant`) :
  * administrateur global → tout ; propriétaire / administrateur d'organisation → les données
  * de SA organisation uniquement ; données plateforme (`organizationId = null`) → RBAC global.
- * Namespace « subscriptions » déclaré dans `src/lib/permissions`. Le client final n'a aucune
+ * Namespace « subscriptions » déclaré dans `./statements.ts` (registre core `permissions/registry`). Le client final n'a aucune
  * permission : ses actions (résilier / reprendre) passent par un contrôle de propriété (portail).
  */
 import type { ActionAPIContext } from "astro:actions";

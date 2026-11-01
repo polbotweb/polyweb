@@ -2,7 +2,7 @@
  * Gardes de permission Effect du domaine bookings (réservations), tenant-aware (core `permissions/tenant`) :
  * administrateur global → tout ; propriétaire / administrateur d'organisation → les données
  * de SA organisation uniquement ; données plateforme (`organizationId = null`) → RBAC global.
- * Namespace « bookings » déclaré dans `src/lib/permissions`.
+ * Namespace « bookings » déclaré dans `./statements.ts` (registre core `permissions/registry`).
  */
 import type { ActionAPIContext } from "astro:actions";
 import { Effect } from "effect";
