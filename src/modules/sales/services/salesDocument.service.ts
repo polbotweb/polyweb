@@ -16,6 +16,8 @@ import { fail } from "@/lib/effect/failure";
 import { canTransition } from "@/core/workflow";
 import { assignDocumentNumber } from "@/core/numbering";
 import { allocate, parseCurrency } from "@/core/money";
+import { freezeAmounts, parseRate } from "@/core/fx";
+import { findRate, lockBaseCurrency } from "@/core/fx/service";
 import type { LockOwner } from "@/core/locks/policy";
 import { taxActiveRates } from "@/modules/tax/loaders/tax-rate-admin.loader";
 import type { CustomerType, SupplyType, TaxCategory } from "@/modules/tax/domain/rules";
@@ -182,13 +184,30 @@ const insertDraft = (executor: Executor, input: SalesDocumentInput & { readonly 
 const DERIVED = DERIVED_SALES_STATUSES;
 
 /** Émission : numéro sans trou + date + échéance + totaux figés à la date d'émission. */
+/**
+ * Taux figé à l'émission (core/fx) : verrouille la devise de tenue, reprend le taux de la facture
+ * d'origine pour un avoir, sinon le taux du jour (forçage manuel prioritaire, BCE sinon).
+ */
+const frozenColumns = (row: SalesDocumentRow, priced: Priced, today: string, source: SalesDocumentRow | null) =>
+  Effect.gen(function* () {
+    const currency = yield* parseCurrency(row.currency).pipe(Effect.catch(() => fail("BAD_REQUEST", "Devise inconnue : " + row.currency)));
+    const base = yield* lockBaseCurrency(row.organizationId);
+    const amounts = { netMinor: priced.totals.net.amountMinor, taxMinor: priced.totals.tax.amountMinor, currency };
+    const resolved = source?.exchangeRate && source.baseCurrency === base && source.exchangeRateDate
+      ? { rate: yield* parseRate(source.exchangeRate).pipe(Effect.catch(() => fail("BAD_REQUEST", "Taux de la facture d'origine invalide."))), date: source.exchangeRateDate }
+      : yield* findRate(row.organizationId, currency, base, today).pipe(Effect.catchTag("RateNotFoundError", (e) => fail("BAD_REQUEST", e.message)));
+    return yield* freezeAmounts(amounts, base, resolved.rate, resolved.date).pipe(Effect.catch(() => fail("BAD_REQUEST", "Contre-valeur hors limites.")));
+  });
+
 const issue = (tx: DbTransaction, row: SalesDocumentRow, to: SalesStatus, today: string) =>
   Effect.gen(function* () {
     const lines = (yield* salesLinesOf(tx, row.id)).map(toLineInput);
     const priced = yield* price({ ...partyOf(row), kind: row.kind, organizationId: row.organizationId }, lines, today);
+    let source: SalesDocumentRow | null = null;
     if (row.kind === "credit_note") {
       if (!row.sourceDocumentId) return yield* fail("BAD_REQUEST", "Avoir sans facture d'origine.");
       const invoice = yield* required(tx, row.sourceDocumentId, true);
+      source = invoice;
       if (!CREDITABLE_INVOICE_STATUSES.includes(invoice.status)) return yield* fail("BAD_REQUEST", "Facture d'origine non créditable (" + invoice.status + ").");
       yield* validateCreditAmount({ invoiceGrossMinor: invoice.grossMinor, alreadyCreditedMinor: invoice.creditedMinor, requestedMinor: priced.totals.gross.amountMinor }).pipe(
         Effect.catch(() => fail("BAD_REQUEST", "Avoir supérieur au restant créditable de la facture.")),
@@ -199,9 +218,10 @@ const issue = (tx: DbTransaction, row: SalesDocumentRow, to: SalesStatus, today:
     }
     const { number } = yield* assignDocumentNumber(tx, { organizationId: row.organizationId, key: SALES_NUMBERING_KEYS[row.kind], scheme: DEFAULT_SALES_NUMBERING[row.kind], date: today });
     const dueDate = row.kind === "invoice" ? yield* dueDateFrom(today, row.paymentTermDays) : null;
+    const frozen = yield* frozenColumns(row, priced, today, source);
     yield* writeLines(tx, row.id, priced);
     const [updated] = yield* dbTry("sales.issue", () =>
-      tx.update(sales).set({ ...totalsColumns(priced), status: to, number, issueDate: today, dueDate }).where(eq(sales.id, row.id)).returning());
+      tx.update(sales).set({ ...totalsColumns(priced), ...frozen, status: to, number, issueDate: today, dueDate }).where(eq(sales.id, row.id)).returning());
     return updated;
   });
 

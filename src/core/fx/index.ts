@@ -2,3 +2,4 @@
 export * from '@/core/fx/errors';
 export * from '@/core/fx/rate';
 export * from '@/core/fx/ecb';
+export * from '@/core/fx/freeze';
