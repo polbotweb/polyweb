@@ -1,12 +1,12 @@
 
-> polyweb@0.0.1 check /workspace/b3-fx
+> polyweb@0.0.1 check /workspace/b4-api
 > astro check
 
-16:01:16 [@astrojs/node] Enabling sessions with filesystem storage
-16:01:17 [content] Syncing content
-16:01:17 [content] Synced content
-16:01:17 [types] Generated 152ms
-16:01:17 [check] Getting diagnostics for Astro files in /workspace/b3-fx...
+19:08:39 [@astrojs/node] Enabling sessions with filesystem storage
+19:08:39 [content] Syncing content
+19:08:39 [content] Synced content
+19:08:39 [types] Generated 185ms
+19:08:39 [check] Getting diagnostics for Astro files in /workspace/b4-api...
 [96msrc/actions/admin/pages.ts[0m:[93m4[0m:[93m38[0m - [93mwarning[0m[90m ts(6133): [0m'isNotNull' is declared but its value is never read.
 
 [7m4[0m import { eq, and, asc, desc, isNull, isNotNull, inArray, max } from "drizzle-orm";
@@ -230,6 +230,11 @@
 [7m27[0m   coverImageId: z.string().uuid().optional().nullable(),
 [7m  [0m [93m                           ~~~~[0m
 
+[96msrc/modules/shop/refunds.ts[0m:[93m19[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'orders' is declared but its value is never read.
+
+[7m19[0m import { orders } from "./schema/orders";
+[7m  [0m [93m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
 [96msrc/pages/[lang]/admin/sales/fx/index.astro[0m:[93m3[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'Effect' is declared but its value is never read.
 
 [7m3[0m import { Effect } from "effect";
@@ -263,8 +268,8 @@
 [7m23[0m import { bookings, bookingsResources } from '@/modules/bookings/schema';
 [7m  [0m [93m                   ~~~~~~~~~~~~~~~~~[0m
 
-Result (1740 files): 
+Result (1762 files): 
 - 0 errors
 - 0 warnings
-- 58 hints
+- 59 hints
 
