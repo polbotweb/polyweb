@@ -5,7 +5,7 @@
  */
 import type { FieldDefinition } from '@/core/content-types/fields';
 import type { ContentType } from '@/modules/content/domain/content-types';
-import { API_SCOPES } from '@database/schemas/api.schema';
+import { listApiScopes } from '@/core/api/registry';
 
 type JsonSchema = Record<string, unknown>;
 
@@ -210,7 +210,7 @@ export function buildOpenApiDocument(opts: {
     info: { title: `${opts.siteName} — API de contenu`, version: '1.0.0', description: 'API REST Polyweb v1. Authentification : `Authorization: Bearer pw_…` (jetons créés dans l’admin). Lecture anonyme possible pour les types publics.' },
     servers: [{ url: `${opts.baseUrl.replace(/\/$/, '')}/api/v1` }],
     components: {
-      securitySchemes: { bearer: { type: 'http', scheme: 'bearer', description: `Scopes : ${API_SCOPES.join(', ')}` } },
+      securitySchemes: { bearer: { type: 'http', scheme: 'bearer', description: `Scopes : ${listApiScopes().join(', ')}` } },
       schemas,
     },
     security: [{}, { bearer: ['content:read'] }],

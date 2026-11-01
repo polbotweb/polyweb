@@ -12,7 +12,7 @@ import { logAuditEvent, extractIp } from '@/lib/audit';
 import { runAppResult } from '@/lib/effect/http';
 import { ForbiddenError } from '@/lib/effect/errors';
 import { createToken, listTokens, revokeToken } from '@/modules/api/domain/tokens';
-import { API_SCOPES } from '@database/schemas/api.schema';
+import { listApiScopes } from '@/core/api/registry';
 
 export const prerender = false;
 const result = await requirePermission(Astro, { apiToken: ['read'] });
@@ -86,7 +86,7 @@ const scopeLabels: Record<string, string> = {
       <label class="grid gap-1 text-sm">Nom<input name="name" required maxlength="120" class="rounded-md border bg-background px-3 py-2" /></label>
       <fieldset class="grid gap-1 text-sm">
         <legend class="mb-1">Portées</legend>
-        {API_SCOPES.map((s) => (
+        {listApiScopes().map((s) => (
           <label class="flex items-center gap-2"><input type="checkbox" name="scopes" value={s} checked={s === 'content:read'} /> <code>{s}</code> <span class="text-muted-foreground">— {scopeLabels[s]}</span></label>
         ))}
       </fieldset>

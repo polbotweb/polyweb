@@ -8,7 +8,7 @@ import { getAdminSite, userCan } from '@/lib/platform/admin';
 import { logAuditEvent, extractIp } from '@/lib/audit';
 import { runAppResult } from '@/lib/effect/http';
 import { ForbiddenError } from '@/lib/effect/errors';
-import { createWebhook, listWebhooks, EVENT_PATTERNS } from '@/modules/webhooks/domain/webhooks';
+import { createWebhook, listWebhooks,  eventPatterns } from '@/modules/webhooks/domain/webhooks';
 
 export const prerender = false;
 const result = await requirePermission(Astro, { webhook: ['read'] });
@@ -57,7 +57,7 @@ const hooks = listed.ok ? listed.value : [];
       <label class="grid gap-1 text-sm">URL<input name="url" type="url" required placeholder="https://exemple.com/hooks/polyweb" class="rounded-md border bg-background px-3 py-2" /></label>
       <fieldset class="grid gap-1 text-sm sm:grid-cols-3">
         <legend class="mb-1">Événements</legend>
-        {EVENT_PATTERNS.map((e) => <label class="flex items-center gap-2"><input type="checkbox" name="events" value={e} checked={e === 'content.*'} /> <code>{e}</code></label>)}
+        {eventPatterns().map((e) => <label class="flex items-center gap-2"><input type="checkbox" name="events" value={e} checked={e === 'content.*'} /> <code>{e}</code></label>)}
       </fieldset>
       <div><button class="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">Créer le webhook</button></div>
     </form>

@@ -5,12 +5,13 @@
  * Seul le SHA-256 hex est stocké ; le jeton en clair n'est renvoyé qu'à la création.
  */
 import { createHash, randomBytes } from 'node:crypto';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull, lt, sql } from 'drizzle-orm';
 import { Clock, Effect, Schema } from 'effect';
 import { schema } from '@database/drizzle';
-import { API_SCOPES, type ApiScope } from '@database/schemas/api.schema';
-import { query } from '@/lib/effect/db';
-import { ForbiddenError, NotFoundError, UnauthorizedError, RateLimitedError } from '@/lib/effect/errors';
+import type { ApiScope } from '@database/schemas/api.schema';
+import { listApiScopes } from '@/core/api/registry';
+import { type Db, query } from '@/lib/effect/db';
+import { type DbError, ForbiddenError, NotFoundError, UnauthorizedError, RateLimitedError } from '@/lib/effect/errors';
 import { decode } from '@/lib/effect/schema';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -31,9 +32,14 @@ const strip = ({ tokenHash: _hash, ...rest }: ApiToken): PublicApiToken => rest;
 
 export const CreateTokenInput = Schema.Struct({
   name: Schema.Trim.pipe(Schema.check(Schema.isMinLength(1), Schema.isMaxLength(120))),
-  scopes: Schema.Array(Schema.Literals(API_SCOPES)).pipe(Schema.check(Schema.isMinLength(1))),
+  /** Scopes connus : cœur + scopes déclarés par les ressources des modules (registre). */
+  scopes: Schema.Array(Schema.String.pipe(Schema.check(Schema.makeFilter((s: string) => listApiScopes().includes(s) || 'Unknown scope')))).pipe(
+    Schema.check(Schema.isMinLength(1)),
+  ),
   /** Durée de validité en jours (absent = sans expiration). */
   expiresInDays: Schema.optional(Schema.Number.pipe(Schema.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 3650 })))),
+  /** Quota par minute propre à la clé (absent = valeur par défaut). */
+  rateLimitPerMinute: Schema.optional(Schema.Number.pipe(Schema.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100_000 })))),
 });
 export type CreateTokenInput = typeof CreateTokenInput.Type;
 
@@ -53,6 +59,7 @@ export const createToken = (siteId: string, input: unknown, createdBy: string | 
           scopes: [...new Set(data.scopes)],
           createdBy,
           expiresAt: data.expiresInDays ? new Date(now + data.expiresInDays * 86_400_000) : null,
+          rateLimitPerMinute: data.rateLimitPerMinute ?? null,
         })
         .returning(),
     );
@@ -81,6 +88,8 @@ export interface ApiPrincipal {
   readonly tokenId: string | null;
   readonly siteId: string;
   readonly scopes: ReadonlySet<ApiScope>;
+  /** Quota par minute propre à la clé (`null` = défaut). */
+  readonly rateLimitPerMinute?: number | null;
 }
 
 export const hasScope = (p: ApiPrincipal, scope: ApiScope) => p.scopes.has(scope);
@@ -119,7 +128,7 @@ export const authenticate = (authorization: string | null, fallbackSiteId: strin
         db.update(schema.apiTokens).set({ lastUsedAt: new Date(now) }).where(eq(schema.apiTokens.id, row.id)),
       ).pipe(Effect.tapError((e) => Effect.logWarning('api token touch failed', e)), Effect.ignore);
     }
-    return { kind: 'token', tokenId: row.id, siteId: row.siteId, scopes: new Set(row.scopes) } satisfies ApiPrincipal as ApiPrincipal;
+    return { kind: 'token', tokenId: row.id, siteId: row.siteId, scopes: new Set(row.scopes), rateLimitPerMinute: row.rateLimitPerMinute } satisfies ApiPrincipal as ApiPrincipal;
   }).pipe(Effect.withSpan('api.authenticate'));
 
 export const API_RATE_LIMITS = {
@@ -127,11 +136,56 @@ export const API_RATE_LIMITS = {
   anonymous: { window: 60, max: Number(process.env.API_RATE_LIMIT_ANON ?? 120) },
 } as const;
 
-export const rateLimit = (principal: ApiPrincipal, clientIp: string) =>
-  Effect.suspend(() => {
-    const key = principal.tokenId ? `api:token:${principal.tokenId}` : `api:ip:${clientIp}`;
-    const r = checkRateLimit(key, principal.tokenId ? API_RATE_LIMITS.token : API_RATE_LIMITS.anonymous);
+export interface RateLimitState {
+  readonly limit: number;
+  readonly remaining: number;
+  /** Secondes avant la réinitialisation de la fenêtre. */
+  readonly reset: number;
+}
+
+/** En-têtes `RateLimit-*` (draft IETF) pour une réponse réussie. */
+export const rateLimitHeaders = (s: RateLimitState): Record<string, string> => ({
+  'ratelimit-limit': String(s.limit),
+  'ratelimit-remaining': String(s.remaining),
+  'ratelimit-reset': String(s.reset),
+});
+
+/**
+ * Fenêtre fixe d'une minute par clé, en base (partagée entre instances) :
+ * upsert atomique qui renvoie le compteur. Les anciennes fenêtres sont purgées
+ * au passage (au plus 1 requête sur 100).
+ */
+export const tokenRateLimit = (tokenId: string, max: number) =>
+  Effect.gen(function* () {
+    const now = yield* Clock.currentTimeMillis;
+    const windowStart = new Date(Math.floor(now / 60_000) * 60_000);
+    const reset = Math.max(1, Math.ceil((windowStart.getTime() + 60_000 - now) / 1000));
+    const [row] = yield* query('api.rateLimit', (db) =>
+      db
+        .insert(schema.apiRateWindows)
+        .values({ tokenId, windowStart, count: 1 })
+        .onConflictDoUpdate({
+          target: [schema.apiRateWindows.tokenId, schema.apiRateWindows.windowStart],
+          set: { count: sql`${schema.apiRateWindows.count} + 1` },
+        })
+        .returning({ count: schema.apiRateWindows.count }),
+    );
+    if (Math.random() < 0.01) {
+      yield* query('api.rateLimit.gc', (db) => db.delete(schema.apiRateWindows).where(lt(schema.apiRateWindows.windowStart, new Date(now - 3_600_000)))).pipe(Effect.ignore);
+    }
+    const count = row?.count ?? 1;
+    if (count > max) return yield* new RateLimitedError({ retryAfterSeconds: reset, limit: max });
+    return { limit: max, remaining: Math.max(0, max - count), reset } satisfies RateLimitState as RateLimitState;
+  }).pipe(Effect.withSpan('api.rateLimit'));
+
+export const rateLimit = (principal: ApiPrincipal, clientIp: string): Effect.Effect<RateLimitState, RateLimitedError | DbError, Db> => {
+  if (principal.tokenId) return tokenRateLimit(principal.tokenId, principal.rateLimitPerMinute ?? API_RATE_LIMITS.token.max);
+  return Effect.suspend(() => {
+    const cfg = API_RATE_LIMITS.anonymous;
+    const r = checkRateLimit(`api:ip:${clientIp}`, cfg);
+    const reset = Math.max(1, Math.ceil((r.resetAt - Date.now()) / 1000));
     return r.allowed
-      ? Effect.succeed(r)
-      : Effect.fail(new RateLimitedError({ retryAfterSeconds: Math.max(1, Math.ceil((r.resetAt - Date.now()) / 1000)) }));
+      ? Effect.succeed({ limit: cfg.max, remaining: r.remaining, reset } satisfies RateLimitState as RateLimitState)
+      : Effect.fail(new RateLimitedError({ retryAfterSeconds: reset, limit: cfg.max }));
   });
+};

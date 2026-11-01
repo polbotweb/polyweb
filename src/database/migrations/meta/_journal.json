@@ -337,6 +337,13 @@
       "when": 1793547493900,
       "tag": "0047_exchange_rates",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1793555566108,
+      "tag": "0048_public_api",
+      "breakpoints": true
     }
   ]
 }

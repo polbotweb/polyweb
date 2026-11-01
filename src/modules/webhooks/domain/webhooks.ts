@@ -6,7 +6,7 @@ import { query } from '@/lib/effect/db';
 import { AppConfig } from '@/lib/effect/config';
 import { NotFoundError } from '@/lib/effect/errors';
 import { decode } from '@/lib/effect/schema';
-import { POLYWEB_EVENTS } from '@/core/events';
+import { listEventDefinitions } from '@/core/events';
 import { encryptSecret, generateWebhookSecret } from './signing';
 import { validateWebhookUrl } from './ssrf';
 
@@ -17,11 +17,11 @@ export type WebhookDelivery = typeof schema.webhookDeliveries.$inferSelect;
 const strip = ({ secretEncrypted: _s, ...rest }: Webhook): PublicWebhook => rest;
 
 /** Motifs acceptés : un nom exact, `<famille>.*` ou `*`. */
-export const EVENT_PATTERNS: readonly string[] = [
-  '*',
-  ...[...new Set(POLYWEB_EVENTS.map((e) => `${e.split('.')[0]}.*`))],
-  ...POLYWEB_EVENTS,
-];
+/** Motifs proposés, calculés depuis le registre d'événements (cœur + modules). */
+export function eventPatterns(): readonly string[] {
+  const names = listEventDefinitions().map((d) => d.name);
+  return ['*', ...new Set(names.map((e) => `${e.split('.')[0]}.*`)), ...names];
+}
 
 export function eventMatches(patterns: readonly string[], event: string): boolean {
   return patterns.some((p) => p === '*' || p === event || (p.endsWith('.*') && event.startsWith(p.slice(0, -1))));
@@ -30,7 +30,7 @@ export function eventMatches(patterns: readonly string[], event: string): boolea
 export const WebhookInput = Schema.Struct({
   name: Schema.Trim.pipe(Schema.check(Schema.isMinLength(1), Schema.isMaxLength(120))),
   url: Schema.Trim.pipe(Schema.check(Schema.isMaxLength(2000))),
-  events: Schema.Array(Schema.Literals(EVENT_PATTERNS as [string, ...string[]])).pipe(Schema.check(Schema.isMinLength(1))),
+  events: Schema.Array(Schema.String.pipe(Schema.check(Schema.makeFilter((e: string) => eventPatterns().includes(e) || 'Unknown event pattern')))).pipe(Schema.check(Schema.isMinLength(1))),
   active: Schema.optional(Schema.Boolean),
 });
 

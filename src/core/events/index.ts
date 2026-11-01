@@ -30,13 +30,47 @@ export const POLYWEB_EVENTS = [
   "media.deleted",
 ] as const;
 
-export type PolywebEventName = (typeof POLYWEB_EVENTS)[number];
+export type CorePolywebEventName = (typeof POLYWEB_EVENTS)[number];
+/** Nom d'événement : cœur ou déclaré par un module via `registerEventNames`. */
+export type PolywebEventName = CorePolywebEventName | (string & {});
+
+export interface EventDefinition {
+  readonly name: string;
+  /** Module déclarant (ex. `sales`). */
+  readonly module: string;
+  readonly description: string;
+}
+
+const NAME = /^[a-z][a-z_]*\.[a-z][a-z_]*$/;
+const declared = new Map<string, EventDefinition>(
+  POLYWEB_EVENTS.map((name) => [name, { name, module: "core", description: name }]),
+);
+
+/** Registre d'événements : chaque module déclare les siens (webhooks, plugins). */
+export function registerEventNames(definitions: readonly EventDefinition[]): void {
+  for (const d of definitions) {
+    if (!NAME.test(d.name)) throw new Error(`Invalid event name: ${d.name}`);
+    const existing = declared.get(d.name);
+    if (existing && existing.module !== d.module) throw new Error(`Event already registered by ${existing.module}: ${d.name}`);
+    declared.set(d.name, d);
+  }
+}
+
+/** Événements connus (cœur + modules), dans l'ordre de déclaration. */
+export function listEventDefinitions(): readonly EventDefinition[] {
+  return [...declared.values()];
+}
 
 export interface PolywebEvent<T = Record<string, unknown>> {
   readonly id: string;
   readonly name: PolywebEventName;
   readonly occurredAt: string;
   readonly siteId: string | null;
+  /**
+   * Tenant des modules ERP (`null` = plateforme). Absent pour les événements de site :
+   * les webhooks de tous les sites de cette organisation le reçoivent.
+   */
+  readonly organizationId?: string | null;
   readonly payload: T;
 }
 
@@ -45,7 +79,7 @@ export type PolywebEventHandler = (event: PolywebEvent) => void | Promise<void>;
 const handlers = new Map<PolywebEventName | "*", Set<PolywebEventHandler>>();
 
 export function isPolywebEventName(value: string): value is PolywebEventName {
-  return (POLYWEB_EVENTS as readonly string[]).includes(value);
+  return declared.has(value);
 }
 
 /** Abonne un handler à un événement (ou `*` pour tous). Retourne la fonction de désabonnement. */
@@ -74,14 +108,16 @@ const runHandler = (name: PolywebEventName, handler: PolywebEventHandler, event:
 export const emitEventEffect = <T extends Record<string, unknown>>(
   name: PolywebEventName,
   payload: T,
-  options: { siteId?: string | null } = {},
+  options: { siteId?: string | null; organizationId?: string | null } = {},
 ): Effect.Effect<PolywebEvent<T>> =>
   Effect.gen(function* () {
+    if (!declared.has(name)) yield* Effect.logWarning(`[events] undeclared event ${name}`);
     const event: PolywebEvent<T> = {
       id: randomUUID(),
       name,
       occurredAt: new Date().toISOString(),
       siteId: options.siteId ?? null,
+      ...(options.organizationId !== undefined ? { organizationId: options.organizationId } : {}),
       payload,
     };
     const targets = [...(handlers.get(name) ?? []), ...(handlers.get("*") ?? [])];
@@ -93,7 +129,7 @@ export const emitEventEffect = <T extends Record<string, unknown>>(
 export function emitEvent<T extends Record<string, unknown>>(
   name: PolywebEventName,
   payload: T,
-  options: { siteId?: string | null } = {},
+  options: { siteId?: string | null; organizationId?: string | null } = {},
 ): Promise<PolywebEvent<T>> {
   return Effect.runPromise(emitEventEffect(name, payload, options));
 }
