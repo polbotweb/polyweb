@@ -33,9 +33,14 @@ export const logisticsItems = pgTable("logistics_items", {
   sku: text("sku").notNull(),
   name: text("name").notNull(),
   variantId: text("variant_id").references(() => productVariants.id, { onDelete: "set null" }),
+  /** Seuil d'alerte `stock.low` (disponible tous entrepôts) ; `null` = pas d'alerte. */
+  lowStockThreshold: integer("low_stock_threshold"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
-}, (table) => [uniqueIndex("logistics_items_org_sku_uidx").on(table.organizationId, table.sku)]);
+}, (table) => [
+  uniqueIndex("logistics_items_org_sku_uidx").on(table.organizationId, table.sku),
+  check("logistics_items_low_stock_ck", sql`${table.lowStockThreshold} is null or ${table.lowStockThreshold} >= 0`),
+]);
 
 /** Expéditions : entité principale du module (`logistics`, alias attendu par le socle). */
 export const logistics = pgTable("logistics_shipments", {

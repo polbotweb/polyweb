@@ -28,7 +28,10 @@ import { DERIVED_SALES_STATUSES, isLocked, workflowFor, type SalesDocumentKind, 
 import { computeSalesTotals, type SalesLineInput } from "../domain/lines";
 import { DEFAULT_SALES_NUMBERING, NUMBERED_AT, SALES_NUMBERING_KEYS } from "../domain/numbering";
 import { CREDITABLE_INVOICE_STATUSES, validateCreditAmount } from "../domain/credit";
-import { invoiceStatusFromBalance, validatePayment, type PaymentMethod } from "../domain/payments";
+import { validatePayment, type PaymentMethod } from "../domain/payments";
+import { recordEvent } from "@/core/events/outbox";
+import { serializeSalesDocument } from "../api/public-api";
+import { applyInvoiceBalance } from "./balance";
 import { dueDateFrom, nextReminderLevel, daysOverdue } from "../domain/reminders";
 
 export type SalesDocumentRow = typeof sales.$inferSelect;
@@ -212,9 +215,7 @@ const issue = (tx: DbTransaction, row: SalesDocumentRow, to: SalesStatus, today:
       yield* validateCreditAmount({ invoiceGrossMinor: invoice.grossMinor, alreadyCreditedMinor: invoice.creditedMinor, requestedMinor: priced.totals.gross.amountMinor }).pipe(
         Effect.catch(() => fail("BAD_REQUEST", "Avoir supérieur au restant créditable de la facture.")),
       );
-      const creditedMinor = invoice.creditedMinor + priced.totals.gross.amountMinor;
-      const status = invoiceStatusFromBalance({ grossMinor: invoice.grossMinor, paidMinor: invoice.paidMinor, creditedMinor });
-      yield* dbTry("sales.credit.apply", () => tx.update(sales).set({ creditedMinor, status }).where(eq(sales.id, invoice.id)));
+      yield* applyInvoiceBalance(tx, invoice, { creditedMinor: invoice.creditedMinor + priced.totals.gross.amountMinor }, "sales.credit.apply");
     }
     const { number } = yield* assignDocumentNumber(tx, { organizationId: row.organizationId, key: SALES_NUMBERING_KEYS[row.kind], scheme: DEFAULT_SALES_NUMBERING[row.kind], date: today });
     const dueDate = row.kind === "invoice" ? yield* dueDateFrom(today, row.paymentTermDays) : null;
@@ -222,6 +223,8 @@ const issue = (tx: DbTransaction, row: SalesDocumentRow, to: SalesStatus, today:
     yield* writeLines(tx, row.id, priced);
     const [updated] = yield* dbTry("sales.issue", () =>
       tx.update(sales).set({ ...totalsColumns(priced), ...frozen, status: to, number, issueDate: today, dueDate }).where(eq(sales.id, row.id)).returning());
+    const issuedEvent = updated.kind === "invoice" ? "invoice.issued" : updated.kind === "credit_note" ? "credit_note.issued" : null;
+    if (issuedEvent) yield* recordEvent(tx, issuedEvent, serializeSalesDocument(updated), { organizationId: updated.organizationId });
     return updated;
   });
 
@@ -311,9 +314,7 @@ export const issueRefundCreditNote = (tx: DbTransaction, invoiceId: string, inpu
     const credited = yield* required(tx, invoice.id, true);
     yield* dbTry("sales.refund.payment", () =>
       tx.insert(salesPayments).values({ documentId: invoice.id, organizationId: invoice.organizationId, amountMinor: -input.amountMinor, currency: invoice.currency, method: "card", paidAt: input.paidAt, reference: input.refundId, createdBy: input.authorId }));
-    const paidMinor = credited.paidMinor - input.amountMinor;
-    const status = invoiceStatusFromBalance({ grossMinor: credited.grossMinor, paidMinor, creditedMinor: credited.creditedMinor });
-    const [row] = yield* dbTry("sales.refund.apply", () => tx.update(sales).set({ paidMinor, status }).where(eq(sales.id, invoice.id)).returning());
+    const row = yield* applyInvoiceBalance(tx, credited, { paidMinor: credited.paidMinor - input.amountMinor }, "sales.refund.apply");
     yield* revision(tx, row, input.authorId, "Remboursement " + input.amountMinor);
     return { creditNote, issued: true, duplicate: false };
   });
@@ -376,8 +377,7 @@ export const recordProviderInvoicePayment = (tx: DbTransaction, invoiceId: strin
     if (valid._tag === "Failure") return false;
     yield* dbTry("sales.providerPayment.insert", () =>
       tx.insert(salesPayments).values({ documentId: invoice.id, organizationId: invoice.organizationId, amountMinor: input.amountMinor, currency: invoice.currency, method: "card", paidAt: input.paidAt, reference: input.reference, createdBy: null }));
-    const paidMinor = invoice.paidMinor + input.amountMinor;
-    yield* dbTry("sales.providerPayment.apply", () => tx.update(sales).set({ paidMinor, status: invoiceStatusFromBalance({ ...balance, paidMinor }) }).where(eq(sales.id, invoice.id)));
+    yield* applyInvoiceBalance(tx, invoice, { paidMinor: invoice.paidMinor + input.amountMinor }, "sales.providerPayment.apply");
     return true;
   });
 
@@ -456,9 +456,7 @@ export const salesService = {
         yield* validatePayment(invoice.status, balance, input.amountMinor).pipe(Effect.catch((error) => fail("BAD_REQUEST", error.message)));
         const [payment] = yield* dbTry("sales.payment.insert", () =>
           tx.insert(salesPayments).values({ documentId: invoice.id, organizationId: invoice.organizationId, amountMinor: input.amountMinor, currency: invoice.currency, method: input.method, paidAt: input.paidAt, reference: input.reference ?? null, createdBy: authorId }).returning());
-        const paidMinor = invoice.paidMinor + input.amountMinor;
-        const status = invoiceStatusFromBalance({ ...balance, paidMinor });
-        const [row] = yield* dbTry("sales.payment.apply", () => tx.update(sales).set({ paidMinor, status }).where(eq(sales.id, invoice.id)).returning());
+        const row = yield* applyInvoiceBalance(tx, invoice, { paidMinor: invoice.paidMinor + input.amountMinor }, "sales.payment.apply");
         yield* revision(tx, row, authorId, "Encaissement " + input.amountMinor);
         return { payment, document: row };
       })),

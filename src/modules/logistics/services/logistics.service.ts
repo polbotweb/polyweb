@@ -22,6 +22,7 @@ import {
   logistics, logisticsInventoryCountLines, logisticsItems, logisticsShipmentLines, logisticsShipmentRevisions, logisticsStockMovements, logisticsStockReservations, logisticsWarehouses,
 } from "../schema";
 import { logisticsLock } from "../locks";
+import { checkLowStock } from "./low-stock";
 import { assignsNumber, isEditable, shipmentWorkflow, stockEffect, type ShipmentStatus } from "../domain/workflow";
 import { aggregateBySku, ensureAvailable, MANUAL_MOVEMENT_KINDS, signedQuantity, validateSku, type MovementSource } from "../domain/stock";
 import { validateShipment, validateWarehouse, type ShipmentLineInput } from "../domain/shipment";
@@ -112,7 +113,7 @@ interface MovementWrite {
  * Écrit un mouvement (entrepôt déjà verrouillé par l'appelant) ; une sortie ne peut entamer ni le
  * stock négatif ni les quantités réservées par d'autres demandes (tunnel de vente).
  */
-const writeMovement = (executor: Executor, input: MovementWrite, authorId: string | null) =>
+const writeMovement = (executor: DbTransaction, input: MovementWrite, authorId: string | null) =>
   Effect.gen(function* () {
     const { kind, delta } = yield* domain(signedQuantity(input.kind, input.quantity));
     if (delta < 0) {
@@ -124,6 +125,7 @@ const writeMovement = (executor: Executor, input: MovementWrite, authorId: strin
         organizationId: input.organizationId, warehouseId: input.warehouseId, itemId: input.item.id, kind, delta,
         shipmentId: input.shipmentId ?? null, reference: input.reference?.trim() || null, source: input.source, createdBy: authorId,
       }).returning());
+    yield* checkLowStock(executor, input.item.id, delta, input.warehouseId);
     return row!;
   });
 
@@ -161,6 +163,8 @@ export interface ItemInput {
   readonly sku: string;
   readonly name: string;
   readonly variantId?: string | null;
+  /** Seuil d'alerte `stock.low` ; `null`/absent = aucune alerte. */
+  readonly lowStockThreshold?: number | null;
 }
 
 const itemColumns = (executor: Executor, input: ItemInput, organizationId: string | null, exceptId?: string) =>
@@ -177,7 +181,11 @@ const itemColumns = (executor: Executor, input: ItemInput, organizationId: strin
       const found = yield* dbTry("logistics.item.variant", () => executor.select({ id: productVariants.id }).from(productVariants).where(eq(productVariants.id, variantId)).limit(1));
       if (!found[0]) return yield* fail("NOT_FOUND", "Variante introuvable.");
     }
-    return { sku, name, variantId };
+    const lowStockThreshold = input.lowStockThreshold ?? null;
+    if (lowStockThreshold !== null && (!Number.isInteger(lowStockThreshold) || lowStockThreshold < 0 || lowStockThreshold > 1_000_000_000)) {
+      return yield* fail("BAD_REQUEST", "Seuil de stock bas invalide (entier ≥ 0).");
+    }
+    return { sku, name, variantId, lowStockThreshold };
   });
 
 export interface ShipmentInput {

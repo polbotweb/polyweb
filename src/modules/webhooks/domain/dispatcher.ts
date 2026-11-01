@@ -64,6 +64,8 @@ export const enqueueEvent = (event: PolywebEvent) =>
       db
         .insert(schema.webhookDeliveries)
         .values(targets.map((h) => ({ webhookId: h.id, eventId: event.id, event: event.name, payload: envelope(h.siteId) as unknown as Record<string, unknown> })))
+        // Rediffusion d'un événement de l'outbox : pas de seconde livraison pour le même webhook.
+        .onConflictDoNothing({ target: [schema.webhookDeliveries.webhookId, schema.webhookDeliveries.eventId] })
         .returning({ id: schema.webhookDeliveries.id }),
     );
     return rows.map((r) => r.id);

@@ -95,11 +95,22 @@ export function onEvent(name: PolywebEventName | "*", handler: PolywebEventHandl
 
 const HANDLER_TIMEOUT = Duration.seconds(30);
 
+/** Exécute un handler isolé ; `false` si il a échoué ou dépassé le timeout (journalisé). */
 const runHandler = (name: PolywebEventName, handler: PolywebEventHandler, event: PolywebEvent) =>
   Effect.tryPromise(async () => handler(event)).pipe(
     Effect.timeoutOrElse({ duration: HANDLER_TIMEOUT, orElse: () => Effect.fail(new Error(`handler timeout after 30s`)) }),
-    Effect.catch((error) => Effect.logError(`[events] handler failed for ${name}`, error)),
+    Effect.as(true),
+    Effect.catch((error) => Effect.logError(`[events] handler failed for ${name}`, error).pipe(Effect.as(false))),
   );
+
+/** Diffuse un événement déjà construit ; renvoie le nombre d'abonnés en échec (outbox : re-diffusion). */
+export const publishEventEffect = (event: PolywebEvent): Effect.Effect<number> =>
+  Effect.gen(function* () {
+    if (!declared.has(event.name)) yield* Effect.logWarning(`[events] undeclared event ${event.name}`);
+    const targets = [...(handlers.get(event.name) ?? []), ...(handlers.get("*") ?? [])];
+    const results = yield* Effect.forEach(targets, (handler) => runHandler(event.name, handler, event), { concurrency: "unbounded" });
+    return results.filter((ok) => !ok).length;
+  }).pipe(Effect.withSpan("events.publish", { attributes: { "event.name": event.name } }));
 
 /**
  * Émet un événement et attend la fin de tous les handlers (parallèles, isolés).
@@ -111,7 +122,6 @@ export const emitEventEffect = <T extends Record<string, unknown>>(
   options: { siteId?: string | null; organizationId?: string | null } = {},
 ): Effect.Effect<PolywebEvent<T>> =>
   Effect.gen(function* () {
-    if (!declared.has(name)) yield* Effect.logWarning(`[events] undeclared event ${name}`);
     const event: PolywebEvent<T> = {
       id: randomUUID(),
       name,
@@ -120,8 +130,7 @@ export const emitEventEffect = <T extends Record<string, unknown>>(
       ...(options.organizationId !== undefined ? { organizationId: options.organizationId } : {}),
       payload,
     };
-    const targets = [...(handlers.get(name) ?? []), ...(handlers.get("*") ?? [])];
-    yield* Effect.forEach(targets, (handler) => runHandler(name, handler, event as PolywebEvent), { concurrency: "unbounded", discard: true });
+    yield* publishEventEffect(event as PolywebEvent);
     return event;
   }).pipe(Effect.withSpan("events.emit", { attributes: { "event.name": name } }));
 

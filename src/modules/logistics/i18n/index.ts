@@ -17,7 +17,7 @@ export type LogisticsTranslations = {
   fields: {
     number: string; title: string; status: string; warehouse: string; salesDocument: string; recipientName: string; address: string; country: string;
     carrier: string; trackingNumber: string; weightGrams: string; notes: string; shippedAt: string; deliveredAt: string; lines: string;
-    sku: string; description: string; quantity: string; code: string; name: string; active: string; variant: string;
+    sku: string; description: string; quantity: string; code: string; name: string; active: string; variant: string; lowStockThreshold: string; lowStockThresholdHint: string;
     level: string; kind: string; reference: string; fromWarehouse: string; toWarehouse: string; units: string;
   };
   actions: { moveTo: string; updateTracking: string };
@@ -52,7 +52,7 @@ const translations: Record<Locale, LogisticsTranslations> = {
     fields: {
       number: "N° de BL", title: "Intitulé", status: "Statut", warehouse: "Entrepôt", salesDocument: "Document de vente", recipientName: "Destinataire", address: "Adresse", country: "Pays (ISO)",
       carrier: "Transporteur", trackingNumber: "N° de suivi", weightGrams: "Poids (g)", notes: "Notes", shippedAt: "Expédiée le", deliveredAt: "Livrée le", lines: "Lignes",
-      sku: "SKU", description: "Description", quantity: "Quantité", code: "Code", name: "Nom", active: "Actif", variant: "Variante boutique (id)",
+      sku: "SKU", description: "Description", quantity: "Quantité", code: "Code", name: "Nom", active: "Actif", variant: "Variante boutique (id)", lowStockThreshold: "Seuil de stock bas", lowStockThresholdHint: "Alerte stock.low (webhooks) quand le stock total passe à ce niveau ou en dessous. Vide : aucune alerte.",
       level: "Niveau", kind: "Type", reference: "Référence", fromWarehouse: "Depuis", toWarehouse: "Vers", units: "Unités",
     },
     actions: { moveTo: "Passer à", updateTracking: "Mettre à jour le suivi" },
@@ -85,7 +85,7 @@ const translations: Record<Locale, LogisticsTranslations> = {
     fields: {
       number: "Delivery note no.", title: "Title", status: "Status", warehouse: "Warehouse", salesDocument: "Sales document", recipientName: "Recipient", address: "Address", country: "Country (ISO)",
       carrier: "Carrier", trackingNumber: "Tracking no.", weightGrams: "Weight (g)", notes: "Notes", shippedAt: "Shipped on", deliveredAt: "Delivered on", lines: "Lines",
-      sku: "SKU", description: "Description", quantity: "Quantity", code: "Code", name: "Name", active: "Active", variant: "Shop variant (id)",
+      sku: "SKU", description: "Description", quantity: "Quantity", code: "Code", name: "Name", active: "Active", variant: "Shop variant (id)", lowStockThreshold: "Low stock threshold", lowStockThresholdHint: "stock.low alert (webhooks) when total stock drops to or below this level. Empty: no alert.",
       level: "Level", kind: "Type", reference: "Reference", fromWarehouse: "From", toWarehouse: "To", units: "Units",
     },
     actions: { moveTo: "Move to", updateTracking: "Update tracking" },
@@ -118,7 +118,7 @@ const translations: Record<Locale, LogisticsTranslations> = {
     fields: {
       number: "N.º de albarán", title: "Título", status: "Estado", warehouse: "Almacén", salesDocument: "Documento de venta", recipientName: "Destinatario", address: "Dirección", country: "País (ISO)",
       carrier: "Transportista", trackingNumber: "N.º de seguimiento", weightGrams: "Peso (g)", notes: "Notas", shippedAt: "Enviado el", deliveredAt: "Entregado el", lines: "Líneas",
-      sku: "SKU", description: "Descripción", quantity: "Cantidad", code: "Código", name: "Nombre", active: "Activo", variant: "Variante de tienda (id)",
+      sku: "SKU", description: "Descripción", quantity: "Cantidad", code: "Código", name: "Nombre", active: "Activo", variant: "Variante de tienda (id)", lowStockThreshold: "Umbral de stock bajo", lowStockThresholdHint: "Alerta stock.low (webhooks) cuando el stock total baja a este nivel o por debajo. Vacío: sin alerta.",
       level: "Nivel", kind: "Tipo", reference: "Referencia", fromWarehouse: "Desde", toWarehouse: "Hacia", units: "Unidades",
     },
     actions: { moveTo: "Pasar a", updateTracking: "Actualizar seguimiento" },
@@ -151,7 +151,7 @@ const translations: Record<Locale, LogisticsTranslations> = {
     fields: {
       number: "رقم إيصال التسليم", title: "العنوان", status: "الحالة", warehouse: "المستودع", salesDocument: "مستند البيع", recipientName: "المستلم", address: "العنوان البريدي", country: "البلد (ISO)",
       carrier: "شركة النقل", trackingNumber: "رقم التتبع", weightGrams: "الوزن (غ)", notes: "ملاحظات", shippedAt: "تاريخ الشحن", deliveredAt: "تاريخ التسليم", lines: "الأسطر",
-      sku: "SKU", description: "الوصف", quantity: "الكمية", code: "الرمز", name: "الاسم", active: "نشط", variant: "متغير المتجر (المعرّف)",
+      sku: "SKU", description: "الوصف", quantity: "الكمية", code: "الرمز", name: "الاسم", active: "نشط", variant: "متغير المتجر (المعرّف)", lowStockThreshold: "حد المخزون المنخفض", lowStockThresholdHint: "تنبيه stock.low (خطافات الويب) عندما ينخفض المخزون الإجمالي إلى هذا المستوى أو أقل. فارغ: بلا تنبيه.",
       level: "المستوى", kind: "النوع", reference: "المرجع", fromWarehouse: "من", toWarehouse: "إلى", units: "الوحدات",
     },
     actions: { moveTo: "نقل إلى", updateTracking: "تحديث التتبع" },

@@ -21,6 +21,7 @@ import { dbTry } from "@/lib/effect/run";
 import type { DbTransaction } from "@/lib/effect/transaction";
 import { logisticsStockPort } from "@/modules/logistics/services/logistics.service";
 import { orders } from "./schema/orders";
+import { setOrderStatus } from "./services/order-status";
 import { orderWorkflow } from "./domain/orders";
 import { lockOrder, reservationReference, SHOP_ORDER_PAYMENT_PURPOSE } from "./services/order.service";
 import { cartService } from "./services/cart.service";
@@ -46,7 +47,7 @@ const markPaid = (tx: DbTransaction, payment: Payment, orderId: string) =>
         : Effect.logError("[shop] sortie de stock impossible", { orderId, error }).pipe(Effect.as({ issued: [], shortages: ["?"] }))));
     const stockShortage = consumed.shortages.length > 0 ? consumed.shortages.join(", ").slice(0, 500) : null;
     if (stockShortage) yield* Effect.logError("[shop] commande payée avec stock insuffisant", { orderId, skus: stockShortage });
-    yield* dbTry("shop.payment.paid", () => tx.update(orders).set({ status: "PAID", paidAt, paymentId: payment.id, stockShortage }).where(eq(orders.id, orderId)));
+    yield* setOrderStatus(tx, orderId, "PAID", { paidAt, paymentId: payment.id, stockShortage }, "shop.payment.paid");
   });
 
 const markExpired = (tx: DbTransaction, _payment: Payment, orderId: string) =>

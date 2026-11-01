@@ -19,7 +19,8 @@ import { AppConfig } from '@/lib/effect/config';
 import { dbTry } from '@/lib/effect/run';
 import type { DbTransaction } from '@/lib/effect/transaction';
 import { sales, salesPayments } from './schema';
-import { amountDue, invoiceStatusFromBalance, validatePayment } from './domain/payments';
+import { amountDue, validatePayment } from './domain/payments';
+import { applyInvoiceBalance } from './services/balance';
 
 export const SALES_PAYMENT_PURPOSE = 'sales-invoice';
 
@@ -91,8 +92,7 @@ const recordCardPayment = (tx: DbTransaction, payment: Payment, invoiceId: strin
     yield* dbTry('sales.payLink.insert', () => tx.insert(salesPayments).values({
       documentId: invoice.id, organizationId: invoice.organizationId, amountMinor: payment.amount, currency: invoice.currency, method: 'card', paidAt, reference, createdBy: null,
     }));
-    const paidMinor = invoice.paidMinor + payment.amount;
-    yield* dbTry('sales.payLink.apply', () => tx.update(sales).set({ paidMinor, status: invoiceStatusFromBalance({ ...balance, paidMinor }) }).where(eq(sales.id, invoice.id)));
+    yield* applyInvoiceBalance(tx, invoice, { paidMinor: invoice.paidMinor + payment.amount }, 'sales.payLink.apply');
   });
 
 export const registerSalesPayments = () => registerPaymentPurpose({ purpose: SALES_PAYMENT_PURPOSE, onSucceeded: recordCardPayment });
