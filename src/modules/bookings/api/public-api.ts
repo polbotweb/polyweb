@@ -13,7 +13,8 @@ import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/effect/err
 import { decode } from "@/lib/effect/schema";
 import { BOOKING_STATUSES } from "../domain/workflow";
 import { bookings } from "../schema";
-import { bookingsService } from "../services/bookings.service";
+/** Import différé : le service dépend de `astro:actions`, absent hors runtime Astro (bootstrap, tests unitaires). */
+const loadService = () => Effect.promise(() => import("../services/bookings.service")).pipe(Effect.map((m) => m.bookingsService));
 
 type BookingRow = typeof bookings.$inferSelect;
 
@@ -120,6 +121,7 @@ export const bookingsResource: ApiResourceDefinition<ReturnType<typeof serialize
       const input = yield* decode(BookingCreate)(body);
       if (!instant(input.startsAt) || !instant(input.endsAt)) return yield* Effect.fail(new ValidationError({ issues: [{ path: "startsAt", message: "Invalid ISO 8601 instant." }] }));
       const { startsAt, endsAt, ...rest } = input;
+      const bookingsService = yield* loadService();
       const row = yield* bookingsService.createBooking({ ...rest, slot: { startsAt, endsAt }, organizationId: tenant.organizationId }, authorId);
       return serializeBooking(row);
     }),
@@ -133,6 +135,7 @@ export const bookingsResource: ApiResourceDefinition<ReturnType<typeof serialize
           const current = yield* reader.find(tenant, id);
           if (!current) return yield* Effect.fail(new NotFoundError({ entity: "Booking", id }));
           if (current.status === "CANCELLED") return serializeBooking(current);
+          const bookingsService = yield* loadService();
           const row = yield* bookingsService.transition(id, "CANCELLED", { userId: authorId, sessionId: `api:${tenant.tokenId ?? "anonymous"}` });
           return serializeBooking(row);
         }),

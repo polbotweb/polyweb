@@ -12,7 +12,8 @@ import { iso, tableReader } from "@/core/api/table";
 import { NotFoundError } from "@/lib/effect/errors";
 import { decode } from "@/lib/effect/schema";
 import { crmCompanies, crmContacts } from "../schema";
-import { crmService } from "../services/crm.service";
+/** Import différé : le service dépend de `astro:actions`, absent hors runtime Astro (bootstrap, tests unitaires). */
+const loadService = () => Effect.promise(() => import("../services/crm.service")).pipe(Effect.map((m) => m.crmService));
 
 type ContactRow = typeof crmContacts.$inferSelect;
 type CompanyRow = typeof crmCompanies.$inferSelect;
@@ -117,13 +118,14 @@ export const contactsResource: ApiResourceDefinition<ReturnType<typeof serialize
   get: contacts.get,
   create: (tenant: ApiTenant, body: unknown) =>
     decode(ContactCreate)(body).pipe(
-      Effect.flatMap((input) => crmService.createContact({ ...input, organizationId: tenant.organizationId }, tenant.actorUserId)),
+      Effect.flatMap((input) => Effect.flatMap(loadService(), (crmService) => crmService.createContact({ ...input, organizationId: tenant.organizationId }, tenant.actorUserId))),
       Effect.map(serializeContact),
     ),
   update: (tenant: ApiTenant, id: string, body: unknown) =>
     Effect.gen(function* () {
       const patch = yield* decode(ContactPatch)(body);
       const current = yield* contacts.find(tenant, id).pipe(Effect.flatMap(mustExist<ContactRow>("Contact", id)));
+      const crmService = yield* loadService();
       const row = yield* crmService.updateContact(id, { ...current, ...defined(patch) });
       return serializeContact(row);
     }),
@@ -142,13 +144,14 @@ export const companiesResource: ApiResourceDefinition<ReturnType<typeof serializ
   get: companies.get,
   create: (tenant: ApiTenant, body: unknown) =>
     decode(CompanyCreate)(body).pipe(
-      Effect.flatMap((input) => crmService.createCompany({ ...input, organizationId: tenant.organizationId }, tenant.actorUserId)),
+      Effect.flatMap((input) => Effect.flatMap(loadService(), (crmService) => crmService.createCompany({ ...input, organizationId: tenant.organizationId }, tenant.actorUserId))),
       Effect.map(serializeCompany),
     ),
   update: (tenant: ApiTenant, id: string, body: unknown) =>
     Effect.gen(function* () {
       const patch = yield* decode(CompanyPatch)(body);
       const current = yield* companies.find(tenant, id).pipe(Effect.flatMap(mustExist<CompanyRow>("Company", id)));
+      const crmService = yield* loadService();
       const row = yield* crmService.updateCompany(id, { ...current, ...defined(patch) });
       return serializeCompany(row);
     }),
