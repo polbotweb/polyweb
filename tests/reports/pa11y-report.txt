@@ -1,6 +1,6 @@
 ════════════════════════════════════════════════════════════════════════════════
   PA11Y ACCESSIBILITY REPORT — WCAG 2.1 AAA
-  Generated: 2026-10-28 01:40:33
+  Generated: 2026-11-01 09:21:31
 ════════════════════════════════════════════════════════════════════════════════
 
   Total URLs tested:  132
@@ -25,8 +25,8 @@
   ✅ http://localhost:4321/fr/shop/a11y-t-shirt
   ✅ http://localhost:4321/fr/shop/cart
   ✅ http://localhost:4321/fr/shop/checkout
-  ✅ http://localhost:4321/fr/shop/order/4976c4bc-b297-408c-a1c5-5d22f4cbebec?t=REDACTED
-  ✅ http://localhost:4321/fr/shop/order/730711c5-76fc-420f-b5b5-05ff8caf4282?t=REDACTED
+  ✅ http://localhost:4321/fr/shop/order/f1a609dd-c290-408c-bb75-927a6774142a?t=REDACTED
+  ✅ http://localhost:4321/fr/shop/order/1f86ad47-dbcd-4737-9e0f-b1ea13728af8?t=REDACTED
   ✅ http://localhost:4321/en/
   ✅ http://localhost:4321/en/about
   ✅ http://localhost:4321/en/contact
@@ -40,8 +40,8 @@
   ✅ http://localhost:4321/en/shop/a11y-t-shirt
   ✅ http://localhost:4321/en/shop/cart
   ✅ http://localhost:4321/en/shop/checkout
-  ✅ http://localhost:4321/en/shop/order/4976c4bc-b297-408c-a1c5-5d22f4cbebec?t=REDACTED
-  ✅ http://localhost:4321/en/shop/order/730711c5-76fc-420f-b5b5-05ff8caf4282?t=REDACTED
+  ✅ http://localhost:4321/en/shop/order/f1a609dd-c290-408c-bb75-927a6774142a?t=REDACTED
+  ✅ http://localhost:4321/en/shop/order/1f86ad47-dbcd-4737-9e0f-b1ea13728af8?t=REDACTED
   ✅ http://localhost:4321/es/
   ✅ http://localhost:4321/es/acerca-de
   ✅ http://localhost:4321/es/contacto
@@ -55,8 +55,8 @@
   ✅ http://localhost:4321/es/shop/a11y-camiseta
   ✅ http://localhost:4321/es/shop/cart
   ✅ http://localhost:4321/es/shop/checkout
-  ✅ http://localhost:4321/es/shop/order/4976c4bc-b297-408c-a1c5-5d22f4cbebec?t=REDACTED
-  ✅ http://localhost:4321/es/shop/order/730711c5-76fc-420f-b5b5-05ff8caf4282?t=REDACTED
+  ✅ http://localhost:4321/es/shop/order/f1a609dd-c290-408c-bb75-927a6774142a?t=REDACTED
+  ✅ http://localhost:4321/es/shop/order/1f86ad47-dbcd-4737-9e0f-b1ea13728af8?t=REDACTED
   ✅ http://localhost:4321/ar/
   ✅ http://localhost:4321/ar/%D9%85%D9%86-%D9%86%D8%AD%D9%86
   ✅ http://localhost:4321/ar/%D8%A7%D8%AA%D8%B5%D9%84-%D8%A8%D9%86%D8%A7
@@ -70,8 +70,8 @@
   ✅ http://localhost:4321/ar/shop/a11y-qamis
   ✅ http://localhost:4321/ar/shop/cart
   ✅ http://localhost:4321/ar/shop/checkout
-  ✅ http://localhost:4321/ar/shop/order/4976c4bc-b297-408c-a1c5-5d22f4cbebec?t=REDACTED
-  ✅ http://localhost:4321/ar/shop/order/730711c5-76fc-420f-b5b5-05ff8caf4282?t=REDACTED
+  ✅ http://localhost:4321/ar/shop/order/f1a609dd-c290-408c-bb75-927a6774142a?t=REDACTED
+  ✅ http://localhost:4321/ar/shop/order/1f86ad47-dbcd-4737-9e0f-b1ea13728af8?t=REDACTED
   ✅ http://localhost:4321/fr/auth/tableau-de-bord
   ✅ http://localhost:4321/fr/auth/profil
   ✅ http://localhost:4321/en/auth/dashboard
@@ -87,14 +87,14 @@
   ✅ http://localhost:4321/fr/admin/blog
   ✅ http://localhost:4321/fr/admin/dashboard
   ✅ http://localhost:4321/fr/admin/orders
-  ✅ http://localhost:4321/fr/admin/orders/4976c4bc-b297-408c-a1c5-5d22f4cbebec
+  ✅ http://localhost:4321/fr/admin/orders/f1a609dd-c290-408c-bb75-927a6774142a
   ✅ http://localhost:4321/fr/admin/returns
-  ✅ http://localhost:4321/fr/admin/returns/68759927-fb96-4656-bb7f-d07709d4abab
-  ✅ http://localhost:4321/fr/admin/orders/730711c5-76fc-420f-b5b5-05ff8caf4282
+  ✅ http://localhost:4321/fr/admin/returns/cc141781-a545-466e-8638-77183c1f131d
+  ✅ http://localhost:4321/fr/admin/orders/1f86ad47-dbcd-4737-9e0f-b1ea13728af8
   ✅ http://localhost:4321/fr/admin/logistics/inventories
   ✅ http://localhost:4321/fr/admin/logistics/movements
-  ✅ http://localhost:4321/fr/admin/logistics/inventories/d39d6ac4-d4a1-45c7-9afc-665c88f5aaeb
-  ✅ http://localhost:4321/fr/admin/logistics/inventories/13ded2e8-9b41-49ed-9535-485614697313
+  ✅ http://localhost:4321/fr/admin/logistics/inventories/64dcdb76-58ce-4afc-a35a-f7a7ca82b1fc
+  ✅ http://localhost:4321/fr/admin/logistics/inventories/53f76ef4-9957-4253-bf5e-403667a75ab2
   ✅ http://localhost:4321/fr/admin/sales/fec
   ✅ http://localhost:4321/en/admin/stats
   ✅ http://localhost:4321/en/admin/site
@@ -103,14 +103,14 @@
   ✅ http://localhost:4321/en/admin/blog
   ✅ http://localhost:4321/en/admin/dashboard
   ✅ http://localhost:4321/en/admin/orders
-  ✅ http://localhost:4321/en/admin/orders/4976c4bc-b297-408c-a1c5-5d22f4cbebec
+  ✅ http://localhost:4321/en/admin/orders/f1a609dd-c290-408c-bb75-927a6774142a
   ✅ http://localhost:4321/en/admin/returns
-  ✅ http://localhost:4321/en/admin/returns/68759927-fb96-4656-bb7f-d07709d4abab
-  ✅ http://localhost:4321/en/admin/orders/730711c5-76fc-420f-b5b5-05ff8caf4282
+  ✅ http://localhost:4321/en/admin/returns/cc141781-a545-466e-8638-77183c1f131d
+  ✅ http://localhost:4321/en/admin/orders/1f86ad47-dbcd-4737-9e0f-b1ea13728af8
   ✅ http://localhost:4321/en/admin/logistics/inventories
   ✅ http://localhost:4321/en/admin/logistics/movements
-  ✅ http://localhost:4321/en/admin/logistics/inventories/d39d6ac4-d4a1-45c7-9afc-665c88f5aaeb
-  ✅ http://localhost:4321/en/admin/logistics/inventories/13ded2e8-9b41-49ed-9535-485614697313
+  ✅ http://localhost:4321/en/admin/logistics/inventories/64dcdb76-58ce-4afc-a35a-f7a7ca82b1fc
+  ✅ http://localhost:4321/en/admin/logistics/inventories/53f76ef4-9957-4253-bf5e-403667a75ab2
   ✅ http://localhost:4321/en/admin/sales/fec
   ✅ http://localhost:4321/es/admin/stats
   ✅ http://localhost:4321/es/admin/site
@@ -119,14 +119,14 @@
   ✅ http://localhost:4321/es/admin/blog
   ✅ http://localhost:4321/es/admin/dashboard
   ✅ http://localhost:4321/es/admin/orders
-  ✅ http://localhost:4321/es/admin/orders/4976c4bc-b297-408c-a1c5-5d22f4cbebec
+  ✅ http://localhost:4321/es/admin/orders/f1a609dd-c290-408c-bb75-927a6774142a
   ✅ http://localhost:4321/es/admin/returns
-  ✅ http://localhost:4321/es/admin/returns/68759927-fb96-4656-bb7f-d07709d4abab
-  ✅ http://localhost:4321/es/admin/orders/730711c5-76fc-420f-b5b5-05ff8caf4282
+  ✅ http://localhost:4321/es/admin/returns/cc141781-a545-466e-8638-77183c1f131d
+  ✅ http://localhost:4321/es/admin/orders/1f86ad47-dbcd-4737-9e0f-b1ea13728af8
   ✅ http://localhost:4321/es/admin/logistics/inventories
   ✅ http://localhost:4321/es/admin/logistics/movements
-  ✅ http://localhost:4321/es/admin/logistics/inventories/d39d6ac4-d4a1-45c7-9afc-665c88f5aaeb
-  ✅ http://localhost:4321/es/admin/logistics/inventories/13ded2e8-9b41-49ed-9535-485614697313
+  ✅ http://localhost:4321/es/admin/logistics/inventories/64dcdb76-58ce-4afc-a35a-f7a7ca82b1fc
+  ✅ http://localhost:4321/es/admin/logistics/inventories/53f76ef4-9957-4253-bf5e-403667a75ab2
   ✅ http://localhost:4321/es/admin/sales/fec
   ✅ http://localhost:4321/ar/admin/stats
   ✅ http://localhost:4321/ar/admin/site
@@ -135,14 +135,14 @@
   ✅ http://localhost:4321/ar/admin/blog
   ✅ http://localhost:4321/ar/admin/dashboard
   ✅ http://localhost:4321/ar/admin/orders
-  ✅ http://localhost:4321/ar/admin/orders/4976c4bc-b297-408c-a1c5-5d22f4cbebec
+  ✅ http://localhost:4321/ar/admin/orders/f1a609dd-c290-408c-bb75-927a6774142a
   ✅ http://localhost:4321/ar/admin/returns
-  ✅ http://localhost:4321/ar/admin/returns/68759927-fb96-4656-bb7f-d07709d4abab
-  ✅ http://localhost:4321/ar/admin/orders/730711c5-76fc-420f-b5b5-05ff8caf4282
+  ✅ http://localhost:4321/ar/admin/returns/cc141781-a545-466e-8638-77183c1f131d
+  ✅ http://localhost:4321/ar/admin/orders/1f86ad47-dbcd-4737-9e0f-b1ea13728af8
   ✅ http://localhost:4321/ar/admin/logistics/inventories
   ✅ http://localhost:4321/ar/admin/logistics/movements
-  ✅ http://localhost:4321/ar/admin/logistics/inventories/d39d6ac4-d4a1-45c7-9afc-665c88f5aaeb
-  ✅ http://localhost:4321/ar/admin/logistics/inventories/13ded2e8-9b41-49ed-9535-485614697313
+  ✅ http://localhost:4321/ar/admin/logistics/inventories/64dcdb76-58ce-4afc-a35a-f7a7ca82b1fc
+  ✅ http://localhost:4321/ar/admin/logistics/inventories/53f76ef4-9957-4253-bf5e-403667a75ab2
   ✅ http://localhost:4321/ar/admin/sales/fec
 
 ════════════════════════════════════════════════════════════════════════════════

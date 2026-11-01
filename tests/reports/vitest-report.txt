@@ -1,6 +1,6 @@
 ════════════════════════════════════════════════════════════════════════════════
   VITEST UNIT & INTEGRATION TEST REPORT
-  Generated: 2026-10-28 01:23:28
+  Generated: 2026-11-01 09:04:25
 ════════════════════════════════════════════════════════════════════════════════
 
   ✅ tests/integration/audit.test.ts  (8/8 passed)
@@ -164,11 +164,11 @@
   ✅ tests/unit/upload.test.ts  (24/24 passed)
   ✅ tests/integration/backup/backup.test.ts  (6/6 passed)
   ✅ tests/integration/effect/db.test.ts  (3/3 passed)
-  ✅ tests/integration/locks/core-locks-pg.test.ts  (8/8 passed)
   ✅ tests/integration/loaders/blog-loader-effect.test.ts  (8/8 passed)
   ✅ tests/integration/loaders/navigation-consent-effect.test.ts  (3/3 passed)
   ✅ tests/integration/loaders/page-loader-effect.test.ts  (4/4 passed)
   ✅ tests/integration/loaders/site-media-admin-effect.test.ts  (3/3 passed)
+  ✅ tests/integration/locks/core-locks-pg.test.ts  (8/8 passed)
   ✅ tests/integration/observability/observability.test.ts  (5/5 passed)
   ✅ tests/integration/platform/api-v1.test.ts  (8/8 passed)
   ✅ tests/integration/platform/blocks-media.test.ts  (2/2 passed)
@@ -181,17 +181,6 @@
   ✅ tests/integration/search/search.test.ts  (4/5 passed, 1 skipped)
   ✅ tests/integration/storage/s3.test.ts  (5/5 passed)
   ✅ tests/unit/blog/status-transitions.test.ts  (17/17 passed)
-  ✅ tests/unit/bookings/admin-resource.test.ts  (3/3 passed)
-  ✅ tests/unit/bookings/domain.test.ts  (5/5 passed)
-  ✅ tests/unit/bookings/guest.test.ts  (7/7 passed)
-  ✅ tests/unit/bookings/scheduling.test.ts  (5/5 passed)
-  ✅ tests/unit/core/category-taxonomy.test.ts  (5/5 passed)
-  ✅ tests/unit/core/documents.test.ts  (9/9 passed)
-  ✅ tests/unit/core/einvoice-pdfa.test.ts  (4/4 passed)
-  ✅ tests/unit/core/einvoice.test.ts  (16/16 passed)
-  ✅ tests/unit/core/money.test.ts  (29/29 passed)
-  ✅ tests/unit/core/numbering.test.ts  (3/3 passed)
-  ✅ tests/unit/core/payments.test.ts  (15/15 passed)
   ✅ tests/unit/cms/admin-filter-contract.test.ts  (2/2 passed)
   ✅ tests/unit/cms/admin-module-contract.test.ts  (3/3 passed)
   ✅ tests/unit/cms/capabilities.test.ts  (2/2 passed)
@@ -200,6 +189,17 @@
   ✅ tests/unit/cms/module-registry.test.ts  (2/2 passed)
   ✅ tests/unit/cms/resource-contract.test.ts  (6/6 passed)
   ✅ tests/unit/cms/workflow.test.ts  (4/4 passed)
+  ✅ tests/unit/core/category-taxonomy.test.ts  (5/5 passed)
+  ✅ tests/unit/core/documents.test.ts  (9/9 passed)
+  ✅ tests/unit/core/einvoice-pdfa.test.ts  (4/4 passed)
+  ✅ tests/unit/core/einvoice.test.ts  (16/16 passed)
+  ✅ tests/unit/core/money.test.ts  (29/29 passed)
+  ✅ tests/unit/core/numbering.test.ts  (3/3 passed)
+  ✅ tests/unit/core/payments.test.ts  (15/15 passed)
+  ✅ tests/unit/bookings/admin-resource.test.ts  (3/3 passed)
+  ✅ tests/unit/bookings/domain.test.ts  (5/5 passed)
+  ✅ tests/unit/bookings/guest.test.ts  (7/7 passed)
+  ✅ tests/unit/bookings/scheduling.test.ts  (5/5 passed)
   ✅ tests/unit/crm/admin-resource.test.ts  (3/3 passed)
   ✅ tests/unit/crm/domain.test.ts  (9/9 passed)
   ✅ tests/unit/dashboard/metrics.test.ts  (3/3 passed)
@@ -213,9 +213,9 @@
   ✅ tests/unit/logistics/admin-resource.test.ts  (3/3 passed)
   ✅ tests/unit/logistics/domain.test.ts  (9/9 passed)
   ✅ tests/unit/logistics/inventory-ledger.test.ts  (11/11 passed)
-  ✅ tests/unit/payments/providers.test.ts  (4/4 passed)
   ✅ tests/unit/modules/sales-fec.test.ts  (17/17 passed)
   ✅ tests/unit/modules/tax-domain.test.ts  (16/16 passed)
+  ✅ tests/unit/payments/providers.test.ts  (4/4 passed)
   ✅ tests/unit/platform/blocks.test.ts  (5/5 passed)
   ✅ tests/unit/platform/fields.test.ts  (5/5 passed)
   ✅ tests/unit/platform/revisions-diff.test.ts  (4/4 passed)
@@ -223,11 +223,11 @@
   ✅ tests/unit/purchasing/domain.test.ts  (5/5 passed)
   ✅ tests/unit/readme-builder/node-requirement.test.ts  (3/3 passed)
   ✅ tests/unit/routing/content-routes.test.ts  (4/4 passed)
-  ✅ tests/unit/scripts/new-module.test.ts  (6/6 passed)
   ✅ tests/unit/sales/domain.test.ts  (12/12 passed)
   ✅ tests/unit/sales/einvoice.test.ts  (8/8 passed)
   ✅ tests/unit/sales/pay-link.test.ts  (4/4 passed)
   ✅ tests/unit/sales/pdf-template.test.ts  (7/7 passed)
+  ✅ tests/unit/scripts/new-module.test.ts  (6/6 passed)
   ✅ tests/unit/services/admin-actions.test.ts  (4/4 passed)
   ✅ tests/unit/services/admin-contract.test.ts  (2/2 passed)
   ✅ tests/unit/services/admin-resource.test.ts  (3/3 passed)
@@ -247,7 +247,7 @@
   Passed:        2069  ✅
   Failed:        0  
   Skipped:       1
-  Duration:      36s
+  Duration:      46s
 
 ════════════════════════════════════════════════════════════════════════════════
   END OF REPORT — 2069/2070 passed
