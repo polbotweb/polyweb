@@ -49,7 +49,7 @@ export const apiRateWindows = pgTable(
 
 /**
  * Clés d'idempotence des écritures (en-tête `Idempotency-Key`) : la première réponse est rejouée
- * à l'identique pendant 24 h ; même clé + autre requête → 422.
+ * à l'identique pendant 24 h ; même clé + autre requête → 400.
  */
 export const apiIdempotencyKeys = pgTable(
   "api_idempotency_keys",

@@ -504,6 +504,8 @@ migrations/
   0045_customer_portal_links.sql
   0046_subscriptions.sql
   0047_exchange_rates.sql
+  0048_public_api.sql
+  0049_event_outbox_low_stock.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -549,6 +551,8 @@ migrations/
     0045_snapshot.json
     0046_snapshot.json
     0047_snapshot.json
+    0048_snapshot.json
+    0049_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -557,6 +561,7 @@ schemas/
   blog.schema.ts
   consent.schema.ts
   content.schema.ts
+  event-outbox.schema.ts
   exchange-rates.schema.ts
   forms.schema.ts
   media.schema.ts
@@ -693,11 +698,16 @@ schemas.ts
 - `content_entry_revisions`: `id`, `entryId`, `version`, `snapshot`, `message`, `authorId`, `createdAt`
 
 **api.schema.ts**
-- `api_tokens`: `id`, `siteId`, `name`, `prefix`, `tokenHash`, `scopes`, `createdBy`, `lastUsedAt`, `expiresAt`, `revokedAt`, `createdAt`
+- `api_tokens`: `id`, `siteId`, `name`, `prefix`, `tokenHash`, `scopes`, `createdBy`, `lastUsedAt`, `expiresAt`, `revokedAt`, `rateLimitPerMinute`, `createdAt`
+- `api_rate_windows`: `tokenId`, `windowStart`, `count`
+- `api_idempotency_keys`: `tokenId`, `key`, `requestHash`, `status`, `body`, `location`, `createdAt`
 
 **webhooks.schema.ts**
 - `webhooks`: `id`, `siteId`, `name`, `url`, `secretEncrypted`, `events`, `active`, `consecutiveFailures`, `disabledReason`, `createdBy`, `createdAt`, `updatedAt`
 - `webhook_deliveries`: `id`, `webhookId`, `eventId`, `event`, `payload`, `status`, `attempts`, `nextAttemptAt`, `lockedUntil`, `lastStatusCode`, `lastError`, `responseSnippet`, `durationMs`, `createdAt`, `deliveredAt`
+
+**event-outbox.schema.ts**
+- `event_outbox`: `id`, `name`, `organizationId`, `payload`, `occurredAt`, `dispatchedAt`, `lockedUntil`, `attempts`, `lastError`
 
 **forms.schema.ts**
 - `forms`: `id`, `siteId`, `slug`, `name`, `description`, `fields`, `settings`, `status`, `createdAt`, `updatedAt`
@@ -765,6 +775,8 @@ schemas.ts
 - `0045_customer_portal_links.sql`
 - `0046_subscriptions.sql`
 - `0047_exchange_rates.sql`
+- `0048_public_api.sql`
+- `0049_event_outbox_low_stock.sql`
 
 ### Comandos
 
@@ -881,6 +893,12 @@ admin/
   filter-contract.ts
   index.ts
   resource-contract.ts
+api/
+  contract.ts
+  cursor.ts
+  idempotency.ts
+  registry.ts
+  table.ts
 attributes/
   index.ts
 audit/
@@ -924,6 +942,7 @@ engagement/
   index.ts
 events/
   index.ts
+  outbox.ts
 filters/
   facets.ts
   i18n.ts
@@ -938,6 +957,7 @@ fx/
   service.ts
 index.ts
 localization/
+  api-tokens-labels.ts
   index.ts
   module-labels.ts
   platform-labels.ts
@@ -1021,6 +1041,7 @@ src/modules/
 api/
   domain/
     openapi.ts
+    resources.ts
     tokens.ts
     v1.ts
 blog/
@@ -1067,6 +1088,8 @@ bookings/
     index.ts
   admin/
     resource.ts
+  api/
+    public-api.ts
   capabilities.ts
   client/
     forms.ts
@@ -1143,6 +1166,8 @@ crm/
     index.ts
   admin/
     resource.ts
+  api/
+    public-api.ts
   capabilities.ts
   client/
     forms.ts
@@ -1239,6 +1264,8 @@ logistics/
     index.ts
   admin/
     resource.ts
+  api/
+    public-api.ts
   capabilities.ts
   client/
     forms.ts
@@ -1268,6 +1295,7 @@ logistics/
   services/
     inventory.service.ts
     logistics.service.ts
+    low-stock.ts
 payments/
   domain/
     payment-service.ts
@@ -1323,6 +1351,8 @@ sales/
     index.ts
   admin/
     resource.ts
+  api/
+    public-api.ts
   capabilities.ts
   client/
     document-actions.ts
@@ -1366,6 +1396,7 @@ sales/
   schema/
     index.ts
   services/
+    balance.ts
     fecExport.service.ts
     salesDocument.service.ts
     sellerProfile.service.ts
@@ -1429,6 +1460,8 @@ shop/
     orders.ts
     resource.ts
     returns.ts
+  api/
+    public-api.ts
   capabilities.ts
   client/
     init.ts
@@ -1465,6 +1498,7 @@ shop/
     returns.ts
   services/
     cart.service.ts
+    order-status.ts
     order.service.ts
     product.service.ts
     return.service.ts
@@ -1476,6 +1510,8 @@ sites/
 subscriptions/
   actions/
     index.ts
+  api/
+    public-api.ts
   capabilities.ts
   client/
     forms.ts
@@ -1496,6 +1532,7 @@ subscriptions/
   schema/
     index.ts
   services/
+    state.ts
     subscription.service.ts
     webhook.ts
   taxonomy.ts
@@ -1655,6 +1692,7 @@ api/
   search.ts
   upload.ts
   v1/
+    [resource]/
     content/
     content-types.ts
     forms/
