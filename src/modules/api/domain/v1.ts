@@ -13,7 +13,8 @@ import { pickTranslation, type FullEntry } from '@/modules/content/domain/entrie
 import type { ContentType } from '@/modules/content/domain/content-types';
 import { getSiteByIdEffect } from '@/modules/sites/domain/sites';
 import { DEFAULT_SITE_ID } from '@database/schemas/content.schema';
-import { authenticate, hasScope, rateLimit, requireScope, type ApiPrincipal } from './tokens';
+import { authenticate, hasScope, rateLimit, rateLimitHeaders, requireScope, type ApiPrincipal, type RateLimitState } from './tokens';
+import { listApiResources } from '@/core/api/registry';
 import { buildOpenApiDocument } from './openapi';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -22,7 +23,8 @@ export function corsHeaders(): Record<string, string> {
   return {
     'access-control-allow-origin': process.env.API_CORS_ORIGINS?.trim() || '*',
     'access-control-allow-methods': 'GET, POST, PATCH, DELETE, OPTIONS',
-    'access-control-allow-headers': 'authorization, content-type',
+    'access-control-allow-headers': 'authorization, content-type, idempotency-key',
+    'access-control-expose-headers': 'ratelimit-limit, ratelimit-remaining, ratelimit-reset, retry-after, idempotent-replayed, location',
     'access-control-max-age': '600',
     vary: 'origin',
   };
@@ -30,8 +32,9 @@ export function corsHeaders(): Record<string, string> {
 
 export const preflight = () => new Response(null, { status: 204, headers: corsHeaders() });
 
-const withCors = (res: Response) => {
+export const withCors = (res: Response, limit?: RateLimitState) => {
   for (const [k, v] of Object.entries(corsHeaders())) res.headers.set(k, v);
+  if (limit) for (const [k, v] of Object.entries(rateLimitHeaders(limit))) res.headers.set(k, v);
   return res;
 };
 
@@ -233,7 +236,7 @@ export const openApiHandler = (ctx: APIContext) =>
     const types = (yield* Content.listTypes(site.id)).filter((t) => visibleType(t, principal));
     return withCors(
       json(
-        buildOpenApiDocument({ baseUrl: ctx.url.origin || config.siteUrl, siteName: site.name, locales: site.locales, types }),
+        buildOpenApiDocument({ baseUrl: ctx.url.origin || config.siteUrl, siteName: site.name, locales: site.locales, types, resources: listApiResources() }),
         { headers: { 'cache-control': 'public, max-age=60' } },
       ),
     );
@@ -246,7 +249,12 @@ export const indexHandler = (ctx: APIContext) =>
         name: 'Polyweb API',
         version: 1,
         openapi: `${ctx.url.origin}/api/v1/openapi.json`,
-        endpoints: ['/api/v1/content-types', '/api/v1/content/{type}', '/api/v1/content/{type}/{ref}'],
+        endpoints: [
+          '/api/v1/content-types',
+          '/api/v1/content/{type}',
+          '/api/v1/content/{type}/{ref}',
+          ...listApiResources().map((r) => `/api/v1/${r.name}`),
+        ],
       }),
     ),
   );

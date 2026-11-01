@@ -10,17 +10,22 @@ interface Props {
   locale: Locale;
   organizationId?: string | null;
   viewBaseUrl?: string;
-  item?: { id: string; sku: string; name: string; variantId: string | null };
+  item?: { id: string; sku: string; name: string; variantId: string | null; lowStockThreshold: number | null };
 }
 const { locale, organizationId = null, viewBaseUrl = "", item: i } = Astro.props as Props;
 const t = getLogisticsTranslations(locale);
 const p = i ? "lg-item-edit" : "lg-item-new";
 ---
 <form class="flex max-w-3xl flex-col gap-4" data-logistics-form="item" data-id={i?.id ?? ""} data-organization-id={organizationId ?? ""} data-view-base-url={viewBaseUrl} data-done={i ? t.admin.saved : t.admin.created} novalidate>
-  <div class="grid gap-4 sm:grid-cols-3">
+  <div class="grid gap-4 sm:grid-cols-2">
     <div class="grid gap-2"><Label for={`${p}-sku`}>{t.fields.sku}</Label><Input id={`${p}-sku`} name="sku" required maxlength={64} value={i?.sku ?? ""} /></div>
     <div class="grid gap-2"><Label for={`${p}-name`}>{t.fields.name}</Label><Input id={`${p}-name`} name="name" required maxlength={200} value={i?.name ?? ""} /></div>
     <div class="grid gap-2"><Label for={`${p}-variant`}>{t.fields.variant}</Label><Input id={`${p}-variant`} name="variantId" maxlength={64} value={i?.variantId ?? ""} /></div>
+    <div class="grid gap-2">
+      <Label for={`${p}-low-stock`}>{t.fields.lowStockThreshold}</Label>
+      <Input id={`${p}-low-stock`} name="lowStockThreshold" type="number" inputmode="numeric" min={0} max={1000000000} step={1} value={i?.lowStockThreshold ?? ""} aria-describedby={`${p}-low-stock-hint`} />
+      <p id={`${p}-low-stock-hint`} class="text-sm text-foreground">{t.fields.lowStockThresholdHint}</p>
+    </div>
   </div>
   <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
   <div><Button type="submit">{i ? t.admin.save : t.admin.create}</Button></div>

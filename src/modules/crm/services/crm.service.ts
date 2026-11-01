@@ -13,6 +13,8 @@ import { dbTry } from "@/lib/effect/run";
 import { dbTransaction, type DbTransaction } from "@/lib/effect/transaction";
 import { fail } from "@/lib/effect/action";
 import { canTransition } from "@/core/workflow";
+import { recordEvent } from "@/core/events/outbox";
+import { serializeContact } from "../api/public-api";
 import type { LockOwner } from "@/core/locks/policy";
 import { sales } from "@/modules/sales/schema";
 import { crm, crmActivities, crmCompanies, crmContacts, crmOpportunityRevisions } from "../schema";
@@ -150,7 +152,7 @@ export interface ActivityInput {
 
 export const crmService = {
   // ── Sociétés ────────────────────────────────────────────────────────────
-  createCompany: (input: CompanyInput & { readonly organizationId: string | null }, authorId: string) =>
+  createCompany: (input: CompanyInput & { readonly organizationId: string | null }, authorId: string | null) =>
     Effect.gen(function* () {
       const columns = yield* companyColumns(input);
       const [row] = yield* dbTry("crm.company.create", () => getDrizzle().insert(crmCompanies).values({ ...columns, organizationId: input.organizationId, createdBy: authorId }).returning());
@@ -170,12 +172,13 @@ export const crmService = {
     ),
 
   // ── Contacts ────────────────────────────────────────────────────────────
-  createContact: (input: ContactInput & { readonly organizationId: string | null }, authorId: string) =>
+  createContact: (input: ContactInput & { readonly organizationId: string | null }, authorId: string | null) =>
     dbTransaction("crm.contact.create", (tx) =>
       Effect.gen(function* () {
         const columns = yield* contactColumns(tx, input, input.organizationId);
         yield* ensureUniqueContact(tx, columns.dedupKey, input.organizationId);
         const [row] = yield* dbTry("crm.contact.create", () => tx.insert(crmContacts).values({ ...columns, organizationId: input.organizationId, createdBy: authorId }).returning());
+        yield* recordEvent(tx, "contact.created", serializeContact(row!), { organizationId: row!.organizationId ?? null });
         return row!;
       })),
 
@@ -187,6 +190,7 @@ export const crmService = {
         const columns = yield* contactColumns(tx, input, current.organizationId);
         yield* ensureUniqueContact(tx, columns.dedupKey, current.organizationId, id);
         const [row] = yield* dbTry("crm.contact.update", () => tx.update(crmContacts).set(columns).where(eq(crmContacts.id, id)).returning());
+        yield* recordEvent(tx, "contact.updated", serializeContact(row!), { organizationId: row!.organizationId ?? null });
         return row!;
       })),
 

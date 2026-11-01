@@ -8,6 +8,8 @@ import { Effect } from "effect";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { dbTry } from "@/lib/effect/run";
+import { dbTransaction } from "@/lib/effect/transaction";
+import { writeSubscriptionState } from "./state";
 import { fail } from "@/lib/effect/failure";
 import { logAuditEventEffect } from "@/lib/audit";
 import { PaymentGateway, clampExpiry, tenantPaymentSettings, UnsupportedAmountError, type ProviderSubscriptionState, type RecurringPrice } from "@/core/payments";
@@ -88,9 +90,12 @@ const recurringPrice = (plan: PlanRow, price: PriceRow) =>
   });
 
 const applyState = (id: string, state: ProviderSubscriptionState, extra: Partial<SubscriptionRow> = {}) =>
-  dbTry("subscriptions.state", () => db().update(subscriptions)
-    .set({ status: state.status, cancelAtPeriodEnd: state.cancelAtPeriodEnd, ...(state.status === "cancelled" ? { cancelledAt: new Date() } : {}), ...extra })
-    .where(eq(subscriptions.id, id)).returning()).pipe(Effect.map((rows) => rows[0]!));
+  dbTransaction("subscriptions.state", (tx) =>
+    Effect.gen(function* () {
+      const [before] = yield* dbTry("subscriptions.state.lock", () => tx.select().from(subscriptions).where(eq(subscriptions.id, id)).limit(1).for("update"));
+      const patch = { status: state.status, cancelAtPeriodEnd: state.cancelAtPeriodEnd, ...(state.status === "cancelled" ? { cancelledAt: new Date() } : {}), ...extra };
+      return (yield* writeSubscriptionState(tx, before!, patch, "subscriptions.state"))!;
+    }));
 
 const providerContext = (organizationId: string | null) =>
   Effect.gen(function* () {

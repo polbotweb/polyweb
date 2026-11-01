@@ -42,7 +42,14 @@ export function errorResponse(error: unknown): Response {
     };
     if (e._tag === 'ValidationError') body.issues = e.issues;
     const headers: Record<string, string> = {};
-    if (e._tag === 'RateLimitedError') headers['retry-after'] = String(e.retryAfterSeconds);
+    if (e._tag === 'RateLimitedError') {
+      headers['retry-after'] = String(e.retryAfterSeconds);
+      if (e.limit !== undefined) {
+        headers['ratelimit-limit'] = String(e.limit);
+        headers['ratelimit-remaining'] = '0';
+        headers['ratelimit-reset'] = String(e.retryAfterSeconds);
+      }
+    }
     if (e._tag === 'UnauthorizedError') headers['www-authenticate'] = 'Bearer';
     return json(body, { status, headers });
   }

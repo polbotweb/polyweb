@@ -28,7 +28,7 @@ const warehouseFields = {
   code: z.string().trim().min(1).max(16), name: z.string().trim().min(1).max(200),
   country: optionalText(2), address: optionalText(1000), active: z.boolean().default(true),
 };
-const itemFields = { sku, name: z.string().trim().min(1).max(200), variantId: z.string().max(64).nullable().default(null) };
+const itemFields = { sku, name: z.string().trim().min(1).max(200), variantId: z.string().max(64).nullable().default(null), lowStockThreshold: z.number().int().min(0).max(1_000_000_000).nullable().default(null) };
 const shipmentFields = {
   title: optionalText(200),
   warehouseId: z.uuid(),

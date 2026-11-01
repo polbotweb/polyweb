@@ -17,6 +17,7 @@ import { dbTry } from "@/lib/effect/run";
 import type { DbTransaction } from "@/lib/effect/transaction";
 import { logisticsStockPort } from "@/modules/logistics/services/logistics.service";
 import { orders } from "./schema/orders";
+import { setOrderStatus } from "./services/order-status";
 import { orderReturns } from "./schema/returns";
 import { orderWorkflow } from "./domain/orders";
 import { returnReference } from "./domain/returns";
@@ -53,7 +54,7 @@ const onRefundSucceeded = (tx: DbTransaction, outcome: RefundOutcome) =>
       if (order.status !== "REFUNDED") yield* Effect.logWarning("[shop] remboursement total sur une commande non remboursable", { orderId: order.id, status: order.status });
       return;
     }
-    yield* dbTry("shop.refund.status", () => tx.update(orders).set({ status: "REFUNDED" }).where(eq(orders.id, order.id)));
+    yield* setOrderStatus(tx, order.id, "REFUNDED", {}, "shop.refund.status");
   });
 
 /** Avant l'appel fournisseur : la commande existe dans le tenant du paiement ; un retour cité est inspecté et de cette commande. */

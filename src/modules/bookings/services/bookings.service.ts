@@ -12,6 +12,8 @@ import type { PgColumn } from "drizzle-orm/pg-core";
 import { getDrizzle } from "@database/drizzle";
 import { dbTry } from "@/lib/effect/run";
 import { dbTransaction, type DbTransaction } from "@/lib/effect/transaction";
+import { recordEvent } from "@/core/events/outbox";
+import { serializeBooking } from "../api/public-api";
 import { fail } from "@/lib/effect/action";
 import { canTransition } from "@/core/workflow";
 import { assignDocumentNumber } from "@/core/numbering";
@@ -150,6 +152,10 @@ export interface GuestBookingInput extends GuestInput {
 export const DEPOSIT_WINDOW_MINUTES = 60;
 
 
+/** Événement de réservation dans l'outbox de la transaction (diffusé après COMMIT). */
+const publishBooking = (tx: DbTransaction, name: "booking.created" | "booking.canceled", row: typeof bookings.$inferSelect) =>
+  recordEvent(tx, name, serializeBooking(row), { organizationId: row.organizationId ?? null });
+
 export const bookingsService = {
   // ── Ressources ──────────────────────────────────────────────────────────
   createResource: (input: ResourceInput & { readonly organizationId: string | null }) =>
@@ -192,6 +198,7 @@ export const bookingsService = {
         const slug = `${slugify(columns.customerName)}-${crypto.randomUUID().slice(0, 8)}`;
         const [row] = yield* dbTry("bookings.create", () => tx.insert(bookings).values({ ...columns, slug, organizationId: input.organizationId, createdBy: authorId }).returning());
         yield* revision(tx, row!, authorId, "Création");
+        yield* publishBooking(tx, "booking.created", row!);
         return row!;
       })),
 
@@ -227,6 +234,7 @@ export const bookingsService = {
             ? { depositMinor: resource.depositMinor, depositCurrency: resource.depositCurrency, paymentDueAt: new Date(now.getTime() + DEPOSIT_WINDOW_MINUTES * 60_000) }
             : {}),
         }).returning());
+        yield* publishBooking(tx, "booking.created", row!);
         return { booking: row!, resource };
       })),
 
@@ -243,6 +251,7 @@ export const bookingsService = {
           return yield* fail("BAD_REQUEST", "Réservation non annulable.");
         }
         const [row] = yield* dbTry("bookings.guest.cancel", () => tx.update(bookings).set({ status: "CANCELLED" }).where(eq(bookings.id, id)).returning());
+        yield* publishBooking(tx, "booking.canceled", row!);
         return row!;
       })),
 
@@ -284,6 +293,7 @@ export const bookingsService = {
           }
           const [row] = yield* dbTry("bookings.transition", () => tx.update(bookings).set(patch).where(eq(bookings.id, id)).returning());
           yield* revision(tx, row!, owner.userId, `Statut ${current.status} → ${to}`);
+          if (to === "CANCELLED") yield* publishBooking(tx, "booking.canceled", row!);
           return row!;
         }));
     }),

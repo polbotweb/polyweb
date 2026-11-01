@@ -126,7 +126,9 @@ for (const lang of locales) {
   adminUrls.push(`${BASE}/${lang}/admin/returns`);
   if (shopReturn) adminUrls.push(`${BASE}/${lang}/admin/returns/${encodeURIComponent(shopReturn.id)}`, `${BASE}/${lang}/admin/orders/${encodeURIComponent(shopReturn.orderId)}`);
   // Logistique : inventaires (liste, en cours, validé) et grand livre de stock.
-  adminUrls.push(`${BASE}/${lang}/admin/logistics/inventories`, `${BASE}/${lang}/admin/logistics/movements`);
+  adminUrls.push(`${BASE}/${lang}/admin/logistics/inventories`, `${BASE}/${lang}/admin/logistics/movements`, `${BASE}/${lang}/admin/logistics/items`);
+  // Clés d'API publique (portées du registre, débit, expiration).
+  adminUrls.push(`${BASE}/${lang}/admin/platform/api-tokens`);
   if (logistics) adminUrls.push(`${BASE}/${lang}/admin/logistics/inventories/${encodeURIComponent(logistics.openCountId)}`, `${BASE}/${lang}/admin/logistics/inventories/${encodeURIComponent(logistics.validatedCountId)}`);
   // Exports FEC (liste avec un export prêt et un export en échec seedés, formulaire de génération).
   adminUrls.push(`${BASE}/${lang}/admin/sales/fec`);

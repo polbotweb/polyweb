@@ -41,20 +41,31 @@ export interface DeliveryEnvelope {
 
 export const enqueueEvent = (event: PolywebEvent) =>
   Effect.gen(function* () {
-    if (!event.siteId) return [] as string[];
+    // Événement de site → webhooks du site ; événement ERP (organizationId défini) → webhooks
+    // de tous les sites de l'organisation (`null` = plateforme).
+    const org = event.organizationId;
+    if (!event.siteId && org === undefined) return [] as string[];
+    const scope = event.siteId
+      ? eq(schema.webhooks.siteId, event.siteId)
+      : inArray(
+          schema.webhooks.siteId,
+          sql`(SELECT ${schema.sites.id} FROM ${schema.sites} WHERE ${org === null ? sql`${schema.sites.organizationId} IS NULL` : sql`${schema.sites.organizationId} = ${org}`})`,
+        );
     const hooks = yield* query('webhooks.subscribers', (db) =>
       db
-        .select({ id: schema.webhooks.id, events: schema.webhooks.events })
+        .select({ id: schema.webhooks.id, siteId: schema.webhooks.siteId, events: schema.webhooks.events })
         .from(schema.webhooks)
-        .where(and(eq(schema.webhooks.siteId, event.siteId!), eq(schema.webhooks.active, true))),
+        .where(and(scope, eq(schema.webhooks.active, true))),
     );
     const targets = hooks.filter((h) => eventMatches(h.events, event.name));
     if (targets.length === 0) return [] as string[];
-    const envelope: DeliveryEnvelope = { id: event.id, event: event.name, occurredAt: event.occurredAt, siteId: event.siteId, data: event.payload };
+    const envelope = (siteId: string): DeliveryEnvelope => ({ id: event.id, event: event.name, occurredAt: event.occurredAt, siteId, data: event.payload });
     const rows = yield* query('webhooks.enqueue', (db) =>
       db
         .insert(schema.webhookDeliveries)
-        .values(targets.map((h) => ({ webhookId: h.id, eventId: event.id, event: event.name, payload: envelope as unknown as Record<string, unknown> })))
+        .values(targets.map((h) => ({ webhookId: h.id, eventId: event.id, event: event.name, payload: envelope(h.siteId) as unknown as Record<string, unknown> })))
+        // Rediffusion d'un événement de l'outbox : pas de seconde livraison pour le même webhook.
+        .onConflictDoNothing({ target: [schema.webhookDeliveries.webhookId, schema.webhookDeliveries.eventId] })
         .returning({ id: schema.webhookDeliveries.id }),
     );
     return rows.map((r) => r.id);

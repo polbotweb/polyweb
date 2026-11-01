@@ -143,6 +143,9 @@ for (const lang of locales) {
   // Logistique : liste des inventaires, inventaire en cours (saisie) et validé (écarts), grand livre.
   adminUrls.push({ url: `${BASE}/${lang}/admin/logistics/inventories`, headers: { Cookie: adminCookie } });
   adminUrls.push({ url: `${BASE}/${lang}/admin/logistics/movements`, headers: { Cookie: adminCookie } });
+  adminUrls.push({ url: `${BASE}/${lang}/admin/logistics/items`, headers: { Cookie: adminCookie } });
+  // Clés d'API publique (portées du registre, débit, expiration).
+  adminUrls.push({ url: `${BASE}/${lang}/admin/platform/api-tokens`, headers: { Cookie: adminCookie } });
   if (logistics) {
     adminUrls.push({ url: `${BASE}/${lang}/admin/logistics/inventories/${encodeURIComponent(logistics.openCountId)}`, headers: { Cookie: adminCookie } });
     adminUrls.push({ url: `${BASE}/${lang}/admin/logistics/inventories/${encodeURIComponent(logistics.validatedCountId)}`, headers: { Cookie: adminCookie } });

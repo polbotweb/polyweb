@@ -977,6 +977,72 @@ export const ${taxo} = registerCategoryTaxonomy(defineCategoryTaxonomy({
   : [];`);
 }
 
+// ── API publique (registre core/api) : lecture seule, tenantisée, à compléter ──
+const apiResource = table.replace(/_/g, "-");
+files[`${moduleDir}/api/public-api.ts`] = `/**
+ * API publique du module ${name} (registre \`@/core/api\`) : lecture \`${name}:read\`
+ * via \`tableReader\` (tenant = organisation du site de la clé, pagination par curseur).
+ * À enregistrer dans \`src/core/modules/bootstrap.ts\` (\`registerModuleApi(${camel}Api)\`).
+ * Écritures : ajouter \`writeScope\`, \`create\` / \`update\` (Idempotency-Key gérée par le cœur).
+ * Événements webhooks : les déclarer dans \`events\` et les publier via \`recordEvent(tx, …)\`
+ * (outbox transactionnelle, \`@/core/events/outbox\`).
+ * Ne JAMAIS importer ici un module qui dépend d'\`astro:actions\` (import différé sinon).
+ */
+import { desc } from "drizzle-orm";
+import { getDrizzle } from "@database/drizzle";
+import type { ApiResourceDefinition, ModuleApiDeclaration } from "@/core/api/contract";
+import { iso, tableReader } from "@/core/api/table";
+import { ${camel} } from "../schema";
+
+type Row = typeof ${camel}.$inferSelect;
+
+export const serialize${pascal} = (r: Row) => ({
+  id: r.id,
+  slug: r.slug,
+  title: r.title,
+  status: r.status,
+  createdAt: r.createdAt.toISOString(),
+  updatedAt: iso(r.updatedAt),
+});
+
+const reader = tableReader<Row, ReturnType<typeof serialize${pascal}>>(
+  {
+    name: "${apiResource}",
+    columns: { id: ${camel}.id, createdAt: ${camel}.createdAt, organizationId: ${camel}.organizationId },
+    select: (where, limit) => getDrizzle().select().from(${camel}).where(where).orderBy(desc(${camel}.createdAt), desc(${camel}.id)).limit(limit),
+    filters: [],
+  },
+  serialize${pascal},
+);
+
+export const ${camel}Resource: ApiResourceDefinition<ReturnType<typeof serialize${pascal}>> = {
+  name: "${apiResource}",
+  module: "${name}",
+  description: "${pascal} de l'organisation du site.",
+  scope: "${name}:read",
+  filters: reader.filters,
+  schema: {
+    properties: {
+      id: { type: "string" },
+      slug: { type: "string" },
+      title: { type: "string" },
+      status: { type: "string" },
+      createdAt: { type: "string", format: "date-time" },
+      updatedAt: { type: "string", format: "date-time", nullable: true },
+    },
+    required: ["id", "slug", "title", "status", "createdAt"],
+  },
+  list: reader.list,
+  get: reader.get,
+};
+
+export const ${camel}Api: ModuleApiDeclaration = {
+  module: "${name}",
+  resources: [${camel}Resource as ApiResourceDefinition<unknown>],
+  events: [],
+};
+`;
+
 const optionalDirs = [
   "actions",
   "engagement",
@@ -1002,6 +1068,7 @@ Module « ${name} » généré.
      puis déclarer le namespace « ${name} » dans le contrôle d'accès (permissions/index.ts)
      si le domaine encaisse : register${pascal}Refunds() dans src/core/modules/bootstrap.ts (refunds.ts, docs/refunds.md)
      compléter ${camel}Loader / load${pascal}()      (src/modules/${name}/loaders/${entity}.loader.ts)
+     API publique : registerModuleApi(${camel}Api) dans src/core/modules/bootstrap.ts (api/public-api.ts, docs/public-api.md)
   2. déclarer les capacités réelles         (capabilities.ts + module.ts)
   3. ajouter les libellés des 4 locales     (modules/${name}/i18n/)
   4. ré-exporter les actions générées      (modules/${name}/actions/index.ts → src/actions/index.ts)

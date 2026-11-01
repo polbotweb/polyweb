@@ -17,6 +17,7 @@ import { sellerProfileOf } from "@/modules/sales/loaders/sellerProfile.loader";
 import { subscriptionPlans, subscriptions } from "../schema";
 import { providerPatch } from "../domain/lifecycle";
 import type { SubscriptionRow } from "./subscription.service";
+import { writeSubscriptionState } from "./state";
 
 /** Pays vendeur par défaut si le profil vendeur du tenant n'est pas renseigné. */
 const DEFAULT_SELLER_COUNTRY = "FR";
@@ -67,7 +68,7 @@ const applyEvent = (tx: DbTransaction, sub: SubscriptionRow, event: VerifiedSubs
       if (!issued) yield* Effect.logError("[subscriptions] facture Sales impayée laissée en brouillon (montant inatteignable)", { invoiceId: invoice.id });
       if (!event.status) patch.status = "past_due";
     }
-    yield* dbTry("subscriptions.webhook.apply", () => tx.update(subscriptions).set(patch).where(eq(subscriptions.id, sub.id)));
+    yield* writeSubscriptionState(tx, sub, patch, "subscriptions.webhook.apply");
   });
 
 /** Récepteur branché par `bootstrap` : refus métier journalisés, seule une `DbError` remonte. */

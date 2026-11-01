@@ -25,6 +25,16 @@ describe('scripts/new-module.ts', () => {
     expect(existsSync(join(dir, 'components/event-tickets/EventTicketsCard.astro'))).toBe(true);
   });
 
+  it('generates a read-only public API stub for the core/api registry (scope, tenant reader, empty events)', () => {
+    const api = readFileSync(join(dir, 'modules/event-tickets/api/public-api.ts'), 'utf8');
+    expect(api).toContain('export const eventTicketsApi: ModuleApiDeclaration');
+    expect(api).toContain('name: "tickets"');
+    expect(api).toContain('scope: "event-tickets:read"');
+    expect(api).toContain('organizationId: eventTickets.organizationId');
+    expect(api).toContain('events: []');
+    expect(api).not.toContain('astro:actions"');
+  });
+
   it("names the main SQL table after the pluralized entity (not the domain) and auxiliary tables after the singular entity, with --table override and collision guard", () => {
     const schema = (m: string) => readFileSync(join(dir, `modules/${m}/schema/index.ts`), 'utf8');
     expect(schema('event-tickets')).toContain('pgTable("tickets", {');

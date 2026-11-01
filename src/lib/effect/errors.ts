@@ -52,6 +52,8 @@ export class ConflictError extends Data.TaggedError('ConflictError')<{
 
 export class RateLimitedError extends Data.TaggedError('RateLimitedError')<{
   readonly retryAfterSeconds: number;
+  /** Quota de la fenêtre, pour les en-têtes `RateLimit-*` (API publique). */
+  readonly limit?: number;
 }> {}
 
 export class UpstreamError extends Data.TaggedError('UpstreamError')<{

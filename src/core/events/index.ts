@@ -30,13 +30,47 @@ export const POLYWEB_EVENTS = [
   "media.deleted",
 ] as const;
 
-export type PolywebEventName = (typeof POLYWEB_EVENTS)[number];
+export type CorePolywebEventName = (typeof POLYWEB_EVENTS)[number];
+/** Nom d'événement : cœur ou déclaré par un module via `registerEventNames`. */
+export type PolywebEventName = CorePolywebEventName | (string & {});
+
+export interface EventDefinition {
+  readonly name: string;
+  /** Module déclarant (ex. `sales`). */
+  readonly module: string;
+  readonly description: string;
+}
+
+const NAME = /^[a-z][a-z_]*\.[a-z][a-z_]*$/;
+const declared = new Map<string, EventDefinition>(
+  POLYWEB_EVENTS.map((name) => [name, { name, module: "core", description: name }]),
+);
+
+/** Registre d'événements : chaque module déclare les siens (webhooks, plugins). */
+export function registerEventNames(definitions: readonly EventDefinition[]): void {
+  for (const d of definitions) {
+    if (!NAME.test(d.name)) throw new Error(`Invalid event name: ${d.name}`);
+    const existing = declared.get(d.name);
+    if (existing && existing.module !== d.module) throw new Error(`Event already registered by ${existing.module}: ${d.name}`);
+    declared.set(d.name, d);
+  }
+}
+
+/** Événements connus (cœur + modules), dans l'ordre de déclaration. */
+export function listEventDefinitions(): readonly EventDefinition[] {
+  return [...declared.values()];
+}
 
 export interface PolywebEvent<T = Record<string, unknown>> {
   readonly id: string;
   readonly name: PolywebEventName;
   readonly occurredAt: string;
   readonly siteId: string | null;
+  /**
+   * Tenant des modules ERP (`null` = plateforme). Absent pour les événements de site :
+   * les webhooks de tous les sites de cette organisation le reçoivent.
+   */
+  readonly organizationId?: string | null;
   readonly payload: T;
 }
 
@@ -45,7 +79,7 @@ export type PolywebEventHandler = (event: PolywebEvent) => void | Promise<void>;
 const handlers = new Map<PolywebEventName | "*", Set<PolywebEventHandler>>();
 
 export function isPolywebEventName(value: string): value is PolywebEventName {
-  return (POLYWEB_EVENTS as readonly string[]).includes(value);
+  return declared.has(value);
 }
 
 /** Abonne un handler à un événement (ou `*` pour tous). Retourne la fonction de désabonnement. */
@@ -61,11 +95,22 @@ export function onEvent(name: PolywebEventName | "*", handler: PolywebEventHandl
 
 const HANDLER_TIMEOUT = Duration.seconds(30);
 
+/** Exécute un handler isolé ; `false` si il a échoué ou dépassé le timeout (journalisé). */
 const runHandler = (name: PolywebEventName, handler: PolywebEventHandler, event: PolywebEvent) =>
   Effect.tryPromise(async () => handler(event)).pipe(
     Effect.timeoutOrElse({ duration: HANDLER_TIMEOUT, orElse: () => Effect.fail(new Error(`handler timeout after 30s`)) }),
-    Effect.catch((error) => Effect.logError(`[events] handler failed for ${name}`, error)),
+    Effect.as(true),
+    Effect.catch((error) => Effect.logError(`[events] handler failed for ${name}`, error).pipe(Effect.as(false))),
   );
+
+/** Diffuse un événement déjà construit ; renvoie le nombre d'abonnés en échec (outbox : re-diffusion). */
+export const publishEventEffect = (event: PolywebEvent): Effect.Effect<number> =>
+  Effect.gen(function* () {
+    if (!declared.has(event.name)) yield* Effect.logWarning(`[events] undeclared event ${event.name}`);
+    const targets = [...(handlers.get(event.name) ?? []), ...(handlers.get("*") ?? [])];
+    const results = yield* Effect.forEach(targets, (handler) => runHandler(event.name, handler, event), { concurrency: "unbounded" });
+    return results.filter((ok) => !ok).length;
+  }).pipe(Effect.withSpan("events.publish", { attributes: { "event.name": event.name } }));
 
 /**
  * Émet un événement et attend la fin de tous les handlers (parallèles, isolés).
@@ -74,7 +119,7 @@ const runHandler = (name: PolywebEventName, handler: PolywebEventHandler, event:
 export const emitEventEffect = <T extends Record<string, unknown>>(
   name: PolywebEventName,
   payload: T,
-  options: { siteId?: string | null } = {},
+  options: { siteId?: string | null; organizationId?: string | null } = {},
 ): Effect.Effect<PolywebEvent<T>> =>
   Effect.gen(function* () {
     const event: PolywebEvent<T> = {
@@ -82,10 +127,10 @@ export const emitEventEffect = <T extends Record<string, unknown>>(
       name,
       occurredAt: new Date().toISOString(),
       siteId: options.siteId ?? null,
+      ...(options.organizationId !== undefined ? { organizationId: options.organizationId } : {}),
       payload,
     };
-    const targets = [...(handlers.get(name) ?? []), ...(handlers.get("*") ?? [])];
-    yield* Effect.forEach(targets, (handler) => runHandler(name, handler, event as PolywebEvent), { concurrency: "unbounded", discard: true });
+    yield* publishEventEffect(event as PolywebEvent);
     return event;
   }).pipe(Effect.withSpan("events.emit", { attributes: { "event.name": name } }));
 
@@ -93,7 +138,7 @@ export const emitEventEffect = <T extends Record<string, unknown>>(
 export function emitEvent<T extends Record<string, unknown>>(
   name: PolywebEventName,
   payload: T,
-  options: { siteId?: string | null } = {},
+  options: { siteId?: string | null; organizationId?: string | null } = {},
 ): Promise<PolywebEvent<T>> {
   return Effect.runPromise(emitEventEffect(name, payload, options));
 }

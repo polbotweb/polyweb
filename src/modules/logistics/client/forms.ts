@@ -44,7 +44,12 @@ export const readWarehouseForm = (form: HTMLFormElement) => ({
   address: nullable(text(form, "address")), active: form.querySelector<HTMLInputElement>("[name=active]")?.checked ?? true,
 });
 
-export const readItemForm = (form: HTMLFormElement) => ({ sku: text(form, "sku").toUpperCase(), name: text(form, "name"), variantId: nullable(text(form, "variantId")) });
+/** Seuil vide → `null` (pas d'alerte) ; sinon entier (validé côté serveur). */
+const threshold = (raw: string): number | null => (raw === "" ? null : Number(raw));
+
+export const readItemForm = (form: HTMLFormElement) => ({
+  sku: text(form, "sku").toUpperCase(), name: text(form, "name"), variantId: nullable(text(form, "variantId")), lowStockThreshold: threshold(text(form, "lowStockThreshold")),
+});
 
 /** Saisies d'inventaire `[data-count-line]` → `{ lineId, counted }` (vide = non compté). */
 export const readInventoryCounts = (form: ParentNode) =>

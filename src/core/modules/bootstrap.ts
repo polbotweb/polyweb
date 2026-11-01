@@ -28,6 +28,13 @@ import { registerRefundsCore } from "@/core/refunds";
 import { registerBookingRefunds } from "@/modules/bookings/refunds";
 import { registerSalesRefunds } from "@/modules/sales/refunds";
 import { registerShopRefunds } from "@/modules/shop/refunds";
+import { registerModuleApi } from "@/core/api/registry";
+import { bookingsApi } from "@/modules/bookings/api/public-api";
+import { crmApi } from "@/modules/crm/api/public-api";
+import { logisticsApi } from "@/modules/logistics/api/public-api";
+import { salesApi } from "@/modules/sales/api/public-api";
+import { shopApi } from "@/modules/shop/api/public-api";
+import { subscriptionsApi } from "@/modules/subscriptions/api/public-api";
 
 let bootstrapped = false;
 
@@ -53,6 +60,8 @@ export function bootstrapModules(): void {
   if (servicesModule.searchDefinition) registerSearchResource(servicesModule.searchDefinition);
   registerInternalLinkResolver(blogInternalLinkResolver);
   registerInternalLinkResolver(serviceInternalLinkResolver);
+  // API publique v1 + événements webhooks : chaque module déclare ses ressources, scopes et événements.
+  for (const api of [salesApi, shopApi, logisticsApi, crmApi, bookingsApi, subscriptionsApi]) registerModuleApi(api);
   registerWebhookDispatcher();
   registerSearchIndexer();
   // Objets payables en ligne (core/payments) : sans effet tant que PAYMENTS_ENABLED est faux.

@@ -8,7 +8,7 @@ import { getAdminSite, userCan, formatDate } from '@/lib/platform/admin';
 import { logAuditEvent, extractIp } from '@/lib/audit';
 import { runAppResult } from '@/lib/effect/http';
 import { ForbiddenError, NotFoundError } from '@/lib/effect/errors';
-import { getWebhook, updateWebhook, deleteWebhook, rotateSecret, listDeliveries, EVENT_PATTERNS } from '@/modules/webhooks/domain/webhooks';
+import { getWebhook, updateWebhook, deleteWebhook, rotateSecret, listDeliveries,  eventPatterns } from '@/modules/webhooks/domain/webhooks';
 import { redeliver, sendPing } from '@/modules/webhooks/domain/dispatcher';
 
 export const prerender = false;
@@ -81,7 +81,7 @@ const messages: Record<string, string> = { saved: 'Enregistré.', 'ping-ok': 'Pi
     <label class="grid gap-1 text-sm">URL<input name="url" type="url" required value={hook.url} class="rounded-md border bg-background px-3 py-2" disabled={!canUpdate} /></label>
     <fieldset class="grid gap-1 text-sm sm:grid-cols-3">
       <legend class="mb-1">Événements</legend>
-      {EVENT_PATTERNS.map((e) => <label class="flex items-center gap-2"><input type="checkbox" name="events" value={e} checked={hook.events.includes(e)} disabled={!canUpdate} /> <code>{e}</code></label>)}
+      {eventPatterns().map((e) => <label class="flex items-center gap-2"><input type="checkbox" name="events" value={e} checked={hook.events.includes(e)} disabled={!canUpdate} /> <code>{e}</code></label>)}
     </fieldset>
     <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="active" checked={hook.active} disabled={!canUpdate} /> Actif {hook.disabledReason && <span class="text-error">(désactivé automatiquement : {hook.disabledReason})</span>}</label>
     {canUpdate && <div><button class="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">Enregistrer</button></div>}

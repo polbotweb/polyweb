@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, timestamp, jsonb, boolean, integer, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, jsonb, boolean, integer, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { user } from "./auth.schema";
 import { sites } from "./content.schema";
 
@@ -55,5 +55,7 @@ export const webhookDeliveries = pgTable(
   (t) => [
     index("webhook_deliveries_due_idx").on(t.status, t.nextAttemptAt),
     index("webhook_deliveries_hook_idx").on(t.webhookId, t.createdAt),
+    /** Une livraison par webhook et par événement : la diffusion de l'outbox peut être rejouée sans doublon. */
+    uniqueIndex("webhook_deliveries_hook_event_uidx").on(t.webhookId, t.eventId),
   ],
 );

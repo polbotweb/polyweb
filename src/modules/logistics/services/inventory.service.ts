@@ -20,6 +20,7 @@ import { countAdjustments, ensureOpen, parseCountedQuantity } from "../domain/in
 import { DEFAULT_INVENTORY_NUMBERING, INVENTORY_NUMBERING_KEY } from "../domain/numbering";
 import type { InvalidInventoryCountError, InventoryCountStateError } from "../domain/errors";
 import { logisticsStockInternals, logisticsToday } from "./logistics.service";
+import { checkLowStock } from "./low-stock";
 
 export type InventoryCountRow = typeof logisticsInventoryCounts.$inferSelect;
 export type InventoryCountLineRow = typeof logisticsInventoryCountLines.$inferSelect;
@@ -137,6 +138,7 @@ export const inventoryService = {
                 organizationId: count.organizationId, warehouseId: count.warehouseId, itemId: adjustment.itemId, kind: "adjustment", delta: adjustment.variance,
                 source: "inventory", inventoryCountId: count.id, reference: count.number, createdBy: authorId,
               }));
+            yield* checkLowStock(tx, adjustment.itemId, adjustment.variance, count.warehouseId);
             posted += 1;
           }
           yield* dbTry("logistics.inventory.line.freeze", () =>

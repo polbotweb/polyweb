@@ -15,6 +15,7 @@ import { and, asc, desc, eq, gte, ilike, inArray, isNull, lt, or, sql, type SQL 
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { getDrizzle } from "@database/drizzle";
 import { dbTry } from "@/lib/effect/run";
+import { setOrderStatus } from "./order-status";
 import { dbTransaction, type DbTransaction } from "@/lib/effect/transaction";
 import { fail } from "@/lib/effect/failure";
 import { AppConfig } from "@/lib/effect/config";
@@ -252,9 +253,10 @@ export const orderService = {
         if (!canTransition(orderWorkflow, order.status, to)) return yield* fail("CONFLICT", `Transition ${order.status} → ${to} interdite.`);
         if (to === "CANCELLED") {
           yield* cancelPending(tx, order, "CANCELLED", now);
+        } else if (to === "SHIPPED") {
+          yield* setOrderStatus(tx, id, "SHIPPED", { shippedAt: now }, "shop.order.status");
         } else {
-          yield* dbTry("shop.order.status", () =>
-            tx.update(orders).set({ status: to, ...(to === "SHIPPED" ? { shippedAt: now } : {}) }).where(eq(orders.id, id)));
+          yield* dbTry("shop.order.status", () => tx.update(orders).set({ status: to }).where(eq(orders.id, id)));
         }
         const [updated] = yield* dbTry("shop.order.reload", () => tx.select().from(orders).where(eq(orders.id, id)).limit(1));
         return updated!;
