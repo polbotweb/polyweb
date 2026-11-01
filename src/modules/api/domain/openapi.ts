@@ -6,6 +6,7 @@
 import type { FieldDefinition } from '@/core/content-types/fields';
 import type { ContentType } from '@/modules/content/domain/content-types';
 import { listApiScopes } from '@/core/api/registry';
+import type { ApiObjectSchema, ApiResourceDefinition } from '@/core/api/contract';
 
 type JsonSchema = Record<string, unknown>;
 
@@ -68,6 +69,8 @@ export function buildOpenApiDocument(opts: {
   locales: readonly string[];
   types: readonly ContentType[];
   /** Types visibles : sans jeton, seulement ceux en lecture publique. */
+  /** Ressources des modules (registre) : chemins générés automatiquement. */
+  resources?: readonly ApiResourceDefinition<unknown>[];
 }): Record<string, unknown> {
   const schemas: Record<string, JsonSchema> = {
     Problem: {
@@ -205,6 +208,8 @@ export function buildOpenApiDocument(opts: {
     };
   }
 
+  for (const r of opts.resources ?? []) addResourcePaths(r, paths, schemas);
+
   return {
     openapi: '3.1.0',
     info: { title: `${opts.siteName} — API de contenu`, version: '1.0.0', description: 'API REST Polyweb v1. Authentification : `Authorization: Bearer pw_…` (jetons créés dans l’admin). Lecture anonyme possible pour les types publics.' },
@@ -216,4 +221,71 @@ export function buildOpenApiDocument(opts: {
     security: [{}, { bearer: ['content:read'] }],
     paths,
   };
+}
+
+const objectSchema = (s: ApiObjectSchema): JsonSchema => ({
+  type: 'object',
+  properties: Object.fromEntries(
+    Object.entries(s.properties).map(([k, p]) => [k, p.nullable ? { ...p, nullable: undefined, type: [p.type, 'null'] } : p]),
+  ),
+  ...(s.required?.length ? { required: [...s.required] } : {}),
+});
+
+const RATE_HEADERS = {
+  'RateLimit-Limit': { schema: { type: 'integer' } },
+  'RateLimit-Remaining': { schema: { type: 'integer' } },
+  'RateLimit-Reset': { schema: { type: 'integer' } },
+};
+
+/** Chemins OpenAPI d'une ressource du registre (liste, lecture, écritures, actions). */
+export function addResourcePaths(r: ApiResourceDefinition<unknown>, paths: Record<string, unknown>, schemas: Record<string, JsonSchema>): void {
+  const name = pascal(r.name);
+  const ref = { $ref: `#/components/schemas/${name}` };
+  schemas[name] = objectSchema(r.schema);
+  if (r.inputSchema) schemas[`${name}Input`] = objectSchema(r.inputSchema);
+  const tag = r.module;
+  const idem = { name: 'Idempotency-Key', in: 'header', required: false, schema: { type: 'string', maxLength: 255 }, description: 'Rejoue la même réponse pendant 24 h ; 422 si réutilisée avec une autre requête.' };
+  const idParam = { name: 'id', in: 'path', required: true, schema: { type: 'string' } };
+  const one = { content: { 'application/json': { schema: { type: 'object', properties: { data: ref } } } }, headers: RATE_HEADERS };
+  const body = r.inputSchema ? { required: true, content: { 'application/json': { schema: { $ref: `#/components/schemas/${name}Input` } } } } : undefined;
+  const write = r.writeScope ? [{ bearer: [r.writeScope] }] : [];
+  paths[`/${r.name}`] = {
+    get: {
+      operationId: `list${name}`,
+      tags: [tag],
+      summary: r.description,
+      security: [{ bearer: [r.scope] }],
+      parameters: [
+        { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
+        { name: 'cursor', in: 'query', schema: { type: 'string' }, description: 'Valeur `meta.nextCursor` de la page précédente.' },
+        ...r.filters.map((f) => ({ name: f.name, in: 'query', description: f.description, schema: f.values ? { type: 'string', enum: [...f.values] } : { type: 'string' } })),
+      ],
+      responses: {
+        '200': {
+          description: 'Page',
+          headers: RATE_HEADERS,
+          content: {
+            'application/json': {
+              schema: { type: 'object', properties: { data: { type: 'array', items: ref }, meta: { type: 'object', properties: { limit: { type: 'integer' }, nextCursor: { type: ['string', 'null'] } } } } },
+            },
+          },
+        },
+        ...errors([400, 401, 403, 429]),
+      },
+    },
+    ...(r.create
+      ? { post: { operationId: `create${name}`, tags: [tag], security: write, parameters: [idem], requestBody: body, responses: { '201': { description: 'Créé', ...one }, ...errors([400, 401, 403, 409, 422, 429]) } } }
+      : {}),
+  };
+  paths[`/${r.name}/{id}`] = {
+    get: { operationId: `get${name}`, tags: [tag], security: [{ bearer: [r.scope] }], parameters: [idParam], responses: { '200': { description: 'Ressource', ...one }, ...errors([401, 403, 404, 429]) } },
+    ...(r.update
+      ? { patch: { operationId: `update${name}`, tags: [tag], security: write, parameters: [idParam, idem], requestBody: body, responses: { '200': { description: 'Mise à jour', ...one }, ...errors([400, 401, 403, 404, 409, 422, 429]) } } }
+      : {}),
+  };
+  for (const a of r.actions ?? []) {
+    paths[`/${r.name}/{id}/${a.name}`] = {
+      post: { operationId: `${a.name}${name}`, tags: [tag], summary: a.description, security: write, parameters: [idParam, idem], responses: { '200': { description: a.description, ...one }, ...errors([400, 401, 403, 404, 409, 422, 429]) } },
+    };
+  }
 }

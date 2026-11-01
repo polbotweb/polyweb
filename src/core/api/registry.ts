@@ -4,9 +4,12 @@ import { registerEventNames } from "@/core/events";
 import { assertApiResourceDefinition, type ApiResourceDefinition, type ModuleApiDeclaration } from "./contract";
 
 const resources = new Map<string, ApiResourceDefinition<unknown>>();
+/** Segments déjà servis par des routes statiques de `/api/v1`. */
+const RESERVED = new Set(["content", "content-types", "forms", "search", "openapi.json"]);
 
 export function registerApiResource(definition: ApiResourceDefinition<unknown>): void {
   assertApiResourceDefinition(definition);
+  if (RESERVED.has(definition.name)) throw new Error(`API resource name is reserved: ${definition.name}`);
   if (resources.has(definition.name)) throw new Error(`API resource already registered: ${definition.name}`);
   resources.set(definition.name, definition);
 }
