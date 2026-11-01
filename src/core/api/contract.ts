@@ -15,6 +15,10 @@ import type { EventDefinition } from "@/core/events";
 export interface ApiTenant {
   readonly siteId: string;
   readonly organizationId: string | null;
+  /** Utilisateur ayant créé la clé : auteur des écritures (révisions, `createdBy`). */
+  readonly actorUserId: string | null;
+  /** Identifiant de la clé (verrous d'édition : session `api:<id>`). */
+  readonly tokenId: string | null;
 }
 
 export interface ApiFilterDefinition {

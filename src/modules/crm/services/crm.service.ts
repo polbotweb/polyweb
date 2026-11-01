@@ -150,7 +150,7 @@ export interface ActivityInput {
 
 export const crmService = {
   // ── Sociétés ────────────────────────────────────────────────────────────
-  createCompany: (input: CompanyInput & { readonly organizationId: string | null }, authorId: string) =>
+  createCompany: (input: CompanyInput & { readonly organizationId: string | null }, authorId: string | null) =>
     Effect.gen(function* () {
       const columns = yield* companyColumns(input);
       const [row] = yield* dbTry("crm.company.create", () => getDrizzle().insert(crmCompanies).values({ ...columns, organizationId: input.organizationId, createdBy: authorId }).returning());
@@ -170,7 +170,7 @@ export const crmService = {
     ),
 
   // ── Contacts ────────────────────────────────────────────────────────────
-  createContact: (input: ContactInput & { readonly organizationId: string | null }, authorId: string) =>
+  createContact: (input: ContactInput & { readonly organizationId: string | null }, authorId: string | null) =>
     dbTransaction("crm.contact.create", (tx) =>
       Effect.gen(function* () {
         const columns = yield* contactColumns(tx, input, input.organizationId);

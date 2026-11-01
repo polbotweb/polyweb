@@ -90,6 +90,8 @@ export interface ApiPrincipal {
   readonly scopes: ReadonlySet<ApiScope>;
   /** Quota par minute propre à la clé (`null` = défaut). */
   readonly rateLimitPerMinute?: number | null;
+  /** Créateur de la clé (auteur des écritures faites avec elle). */
+  readonly createdBy?: string | null;
 }
 
 export const hasScope = (p: ApiPrincipal, scope: ApiScope) => p.scopes.has(scope);
@@ -128,7 +130,7 @@ export const authenticate = (authorization: string | null, fallbackSiteId: strin
         db.update(schema.apiTokens).set({ lastUsedAt: new Date(now) }).where(eq(schema.apiTokens.id, row.id)),
       ).pipe(Effect.tapError((e) => Effect.logWarning('api token touch failed', e)), Effect.ignore);
     }
-    return { kind: 'token', tokenId: row.id, siteId: row.siteId, scopes: new Set(row.scopes), rateLimitPerMinute: row.rateLimitPerMinute } satisfies ApiPrincipal as ApiPrincipal;
+    return { kind: 'token', tokenId: row.id, siteId: row.siteId, scopes: new Set(row.scopes), rateLimitPerMinute: row.rateLimitPerMinute, createdBy: row.createdBy } satisfies ApiPrincipal as ApiPrincipal;
   }).pipe(Effect.withSpan('api.authenticate'));
 
 export const API_RATE_LIMITS = {

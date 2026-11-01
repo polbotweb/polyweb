@@ -8,7 +8,7 @@
 import type { APIContext } from 'astro';
 import { Effect } from 'effect';
 import { json } from '@/lib/effect/http';
-import { NotFoundError, UnauthorizedError, ValidationError } from '@/lib/effect/errors';
+import { ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from '@/lib/effect/errors';
 import { readJson } from '@/lib/effect/schema';
 import { getApiResource } from '@/core/api/registry';
 import { decodeCursor, encodeCursor } from '@/core/api/cursor';
@@ -35,7 +35,12 @@ const resolve = (ctx: APIContext, write: boolean) =>
     const scope = write ? resource.writeScope : resource.scope;
     if (!scope) return yield* new NotFoundError({ entity: 'ApiOperation', id: `write ${name}` });
     yield* requireScope(req.principal, scope);
-    const tenant: ApiTenant = { siteId: req.site.id, organizationId: req.site.organizationId ?? null };
+    const tenant: ApiTenant = {
+      siteId: req.site.id,
+      organizationId: req.site.organizationId ?? null,
+      actorUserId: req.principal.createdBy ?? null,
+      tokenId: req.principal.tokenId,
+    };
     return { resource, tenant, ...req };
   });
 
@@ -44,6 +49,25 @@ const idParam = (ctx: APIContext) =>
     const id = ctx.params.id ?? '';
     return ID.test(id) ? Effect.succeed(id) : Effect.fail(new NotFoundError({ entity: 'Resource', id: id.slice(0, 64) }));
   });
+
+/** Échecs métier des services (`ActionFailure`) → erreurs HTTP typées de l'API. */
+export const toApiError = (error: unknown): unknown => {
+  const e = error as { _tag?: string; code?: string; message?: string };
+  if (e?._tag !== 'ActionFailure') return error;
+  const message = e.message ?? '';
+  switch (e.code) {
+    case 'NOT_FOUND':
+      return new NotFoundError({ entity: 'Resource', id: message });
+    case 'CONFLICT':
+      return new ConflictError({ reason: message });
+    case 'UNAUTHORIZED':
+      return new UnauthorizedError({ reason: message });
+    case 'FORBIDDEN':
+      return new ForbiddenError({ reason: message });
+    default:
+      return new ValidationError({ issues: [{ path: '', message }] });
+  }
+};
 
 const notFound = (resource: ApiResourceDefinition, id: string) => new NotFoundError({ entity: resource.name, id });
 
@@ -67,7 +91,7 @@ export const listResourceHandler = (ctx: APIContext) =>
       }
       filters[f.name] = v;
     }
-    const page = yield* resource.list(tenant, { limit, cursor, filters });
+    const page = yield* resource.list(tenant, { limit, cursor, filters }).pipe(Effect.mapError(toApiError));
     return withCors(json({ data: page.items, meta: { limit, nextCursor: page.last ? encodeCursor(page.last) : null } }), rate);
   });
 
@@ -75,7 +99,7 @@ export const getResourceHandler = (ctx: APIContext) =>
   Effect.gen(function* () {
     const { resource, tenant, limit } = yield* resolve(ctx, false);
     const id = yield* idParam(ctx);
-    const item = yield* resource.get(tenant, id);
+    const item = yield* resource.get(tenant, id).pipe(Effect.mapError(toApiError));
     if (item === undefined) return yield* notFound(resource, id);
     return withCors(json({ data: item }), limit);
   });
@@ -92,7 +116,7 @@ const idempotentWrite = (
     let body: unknown = {};
     if (raw.trim()) body = yield* readJson(new Request('http://x', { method: 'POST', body: raw }));
     const key = ctx.request.headers.get('idempotency-key');
-    return yield* withIdempotency(tokenId, key, requestFingerprint(ctx.request.method, ctx.url.pathname, raw), run(body));
+    return yield* withIdempotency(tokenId, key, requestFingerprint(ctx.request.method, ctx.url.pathname, raw), run(body).pipe(Effect.mapError(toApiError)));
   });
 
 const writeResponse = (r: { status: number; body: unknown; location: string | null; replayed: boolean }) => {
