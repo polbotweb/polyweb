@@ -130,6 +130,8 @@ for (const lang of locales) {
   if (logistics) adminUrls.push(`${BASE}/${lang}/admin/logistics/inventories/${encodeURIComponent(logistics.openCountId)}`, `${BASE}/${lang}/admin/logistics/inventories/${encodeURIComponent(logistics.validatedCountId)}`);
   // Exports FEC (liste avec un export prêt et un export en échec seedés, formulaire de génération).
   adminUrls.push(`${BASE}/${lang}/admin/sales/fec`);
+  // Taux de change (devise de tenue, taux BCE et forçage manuel seedés).
+  adminUrls.push(`${BASE}/${lang}/admin/sales/fx`);
   adminUrls.push(`${BASE}/${lang}/admin/subscriptions`);
   if (subscriptionsSeed) {
     adminUrls.push(`${BASE}/${lang}/admin/subscriptions/plans/${encodeURIComponent(subscriptionsSeed.planId)}`);

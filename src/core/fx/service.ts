@@ -147,3 +147,18 @@ export const findRate = (organizationId: string | null, from: CurrencyCode, to: 
     }
     return yield* Effect.fail(new RateNotFoundError({ from, to, date }));
   });
+
+/** Taux affichés au back-office : forçages du tenant puis derniers taux BCE (plus récents d'abord). */
+export const listRates = (organizationId: string | null, limit = 100) =>
+  Effect.gen(function* () {
+    const db = getDrizzle();
+    const take = Math.min(Math.max(limit, 1), 500);
+    const manual = yield* dbTry('fx.list.manual', () => db.select().from(exchangeRates)
+      .where(and(eq(exchangeRates.source, 'manual'), orgEq(exchangeRates.organizationId, organizationId)))
+      .orderBy(desc(exchangeRates.rateDate), exchangeRates.baseCurrency, exchangeRates.quoteCurrency).limit(take));
+    const ecb = yield* dbTry('fx.list.ecb', () => db.select().from(exchangeRates)
+      .where(and(eq(exchangeRates.source, 'ecb'), isNull(exchangeRates.organizationId)))
+      .orderBy(desc(exchangeRates.rateDate), exchangeRates.quoteCurrency).limit(take));
+    const latest = ecb[0]?.rateDate ?? null;
+    return { manual, ecb: ecb.filter((row) => row.rateDate === latest), latestEcbDate: latest };
+  });

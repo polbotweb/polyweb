@@ -1,0 +1,120 @@
+---
+/** Back-office : devise de tenue (verrou), derniers taux BCE, forçages manuels (ajout / suppression). */
+import { Effect } from "effect";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Button } from "@atoms/button";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import { ScrollRegion } from "@molecules/ScrollRegion";
+import { requirePermission } from "@lib/auth-guards";
+import { CURRENCY_EXPONENTS } from "@/core/money";
+import { fxSettings, listRates } from "@/core/fx/service";
+import { appRuntime } from "@/lib/effect/runtime";
+import { getSalesTranslations } from "@/modules/sales/i18n";
+import { hasSalesPermission } from "@/modules/sales/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { sales: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getSalesTranslations(locale);
+const tx = t.fx;
+const baseAdminUrl = `/${locale}/admin/sales`;
+const [settings, rates, canEdit] = await Promise.all([
+  appRuntime.runPromise(fxSettings(null)),
+  appRuntime.runPromise(listRates(null)),
+  hasSalesPermission(Astro, ["issue"]),
+]);
+const currencies = Object.keys(CURRENCY_EXPONENTS).sort();
+const today = new Date().toISOString().slice(0, 10);
+const when = (value: Date | null) => (value ? new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" }).format(value) : "—");
+const day = (iso: string) => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
+---
+<BaseLayout title={tx.title} description={t.meta.description}>
+  <AuthLayout title={tx.title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="sales" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+      <h1 class="text-2xl font-semibold">{tx.title}</h1>
+      <p class="max-w-3xl text-muted-foreground">{tx.intro}</p>
+
+      <section class="flex flex-col gap-3" aria-labelledby="fx-base-title">
+        <h2 id="fx-base-title" class="text-lg font-semibold">{tx.baseTitle}</h2>
+        <form class="flex max-w-xl flex-col gap-3 rounded-md border p-4" data-fx-base-form data-organization-id="" data-done={tx.baseSaved} aria-labelledby="fx-base-title" novalidate>
+          <p class="text-sm text-muted-foreground" id="fx-base-hint">{tx.baseHint}</p>
+          <div class="grid gap-2">
+            <Label for="fx-base-currency">{tx.baseCurrency}</Label>
+            <NativeSelect id="fx-base-currency" name="baseCurrency" aria-describedby="fx-base-hint" disabled={!canEdit || settings.lockedAt !== null} data-testid="fx-base-currency">
+              {currencies.map((code) => <NativeSelectOption value={code} selected={code === settings.baseCurrency}>{code}</NativeSelectOption>)}
+            </NativeSelect>
+          </div>
+          {settings.lockedAt && <p class="text-sm" data-testid="fx-base-locked">{tx.baseLocked} {when(settings.lockedAt)}</p>}
+          <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+          {canEdit && !settings.lockedAt && <div><Button type="submit" data-testid="fx-base-save">{tx.saveBase}</Button></div>}
+        </form>
+      </section>
+
+      <section class="flex flex-col gap-3" aria-labelledby="fx-ecb-title">
+        <h2 id="fx-ecb-title" class="text-lg font-semibold">{tx.ecbTitle}</h2>
+        <p class="text-sm text-muted-foreground">{tx.lastFetched} : {when(settings.lastFetchedAt)}{rates.latestEcbDate && <> — {tx.ecbDate} : {day(rates.latestEcbDate)}</>}</p>
+        {rates.ecb.length === 0 ? <p class="text-sm text-muted-foreground" data-testid="fx-ecb-empty">{tx.ecbNone}</p> : (
+          <ScrollRegion label={tx.ecbTitle}>
+            <table class="w-full text-sm" data-testid="fx-ecb-list">
+              <caption class="sr-only">{tx.ecbTitle}</caption>
+              <thead><tr class="border-b"><th scope="col" class="py-2 text-start">{tx.from}</th><th scope="col" class="py-2 text-start">{tx.to}</th><th scope="col" class="py-2 text-end">{tx.rate}</th></tr></thead>
+              <tbody>{rates.ecb.map((row) => <tr class="border-b"><td class="py-2 font-mono">{row.baseCurrency}</td><td class="py-2 font-mono">{row.quoteCurrency}</td><td class="py-2 text-end font-mono">{row.rate}</td></tr>)}</tbody>
+            </table>
+          </ScrollRegion>
+        )}
+      </section>
+
+      <section class="flex flex-col gap-3" aria-labelledby="fx-manual-title">
+        <h2 id="fx-manual-title" class="text-lg font-semibold">{tx.manualTitle}</h2>
+        {rates.manual.length === 0 ? <p class="text-sm text-muted-foreground" data-testid="fx-manual-empty">{tx.manualNone}</p> : (
+          <ScrollRegion label={tx.manualTitle}>
+            <table class="w-full text-sm" data-testid="fx-manual-list">
+              <caption class="sr-only">{tx.manualTitle}</caption>
+              <thead><tr class="border-b">
+                <th scope="col" class="py-2 text-start">{tx.date}</th><th scope="col" class="py-2 text-start">{tx.from}</th><th scope="col" class="py-2 text-start">{tx.to}</th>
+                <th scope="col" class="py-2 text-end">{tx.rate}</th><th scope="col" class="py-2 text-start"><span class="sr-only">{tx.remove}</span></th>
+              </tr></thead>
+              <tbody>{rates.manual.map((row) => (
+                <tr class="border-b" data-fx-rate={`${row.baseCurrency}/${row.quoteCurrency}@${row.rateDate}`}>
+                  <td class="py-2">{day(row.rateDate)}</td><td class="py-2 font-mono">{row.baseCurrency}</td><td class="py-2 font-mono">{row.quoteCurrency}</td><td class="py-2 text-end font-mono">{row.rate}</td>
+                  <td class="py-2">{canEdit && (
+                    <Button type="button" variant="outline" data-fx-delete={row.id} data-organization-id="" data-confirm={tx.confirmRemove} data-done={tx.removed} data-testid="fx-delete">
+                      {tx.remove}<span class="sr-only"> — {row.baseCurrency}/{row.quoteCurrency} {row.rateDate}</span>
+                    </Button>
+                  )}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </ScrollRegion>
+        )}
+        {canEdit && (
+          <form class="grid max-w-3xl gap-3 rounded-md border p-4 sm:grid-cols-2" data-fx-rate-form data-organization-id="" data-done={tx.added} data-invalid={tx.invalid} aria-labelledby="fx-manual-title" novalidate>
+            <p class="text-sm text-muted-foreground sm:col-span-2" id="fx-rate-hint">{tx.manualHint}</p>
+            <div class="grid gap-2"><Label for="fx-from">{tx.from}</Label>
+              <NativeSelect id="fx-from" name="from" data-testid="fx-from">{currencies.map((code) => <NativeSelectOption value={code} selected={code === "USD"}>{code}</NativeSelectOption>)}</NativeSelect></div>
+            <div class="grid gap-2"><Label for="fx-to">{tx.to}</Label>
+              <NativeSelect id="fx-to" name="to" data-testid="fx-to">{currencies.map((code) => <NativeSelectOption value={code} selected={code === settings.baseCurrency}>{code}</NativeSelectOption>)}</NativeSelect></div>
+            <div class="grid gap-2"><Label for="fx-date">{tx.date}</Label><Input id="fx-date" name="date" type="date" value={today} required data-testid="fx-date" /></div>
+            <div class="grid gap-2"><Label for="fx-rate">{tx.rate}</Label><Input id="fx-rate" name="rate" inputmode="decimal" autocomplete="off" required aria-describedby="fx-rate-hint" data-testid="fx-rate" /></div>
+            <p class="text-sm text-destructive sm:col-span-2" role="alert" tabindex="-1" data-form-error hidden></p>
+            <div class="sm:col-span-2"><Button type="submit" data-testid="fx-add">{tx.add}</Button></div>
+          </form>
+        )}
+      </section>
+      <a class="inline-flex min-h-11 items-center underline" href={baseAdminUrl}>{t.admin.back}</a>
+    </main>
+  </AuthLayout>
+</BaseLayout>
+
+<script>
+  import { initSales } from "@/modules/sales/client/init";
+
+  initSales();
+  document.addEventListener("astro:after-swap", initSales);
+</script>
