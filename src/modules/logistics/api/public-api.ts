@@ -113,5 +113,5 @@ export const stockLevelsResource: ApiResourceDefinition<unknown> = {
 export const logisticsApi: ModuleApiDeclaration = {
   module: "logistics",
   resources: [stockLevelsResource],
-  events: [{ name: "stock.low", description: "Disponible d'un article passé sous son seuil d'alerte dans un entrepôt." }],
+  events: [{ name: "stock.low", description: "Stock physique total (tous entrepôts) d'un article passé au niveau de son seuil d'alerte ou en dessous." }],
 };

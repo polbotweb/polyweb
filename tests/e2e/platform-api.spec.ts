@@ -21,9 +21,11 @@ test('jeton d’API créé dans l’admin → CRUD via /api/v1', async ({ page, 
   const tokenName = `E2E ${typeSlug}`;
   await page.locator('input[name="name"]').fill(tokenName);
   await page.locator('input[name="scopes"][value="content:write"]').check();
+  await page.getByLabel('Limite de débit (requêtes par minute)').fill('50');
   await page.getByRole('button', { name: 'Créer le jeton' }).click();
   const token = (await page.locator('[data-token]').textContent())?.trim() ?? '';
   expect(token).toMatch(/^pw_[A-Za-z0-9]{8}_/);
+  await expect(page.locator('tr', { hasText: tokenName })).toContainText('50/min');
 
   const auth = { authorization: `Bearer ${token}` };
   const created = await request.post(`/api/v1/content/${typeSlug}`, {
