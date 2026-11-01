@@ -1,4 +1,4 @@
 
-> polyweb@0.0.1 lint /workspace/p-final
+> polyweb@0.0.1 lint /workspace/p-audit
 > eslint "src/**/*.{js,ts,astro}" --max-warnings 0
 
