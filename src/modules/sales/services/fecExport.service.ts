@@ -21,7 +21,7 @@ import { toFec } from "@/modules/tax/domain/accounting";
 import { sales, salesDocumentLines, salesFecExports, salesPayments, salesSellerProfiles } from "../schema";
 import {
   buildFecEntries, encodeLatin9, FEC_CONTENT_TYPE, fecSirenOf, fecStorageKey, parseFecPeriod, previousFecPeriod, sha256Hex,
-  type FecDocument, type FecPayment, type FecPeriod,
+  type FecDocument, type FecFrozen, type FecPayment, type FecPeriod,
 } from "../domain/fec";
 
 export type FecExportRow = typeof salesFecExports.$inferSelect;
@@ -48,12 +48,24 @@ const claim = (organizationId: string | null, period: string, authorId: string |
          OR (sales_fec_exports.status = 'PENDING' AND sales_fec_exports.attempted_at < now() - make_interval(mins => ${FEC_STALE_PENDING_MINUTES}))
     RETURNING id`)).pipe(Effect.map((result) => result.rows[0]?.id ?? null));
 
+/** Contre-valeur figée à l'émission (core/fx). */
+const frozenColumns = {
+  baseCurrency: sales.baseCurrency, exchangeRate: sales.exchangeRate,
+  netBaseMinor: sales.netBaseMinor, taxBaseMinor: sales.taxBaseMinor, grossBaseMinor: sales.grossBaseMinor,
+};
+type FrozenRow = { [K in keyof typeof frozenColumns]: (typeof frozenColumns)[K]["_"]["data"] | null };
+const frozenOf = (row: FrozenRow): FecFrozen | null =>
+  row.baseCurrency && row.exchangeRate && row.netBaseMinor !== null && row.taxBaseMinor !== null && row.grossBaseMinor !== null
+    ? { baseCurrency: row.baseCurrency, exchangeRate: row.exchangeRate, netBaseMinor: row.netBaseMinor, taxBaseMinor: row.taxBaseMinor, grossBaseMinor: row.grossBaseMinor }
+    : null;
+
 const loadDocuments = (organizationId: string | null, range: FecPeriod) =>
   Effect.gen(function* () {
     const db = getDrizzle();
     const docs = yield* dbTry("sales.fec.documents", () => db.select({
       id: sales.id, kind: sales.kind, number: sales.number, issueDate: sales.issueDate, currency: sales.currency,
       customerName: sales.customerName, customerVatNumber: sales.customerVatNumber, netMinor: sales.netMinor, taxMinor: sales.taxMinor, grossMinor: sales.grossMinor,
+      ...frozenColumns,
     }).from(sales).where(and(
       tenantOf(sales.organizationId, organizationId),
       inArray(sales.kind, ["invoice", "credit_note"]),
@@ -69,6 +81,7 @@ const loadDocuments = (organizationId: string | null, range: FecPeriod) =>
       id: doc.id, kind: doc.kind as FecDocument["kind"], number: doc.number!, issueDate: doc.issueDate!, currency: doc.currency,
       customerName: doc.customerName, customerVatNumber: doc.customerVatNumber, netMinor: doc.netMinor, taxMinor: doc.taxMinor, grossMinor: doc.grossMinor,
       lines: (byDocument.get(doc.id) ?? []).map((line) => ({ netMinor: line.netMinor, ratePercent: line.ratePercent })),
+      fx: frozenOf(doc),
     }));
   });
 
@@ -76,11 +89,15 @@ const loadPayments = (organizationId: string | null, range: FecPeriod) =>
   dbTry("sales.fec.payments", () => getDrizzle().select({
     id: salesPayments.id, paidAt: salesPayments.paidAt, amountMinor: salesPayments.amountMinor, currency: salesPayments.currency, method: salesPayments.method,
     reference: salesPayments.reference, documentNumber: sales.number, customerName: sales.customerName, customerVatNumber: sales.customerVatNumber,
+    ...frozenColumns,
   }).from(salesPayments).innerJoin(sales, eq(sales.id, salesPayments.documentId)).where(and(
     tenantOf(sales.organizationId, organizationId),
     gte(salesPayments.paidAt, range.start), lt(salesPayments.paidAt, range.endExclusive),
   )).orderBy(asc(salesPayments.paidAt), asc(salesPayments.id))).pipe(
-    Effect.map((rows) => rows.map((row): FecPayment => ({ ...row, documentNumber: row.documentNumber ?? row.id }))),
+    Effect.map((rows) => rows.map((row): FecPayment => ({
+      id: row.id, paidAt: row.paidAt, amountMinor: row.amountMinor, currency: row.currency, method: row.method, reference: row.reference,
+      documentNumber: row.documentNumber ?? row.id, customerName: row.customerName, customerVatNumber: row.customerVatNumber, fx: frozenOf(row),
+    }))),
   );
 
 const errorText = (error: unknown): string => {
