@@ -81,7 +81,7 @@ export interface VerifiedRefund {
 }
 
 /** Issue normalisée d'un événement fournisseur vérifié (`refund` : traité par core/refunds). */
-export type PaymentEventKind = 'succeeded' | 'failed' | 'expired' | 'refund' | 'ignored';
+export type PaymentEventKind = 'succeeded' | 'failed' | 'expired' | 'refund' | 'subscription' | 'ignored';
 
 export interface VerifiedPaymentEvent {
   readonly provider: PaymentProviderName;
@@ -97,6 +97,85 @@ export interface VerifiedPaymentEvent {
   readonly amount: Money | null;
   /** Présent si `kind = 'refund'`. */
   readonly refund?: VerifiedRefund | null;
+  /** Présent si `kind = 'subscription'` (traité par le module subscriptions via `setSubscriptionEventSink`). */
+  readonly subscription?: VerifiedSubscriptionEvent | null;
+}
+
+// --- Abonnements ------------------------------------------------------------------------
+
+/** Statut normalisé d'un abonnement chez le fournisseur. */
+export type ProviderSubscriptionStatus = 'incomplete' | 'trialing' | 'active' | 'past_due' | 'cancelled' | 'unpaid' | 'paused';
+
+export type SubscriptionInterval = 'day' | 'week' | 'month' | 'year';
+
+/** Prix récurrent décrit en ligne (aucun objet Price à synchroniser chez le fournisseur). */
+export interface RecurringPrice {
+  readonly amount: Money;
+  readonly interval: SubscriptionInterval;
+  readonly intervalCount: number;
+  readonly productName: string;
+}
+
+export interface SubscriptionCheckoutRequest extends ProviderTenantOptions {
+  /** Identifiant interne de l'abonnement : clé d'idempotence et métadonnée `subscription_id`. */
+  readonly subscriptionId: string;
+  readonly price: RecurringPrice;
+  readonly customerEmail: string | null;
+  readonly successUrl: string;
+  readonly cancelUrl: string;
+  readonly expiresAt: Date;
+}
+
+export interface SubscriptionChangeRequest extends ProviderTenantOptions {
+  readonly subscriptionId: string;
+  readonly providerSubscriptionId: string;
+  readonly providerItemId: string;
+  /** Produit fournisseur de l'article (créé au checkout, relu des événements). */
+  readonly providerProductId: string;
+  readonly price: RecurringPrice;
+  /** Prorata au changement (le fournisseur le facture sur la prochaine échéance). */
+  readonly prorate: boolean;
+  readonly idempotencyKey: string;
+}
+
+export interface SubscriptionCancelRequest extends ProviderTenantOptions {
+  readonly providerSubscriptionId: string;
+  /** `true` : fin de période (réversible par `resume`) ; `false` : immédiat. */
+  readonly atPeriodEnd: boolean;
+  readonly idempotencyKey: string;
+}
+
+export interface ProviderSubscriptionState {
+  readonly providerSubscriptionId: string;
+  readonly status: ProviderSubscriptionStatus;
+  readonly cancelAtPeriodEnd: boolean;
+}
+
+/** Facture fournisseur d'une période d'abonnement. */
+export interface VerifiedSubscriptionInvoice {
+  readonly providerInvoiceId: string;
+  readonly amount: Money;
+  readonly periodStart: Date;
+  readonly periodEnd: Date;
+  /** Numéro de tentative de prélèvement (relances). */
+  readonly attempt: number;
+  readonly nextAttemptAt: Date | null;
+}
+
+export type SubscriptionEventAction = 'created' | 'updated' | 'deleted' | 'invoice_paid' | 'invoice_failed';
+
+export interface VerifiedSubscriptionEvent {
+  readonly action: SubscriptionEventAction;
+  /** `subscription_id` posé en métadonnée à la création (null si absent). */
+  readonly subscriptionId: string | null;
+  readonly providerSubscriptionId: string;
+  readonly providerCustomerId: string | null;
+  readonly providerItemId: string | null;
+  readonly providerProductId: string | null;
+  readonly status: ProviderSubscriptionStatus | null;
+  readonly cancelAtPeriodEnd: boolean | null;
+  readonly currentPeriodEnd: Date | null;
+  readonly invoice: VerifiedSubscriptionInvoice | null;
 }
 
 export interface PaymentProvider {
@@ -106,6 +185,11 @@ export interface PaymentProvider {
   readonly createCheckoutSession: (request: CheckoutRequest) => Effect.Effect<CheckoutSession, PaymentProviderError | UnsupportedAmountError>;
   readonly createPaymentIntent: (request: PaymentIntentRequest) => Effect.Effect<PaymentIntentResult, PaymentProviderError | UnsupportedAmountError>;
   readonly refund: (request: RefundRequest) => Effect.Effect<RefundResult, PaymentProviderError | UnsupportedAmountError>;
+  readonly createSubscriptionCheckout: (request: SubscriptionCheckoutRequest) => Effect.Effect<CheckoutSession, PaymentProviderError | UnsupportedAmountError>;
+  readonly changeSubscriptionPrice: (request: SubscriptionChangeRequest) => Effect.Effect<ProviderSubscriptionState, PaymentProviderError | UnsupportedAmountError>;
+  readonly cancelSubscription: (request: SubscriptionCancelRequest) => Effect.Effect<ProviderSubscriptionState, PaymentProviderError>;
+  /** Annule une résiliation programmée en fin de période. */
+  readonly resumeSubscription: (request: Omit<SubscriptionCancelRequest, 'atPeriodEnd'>) => Effect.Effect<ProviderSubscriptionState, PaymentProviderError>;
   /** Vérifie la signature sur le corps BRUT (octets reçus, jamais re-sérialisés). */
   readonly verifyWebhook: (rawBody: string, signature: string | null) => Effect.Effect<VerifiedPaymentEvent, WebhookSignatureError>;
 }

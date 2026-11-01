@@ -25,6 +25,10 @@ const fakeClient = () => {
     checkout: { sessions: { create: vi.fn(async () => ({ id: 'cs_test_1', url: 'https://checkout.stripe.test/c/cs_test_1' })) } },
     paymentIntents: { create: vi.fn(async () => ({ id: 'pi_test_1', client_secret: 'pi_test_1_secret_x', status: 'requires_payment_method' as const })) },
     refunds: { create: vi.fn(async (): Promise<{ id: string; status: string | null }> => ({ id: 're_test_1', status: 'succeeded' })) },
+    subscriptions: {
+      update: vi.fn(async (id: string, params: Stripe.SubscriptionUpdateParams) => ({ id, status: 'active' as const, cancel_at_period_end: params.cancel_at_period_end ?? false })),
+      cancel: vi.fn(async (id: string) => ({ id, status: 'canceled' as const, cancel_at_period_end: false })),
+    },
   };
   return client satisfies StripeClientLike;
 };
@@ -174,5 +178,71 @@ describe('core/payments — configuration et règles', () => {
     expect(canTransitionPayment('expired', 'paid')).toBe(true);
     expect(canTransitionPayment('paid', 'pending')).toBe(false);
     expect(canTransitionPayment('refunded', 'paid')).toBe(false);
+  });
+});
+
+describe('core/payments — abonnements (Stripe simulé + mock)', () => {
+  const SUB_ID = '0198f2c4-0000-7000-8000-00000000abcd';
+  const price = { amount: { amountMinor: 1990, currency: 'EUR' as const }, interval: 'month' as const, intervalCount: 1, productName: 'Pro' };
+  const subObject = (over: Record<string, unknown> = {}) => ({
+    id: 'sub_1', object: 'subscription', status: 'active', cancel_at_period_end: false, customer: 'cus_1', metadata: { subscription_id: SUB_ID },
+    items: { data: [{ id: 'si_1', current_period_end: 1_790_000_000, price: { product: 'prod_1' } }] }, ...over,
+  });
+  const invoiceObject = (over: Record<string, unknown> = {}) => ({
+    id: 'in_1', object: 'invoice', amount_paid: 1990, amount_due: 1990, currency: 'eur', customer: 'cus_1', attempt_count: 1, next_payment_attempt: null,
+    period_start: 1_780_000_000, period_end: 1_780_000_000,
+    parent: { subscription_details: { subscription: 'sub_1', metadata: { subscription_id: SUB_ID } } },
+    lines: { data: [{ period: { start: 1_787_000_000, end: 1_790_000_000 } }] }, ...over,
+  });
+  const ev = (type: string, object: unknown) => asEvent({ id: `evt_${type}`, object: 'event', type, data: { object } });
+
+  it('normalise customer.subscription.* (statut, fin de période, article, produit)', () => {
+    const e = normalizeStripeEvent(ev('customer.subscription.updated', subObject({ status: 'past_due', cancel_at_period_end: true })));
+    expect(e.kind).toBe('subscription');
+    expect(e.subscription).toMatchObject({ action: 'updated', subscriptionId: SUB_ID, providerSubscriptionId: 'sub_1', providerItemId: 'si_1', providerProductId: 'prod_1', status: 'past_due', cancelAtPeriodEnd: true });
+    expect(e.subscription?.currentPeriodEnd?.getTime()).toBe(1_790_000_000_000);
+    expect(normalizeStripeEvent(ev('customer.subscription.deleted', subObject({ status: 'canceled' }))).subscription).toMatchObject({ action: 'deleted', status: 'cancelled' });
+  });
+
+  it('normalise invoice.paid / invoice.payment_failed avec période de ligne et relance', () => {
+    const paid = normalizeStripeEvent(ev('invoice.paid', invoiceObject()));
+    expect(paid.subscription).toMatchObject({ action: 'invoice_paid', invoice: { providerInvoiceId: 'in_1', amount: { amountMinor: 1990, currency: 'EUR' }, attempt: 1 } });
+    expect(paid.subscription?.invoice?.periodStart.getTime()).toBe(1_787_000_000_000);
+    const failed = normalizeStripeEvent(ev('invoice.payment_failed', invoiceObject({ amount_paid: 0, attempt_count: 2, next_payment_attempt: 1_788_000_000 })));
+    expect(failed.subscription).toMatchObject({ action: 'invoice_failed', invoice: { attempt: 2, amount: { amountMinor: 1990 } } });
+    expect(failed.subscription?.invoice?.nextAttemptAt?.getTime()).toBe(1_788_000_000_000);
+    // Facture hors abonnement : ignorée.
+    expect(normalizeStripeEvent(ev('invoice.paid', invoiceObject({ parent: null }))).kind).toBe('ignored');
+  });
+
+  it('checkout abonnement, changement de prix proratisé, résiliation et reprise', async () => {
+    const client = fakeClient();
+    const provider = makeStripeProvider({ client, webhookSecret: SECRET });
+    await run(provider.createSubscriptionCheckout({ subscriptionId: SUB_ID, price, customerEmail: 'a@example.test', successUrl: 'https://x.test/ok', cancelUrl: 'https://x.test/ko', expiresAt: new Date(Date.now() + 3_600_000) }));
+    const [params, options] = client.checkout.sessions.create.mock.calls[0] as unknown as [Stripe.Checkout.SessionCreateParams, Stripe.RequestOptions];
+    expect(params).toMatchObject({ mode: 'subscription', subscription_data: { metadata: { subscription_id: SUB_ID } } });
+    expect(params.line_items?.[0]?.price_data).toMatchObject({ unit_amount: 1990, recurring: { interval: 'month', interval_count: 1 }, product_data: { name: 'Pro' } });
+    expect(options.idempotencyKey).toBe(`subscription-checkout:${SUB_ID}`);
+
+    await run(provider.changeSubscriptionPrice({ subscriptionId: SUB_ID, providerSubscriptionId: 'sub_1', providerItemId: 'si_1', providerProductId: 'prod_1', price, prorate: true, idempotencyKey: 'chg:1' }));
+    const [, upd] = client.subscriptions.update.mock.calls[0] as unknown as [string, Stripe.SubscriptionUpdateParams];
+    expect(upd).toMatchObject({ proration_behavior: 'create_prorations', items: [{ id: 'si_1', price_data: { product: 'prod_1', unit_amount: 1990 } }] });
+
+    expect(await run(provider.cancelSubscription({ providerSubscriptionId: 'sub_1', atPeriodEnd: true, idempotencyKey: 'c:1' }))).toEqual({ providerSubscriptionId: 'sub_1', status: 'active', cancelAtPeriodEnd: true });
+    expect((await run(provider.cancelSubscription({ providerSubscriptionId: 'sub_1', atPeriodEnd: false, idempotencyKey: 'c:2' }))).status).toBe('cancelled');
+    expect((await run(provider.resumeSubscription({ providerSubscriptionId: 'sub_1', idempotencyKey: 'r:1' }))).cancelAtPeriodEnd).toBe(false);
+  });
+
+  it('mock : événement abonnement signé, dates restaurées', async () => {
+    const provider = makeMockProvider(SECRET);
+    const body = mockWebhookBody({
+      eventId: 'mock_evt_sub', type: 'invoice.paid', kind: 'subscription', paymentId: null, providerPaymentId: null, sessionId: null, amount: price.amount,
+      subscription: { action: 'invoice_paid', subscriptionId: SUB_ID, providerSubscriptionId: 'mock_sub_1', providerCustomerId: null, providerItemId: null, providerProductId: null, status: null, cancelAtPeriodEnd: null, currentPeriodEnd: new Date('2026-12-01T00:00:00Z'),
+        invoice: { providerInvoiceId: 'mock_in_1', amount: price.amount, periodStart: new Date('2026-11-01T00:00:00Z'), periodEnd: new Date('2026-12-01T00:00:00Z'), attempt: 1, nextAttemptAt: null } },
+    });
+    const e = await run(provider.verifyWebhook(body, signMockPayload(body, SECRET)));
+    expect(e.subscription?.invoice?.periodStart).toBeInstanceOf(Date);
+    expect(e.subscription?.invoice?.periodStart.toISOString()).toBe('2026-11-01T00:00:00.000Z');
+    expect(await failure(provider.verifyWebhook(body, 'bad'))).toMatchObject({ _tag: 'WebhookSignatureError' });
   });
 });
