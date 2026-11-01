@@ -1,4 +1,4 @@
 
-> polyweb@0.0.1 lint /workspace/p-refunds
+> polyweb@0.0.1 lint /workspace/p-final
 > eslint "src/**/*.{js,ts,astro}" --max-warnings 0
 

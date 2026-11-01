@@ -1,13 +1,12 @@
 
-> polyweb@0.0.1 check /workspace/p-refunds
+> polyweb@0.0.1 check /workspace/p-final
 > astro check
 
-20:07:29 [@astrojs/node] Enabling sessions with filesystem storage
-20:07:29 [vite] Re-optimizing dependencies because vite config has changed
-20:07:30 [content] Syncing content
-20:07:30 [content] Synced content
-20:07:30 [types] Generated 632ms
-20:07:30 [check] Getting diagnostics for Astro files in /workspace/p-refunds...
+01:22:09 [@astrojs/node] Enabling sessions with filesystem storage
+01:22:09 [content] Syncing content
+01:22:09 [content] Synced content
+01:22:09 [types] Generated 135ms
+01:22:09 [check] Getting diagnostics for Astro files in /workspace/p-final...
 [96msrc/actions/admin/pages.ts[0m:[93m4[0m:[93m38[0m - [93mwarning[0m[90m ts(6133): [0m'isNotNull' is declared but its value is never read.
 
 [7m4[0m import { eq, and, asc, desc, isNull, isNotNull, inArray, max } from "drizzle-orm";
@@ -259,7 +258,7 @@
 [7m23[0m import { bookings, bookingsResources } from '@/modules/bookings/schema';
 [7m  [0m [93m                   ~~~~~~~~~~~~~~~~~[0m
 
-Result (1646 files): 
+Result (1678 files): 
 - 0 errors
 - 0 warnings
 - 57 hints

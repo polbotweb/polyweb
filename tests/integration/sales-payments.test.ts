@@ -69,11 +69,14 @@ afterAll(async () => {
 });
 
 describe('sales : paiement en ligne d’une facture', () => {
+  // Altère le dernier caractère en garantissant un jeton différent (un suffixe fixe « x » échouait 1 fois sur 64).
+  const tampered = (tok: string) => `${tok.slice(0, -1)}${tok.endsWith('x') ? 'y' : 'x'}`;
+
   it('lien signé : seul le bon jeton ouvre la facture', async () => {
     const invoice = await issued();
     const token = payLinkToken(LINK_SECRET, invoice.id);
     expect((await run(invoiceForPayLink(LINK_SECRET, invoice.id, token)))?.id).toBe(invoice.id);
-    expect(await run(invoiceForPayLink(LINK_SECRET, invoice.id, `${token.slice(0, 31)}x`))).toBeNull();
+    expect(await run(invoiceForPayLink(LINK_SECRET, invoice.id, tampered(token)))).toBeNull();
     expect(await run(invoiceForPayLink('other-secret', invoice.id, token))).toBeNull();
     expect(await run(invoiceForPayLink(LINK_SECRET, invoice.id, null))).toBeNull();
     // URL du back-office : jeton du secret de signature de l'application, vérifiable par la page publique.
