@@ -1077,8 +1077,17 @@ for (const [file, content] of Object.entries(files)) {
 
 // Inscription au registre des permissions (src/modules/permissions.ts, entre les marqueurs).
 const permissionsIndex = join(root, "modules", "permissions.ts");
-if (existsSync(permissionsIndex)) {
-  const current = readFileSync(permissionsIndex, "utf8");
+// Lecture directe sans existsSync préalable (pas de course vérification/utilisation).
+const readPermissionsIndex = (): string | null => {
+  try {
+    return readFileSync(permissionsIndex, "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+};
+const current = readPermissionsIndex();
+if (current !== null) {
   if (!current.includes(`${camel}Permissions`)) {
     writeFileSync(
       permissionsIndex,
