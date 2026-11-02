@@ -29,6 +29,7 @@ import { salesService, type SalesDocumentInput } from '@/modules/sales/services/
 import { fecExportOf, fecExportService, listFecExports, listFecExportsForAdmin } from '@/modules/sales/services/fecExport.service';
 import { salesActions } from '@/modules/sales/actions';
 import { GET as download } from '@/pages/[lang]/admin/sales/fec/[id]/download';
+import { purgeAuditRows } from '../helpers/audit-purge';
 
 const db = getDrizzle();
 const t = `fec-${Date.now().toString(36)}`;
@@ -88,7 +89,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await db.delete(salesFecExports).where(inArray(salesFecExports.period, [PERIOD, '2031-02']));
-  await db.delete(auditLog).where(inArray(auditLog.userId, [author, member]));
+  await purgeAuditRows(inArray(auditLog.userId, [author, member]));
   const ids = (await db.select({ id: sales.id }).from(sales).where(inArray(sales.organizationId, [orgId, noSiren]))).map((d) => d.id);
   if (ids.length) {
     await db.delete(salesPayments).where(inArray(salesPayments.documentId, ids));

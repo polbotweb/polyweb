@@ -103,6 +103,39 @@ export const requireActionPermission = (context: Pick<ActionAPIContext, 'locals'
   });
 
 /**
+ * Audit automatique des gardes tenant (C5-A) : chaque refus et chaque autorisation d'écriture
+ * (toute action autre que `read`) est journalisé avec sa portée, sans donnée personnelle
+ * (permissions demandées + motif). Nommage : `<module>.permission.denied|granted`.
+ */
+export const auditAccessDecision = (input: {
+  readonly userId: string;
+  readonly permissions: Permissions;
+  readonly organizationId: string | null;
+  readonly siteId: string | null;
+  readonly outcome: 'success' | 'denied';
+  readonly reason?: string;
+}) => {
+  const entries = Object.entries(input.permissions as Record<string, readonly string[]>);
+  const isWrite = entries.some(([, actions]) => actions.some((a) => a !== 'read'));
+  if (input.outcome === 'success' && !isWrite) return Effect.void;
+  const module = entries[0]?.[0] ?? 'core';
+  return Effect.promise(() => import('@/lib/audit')).pipe(
+    Effect.flatMap((audit) =>
+      audit.logAuditEventEffect({
+        userId: input.userId,
+        action: `${module}.permission.${input.outcome === 'denied' ? 'denied' : 'granted'}`,
+        module,
+        organizationId: input.organizationId,
+        siteId: input.siteId,
+        outcome: input.outcome,
+        resource: 'permission',
+        metadata: { permissions: input.permissions, ...(input.reason ? { reason: input.reason } : {}) },
+      }),
+    ),
+  );
+};
+
+/**
  * Garde tenant (core `permissions/tenant`) pour une ressource de l'organisation
  * `organizationId` (`null` = plateforme) :
  * - administrateur global : tout ;
@@ -117,15 +150,28 @@ export const requireTenantPermission = (context: Pick<ActionAPIContext, 'locals'
   Effect.gen(function* () {
     const user = context.locals.user;
     if (!user) return yield* fail('UNAUTHORIZED', 'Vous devez être connecté pour effectuer cette action.');
-    if (user.banned) return yield* fail('FORBIDDEN', 'Compte suspendu.');
+    const scope = { userId: user.id, permissions, organizationId, siteId: siteId ?? context.locals.site?.id ?? null };
+    if (user.banned) {
+      yield* auditAccessDecision({ ...scope, outcome: 'denied', reason: 'banned' });
+      return yield* fail('FORBIDDEN', 'Compte suspendu.');
+    }
     const tenant = yield* actionTry('permissions.tenant', () => import('@/core/permissions/tenant'));
-    if (tenant.isGlobalAdmin(user)) return user;
-    if (organizationId === null) return yield* requireActionPermission(context, permissions);
-    // Propriétaire/admin d'org : tout dans SON org ; autres rôles : rôles dynamiques de l'org.
-    const decision = yield* tenant.tenantPermission(user, organizationId, permissions, siteId ?? context.locals.site?.id ?? null);
+    if (tenant.isGlobalAdmin(user)) {
+      yield* auditAccessDecision({ ...scope, outcome: 'success' });
+      return user;
+    }
+    if (organizationId === null) {
+      const platform = yield* Effect.exit(requireActionPermission(context, permissions));
+      yield* auditAccessDecision({ ...scope, ...(Exit.isSuccess(platform) ? { outcome: 'success' as const } : { outcome: 'denied' as const, reason: 'platform' }) });
+      return yield* platform;
+    }
+    // Propriétaire/admin d'org : tout dans SON org ; autres rôles : rôles dynamiques de l'org ; portée site.
+    const decision = yield* tenant.tenantPermission(user, organizationId, permissions, scope.siteId);
     if (!decision.allowed) {
+      yield* auditAccessDecision({ ...scope, outcome: 'denied', reason: decision.reason });
       return yield* fail('FORBIDDEN', "Vous ne pouvez gérer que le contenu de votre organisation.");
     }
+    yield* auditAccessDecision({ ...scope, outcome: 'success' });
     return user;
   });
 

@@ -8,6 +8,7 @@ import { sanitizeHtml } from '@/lib/sanitize';
 import { contactFormTemplate } from '@smtp/templates/contact-form';
 import { z } from 'astro/zod';
 import { LOCALES, type Locale } from '@i18n/config';
+import { purgeAuditRows } from '../helpers/audit-purge';
 
 /**
  * Integration tests for the /api/contact endpoint.
@@ -57,7 +58,7 @@ describe('/api/contact — integration pipeline', () => {
     if (insertedAuditIds.length > 0) {
       const db = getDrizzle();
       for (const id of insertedAuditIds) {
-        await db.delete(auditLog).where(eq(auditLog.id, id)).catch(() => {});
+        await purgeAuditRows(eq(auditLog.id, id)).catch(() => {});
       }
       insertedAuditIds = [];
     }

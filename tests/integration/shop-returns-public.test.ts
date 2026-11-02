@@ -24,6 +24,7 @@ import { createOrder } from '@/modules/shop/services/order.service';
 import { orderAccessToken } from '@/modules/shop/domain/cart-token';
 import { publicOrderReturns, requestOrderReturn, returnQuantitiesOf, type ReturnSubmission } from '@/modules/shop/public/flow';
 import { orderReturns } from '@/modules/shop/schema/returns';
+import { purgeAuditRows } from '../helpers/audit-purge';
 
 const db = getDrizzle();
 const t = `rmapub-${Date.now().toString(36)}`;
@@ -66,7 +67,7 @@ afterAll(async () => {
   const oids = (await db.select({ id: orders.id }).from(orders).where(eq(orders.email, email))).map((r) => r.id);
   if (oids.length) {
     const rids = (await db.select({ id: orderReturns.id }).from(orderReturns).where(inArray(orderReturns.orderId, oids))).map((r) => r.id);
-    if (rids.length) await db.delete(auditLog).where(and(eq(auditLog.action, 'SHOP_RETURN_REQUEST'), inArray(auditLog.resourceId, rids)));
+    if (rids.length) await purgeAuditRows(and(eq(auditLog.action, 'SHOP_RETURN_REQUEST'), inArray(auditLog.resourceId, rids)));
     await db.delete(orders).where(inArray(orders.id, oids));
   }
   const cids = (await db.select({ id: cartLines.cartId }).from(cartLines).where(eq(cartLines.variantId, variantId))).map((r) => r.id);

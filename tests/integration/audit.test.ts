@@ -5,6 +5,7 @@ import { logAuditEvent } from '@/lib/audit';
 import { getDrizzle } from '@database/drizzle';
 import { auditLog } from '@database/schemas';
 import type { TestHelpers } from 'better-auth/plugins';
+import { purgeAuditRows } from '../helpers/audit-purge';
 
 // ─── Direct logAuditEvent() ─────────────────────────────────────────
 
@@ -14,7 +15,7 @@ describe('Audit — logAuditEvent()', () => {
   afterAll(async () => {
     const db = getDrizzle();
     for (const id of insertedIds) {
-      await db.delete(auditLog).where(eq(auditLog.id, id)).catch(() => {});
+      await purgeAuditRows(eq(auditLog.id, id)).catch(() => {});
     }
   });
 
@@ -108,7 +109,7 @@ describe('Audit — Hooks integration', () => {
     const db = getDrizzle();
     // Clean audit entries
     for (const id of insertedIds) {
-      await db.delete(auditLog).where(eq(auditLog.id, id)).catch(() => {});
+      await purgeAuditRows(eq(auditLog.id, id)).catch(() => {});
     }
     // Clean users
     if (targetUser?.id) await test.deleteUser(targetUser.id).catch(() => {});

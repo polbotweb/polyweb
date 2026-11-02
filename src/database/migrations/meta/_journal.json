@@ -358,6 +358,13 @@
       "when": 1793612961047,
       "tag": "0050_site_access",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1793613382219,
+      "tag": "0051_audit_scope_append_only",
+      "breakpoints": true
     }
   ]
 }
