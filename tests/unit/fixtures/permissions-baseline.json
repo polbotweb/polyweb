@@ -1,0 +1,1281 @@
+{
+  "statement": {
+    "user": [
+      "create",
+      "list",
+      "set-role",
+      "ban",
+      "impersonate",
+      "impersonate-admins",
+      "delete",
+      "set-password",
+      "set-email",
+      "get",
+      "update"
+    ],
+    "session": [
+      "list",
+      "revoke",
+      "delete"
+    ],
+    "organization": [
+      "update",
+      "delete"
+    ],
+    "member": [
+      "create",
+      "update",
+      "delete"
+    ],
+    "invitation": [
+      "create",
+      "cancel"
+    ],
+    "team": [
+      "create",
+      "update",
+      "delete"
+    ],
+    "ac": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "page": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "section": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "media": [
+      "upload",
+      "read",
+      "delete"
+    ],
+    "site": [
+      "read",
+      "update"
+    ],
+    "navigation": [
+      "read",
+      "update"
+    ],
+    "audit": [
+      "read",
+      "export"
+    ],
+    "theme": [
+      "read",
+      "update"
+    ],
+    "blog": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish",
+      "moderate"
+    ],
+    "blogCategory": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "blogTag": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "blogComment": [
+      "read",
+      "update",
+      "delete",
+      "moderate"
+    ],
+    "blogReview": [
+      "read",
+      "update",
+      "delete",
+      "moderate"
+    ],
+    "service": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish",
+      "moderate"
+    ],
+    "serviceCategory": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "serviceTag": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "serviceComment": [
+      "read",
+      "update",
+      "delete",
+      "moderate"
+    ],
+    "serviceReview": [
+      "read",
+      "update",
+      "delete",
+      "moderate"
+    ],
+    "contentType": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "contentEntry": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "apiToken": [
+      "create",
+      "read",
+      "revoke"
+    ],
+    "webhook": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "form": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "formSubmission": [
+      "read",
+      "delete",
+      "export"
+    ],
+    "plugin": [
+      "read",
+      "update"
+    ],
+    "tenant": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "payment": [
+      "read",
+      "refund"
+    ],
+    "shop": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "tax": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "sales": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "issue",
+      "payment"
+    ],
+    "crm": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "logistics": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "purchasing": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "subscriptions": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "bookings": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "courses": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "formations": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "events": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ]
+  },
+  "adminRole": {
+    "user": [
+      "create",
+      "list",
+      "set-role",
+      "ban",
+      "impersonate",
+      "delete",
+      "set-password",
+      "set-email",
+      "get",
+      "update"
+    ],
+    "session": [
+      "list",
+      "revoke",
+      "delete"
+    ],
+    "page": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "section": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "media": [
+      "upload",
+      "read",
+      "delete"
+    ],
+    "site": [
+      "read",
+      "update"
+    ],
+    "navigation": [
+      "read",
+      "update"
+    ],
+    "audit": [
+      "read",
+      "export"
+    ],
+    "theme": [
+      "read",
+      "update"
+    ],
+    "blog": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish",
+      "moderate"
+    ],
+    "blogCategory": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "blogTag": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "blogComment": [
+      "read",
+      "update",
+      "delete",
+      "moderate"
+    ],
+    "blogReview": [
+      "read",
+      "update",
+      "delete",
+      "moderate"
+    ],
+    "service": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish",
+      "moderate"
+    ],
+    "serviceCategory": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "serviceTag": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "serviceComment": [
+      "read",
+      "update",
+      "delete",
+      "moderate"
+    ],
+    "serviceReview": [
+      "read",
+      "update",
+      "delete",
+      "moderate"
+    ],
+    "contentType": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "contentEntry": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "apiToken": [
+      "create",
+      "read",
+      "revoke"
+    ],
+    "webhook": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "form": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "formSubmission": [
+      "read",
+      "delete",
+      "export"
+    ],
+    "plugin": [
+      "read",
+      "update"
+    ],
+    "tenant": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "payment": [
+      "read",
+      "refund"
+    ],
+    "events": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "formations": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "courses": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "shop": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "tax": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "sales": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "issue",
+      "payment"
+    ],
+    "crm": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "logistics": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "purchasing": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "subscriptions": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "bookings": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ]
+  },
+  "editorRole": {
+    "user": [],
+    "session": [],
+    "page": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "section": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "media": [
+      "upload",
+      "read",
+      "delete"
+    ],
+    "site": [
+      "read"
+    ],
+    "navigation": [
+      "read"
+    ],
+    "audit": [
+      "read"
+    ],
+    "theme": [
+      "read"
+    ],
+    "blog": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "blogCategory": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "blogTag": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "blogComment": [
+      "read",
+      "update",
+      "moderate"
+    ],
+    "blogReview": [
+      "read",
+      "update",
+      "moderate"
+    ],
+    "service": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "serviceCategory": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "serviceTag": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "serviceComment": [
+      "read",
+      "update",
+      "moderate"
+    ],
+    "serviceReview": [
+      "read",
+      "update",
+      "moderate"
+    ],
+    "contentType": [
+      "read"
+    ],
+    "contentEntry": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "apiToken": [],
+    "webhook": [],
+    "form": [
+      "create",
+      "read",
+      "update"
+    ],
+    "formSubmission": [
+      "read",
+      "export"
+    ],
+    "plugin": [],
+    "tenant": [],
+    "payment": [],
+    "events": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "formations": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "courses": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "shop": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "tax": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ]
+  },
+  "userRole": {
+    "user": [],
+    "session": [],
+    "page": [
+      "read"
+    ],
+    "section": [
+      "read"
+    ],
+    "media": [
+      "read"
+    ],
+    "site": [
+      "read"
+    ],
+    "navigation": [
+      "read"
+    ],
+    "theme": [
+      "read"
+    ],
+    "blog": [
+      "read"
+    ],
+    "blogCategory": [
+      "read"
+    ],
+    "blogTag": [
+      "read"
+    ],
+    "blogComment": [
+      "read"
+    ],
+    "blogReview": [
+      "read"
+    ],
+    "service": [
+      "read"
+    ],
+    "serviceCategory": [
+      "read"
+    ],
+    "serviceTag": [
+      "read"
+    ],
+    "serviceComment": [
+      "read"
+    ],
+    "serviceReview": [
+      "read"
+    ],
+    "contentType": [
+      "read"
+    ],
+    "contentEntry": [
+      "read"
+    ],
+    "apiToken": [],
+    "webhook": [],
+    "form": [
+      "read"
+    ],
+    "formSubmission": [],
+    "plugin": [],
+    "tenant": [],
+    "payment": [],
+    "events": [
+      "read"
+    ],
+    "formations": [
+      "read"
+    ],
+    "courses": [
+      "read"
+    ],
+    "shop": [
+      "read"
+    ],
+    "tax": [
+      "read"
+    ]
+  },
+  "orgOwnerRole": {
+    "organization": [
+      "update",
+      "delete"
+    ],
+    "member": [
+      "create",
+      "update",
+      "delete"
+    ],
+    "invitation": [
+      "create",
+      "cancel"
+    ],
+    "team": [
+      "create",
+      "update",
+      "delete"
+    ],
+    "ac": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "page": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "section": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "media": [
+      "upload",
+      "read",
+      "delete"
+    ],
+    "site": [
+      "read",
+      "update"
+    ],
+    "navigation": [
+      "read",
+      "update"
+    ],
+    "audit": [
+      "read",
+      "export"
+    ],
+    "theme": [
+      "read",
+      "update"
+    ],
+    "blog": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish",
+      "moderate"
+    ],
+    "blogCategory": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "blogTag": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "blogComment": [
+      "read",
+      "update",
+      "delete",
+      "moderate"
+    ],
+    "blogReview": [
+      "read",
+      "update",
+      "delete",
+      "moderate"
+    ],
+    "service": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish",
+      "moderate"
+    ],
+    "serviceCategory": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "serviceTag": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "serviceComment": [
+      "read",
+      "update",
+      "delete",
+      "moderate"
+    ],
+    "serviceReview": [
+      "read",
+      "update",
+      "delete",
+      "moderate"
+    ],
+    "contentType": [
+      "read"
+    ],
+    "contentEntry": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "apiToken": [],
+    "webhook": [],
+    "form": [
+      "create",
+      "read",
+      "update"
+    ],
+    "formSubmission": [
+      "read",
+      "export"
+    ],
+    "plugin": [],
+    "tenant": [],
+    "payment": [],
+    "events": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "formations": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "courses": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "shop": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "tax": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "sales": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "issue",
+      "payment"
+    ],
+    "crm": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "logistics": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "purchasing": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "subscriptions": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "bookings": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ]
+  },
+  "orgAdminRole": {
+    "organization": [
+      "update"
+    ],
+    "invitation": [
+      "create",
+      "cancel"
+    ],
+    "member": [
+      "create",
+      "update",
+      "delete"
+    ],
+    "team": [
+      "create",
+      "update",
+      "delete"
+    ],
+    "ac": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "page": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "section": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "media": [
+      "upload",
+      "read",
+      "delete"
+    ],
+    "site": [
+      "read"
+    ],
+    "navigation": [
+      "read",
+      "update"
+    ],
+    "audit": [
+      "read"
+    ],
+    "theme": [
+      "read"
+    ],
+    "blog": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish",
+      "moderate"
+    ],
+    "blogCategory": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "blogTag": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "blogComment": [
+      "read",
+      "update",
+      "delete",
+      "moderate"
+    ],
+    "blogReview": [
+      "read",
+      "update",
+      "delete",
+      "moderate"
+    ],
+    "service": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish",
+      "moderate"
+    ],
+    "serviceCategory": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "serviceTag": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "serviceComment": [
+      "read",
+      "update",
+      "delete",
+      "moderate"
+    ],
+    "serviceReview": [
+      "read",
+      "update",
+      "delete",
+      "moderate"
+    ],
+    "contentType": [
+      "read"
+    ],
+    "contentEntry": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "apiToken": [],
+    "webhook": [],
+    "form": [
+      "create",
+      "read",
+      "update"
+    ],
+    "formSubmission": [
+      "read",
+      "export"
+    ],
+    "plugin": [],
+    "tenant": [],
+    "payment": [],
+    "events": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "formations": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "courses": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "shop": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "tax": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "sales": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "issue",
+      "payment"
+    ],
+    "crm": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "logistics": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "purchasing": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "subscriptions": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "bookings": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ]
+  },
+  "orgMemberRole": {
+    "organization": [],
+    "member": [],
+    "invitation": [],
+    "team": [],
+    "ac": [
+      "read"
+    ],
+    "page": [
+      "read"
+    ],
+    "section": [
+      "read"
+    ],
+    "media": [
+      "read"
+    ],
+    "site": [
+      "read"
+    ],
+    "navigation": [
+      "read"
+    ],
+    "theme": [
+      "read"
+    ],
+    "blog": [
+      "read"
+    ],
+    "blogCategory": [
+      "read"
+    ],
+    "blogTag": [
+      "read"
+    ],
+    "blogComment": [
+      "read"
+    ],
+    "blogReview": [
+      "read"
+    ],
+    "service": [
+      "read"
+    ],
+    "serviceCategory": [
+      "read"
+    ],
+    "serviceTag": [
+      "read"
+    ],
+    "serviceComment": [
+      "read"
+    ],
+    "serviceReview": [
+      "read"
+    ],
+    "contentType": [
+      "read"
+    ],
+    "contentEntry": [
+      "read"
+    ],
+    "apiToken": [],
+    "webhook": [],
+    "form": [
+      "read"
+    ],
+    "formSubmission": [],
+    "plugin": [],
+    "tenant": [],
+    "payment": [],
+    "events": [
+      "read"
+    ],
+    "formations": [
+      "read"
+    ],
+    "courses": [
+      "read"
+    ],
+    "shop": [
+      "read"
+    ],
+    "tax": [
+      "read"
+    ],
+    "sales": [
+      "read"
+    ],
+    "crm": [
+      "read"
+    ],
+    "logistics": [
+      "read"
+    ],
+    "purchasing": [
+      "read"
+    ],
+    "subscriptions": [
+      "read"
+    ],
+    "bookings": [
+      "read"
+    ]
+  }
+}

@@ -876,6 +876,17 @@ export interface AuthTranslations {
       title: string;
       description: string;
     };
+    siteAccess: {
+      title: string; description: string; ownerNote: string; site: string; member: string; role: string; orgRole: string;
+      add: string; remove: string; removeLabel: string; empty: string; noSites: string; unrestricted: string; restricted: string;
+      granted: string; revoked: string; error: string; current: string;
+    };
+    audit: {
+      title: string; description: string; filters: string; action: string; actionHint: string; module: string; outcome: string;
+      from: string; to: string; apply: string; reset: string; exportCsv: string; empty: string; date: string; user: string;
+      site: string; resource: string; any: string; previous: string; next: string; pageOf: string; retention: string;
+      outcomes: { success: string; denied: string; failure: string };
+    };
     roles: {
       title: string;
       description: string;

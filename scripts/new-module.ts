@@ -525,7 +525,7 @@ export const register${pascal}Refunds = () =>
  * Gardes de permission Effect du domaine ${name}, tenant-aware (core \`permissions/tenant\`) :
  * administrateur global → tout ; propriétaire / administrateur d'organisation → le contenu
  * de SA organisation uniquement ; contenu plateforme (\`organizationId = null\`) → RBAC global.
- * Le namespace « ${name} » doit être déclaré dans le contrôle d'accès (\`src/lib/permissions\`).
+ * Namespace « ${name} » déclaré dans \`./statements.ts\` (registre core \`permissions/registry\`).
  */
 import type { ActionAPIContext } from "astro:actions";
 import { eq } from "drizzle-orm";
@@ -544,6 +544,21 @@ export const require${pascal}ResourcePermission = (context: ActionAPIContext, pe
   requireTenantResourcePermission(context, { "${name}": [...permissions] }, () =>
     getDrizzle().select({ organizationId: ${camel}.organizationId }).from(${camel}).where(eq(${camel}.id, id)).limit(1),
   );
+`,
+
+  [`${moduleDir}/permissions/statements.ts`]: `/** Permissions du module ${name} (registre core \`permissions/registry\`). Sans import serveur : chargé côté client. */
+import { defineModulePermissions } from "@/core/permissions/registry";
+
+const all = { "${name}": ["create", "read", "update", "publish", "delete"] } as const;
+const readOnly = { "${name}": ["read"] } as const;
+
+export const ${camel}Permissions = defineModulePermissions({
+  module: "${name}",
+  label: "${pascal}",
+  statements: all,
+  // Rôles prédéfinis : ajuster si le module est éditorial (editor / user) ou métier (admin seulement).
+  grants: { admin: all, orgOwner: all, orgAdmin: all, orgMember: readOnly },
+});
 `,
 
   [`${moduleDir}/services/${entity}.service.ts`]: `/**
@@ -1060,12 +1075,37 @@ for (const [file, content] of Object.entries(files)) {
   console.log(`  ${file}`);
 }
 
+// Inscription au registre des permissions (src/modules/permissions.ts, entre les marqueurs).
+const permissionsIndex = join(root, "modules", "permissions.ts");
+// Lecture directe sans existsSync préalable (pas de course vérification/utilisation).
+const readPermissionsIndex = (): string | null => {
+  try {
+    return readFileSync(permissionsIndex, "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+};
+const current = readPermissionsIndex();
+if (current !== null) {
+  if (!current.includes(`${camel}Permissions`)) {
+    writeFileSync(
+      permissionsIndex,
+      current
+        .replace("// @module-permissions:imports", `import { ${camel}Permissions } from "@/modules/${name}/permissions/statements";\n// @module-permissions:imports`)
+        .replace("  // @module-permissions:list", `  ${camel}Permissions,\n  // @module-permissions:list`),
+      "utf8",
+    );
+    console.log(`  ${permissionsIndex} (permissions « ${name} » inscrites)`);
+  }
+}
+
 console.log(`
 Module « ${name} » généré.
 
 Étapes suivantes :
   1. exporter le schéma et générer la migration  (src/modules/${name}/schema → src/database/schemas.ts, pnpm db:generate)
-     puis déclarer le namespace « ${name} » dans le contrôle d'accès (permissions/index.ts)
+     permissions : ajuster les rôles prédéfinis (permissions/statements.ts, inscrit dans src/modules/permissions.ts)
      si le domaine encaisse : register${pascal}Refunds() dans src/core/modules/bootstrap.ts (refunds.ts, docs/refunds.md)
      compléter ${camel}Loader / load${pascal}()      (src/modules/${name}/loaders/${entity}.loader.ts)
      API publique : registerModuleApi(${camel}Api) dans src/core/modules/bootstrap.ts (api/public-api.ts, docs/public-api.md)

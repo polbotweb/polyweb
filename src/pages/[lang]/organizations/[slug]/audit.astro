@@ -1,0 +1,39 @@
+---
+import { Effect } from 'effect';
+import { requireAuth } from '@/lib/auth-guards';
+import { fetchOrgData, getUserOrgRole } from '@/lib/auth-data';
+import { tenantPermission } from '@/core/permissions/tenant';
+import { parseAuditFilters, queryOrganizationAudit } from '@/core/audit/query';
+import { auditRetentionDays } from '@/core/audit/retention';
+import { MODULE_PERMISSIONS } from '@/modules/permissions';
+import { getModuleLabel, isModuleId } from '@/core/localization/module-labels';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import AuthLayout from '@organisms/AuthLayout/AuthLayout.astro';
+import OrgSidebar from '@organisms/OrgSidebar/OrgSidebar.astro';
+import OrgAuditPage from '@pages/org/OrgAuditPage.astro';
+
+export const prerender = false;
+
+const result = await requireAuth(Astro);
+if ('redirect' in result) return result.redirect;
+const { user, locale, authT } = result;
+const orgSlug = Astro.params.slug;
+if (!orgSlug) return Astro.redirect(`/${locale}/auth/${authT.routes['dashboard']}`);
+const orgData = await fetchOrgData(Astro.request.headers, orgSlug);
+if (!orgData) return Astro.redirect(`/${locale}/auth/${authT.routes['dashboard']}`);
+const { org, members } = orgData;
+const activeOrgRole = getUserOrgRole(members, user.id);
+const decision = await Effect.runPromise(tenantPermission(user, org.id, { audit: ['read'] }));
+if (!decision.allowed) return Astro.redirect(`/${locale}/organizations/${orgSlug}/members`);
+
+const { page: requested, ...filters } = parseAuditFilters(Astro.url.searchParams);
+const { rows, page, pages } = await Effect.runPromise(queryOrganizationAudit(org.id, filters, requested));
+const moduleIds = ['org', 'audit', ...MODULE_PERMISSIONS.flatMap((m) => [m.module, ...Object.keys(m.statements)])];
+const modules = [...new Set(moduleIds)].map((id) => ({ id, label: isModuleId(id) ? getModuleLabel(id, locale) : id }));
+---
+<BaseLayout title={`${authT.organizations.audit.title} — ${org.name}`} description={authT.organizations.audit.description}>
+  <AuthLayout title={org.name}>
+    <OrgSidebar slot="sidebar" t={authT} locale={locale} org={org} activeItem="audit" orgRole={activeOrgRole} />
+    <OrgAuditPage t={authT} locale={locale} org={org} rows={rows} page={page} pages={pages} filters={filters} modules={modules} retentionDays={auditRetentionDays(process.env)} />
+  </AuthLayout>
+</BaseLayout>

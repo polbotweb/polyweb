@@ -34,6 +34,8 @@ let shopSlugs = null;
 let shopReturn = null;
 // Abonnements : formule plateforme et abonnement actif du compte seedé.
 let subscriptionsSeed = null;
+// Rôles : organisation dont l'admin seedé est propriétaire (accès par site, journal d'audit).
+let rolesOrg = null;
 // Logistique : inventaires seedés (un en cours, un validé).
 let logistics = null;
 if (fs.existsSync(COOKIES_PATH)) {
@@ -45,6 +47,7 @@ if (fs.existsSync(COOKIES_PATH)) {
   shopSlugs = data.shopSlugs ?? null;
   shopReturn = data.shopReturn ?? null;
   subscriptionsSeed = data.subscriptionsSeed ?? null;
+  rolesOrg = data.rolesOrg ?? null;
   logistics = data.logistics ?? null;
 }
 
@@ -139,6 +142,8 @@ for (const lang of locales) {
     adminUrls.push(`${BASE}/${lang}/admin/subscriptions/plans/${encodeURIComponent(subscriptionsSeed.planId)}`);
     adminUrls.push(`${BASE}/${lang}/admin/subscriptions/${encodeURIComponent(subscriptionsSeed.subscriptionId)}`);
   }
+  // Organisation : rôles (grille des modules), accès par site et journal d'audit.
+  if (rolesOrg) for (const sub of ['roles', 'sites', 'audit']) adminUrls.push(`${BASE}/${lang}/organizations/${encodeURIComponent(rolesOrg.slug)}/${sub}`);
 }
 
 module.exports = {

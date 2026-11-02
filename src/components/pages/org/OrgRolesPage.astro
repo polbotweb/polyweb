@@ -1,4 +1,5 @@
 ---
+import ModulePermissionGrid from '@molecules/ModulePermissionGrid/ModulePermissionGrid.astro';
 /**
  * OrgRolesPage — Tabs layout: custom role CRUD + built-in roles matrix + member assignment.
  *
@@ -45,7 +46,7 @@ interface Props {
   activeOrgRole: string | null;
 }
 
-const { t, user, activeOrg } = Astro.props;
+const { t, user, activeOrg, locale } = Astro.props;
 const tr = t.organizations.roles;
 
 type RoleDef = { name: string; statements: Record<string, readonly string[]> };
@@ -132,6 +133,7 @@ function hasAction(role: RoleDef, resource: string, action: string): boolean {
                 ))}
               </div>
             </fieldset>
+<ModulePermissionGrid locale={locale} idPrefix="org-role-mod" />
           </div>
           <DialogFooter>
             <DialogClose asChild>

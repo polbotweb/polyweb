@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { isIP } from "node:net";
 import { Effect } from "effect";
 
-export type AuditAction =
+/** Actions historiques (majuscules) — conservées telles quelles (rétrocompatibilité). */
+export type LegacyAuditAction =
   | "SIGN_IN" | "SIGN_IN_FAILED" | "SIGN_UP" | "SIGN_UP_FAILED" | "SIGN_OUT"
   | "PASSWORD_CHANGE" | "PASSWORD_CHANGE_FAILED" | "PASSWORD_RESET_REQUEST" | "PASSWORD_RESET_COMPLETE" | "PASSWORD_RESET_COMPLETE_FAILED"
   | "USER_UPDATE" | "USER_DELETE" | "USER_BAN" | "USER_UNBAN" | "USER_ROLE_CHANGE" | "IMPERSONATION_START" | "IMPERSONATION_STOP"
@@ -45,7 +46,12 @@ export type AuditAction =
   // Action groupée générique (core/bulk) des modules générés : l'opération est dans metadata.operation.
   | "BULK_ACTION";
 
-export interface AuditEventInput { userId?: string | null; action: AuditAction; resource?: string | null; resourceId?: string | null; metadata?: Record<string, unknown> | null; ipAddress?: string | null; userAgent?: string | null; }
+/** Nommage ouvert (C4-A) : `module.ressource.action`, ex. `crm.permission.update`, `audit.log.purge`. */
+export type ModuleAuditAction = `${string}.${string}.${string}`;
+export type AuditAction = LegacyAuditAction | ModuleAuditAction;
+export type AuditOutcome = "success" | "denied" | "failure";
+
+export interface AuditEventInput { userId?: string | null; action: AuditAction; organizationId?: string | null; siteId?: string | null; module?: string | null; outcome?: AuditOutcome; resource?: string | null; resourceId?: string | null; metadata?: Record<string, unknown> | null; ipAddress?: string | null; userAgent?: string | null; }
 const MAX_METADATA_SIZE = 10 * 1024;
 function safeMetadata(metadata: Record<string, unknown> | null | undefined): Record<string, unknown> | null { if (!metadata) return null; const json = JSON.stringify(metadata); return json.length <= MAX_METADATA_SIZE ? metadata : { _truncated: true, _originalSize: json.length, action: metadata.action ?? null }; }
 
@@ -63,7 +69,7 @@ const writeFallback = (input: AuditEventInput) =>
  */
 export const logAuditEventEffect = (input: AuditEventInput): Effect.Effect<void> =>
   Effect.tryPromise(async () => {
-    await getDrizzle().insert(auditLog).values({ userId: input.userId ?? null, action: input.action, resource: input.resource ?? null, resourceId: input.resourceId ?? null, metadata: safeMetadata(input.metadata), ipAddress: input.ipAddress ?? null, userAgent: input.userAgent ?? null });
+    await getDrizzle().insert(auditLog).values({ userId: input.userId ?? null, action: input.action, resource: input.resource ?? null, resourceId: input.resourceId ?? null, organizationId: input.organizationId ?? null, siteId: input.siteId ?? null, module: input.module ?? null, outcome: input.outcome ?? "success", metadata: safeMetadata(input.metadata), ipAddress: input.ipAddress ?? null, userAgent: input.userAgent ?? null });
   }).pipe(
     Effect.catch((err) => Effect.logError("[audit] Failed to log event", err).pipe(Effect.andThen(writeFallback(input)))),
     Effect.withSpan("audit.log", { attributes: { "audit.action": input.action } }),

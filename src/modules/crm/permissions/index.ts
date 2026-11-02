@@ -2,7 +2,7 @@
  * Gardes de permission Effect du domaine crm, tenant-aware (core `permissions/tenant`) :
  * administrateur global → tout ; propriétaire / administrateur d'organisation → les données
  * de SA organisation uniquement ; données plateforme (`organizationId = null`) → RBAC global.
- * Namespace « crm » déclaré dans `src/lib/permissions`.
+ * Namespace « crm » déclaré dans `./statements.ts` (registre core `permissions/registry`).
  */
 import type { ActionAPIContext } from "astro:actions";
 import { Effect } from "effect";

@@ -4,12 +4,17 @@
  * TWO access-control layers:
  *   1. Global (admin plugin)  — user/session management + CMS resources
  *   2. Organization (org plugin) — org/member/invitation/team management + CMS resources
+ *
+ * Les namespaces des modules sont déclarés par chaque module (`modules/<m>/permissions/statements.ts`,
+ * agrégés dans `modules/permissions.ts`) puis fusionnés ici (core `permissions/registry`).
  */
 import { createAccessControl } from "better-auth/plugins/access";
 import { defaultStatements as adminDefaultStatements, adminAc } from "better-auth/plugins/admin/access";
+import { mergeStatements, moduleGrants, type PredefinedRole } from "@/core/permissions/registry";
+import { MODULE_PERMISSIONS, type ModuleStatements } from "@/modules/permissions";
 import { defaultStatements as orgDefaultStatements, ownerAc, adminAc as orgAdminAc, memberAc } from "better-auth/plugins/organization/access";
 
-export const statement = {
+const coreStatement = {
   ...adminDefaultStatements,
   ...orgDefaultStatements,
   page: ["create", "read", "update", "delete", "publish"],
@@ -19,16 +24,6 @@ export const statement = {
   navigation: ["read", "update"],
   audit: ["read", "export"],
   theme: ["read", "update"],
-  blog: ["create", "read", "update", "delete", "publish", "moderate"],
-  blogCategory: ["create", "read", "update", "delete"],
-  blogTag: ["create", "read", "update", "delete"],
-  blogComment: ["read", "update", "delete", "moderate"],
-  blogReview: ["read", "update", "delete", "moderate"],
-  service: ["create", "read", "update", "delete", "publish", "moderate"],
-  serviceCategory: ["create", "read", "update", "delete"],
-  serviceTag: ["create", "read", "update", "delete"],
-  serviceComment: ["read", "update", "delete", "moderate"],
-  serviceReview: ["read", "update", "delete", "moderate"],
   // ─── Polyweb platform bricks ───
   contentType: ["create", "read", "update", "delete"],
   contentEntry: ["create", "read", "update", "delete", "publish"],
@@ -39,18 +34,9 @@ export const statement = {
   plugin: ["read", "update"],
   tenant: ["create", "read", "update", "delete"],
   payment: ["read", "refund"],
-  shop: ["create", "read", "update", "delete", "publish"],
-  tax: ["create", "read", "update", "delete", "publish"],
-  sales: ["create", "read", "update", "delete", "issue", "payment"],
-  crm: ["create", "read", "update", "delete"],
-  logistics: ["create", "read", "update", "delete"],
-  purchasing: ["create", "read", "update", "delete"],
-  subscriptions: ["create", "read", "update", "delete"],
-  bookings: ["create", "read", "update", "delete"],
-  courses: ["create", "read", "update", "delete", "publish"],
-  formations: ["create", "read", "update", "delete", "publish"],
-  events: ["create", "read", "update", "delete", "publish"],
 } as const;
+
+export const statement = mergeStatements(coreStatement, MODULE_PERMISSIONS) as typeof coreStatement & ModuleStatements;
 
 const platformAdmin = {
   contentType: ["create", "read", "update", "delete"],
@@ -79,65 +65,8 @@ const platformReadOnly = {
 
 export const ac = createAccessControl(statement);
 
-const cmsAdminServices = {
-  service: ["create", "read", "update", "delete", "publish", "moderate"],
-  serviceCategory: ["create", "read", "update", "delete"],
-  serviceTag: ["create", "read", "update", "delete"],
-  serviceComment: ["read", "update", "delete", "moderate"],
-  serviceReview: ["read", "update", "delete", "moderate"],
-} as const;
-
-const cmsEditorServices = {
-  service: ["create", "read", "update", "delete", "publish"],
-  serviceCategory: ["create", "read", "update", "delete"],
-  serviceTag: ["create", "read", "update", "delete"],
-  serviceComment: ["read", "update", "moderate"],
-  serviceReview: ["read", "update", "moderate"],
-} as const;
-
-const cmsReadOnlyServices = {
-  service: ["read"],
-  serviceCategory: ["read"],
-  serviceTag: ["read"],
-  serviceComment: ["read"],
-  serviceReview: ["read"],
-} as const;
-
-/** Module events (catalogue éditorial ; inscriptions hors CMS Core). */
-const cmsAdminEvents = { events: ["create", "read", "update", "delete", "publish"] } as const;
-const cmsReadOnlyEvents = { events: ["read"] } as const;
-
-/** Module formations (catalogue éditorial ; transactions hors CMS Core). */
-const cmsAdminFormations = { formations: ["create", "read", "update", "delete", "publish"] } as const;
-const cmsReadOnlyFormations = { formations: ["read"] } as const;
-
-/** Module courses (catalogue éditorial ; transactions hors CMS Core). */
-const cmsAdminCourses = { courses: ["create", "read", "update", "delete", "publish"] } as const;
-const cmsReadOnlyCourses = { courses: ["read"] } as const;
-
-/** Module shop (catalogue éditorial ; transactions hors CMS Core). */
-const cmsAdminShop = { shop: ["create", "read", "update", "delete", "publish"] } as const;
-const cmsReadOnlyShop = { shop: ["read"] } as const;
-/** Module tax (taux de TVA par pays / catégorie, exports comptables). */
-const cmsAdminTax = { tax: ["create", "read", "update", "delete", "publish"] } as const;
-const cmsReadOnlyTax = { tax: ["read"] } as const;
-// Ventes : documents commerciaux et comptables — aucun accès pour les rôles éditoriaux/utilisateurs.
-const cmsAdminSales = { sales: ["create", "read", "update", "delete", "issue", "payment"] } as const;
-const cmsReadOnlySales = { sales: ["read"] } as const;
-// CRM : sociétés, contacts, opportunités, activités — mêmes rôles que les ventes.
-const cmsAdminCrm = { crm: ["create", "read", "update", "delete"] } as const;
-const cmsReadOnlyCrm = { crm: ["read"] } as const;
-// Logistique : entrepôts, stock, expéditions — mêmes rôles que les ventes.
-const cmsAdminLogistics = { logistics: ["create", "read", "update", "delete"] } as const;
-const cmsReadOnlyLogistics = { logistics: ["read"] } as const;
-// Achats : fournisseurs, commandes, réceptions — mêmes rôles que la logistique.
-const cmsAdminPurchasing = { purchasing: ["create", "read", "update", "delete"] } as const;
-const cmsReadOnlyPurchasing = { purchasing: ["read"] } as const;
-// Abonnements : formules, tarifs, abonnements clients — mêmes rôles que les achats.
-const cmsAdminSubscriptions = { subscriptions: ["create", "read", "update", "delete"] } as const;
-const cmsReadOnlySubscriptions = { subscriptions: ["read"] } as const;
-const cmsAdminBookings = { bookings: ["create", "read", "update", "delete"] } as const;
-const cmsReadOnlyBookings = { bookings: ["read"] } as const;
+/** Statements accordés par les modules à un rôle prédéfini. */
+const mods = (role: PredefinedRole) => moduleGrants(MODULE_PERMISSIONS, role);
 
 export const adminRole = ac.newRole({
   ...adminAc.statements,
@@ -148,24 +77,8 @@ export const adminRole = ac.newRole({
   navigation: ["read", "update"],
   audit: ["read", "export"],
   theme: ["read", "update"],
-  blog: ["create", "read", "update", "delete", "publish", "moderate"],
-  blogCategory: ["create", "read", "update", "delete"],
-  blogTag: ["create", "read", "update", "delete"],
-  blogComment: ["read", "update", "delete", "moderate"],
-  blogReview: ["read", "update", "delete", "moderate"],
-  ...cmsAdminServices,
   ...platformAdmin,
-  ...cmsAdminEvents,
-  ...cmsAdminFormations,
-  ...cmsAdminCourses,
-  ...cmsAdminShop,
-  ...cmsAdminTax,
-  ...cmsAdminSales,
-  ...cmsAdminCrm,
-  ...cmsAdminLogistics,
-  ...cmsAdminPurchasing,
-  ...cmsAdminSubscriptions,
-  ...cmsAdminBookings,
+  ...mods("admin"),
 });
 
 export const editorRole = ac.newRole({
@@ -174,31 +87,15 @@ export const editorRole = ac.newRole({
   section: ["create", "read", "update", "delete"],
   media: ["upload", "read", "delete"],
   site: ["read"], navigation: ["read"], audit: ["read"], theme: ["read"],
-  blog: ["create", "read", "update", "delete", "publish"],
-  blogCategory: ["create", "read", "update", "delete"],
-  blogTag: ["create", "read", "update", "delete"],
-  blogComment: ["read", "update", "moderate"],
-  blogReview: ["read", "update", "moderate"],
-  ...cmsEditorServices,
   ...platformEditor,
-  ...cmsAdminEvents,
-  ...cmsAdminFormations,
-  ...cmsAdminCourses,
-  ...cmsAdminShop,
-  ...cmsAdminTax,
+  ...mods("editor"),
 });
 
 export const userRole = ac.newRole({
   user: [], session: [],
   page: ["read"], section: ["read"], media: ["read"], site: ["read"], navigation: ["read"], theme: ["read"],
-  blog: ["read"], blogCategory: ["read"], blogTag: ["read"], blogComment: ["read"], blogReview: ["read"],
-  ...cmsReadOnlyServices,
   ...platformReadOnly,
-  ...cmsReadOnlyEvents,
-  ...cmsReadOnlyFormations,
-  ...cmsReadOnlyCourses,
-  ...cmsReadOnlyShop,
-  ...cmsReadOnlyTax,
+  ...mods("user"),
 });
 
 export const orgOwnerRole = ac.newRole({
@@ -207,22 +104,8 @@ export const orgOwnerRole = ac.newRole({
   section: ["create", "read", "update", "delete"],
   media: ["upload", "read", "delete"],
   site: ["read", "update"], navigation: ["read", "update"], audit: ["read", "export"], theme: ["read", "update"],
-  blog: ["create", "read", "update", "delete", "publish", "moderate"],
-  blogCategory: ["create", "read", "update", "delete"], blogTag: ["create", "read", "update", "delete"],
-  blogComment: ["read", "update", "delete", "moderate"], blogReview: ["read", "update", "delete", "moderate"],
-  ...cmsAdminServices,
   ...platformEditor,
-  ...cmsAdminEvents,
-  ...cmsAdminFormations,
-  ...cmsAdminCourses,
-  ...cmsAdminShop,
-  ...cmsAdminTax,
-  ...cmsAdminSales,
-  ...cmsAdminCrm,
-  ...cmsAdminLogistics,
-  ...cmsAdminPurchasing,
-  ...cmsAdminSubscriptions,
-  ...cmsAdminBookings,
+  ...mods("orgOwner"),
 });
 
 export const orgAdminRole = ac.newRole({
@@ -231,39 +114,13 @@ export const orgAdminRole = ac.newRole({
   section: ["create", "read", "update", "delete"],
   media: ["upload", "read", "delete"],
   site: ["read"], navigation: ["read", "update"], audit: ["read"], theme: ["read"],
-  blog: ["create", "read", "update", "delete", "publish", "moderate"],
-  blogCategory: ["create", "read", "update", "delete"], blogTag: ["create", "read", "update", "delete"],
-  blogComment: ["read", "update", "delete", "moderate"], blogReview: ["read", "update", "delete", "moderate"],
-  ...cmsAdminServices,
   ...platformEditor,
-  ...cmsAdminEvents,
-  ...cmsAdminFormations,
-  ...cmsAdminCourses,
-  ...cmsAdminShop,
-  ...cmsAdminTax,
-  ...cmsAdminSales,
-  ...cmsAdminCrm,
-  ...cmsAdminLogistics,
-  ...cmsAdminPurchasing,
-  ...cmsAdminSubscriptions,
-  ...cmsAdminBookings,
+  ...mods("orgAdmin"),
 });
 
 export const orgMemberRole = ac.newRole({
   ...memberAc.statements,
   page: ["read"], section: ["read"], media: ["read"], site: ["read"], navigation: ["read"], theme: ["read"],
-  blog: ["read"], blogCategory: ["read"], blogTag: ["read"], blogComment: ["read"], blogReview: ["read"],
-  ...cmsReadOnlyServices,
   ...platformReadOnly,
-  ...cmsReadOnlyEvents,
-  ...cmsReadOnlyFormations,
-  ...cmsReadOnlyCourses,
-  ...cmsReadOnlyShop,
-  ...cmsReadOnlyTax,
-  ...cmsReadOnlySales,
-  ...cmsReadOnlyCrm,
-  ...cmsReadOnlyLogistics,
-  ...cmsReadOnlyPurchasing,
-  ...cmsReadOnlySubscriptions,
-  ...cmsReadOnlyBookings,
+  ...mods("orgMember"),
 });

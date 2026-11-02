@@ -16,6 +16,7 @@ export * from "./schemas/payments.schema";
 export * from "./schemas/refunds.schema";
 export * from "./schemas/exchange-rates.schema";
 export * from "./schemas/content.schema";
+export * from "./schemas/site-access.schema";
 export * from "./schemas/api.schema";
 export * from "./schemas/webhooks.schema";
 export * from "./schemas/event-outbox.schema";

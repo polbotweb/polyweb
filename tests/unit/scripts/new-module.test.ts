@@ -1,6 +1,6 @@
 import { describe, it, expect, afterAll } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, existsSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, existsSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -23,6 +23,20 @@ describe('scripts/new-module.ts', () => {
     expect(existsSync(join(dir, 'modules/event-tickets/loaders/ticket.loader.ts'))).toBe(true);
     expect(readFileSync(join(dir, 'modules/event-tickets/admin/resource.ts'), 'utf8')).toContain('ticketAdminResource');
     expect(existsSync(join(dir, 'components/event-tickets/EventTicketsCard.astro'))).toBe(true);
+  });
+
+  it('declares the module permissions and registers them in modules/permissions.ts between the markers (idempotent)', () => {
+    mkdirSync(join(dir, 'modules'), { recursive: true });
+    writeFileSync(join(dir, 'modules/permissions.ts'), 'import { a } from "x";\n// @module-permissions:imports\nexport const MODULE_PERMISSIONS = [\n  a,\n  // @module-permissions:list\n] as const;\n');
+    run(['perm-probes']);
+    const st = readFileSync(join(dir, 'modules/perm-probes/permissions/statements.ts'), 'utf8');
+    expect(st).toContain('export const permProbesPermissions = defineModulePermissions(');
+    expect(st).toContain('"perm-probes": ["create", "read", "update", "publish", "delete"]');
+    expect(st).not.toContain('astro:actions');
+    const index = readFileSync(join(dir, 'modules/permissions.ts'), 'utf8');
+    expect(index).toContain('import { permProbesPermissions } from "@/modules/perm-probes/permissions/statements";\n// @module-permissions:imports');
+    expect(index).toContain('  permProbesPermissions,\n  // @module-permissions:list');
+    expect(index.match(/permProbesPermissions,/g)).toHaveLength(1);
   });
 
   it('generates a read-only public API stub for the core/api registry (scope, tenant reader, empty events)', () => {

@@ -2,7 +2,7 @@
  * Gardes de permission Effect du domaine purchasing (achats), tenant-aware (core `permissions/tenant`) :
  * administrateur global → tout ; propriétaire / administrateur d'organisation → les données
  * de SA organisation uniquement ; données plateforme (`organizationId = null`) → RBAC global.
- * Namespace « purchasing » déclaré dans `src/lib/permissions`.
+ * Namespace « purchasing » déclaré dans `./statements.ts` (registre core `permissions/registry`).
  */
 import type { ActionAPIContext } from "astro:actions";
 import { Effect } from "effect";
