@@ -59,7 +59,7 @@ LHCI ne supporte pas les headers par URL dans la config. Les pages authentifiée
 | :-- | --: | :-- | :-- | :-- |
 | Public | 28 | Aucun | `lighthouserc.cjs` | `lhci autorun` |
 | Authenticated | 8 | Session user | `.lighthouseci-authed.json` (temp) | `lhci-authed.cjs` |
-| Admin | 16 | Session admin | `.lighthouseci-admin.json` (temp) | `lhci-authed.cjs` |
+| Admin | 28 | Session admin | `.lighthouseci-admin.json` (temp) | `lhci-authed.cjs` |
 
 ### `lhci-authed.cjs` — Pages authentifiées
 

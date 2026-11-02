@@ -33,6 +33,8 @@ let shopSlugs = null;
 let shopReturn = null;
 // Abonnements : formule plateforme et abonnement actif du compte seedé.
 let subscriptionsSeed = null;
+// Rôles : organisation dont l'admin seedé est propriétaire (accès par site, journal d'audit).
+let rolesOrg = null;
 // Logistique : inventaires seedés (un en cours, un validé) — pages inventaires et grand livre.
 let logistics = null;
 if (fs.existsSync(COOKIES_PATH)) {
@@ -45,6 +47,7 @@ if (fs.existsSync(COOKIES_PATH)) {
   logistics = data.logistics ?? null;
   shopReturn = data.shopReturn ?? null;
   subscriptionsSeed = data.subscriptionsSeed ?? null;
+  rolesOrg = data.rolesOrg ?? null;
 }
 
 // ── Route definitions per locale ─────────────────────────────────────
@@ -158,6 +161,10 @@ for (const lang of locales) {
   if (subscriptionsSeed) {
     adminUrls.push({ url: `${BASE}/${lang}/admin/subscriptions/plans/${encodeURIComponent(subscriptionsSeed.planId)}`, headers: { Cookie: adminCookie } });
     adminUrls.push({ url: `${BASE}/${lang}/admin/subscriptions/${encodeURIComponent(subscriptionsSeed.subscriptionId)}`, headers: { Cookie: adminCookie } });
+  }
+  // Organisation : rôles (grille des modules), accès par site et journal d'audit.
+  if (rolesOrg) {
+    for (const sub of ['roles', 'sites', 'audit']) adminUrls.push({ url: `${BASE}/${lang}/organizations/${encodeURIComponent(rolesOrg.slug)}/${sub}`, headers: { Cookie: adminCookie } });
   }
 }
 

@@ -8,7 +8,7 @@
 ## Usage
 
 ```bash
-# Rétention par défaut (90 jours)
+# Rétention par défaut (365 jours)
 pnpm db:cleanup-audit
 
 # Rétention personnalisée
@@ -25,18 +25,18 @@ Supprime les entrées de la table `audit_log` dont `created_at` est antérieur �
 
 | Variable | Défaut | Description |
 | :-- | :-- | :-- |
-| `AUDIT_RETENTION_DAYS` | `90` | Nombre de jours de rétention (minimum 1) |
+| `AUDIT_RETENTION_DAYS` | `365` | Nombre de jours de rétention (minimum 1) |
 
 ### Sortie
 
 ```text
 ═══════════════════════════════════════════════════════
-   🧹 Cleanup Audit Logs — LOCAL (rétention : 90j)
+   🧹 Cleanup Audit Logs — LOCAL (rétention : 365j)
 ═══════════════════════════════════════════════════════
 
 [cible] LOCAL (postgresql://localhost:5432/polyweb_dev)
 
-✔️  247 entrée(s) supprimée(s) (> 90 jours).
+✔️  247 entrée(s) supprimée(s) (> 365 jours).
 ```
 
 ---
@@ -55,7 +55,7 @@ Pour un nettoyage régulier, ajouter un cron job :
 
 ```bash
 # Chaque dimanche à 3h du matin
-0 3 * * 0 cd /path/to/polyweb && AUDIT_RETENTION_DAYS=90 pnpm db:cleanup-audit
+0 3 * * 0 cd /path/to/polyweb && AUDIT_RETENTION_DAYS=365 pnpm db:cleanup-audit
 ```
 
 ---

@@ -194,7 +194,20 @@ Le fichier `tests/unit/audit-fallback.test.ts` vérifie que quand `getDrizzle()`
 La commande `pnpm db:cleanup-audit` supprime les entrées plus anciennes que N jours :
 
 ```bash
-AUDIT_RETENTION_DAYS=90 pnpm db:cleanup-audit
+AUDIT_RETENTION_DAYS=365 pnpm db:cleanup-audit
 ```
 
-Défaut : 90 jours. Voir [database/cleanup-audit.md](database/cleanup-audit.md).
+Défaut : 365 jours (`AUDIT_RETENTION_DAYS`, minimum 1), à planifier en cron hebdomadaire. Le journal est append-only : seule cette purge supprime des lignes. Voir [database/cleanup-audit.md](database/cleanup-audit.md).
+
+## Journal d'audit par organisation
+
+Page `/<locale>/organizations/<slug>/audit` (permission `audit:read`, propriétaires et administrateurs) :
+
+- Filtres GET validés (`parseAuditFilters`, `src/core/audit/query.ts`) : préfixe d'action, module, résultat (`success`, `denied`, `failure`), dates `YYYY-MM-DD` (fin incluse) ; pagination de 50 lignes.
+- Toutes les requêtes sont bornées à `organizationId` ; aucun filtre ne permet de lire une autre organisation.
+- Export CSV : `GET /api/organizations/audit-export?organizationId=…` (mêmes filtres, 10 000 lignes max, 5 exports/min). BOM UTF-8, lignes CRLF, cellules commençant par `= + - @` tabulation ou retour chariot préfixées par `'` (injection de formules). L'export est lui-même journalisé (`audit.log.export`) ; un refus est journalisé `denied`.
+- Les refus de `requireTenantPermission` sont journalisés `outcome=denied` avec l'organisation et le site visés et la raison (`not-member`, `site`, `permission`).
+
+## Accès par site
+
+Page `/<locale>/organizations/<slug>/sites` : accorde ou retire l'accès d'un membre à un site (`site_access`), avec un rôle optionnel (rôle d'organisation, `admin`, `member` ou rôle dynamique). Un membre sans aucune ligne garde l'accès à tous les sites ; dès qu'il en a une, il est limité aux sites listés. Le propriétaire ne peut pas être restreint. Site et membre doivent appartenir à l'organisation (sinon « introuvable »). Actions `org.site_access.grant` / `org.site_access.revoke`, journalisées.

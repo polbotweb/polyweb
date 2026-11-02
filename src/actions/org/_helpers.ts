@@ -67,6 +67,8 @@ export function auditOrg(
   opts?: {
     resource?: string;
     resourceId?: string;
+    organizationId?: string;
+    siteId?: string;
     metadata?: Record<string, unknown>;
   },
 ) {
@@ -76,6 +78,9 @@ export function auditOrg(
     resource: opts?.resource ?? null,
     resourceId: opts?.resourceId ?? null,
     metadata: opts?.metadata ?? null,
+    organizationId: opts?.organizationId ?? null,
+    siteId: opts?.siteId ?? null,
+    module: opts?.organizationId ? "org" : null,
     ipAddress: extractIp(context.request.headers, context.clientAddress),
     userAgent: context.request.headers.get("user-agent"),
   }).catch(() => {});

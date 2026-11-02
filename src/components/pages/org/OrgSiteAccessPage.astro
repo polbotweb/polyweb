@@ -1,0 +1,92 @@
+---
+import type { AuthTranslations } from '@i18n/config';
+import type { FullOrganization } from '@/lib/auth-data';
+import type { SiteAccessEntry } from '@/core/permissions/site-access';
+import { actions } from 'astro:actions';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@atoms/card';
+import { Label } from '@atoms/label';
+import { NativeSelect, NativeSelectOption } from '@atoms/native-select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@atoms/table';
+import Button from '@atoms/button/Button.astro';
+
+interface Props {
+  t: AuthTranslations;
+  org: FullOrganization;
+  sites: readonly { id: string; name: string }[];
+  entries: readonly SiteAccessEntry[];
+  roleNames: readonly string[];
+  status: 'granted' | 'revoked' | 'error' | null;
+}
+const { t, org, sites, entries, roleNames, status } = Astro.props;
+const s = t.organizations.siteAccess;
+const assignable = org.members.filter((m) => !m.role.split(',').map((r) => r.trim()).includes('owner'));
+const fill = (tpl: string, v: Record<string, string>) => tpl.replace(/\{(\w+)\}/g, (_, k: string) => v[k] ?? '');
+---
+<div class="grid gap-6">
+  <output aria-live="polite" class="block min-h-0">
+    {status === 'granted' && <p class="rounded-md border border-current p-3" data-testid="site-access-status">{s.granted}</p>}
+    {status === 'revoked' && <p class="rounded-md border border-current p-3" data-testid="site-access-status">{s.revoked}</p>}
+  </output>
+  {status === 'error' && <p role="alert" class="rounded-md border border-current p-3 font-medium" data-testid="site-access-error">{s.error}</p>}
+  <Card>
+    <CardHeader>
+      <CardTitle><h1 class="text-xl font-semibold">{s.title}</h1></CardTitle>
+      <CardDescription><p>{s.description}</p><p class="mt-2">{s.ownerNote}</p></CardDescription>
+    </CardHeader>
+    <CardContent>
+      {sites.length === 0 ? <p data-testid="site-access-no-sites">{s.noSites}</p> : (
+        <form method="POST" action={actions.orgGrantSiteAccess} class="grid gap-4 sm:grid-cols-4 sm:items-end" data-testid="site-access-form">
+          <input type="hidden" name="organizationId" value={org.id} />
+          <div class="grid gap-2">
+            <Label for="sa-user">{s.member}</Label>
+            <NativeSelect id="sa-user" name="userId" required>
+              {assignable.map((m) => <NativeSelectOption value={m.userId}>{m.user.name} ({m.user.email})</NativeSelectOption>)}
+            </NativeSelect>
+          </div>
+          <div class="grid gap-2">
+            <Label for="sa-site">{s.site}</Label>
+            <NativeSelect id="sa-site" name="siteId" required>
+              {sites.map((site) => <NativeSelectOption value={site.id}>{site.name}</NativeSelectOption>)}
+            </NativeSelect>
+          </div>
+          <div class="grid gap-2">
+            <Label for="sa-role">{s.role}</Label>
+            <NativeSelect id="sa-role" name="role">
+              <NativeSelectOption value="">{s.orgRole}</NativeSelectOption>
+              <NativeSelectOption value="admin">{t.organizations.members.admin}</NativeSelectOption>
+              <NativeSelectOption value="member">{t.organizations.members.member}</NativeSelectOption>
+              {roleNames.map((r) => <NativeSelectOption value={r}>{r}</NativeSelectOption>)}
+            </NativeSelect>
+          </div>
+          <Button type="submit" class="min-h-11">{s.add}</Button>
+        </form>
+      )}
+    </CardContent>
+  </Card>
+  <Card>
+    <CardHeader><CardTitle><h2 class="text-lg font-semibold">{s.current}</h2></CardTitle></CardHeader>
+    <CardContent>
+      {entries.length === 0 ? <p data-testid="site-access-empty">{s.empty}</p> : (
+        <Table data-testid="site-access-table">
+          <TableHeader><TableRow><TableHead scope="col">{s.member}</TableHead><TableHead scope="col">{s.site}</TableHead><TableHead scope="col">{s.role}</TableHead><TableHead scope="col"><span class="sr-only">{s.remove}</span></TableHead></TableRow></TableHeader>
+          <TableBody>
+            {entries.map((e) => (
+              <TableRow>
+                <TableCell>{e.userName}</TableCell>
+                <TableCell>{e.siteName}</TableCell>
+                <TableCell>{e.role ?? s.orgRole}</TableCell>
+                <TableCell>
+                  <form method="POST" action={actions.orgRevokeSiteAccess}>
+                    <input type="hidden" name="organizationId" value={org.id} />
+                    <input type="hidden" name="id" value={e.id} />
+                    <Button type="submit" variant="outline" size="sm" class="min-h-11" aria-label={fill(s.removeLabel, { member: e.userName, site: e.siteName })}>{s.remove}</Button>
+                  </form>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </CardContent>
+  </Card>
+</div>

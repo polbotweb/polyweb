@@ -1,0 +1,40 @@
+---
+/**
+ * Grille des permissions des modules (registre `MODULE_PERMISSIONS`), regroupées par module.
+ * Mêmes cases `.org-role-perm-cb` (data-resource / data-action) que la grille CMS : le script
+ * des pages de rôles les lit sans changement.
+ */
+import type { Locale } from '@i18n/config';
+import { MODULE_PERMISSIONS } from '@/modules/permissions';
+import { getModuleLabel, isModuleId } from '@/core/localization/module-labels';
+
+interface Props { locale: Locale; idPrefix: string }
+const { locale, idPrefix } = Astro.props;
+const groups = MODULE_PERMISSIONS.map((m) => ({
+  id: m.module,
+  label: isModuleId(m.module) ? getModuleLabel(m.module, locale) : m.label,
+  resources: Object.entries(m.statements as Record<string, readonly string[]>),
+}));
+---
+<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-testid="module-permission-grid">
+  {groups.map((g) => (
+    <fieldset class="border rounded-lg p-3 bg-muted/20">
+      <legend id={`${idPrefix}-${g.id}-legend`} class="text-xs font-semibold px-1">{g.label}</legend>
+      <div class="space-y-2">
+        {g.resources.map(([resource, actions]) => (
+          <div>
+            <p class="text-xs font-medium" dir="ltr">{resource}</p>
+            <div class="flex flex-wrap gap-x-3 gap-y-1">
+              {actions.map((action) => (
+                <label class="flex min-h-6 items-center gap-2 text-xs cursor-pointer">
+                  <input type="checkbox" class="org-role-perm-cb rounded" data-resource={resource} data-action={action} />
+                  <span dir="ltr">{action}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </fieldset>
+  ))}
+</div>

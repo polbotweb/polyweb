@@ -1,0 +1,40 @@
+---
+import { actions, isActionError } from 'astro:actions';
+import { Effect } from 'effect';
+import { requireAuth } from '@/lib/auth-guards';
+import { fetchOrgData, getUserOrgRole } from '@/lib/auth-data';
+import { listSiteAccess, organizationRoleNames, organizationSites } from '@/core/permissions/site-access';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import AuthLayout from '@organisms/AuthLayout/AuthLayout.astro';
+import OrgSidebar from '@organisms/OrgSidebar/OrgSidebar.astro';
+import OrgSiteAccessPage from '@pages/org/OrgSiteAccessPage.astro';
+
+export const prerender = false;
+
+const result = await requireAuth(Astro);
+if ('redirect' in result) return result.redirect;
+const { user, locale, authT } = result;
+const orgSlug = Astro.params.slug;
+if (!orgSlug) return Astro.redirect(`/${locale}/auth/${authT.routes['dashboard']}`);
+const orgData = await fetchOrgData(Astro.request.headers, orgSlug);
+if (!orgData) return Astro.redirect(`/${locale}/auth/${authT.routes['dashboard']}`);
+const { org, members } = orgData;
+const activeOrgRole = getUserOrgRole(members, user.id);
+if (activeOrgRole !== 'admin' && activeOrgRole !== 'owner') return Astro.redirect(`/${locale}/organizations/${orgSlug}/members`);
+
+// Formulaires sans JS : succès → redirection (pas de double envoi), échec → message.
+const grant = Astro.getActionResult(actions.orgGrantSiteAccess);
+const revoke = Astro.getActionResult(actions.orgRevokeSiteAccess);
+if (grant && !grant.error) return Astro.redirect(`${Astro.url.pathname}?done=granted`);
+if (revoke && !revoke.error) return Astro.redirect(`${Astro.url.pathname}?done=revoked`);
+const done = Astro.url.searchParams.get('done');
+const status = isActionError(grant?.error) || isActionError(revoke?.error) ? 'error' : done === 'granted' || done === 'revoked' ? done : null;
+
+const [sites, entries, roleNames] = await Effect.runPromise(Effect.all([organizationSites(org.id), listSiteAccess(org.id), organizationRoleNames(org.id)]));
+---
+<BaseLayout title={`${authT.organizations.siteAccess.title} — ${org.name}`} description={authT.organizations.siteAccess.description}>
+  <AuthLayout title={org.name}>
+    <OrgSidebar slot="sidebar" t={authT} locale={locale} org={org} activeItem="sites" orgRole={activeOrgRole} />
+    <OrgSiteAccessPage t={authT} org={org} sites={sites} entries={entries} roleNames={roleNames} status={status} />
+  </AuthLayout>
+</BaseLayout>

@@ -654,6 +654,8 @@ export default {
       title: 'Media',
       description: 'Manage the organization media library and multilingual alt texts.',
     },
+    siteAccess: { title: 'Site access', description: 'Restrict members to some of the organization\'s sites and, if needed, give them a role specific to each site.', ownerNote: 'A member with no entry keeps access to every site. The owner is never restricted.', site: 'Site', member: 'Member', role: 'Role on this site', orgRole: 'Organization role (unchanged)', add: 'Add access', remove: 'Remove', removeLabel: 'Remove {member}\'s access to site {site}', empty: 'No restriction: every member can access every site.', noSites: 'This organization has no site yet.', unrestricted: 'All sites', restricted: 'Allowed sites', granted: 'Access saved.', revoked: 'Access removed.', error: 'The operation failed. Check the member, site and role.', current: 'Current access' },
+    audit: { title: 'Audit log', description: 'Actions and access denials recorded for this organization. The log is append-only.', filters: 'Filters', action: 'Action', actionHint: 'Prefix, e.g. crm. or sales.permission', module: 'Module', outcome: 'Outcome', from: 'From', to: 'To', apply: 'Filter', reset: 'Reset', exportCsv: 'Export as CSV', empty: 'No entries match these filters.', date: 'Date', user: 'User', site: 'Site', resource: 'Resource', any: 'All', previous: 'Previous page', next: 'Next page', pageOf: 'Page {page} of {pages}', retention: 'Retention: {days} days.', outcomes: { success: 'Succeeded', denied: 'Denied', failure: 'Failed' } },
     roles: {
       title: 'Custom Roles',
       description: 'Create and manage custom roles for your organization.',

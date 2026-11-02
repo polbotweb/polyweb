@@ -1,0 +1,102 @@
+---
+import type { AuthTranslations, Locale } from '@i18n/config';
+import type { FullOrganization } from '@/lib/auth-data';
+import type { AuditFilters, AuditRow } from '@/core/audit/query';
+import { AUDIT_OUTCOMES } from '@/core/audit/query';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@atoms/card';
+import { Input } from '@atoms/input';
+import { Label } from '@atoms/label';
+import { NativeSelect, NativeSelectOption } from '@atoms/native-select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@atoms/table';
+import Button from '@atoms/button/Button.astro';
+
+interface Props {
+  t: AuthTranslations;
+  locale: Locale;
+  org: FullOrganization;
+  rows: readonly AuditRow[];
+  page: number;
+  pages: number;
+  filters: AuditFilters;
+  modules: readonly { id: string; label: string }[];
+  retentionDays: number;
+}
+const { t, locale, org, rows, page, pages, filters, modules, retentionDays } = Astro.props;
+const a = t.organizations.audit;
+const fill = (tpl: string, v: Record<string, string | number>) => tpl.replace(/\{(\w+)\}/g, (_, k: string) => String(v[k] ?? ''));
+const day = (d?: Date, end = false) => (d ? new Date(d.getTime() - (end ? 86_400_000 : 0)).toISOString().slice(0, 10) : '');
+const query = new URLSearchParams();
+if (filters.action) query.set('action', filters.action);
+if (filters.module) query.set('module', filters.module);
+if (filters.outcome) query.set('outcome', filters.outcome);
+if (filters.from) query.set('from', day(filters.from));
+if (filters.to) query.set('to', day(filters.to, true));
+const pageUrl = (p: number) => { const q = new URLSearchParams(query); q.set('page', String(p)); return `?${q.toString()}`; };
+const exportQuery = new URLSearchParams(query); exportQuery.set('organizationId', org.id);
+const fmt = new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'medium', timeZone: 'UTC' });
+---
+<div class="grid gap-6">
+  <Card>
+    <CardHeader>
+      <CardTitle><h1 class="text-xl font-semibold">{a.title}</h1></CardTitle>
+      <CardDescription><p>{a.description}</p><p class="mt-2">{fill(a.retention, { days: retentionDays })}</p></CardDescription>
+    </CardHeader>
+    <CardContent>
+      <form method="GET" class="grid gap-4 sm:grid-cols-3 lg:grid-cols-6 lg:items-end" aria-label={a.filters} data-testid="audit-filters">
+        <div class="grid gap-2">
+          <Label for="audit-action">{a.action}</Label>
+          <Input id="audit-action" name="action" value={filters.action ?? ''} aria-describedby="audit-action-hint" maxlength={64} />
+          <p id="audit-action-hint" class="text-sm">{a.actionHint}</p>
+        </div>
+        <div class="grid gap-2">
+          <Label for="audit-module">{a.module}</Label>
+          <NativeSelect id="audit-module" name="module">
+            <NativeSelectOption value="">{a.any}</NativeSelectOption>
+            {modules.map((m) => <NativeSelectOption value={m.id} selected={filters.module === m.id}>{m.label}</NativeSelectOption>)}
+          </NativeSelect>
+        </div>
+        <div class="grid gap-2">
+          <Label for="audit-outcome">{a.outcome}</Label>
+          <NativeSelect id="audit-outcome" name="outcome">
+            <NativeSelectOption value="">{a.any}</NativeSelectOption>
+            {AUDIT_OUTCOMES.map((o) => <NativeSelectOption value={o} selected={filters.outcome === o}>{a.outcomes[o]}</NativeSelectOption>)}
+          </NativeSelect>
+        </div>
+        <div class="grid gap-2"><Label for="audit-from">{a.from}</Label><Input id="audit-from" name="from" type="date" value={day(filters.from)} /></div>
+        <div class="grid gap-2"><Label for="audit-to">{a.to}</Label><Input id="audit-to" name="to" type="date" value={day(filters.to, true)} /></div>
+        <div class="flex flex-wrap gap-2">
+          <Button type="submit" class="min-h-11">{a.apply}</Button>
+          <Button href="?" variant="outline" class="min-h-11">{a.reset}</Button>
+        </div>
+      </form>
+      <p class="mt-4"><Button href={`/api/organizations/audit-export?${exportQuery.toString()}`} variant="outline" class="min-h-11" download data-testid="audit-export">{a.exportCsv}</Button></p>
+    </CardContent>
+  </Card>
+  <Card>
+    <CardHeader><CardTitle><h2 class="text-lg font-semibold">{fill(a.pageOf, { page, pages })}</h2></CardTitle></CardHeader>
+    <CardContent>
+      {rows.length === 0 ? <p data-testid="audit-empty">{a.empty}</p> : (
+        <Table data-testid="audit-table">
+          <TableHeader><TableRow><TableHead scope="col">{a.date}</TableHead><TableHead scope="col">{a.action}</TableHead><TableHead scope="col">{a.outcome}</TableHead><TableHead scope="col">{a.user}</TableHead><TableHead scope="col">{a.resource}</TableHead></TableRow></TableHeader>
+          <TableBody>
+            {rows.map((r) => (
+              <TableRow>
+                <TableCell><time datetime={r.createdAt.toISOString()}>{fmt.format(r.createdAt)}</time></TableCell>
+                <TableCell><code dir="ltr">{r.action}</code></TableCell>
+                <TableCell>{(AUDIT_OUTCOMES as readonly string[]).includes(r.outcome) ? a.outcomes[r.outcome as (typeof AUDIT_OUTCOMES)[number]] : r.outcome}</TableCell>
+                <TableCell>{r.userName ?? '—'}</TableCell>
+                <TableCell><span dir="ltr">{[r.resource, r.resourceId].filter(Boolean).join(' · ') || '—'}</span></TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+      {pages > 1 && (
+        <nav class="mt-4 flex gap-2" aria-label={a.title}>
+          {page > 1 && <Button href={pageUrl(page - 1)} variant="outline" class="min-h-11" rel="prev">{a.previous}</Button>}
+          {page < pages && <Button href={pageUrl(page + 1)} variant="outline" class="min-h-11" rel="next">{a.next}</Button>}
+        </nav>
+      )}
+    </CardContent>
+  </Card>
+</div>

@@ -390,6 +390,44 @@ async function seedSubscriptions() {
   return { subscriptionsSeed: { planId: plan!.id, subscriptionId: subscription!.id } };
 }
 
+/**
+ * Rôles et audit d'organisation : tenant dont SEED_ADMIN est propriétaire, SEED_USER membre limité
+ * à un site (ligne site_access) et une entrée d'audit refusée — pages « Accès par site » et
+ * « Journal d'audit » auditées avec du contenu réel. Les lignes d'audit (append-only) restent.
+ */
+export const A11Y_ROLES_ORG = 'a11y-roles-org';
+const A11Y_ROLES_SITE = 'a11y-roles-site';
+
+async function deleteRolesSeed() {
+  const { getDrizzle, schema } = await import('../../src/database/drizzle');
+  const { sites } = await import('../../src/database/schemas');
+  const { eq } = await import('drizzle-orm');
+  const db = getDrizzle();
+  await db.delete(sites).where(eq(sites.slug, A11Y_ROLES_SITE)).catch(() => {});
+  await db.delete(schema.organization).where(eq(schema.organization.id, A11Y_ROLES_ORG)).catch(() => {});
+}
+
+async function seedRoles() {
+  const { getDrizzle, schema } = await import('../../src/database/drizzle');
+  const { sites, siteAccess } = await import('../../src/database/schemas');
+  const { logAuditEvent } = await import('../../src/lib/audit');
+  const { inArray } = await import('drizzle-orm');
+  await deleteRolesSeed();
+  const db = getDrizzle();
+  const users = await db.select({ id: schema.user.id, email: schema.user.email }).from(schema.user).where(inArray(schema.user.email, [SEED_ADMIN.email, SEED_USER.email]));
+  const owner = users.find((u) => u.email === SEED_ADMIN.email)!;
+  const restricted = users.find((u) => u.email === SEED_USER.email)!;
+  await db.insert(schema.organization).values({ id: A11Y_ROLES_ORG, name: 'Tenant rôles A11y', slug: A11Y_ROLES_ORG, createdAt: new Date() });
+  await db.insert(schema.member).values([
+    { id: `${A11Y_ROLES_ORG}-owner`, organizationId: A11Y_ROLES_ORG, userId: owner.id, role: 'owner', createdAt: new Date() },
+    { id: `${A11Y_ROLES_ORG}-member`, organizationId: A11Y_ROLES_ORG, userId: restricted.id, role: 'member', createdAt: new Date() },
+  ]);
+  const [site] = await db.insert(sites).values({ slug: A11Y_ROLES_SITE, name: 'Site rôles A11y', organizationId: A11Y_ROLES_ORG, domains: [] }).returning({ id: sites.id });
+  await db.insert(siteAccess).values({ organizationId: A11Y_ROLES_ORG, siteId: site!.id, userId: restricted.id, role: null, createdBy: owner.id });
+  await logAuditEvent({ userId: restricted.id, action: 'crm.permission.denied', module: 'crm', organizationId: A11Y_ROLES_ORG, siteId: site!.id, outcome: 'denied', resource: 'permission', metadata: { reason: 'site' } });
+  return { rolesOrg: { slug: A11Y_ROLES_ORG } };
+}
+
 async function setup() {
   process.env.NODE_ENV = 'test';
 
@@ -450,7 +488,10 @@ async function setup() {
   const subs = await seedSubscriptions();
   console.log(`[a11y] Subscription plan ${A11Y_SUBSCRIPTION_PLAN} and an active subscription seeded`);
 
-  const data = { userCookie, adminCookie: freshAdminCookie, ...shop, ...logistics, ...subs };
+  const roles = await seedRoles();
+  console.log(`[a11y] Organization ${A11Y_ROLES_ORG} with site access and audit entries seeded`);
+
+  const data = { userCookie, adminCookie: freshAdminCookie, ...shop, ...logistics, ...subs, ...roles };
   writeFileSync(COOKIES_PATH, JSON.stringify(data, null, 2));
   console.log(`[a11y] Cookies written to ${COOKIES_PATH}`);
 }
@@ -468,6 +509,7 @@ async function teardown() {
   await deleteFxSeed();
   await deletePortalSeed();
   await deleteSubscriptionsSeed();
+  await deleteRolesSeed();
 
   if (existsSync(COOKIES_PATH)) {
     unlinkSync(COOKIES_PATH);
