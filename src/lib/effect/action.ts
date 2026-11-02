@@ -108,9 +108,12 @@ export const requireActionPermission = (context: Pick<ActionAPIContext, 'locals'
  * - administrateur global : tout ;
  * - ressource plateforme : RBAC global (`userHasPermission`) ;
  * - ressource d'organisation : propriétaire / administrateur de CETTE organisation
- *   uniquement (autre organisation ou simple membre → FORBIDDEN).
+ *   uniquement ; autres rôles : rôles dynamiques de l'organisation (autre organisation ou
+ *   simple membre → FORBIDDEN) ;
+ * - accès par site (`site_access`) : un membre restreint n'agit que sur ses sites (`siteId` de la
+ *   ressource, à défaut le site courant) ; le propriétaire n'est jamais restreint.
  */
-export const requireTenantPermission = (context: Pick<ActionAPIContext, 'locals'>, permissions: Permissions, organizationId: string | null) =>
+export const requireTenantPermission = (context: Pick<ActionAPIContext, 'locals'>, permissions: Permissions, organizationId: string | null, siteId?: string | null) =>
   Effect.gen(function* () {
     const user = context.locals.user;
     if (!user) return yield* fail('UNAUTHORIZED', 'Vous devez être connecté pour effectuer cette action.');
@@ -119,7 +122,7 @@ export const requireTenantPermission = (context: Pick<ActionAPIContext, 'locals'
     if (tenant.isGlobalAdmin(user)) return user;
     if (organizationId === null) return yield* requireActionPermission(context, permissions);
     // Propriétaire/admin d'org : tout dans SON org ; autres rôles : rôles dynamiques de l'org.
-    const decision = yield* tenant.tenantPermission(user, organizationId, permissions);
+    const decision = yield* tenant.tenantPermission(user, organizationId, permissions, siteId ?? context.locals.site?.id ?? null);
     if (!decision.allowed) {
       return yield* fail('FORBIDDEN', "Vous ne pouvez gérer que le contenu de votre organisation.");
     }
@@ -134,13 +137,13 @@ export const requireTenantPermission = (context: Pick<ActionAPIContext, 'locals'
 export const requireTenantResourcePermission = (
   context: ActionAPIContext,
   permissions: Permissions,
-  loadOrganization: () => Promise<ReadonlyArray<{ organizationId: string | null }>>,
+  loadOrganization: () => Promise<ReadonlyArray<{ organizationId: string | null; siteId?: string | null }>>,
 ) =>
   Effect.gen(function* () {
     if (!context.locals.user) return yield* fail('UNAUTHORIZED', 'Vous devez être connecté pour effectuer cette action.');
     const [row] = yield* actionTry('permissions.tenantResource', loadOrganization);
     if (!row) return yield* fail('NOT_FOUND', 'Élément introuvable.');
-    return yield* requireTenantPermission(context, permissions, row.organizationId ?? null);
+    return yield* requireTenantPermission(context, permissions, row.organizationId ?? null, row.siteId);
   });
 
 /** Limite par utilisateur et par portée (mêmes clés que `adminRateLimit`). */

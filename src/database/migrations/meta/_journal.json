@@ -351,6 +351,13 @@
       "when": 1793557805833,
       "tag": "0049_event_outbox_low_stock",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1793612961047,
+      "tag": "0050_site_access",
+      "breakpoints": true
     }
   ]
 }
