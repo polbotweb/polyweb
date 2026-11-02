@@ -99,7 +99,7 @@
     "embla-carousel": "^8.6.0",
     "embla-carousel-autoplay": "^8.6.0",
     "isomorphic-dompurify": "^4.6.0",
-    "motion": "^14.3.0",
+    "motion": "^14.8.0",
     "nodemailer": "^10.2.1",
     "pdf-lib": "^1.17.1",
     "pg": "^8.23.1",
