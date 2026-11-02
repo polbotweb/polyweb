@@ -56,7 +56,7 @@ describe('email outbox', () => {
     expect(sent).toHaveLength(1);
     expect(sent[0]!.subject).toBe('Hello 1');
     const header = sent[0]!.headers!['List-Unsubscribe']!;
-    expect(sent[0]!.headers!['List-Unsubscribe-Post']).toBe('List-Unsubscribe=One-Click');
+    expect(sent[0]!.headers!['List-Unsubscribe-Post']).toBeUndefined();
     const token = decodeURIComponent(/token=([^>]+)>/.exec(header)![1]!);
     expect(header.startsWith('<https://site.test/en/notifications/unsubscribe?token=')).toBe(true);
     expect(verifyUnsubscribeToken(token, 'test-secret')).toMatchObject({ userId, category: 'billing', channel: 'email' });

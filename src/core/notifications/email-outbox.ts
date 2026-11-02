@@ -4,6 +4,8 @@
  * `/api/cron/notifications` appelle `processEmailOutbox` : verrou par ligne, rendu du gabarit,
  * envoi, backoff exponentiel persistant, abandon (`failed`) après `EMAIL_OUTBOX_MAX_ATTEMPTS`.
  * Les e-mails d'authentification restent envoyés en direct (hors outbox).
+ * `List-Unsubscribe` pointe vers la page de confirmation (RFC 2369) ; le POST « un clic » RFC 8058
+ * n'est pas annoncé tant que le contrôle d'Origin CSRF ne l'exempte pas (décision à valider).
  * Aucune PII dans les logs : `last_error` ne contient qu'un code d'erreur.
  */
 import { and, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
@@ -99,7 +101,7 @@ const deliverOne = (id: string, now: Date, send: EmailSender): Effect.Effect<Out
         send({
           to: row.toEmail,
           ...email,
-          ...(unsubscribeUrl ? { headers: { "List-Unsubscribe": `<${unsubscribeUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } } : {}),
+          ...(unsubscribeUrl ? { headers: { "List-Unsubscribe": `<${unsubscribeUrl}>` } } : {}),
         }),
       ),
       Effect.result,
