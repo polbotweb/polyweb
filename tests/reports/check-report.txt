@@ -1,12 +1,12 @@
 
-> polyweb@0.0.1 check /workspace/b4-api
+> polyweb@0.0.1 check /workspace/b5-roles
 > astro check
 
-19:08:39 [@astrojs/node] Enabling sessions with filesystem storage
-19:08:39 [content] Syncing content
-19:08:39 [content] Synced content
-19:08:39 [types] Generated 185ms
-19:08:39 [check] Getting diagnostics for Astro files in /workspace/b4-api...
+10:18:49 [@astrojs/node] Enabling sessions with filesystem storage
+10:18:49 [content] Syncing content
+10:18:49 [content] Synced content
+10:18:49 [types] Generated 120ms
+10:18:49 [check] Getting diagnostics for Astro files in /workspace/b5-roles...
 [96msrc/actions/admin/pages.ts[0m:[93m4[0m:[93m38[0m - [93mwarning[0m[90m ts(6133): [0m'isNotNull' is declared but its value is never read.
 
 [7m4[0m import { eq, and, asc, desc, isNull, isNotNull, inArray, max } from "drizzle-orm";
@@ -250,6 +250,15 @@
 [7m13[0m import type { Locale } from "@i18n/config";
 [7m  [0m [93m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
 
+[96mtests/integration/audit.test.ts[0m:[93m109[0m:[93m11[0m - [93mwarning[0m[90m ts(6133): [0m'db' is declared but its value is never read.
+
+[7m109[0m     const db = getDrizzle();
+[7m   [0m [93m          ~~[0m
+[96mtests/integration/audit.test.ts[0m:[93m16[0m:[93m11[0m - [93mwarning[0m[90m ts(6133): [0m'db' is declared but its value is never read.
+
+[7m16[0m     const db = getDrizzle();
+[7m  [0m [93m          ~~[0m
+
 [96mtests/integration/auth-plugins.test.ts[0m:[93m87[0m:[93m122[0m - [93mwarning[0m[90m ts(6385): [0m'toThrowError' is deprecated.
 
 [7m87[0m     await expect(auth.api.getFullOrganization({ query: { organizationId: org!.id }, headers: outsiderHeaders })).rejects.toThrowError(APIError);
@@ -263,13 +272,18 @@
 [7m42[0m     await expect(auth.api.signInEmail({ body: { email: target.email, password: target.password } })).rejects.toThrowError(APIError);
 [7m  [0m [93m                                                                                                             ~~~~~~~~~~~~[0m
 
+[96mtests/integration/contact-api.test.ts[0m:[93m59[0m:[93m13[0m - [93mwarning[0m[90m ts(6133): [0m'db' is declared but its value is never read.
+
+[7m59[0m       const db = getDrizzle();
+[7m  [0m [93m            ~~[0m
+
 [96mtests/integration/payments.test.ts[0m:[93m23[0m:[93m20[0m - [93mwarning[0m[90m ts(6133): [0m'bookingsResources' is declared but its value is never read.
 
 [7m23[0m import { bookings, bookingsResources } from '@/modules/bookings/schema';
 [7m  [0m [93m                   ~~~~~~~~~~~~~~~~~[0m
 
-Result (1762 files): 
+Result (1800 files): 
 - 0 errors
 - 0 warnings
-- 59 hints
+- 62 hints
 
