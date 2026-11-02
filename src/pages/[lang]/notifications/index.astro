@@ -1,0 +1,21 @@
+---
+/** Mes notifications (N7-A) : session requise ; liste, filtre, pagination, marquage lu. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AuthSidebar from "@organisms/AuthSidebar/AuthSidebar.astro";
+import NotificationsView from "@/components/notifications/NotificationsView.astro";
+import { getNotificationsTranslations } from "@/core/notifications/i18n";
+import { notificationsPage } from "@/core/notifications/pages";
+
+export const prerender = false;
+const result = await notificationsPage(Astro);
+if ("redirect" in result) return result.redirect;
+const view = result;
+const t = getNotificationsTranslations(view.locale);
+---
+<BaseLayout title={t.title} description={t.intro}>
+  <AuthLayout title={t.title}>
+    <AuthSidebar slot="sidebar" t={view.authT} locale={view.locale} user={view.user} activeItem="notifications" />
+    <NotificationsView locale={view.locale} items={view.items} unread={view.unread} unreadOnly={view.unreadOnly} page={view.page} hasNext={view.hasNext} />
+  </AuthLayout>
+</BaseLayout>

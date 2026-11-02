@@ -1,0 +1,38 @@
+---
+/** Préférences catégorie × canal : une case par canal disponible, groupées par catégorie (fieldset/legend). */
+import type { Locale } from "@i18n/config";
+import { categoryLabel, getNotificationsTranslations } from "@/core/notifications/i18n";
+import type { PreferenceRow } from "@/core/notifications/pages";
+import { Button } from "@atoms/button";
+import PublicNotice from "@/components/bookings/public/PublicNotice.astro";
+
+interface Props { locale: Locale; rows: readonly PreferenceRow[]; saved: boolean }
+const { locale, rows, saved } = Astro.props;
+const t = getNotificationsTranslations(locale);
+---
+<section class="grid gap-6" aria-labelledby="preferences-title">
+  <header class="grid gap-2">
+    <h1 id="preferences-title" class="font-heading text-3xl font-semibold text-foreground">{t.preferences}</h1>
+    <p class="text-foreground">{t.preferencesIntro}</p>
+  </header>
+  {saved && <PublicNotice kind="success" id="preferences-saved"><p>{t.saved}</p></PublicNotice>}
+  {rows.length === 0 ? (
+    <p class="text-foreground">{t.noCategories}</p>
+  ) : (
+    <form method="post" class="grid gap-4" data-testid="preferences-form">
+      {rows.map((row) => (
+        <fieldset class="grid gap-2 rounded-lg border border-border p-4">
+          <legend class="px-1 font-medium text-foreground">{categoryLabel(t, row.category)}</legend>
+          {row.channels.map(({ channel, enabled }) => (
+            <label class="flex min-h-11 items-center gap-3 text-foreground">
+              <input type="checkbox" class="size-5 accent-primary" name={`${row.category}:${channel}`} checked={enabled} />
+              <span>{t.channels[channel]}</span>
+            </label>
+          ))}
+        </fieldset>
+      ))}
+      <div><Button type="submit">{t.save}</Button></div>
+    </form>
+  )}
+  <p><a class="text-foreground underline underline-offset-4" href={`/${locale}/notifications`}>{t.title}</a></p>
+</section>

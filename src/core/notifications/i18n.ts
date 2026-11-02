@@ -8,6 +8,9 @@ export type NotificationsTranslations = {
   receivedAt: string; preferences: string; preferencesIntro: string; category: string; save: string; saved: string; noCategories: string;
   channels: Record<NotificationChannel, string>;
   categories: Record<string, string>;
+  /** Libellés par `module:TYPE`, avec variables `{nom}` tirées de `notifications.data`. */
+  types: Record<string, string>;
+  status: string; actions: string; notificationsLink: string;
   unsubscribe: {
     title: string; confirm: string; button: string; done: string; invalid: string; manage: string;
   };
@@ -21,6 +24,8 @@ const fr: NotificationsTranslations = {
   category: "Catégorie", save: "Enregistrer les préférences", saved: "Préférences enregistrées.", noCategories: "Aucune catégorie de notification n'est disponible.",
   channels: { in_app: "Dans l'application", email: "Par e-mail" },
   categories: { comments: "Commentaires", reviews: "Avis", publishing: "Publications", mentions: "Mentions", billing: "Facturation", system: "Système" },
+  types: { "sales:INVOICE_REMINDER_SENT": "Relance n°{level} envoyée pour la facture {number} ({daysOverdue} jours de retard)" },
+  status: "État", actions: "Actions", notificationsLink: "Notifications ({count} non lue(s))",
   unsubscribe: {
     title: "Se désinscrire", confirm: "Ne plus recevoir les e-mails de la catégorie « {category} » ?", button: "Confirmer la désinscription",
     done: "C'est fait : vous ne recevrez plus d'e-mails de la catégorie « {category} ».", invalid: "Ce lien de désinscription est invalide ou a expiré.",
@@ -35,6 +40,8 @@ const en: NotificationsTranslations = {
   category: "Category", save: "Save preferences", saved: "Preferences saved.", noCategories: "No notification category is available.",
   channels: { in_app: "In the app", email: "By email" },
   categories: { comments: "Comments", reviews: "Reviews", publishing: "Publishing", mentions: "Mentions", billing: "Billing", system: "System" },
+  types: { "sales:INVOICE_REMINDER_SENT": "Reminder #{level} sent for invoice {number} ({daysOverdue} days overdue)" },
+  status: "Status", actions: "Actions", notificationsLink: "Notifications ({count} unread)",
   unsubscribe: {
     title: "Unsubscribe", confirm: "Stop receiving emails in the “{category}” category?", button: "Confirm unsubscribe",
     done: "Done: you will no longer receive emails in the “{category}” category.", invalid: "This unsubscribe link is invalid or has expired.",
@@ -49,6 +56,8 @@ const es: NotificationsTranslations = {
   category: "Categoría", save: "Guardar preferencias", saved: "Preferencias guardadas.", noCategories: "No hay ninguna categoría de notificación disponible.",
   channels: { in_app: "En la aplicación", email: "Por correo" },
   categories: { comments: "Comentarios", reviews: "Opiniones", publishing: "Publicaciones", mentions: "Menciones", billing: "Facturación", system: "Sistema" },
+  types: { "sales:INVOICE_REMINDER_SENT": "Recordatorio n.º {level} enviado para la factura {number} ({daysOverdue} días de retraso)" },
+  status: "Estado", actions: "Acciones", notificationsLink: "Notificaciones ({count} sin leer)",
   unsubscribe: {
     title: "Darse de baja", confirm: "¿Dejar de recibir correos de la categoría «{category}»?", button: "Confirmar la baja",
     done: "Hecho: ya no recibirá correos de la categoría «{category}».", invalid: "Este enlace de baja no es válido o ha caducado.",
@@ -63,6 +72,8 @@ const ar: NotificationsTranslations = {
   category: "الفئة", save: "حفظ التفضيلات", saved: "تم حفظ التفضيلات.", noCategories: "لا توجد فئة إشعارات متاحة.",
   channels: { in_app: "داخل التطبيق", email: "عبر البريد الإلكتروني" },
   categories: { comments: "التعليقات", reviews: "المراجعات", publishing: "النشر", mentions: "الإشارات", billing: "الفوترة", system: "النظام" },
+  types: { "sales:INVOICE_REMINDER_SENT": "تم إرسال التذكير رقم {level} للفاتورة {number} (تأخير {daysOverdue} يومًا)" },
+  status: "الحالة", actions: "الإجراءات", notificationsLink: "الإشعارات ({count} غير مقروء)",
   unsubscribe: {
     title: "إلغاء الاشتراك", confirm: "هل تريد التوقف عن تلقي رسائل فئة «{category}»؟", button: "تأكيد إلغاء الاشتراك",
     done: "تم: لن تتلقى بعد الآن رسائل فئة «{category}».", invalid: "رابط إلغاء الاشتراك هذا غير صالح أو منتهي الصلاحية.",
@@ -78,3 +89,14 @@ export const categoryLabel = (t: NotificationsTranslations, category: string) =>
 
 export const fill = (template: string, values: Record<string, string | number>) =>
   template.replace(/\{(\w+)\}/g, (match, name: string) => (name in values ? String(values[name]) : match));
+
+/** Libellé d'une notification : type traduit (variables de `data`), sinon titre stocké, sinon catégorie. */
+export function notificationLabel(t: NotificationsTranslations, n: { module: string; type: string; category: string; title?: string | null; data?: unknown }) {
+  const template = t.types[`${n.module}:${n.type}`];
+  if (template) {
+    const values: Record<string, string | number> = {};
+    for (const [k, v] of Object.entries((n.data ?? {}) as Record<string, unknown>)) if (typeof v === "string" || typeof v === "number") values[k] = v;
+    return fill(template, values);
+  }
+  return n.title || categoryLabel(t, n.category);
+}

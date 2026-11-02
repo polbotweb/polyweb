@@ -1,0 +1,68 @@
+---
+/** Liste des notifications de l'utilisateur : filtre lues/non lues, pagination, marquage lu (formulaires, sans JS). */
+import type { Locale } from "@i18n/config";
+import { fill, getNotificationsTranslations, notificationLabel } from "@/core/notifications/i18n";
+import { notificationsPath } from "@/core/notifications/pages";
+import { Button } from "@atoms/button";
+
+interface Item { id: string; module: string; type: string; category: string; title: string | null; message: string | null; data: unknown; readAt: Date | null; createdAt: Date }
+interface Props { locale: Locale; items: readonly Item[]; unread: number; unreadOnly: boolean; page: number; hasNext: boolean }
+const { locale, items, unread, unreadOnly, page, hasNext } = Astro.props;
+const t = getNotificationsTranslations(locale);
+const when = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
+const self = notificationsPath(locale, { unread: unreadOnly, page });
+const link = "text-foreground underline underline-offset-4";
+---
+<section class="grid gap-6" aria-labelledby="notifications-title">
+  <header class="grid gap-2">
+    <h1 id="notifications-title" class="font-heading text-3xl font-semibold text-foreground">{t.title}</h1>
+    <p class="text-foreground">{t.intro}</p>
+    <p class="text-foreground" data-testid="notifications-unread">{fill(t.unreadCount, { count: unread })}</p>
+  </header>
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <nav aria-label={t.filterLabel}>
+      <ul class="flex gap-4">
+        <li><a class={link} href={notificationsPath(locale)} aria-current={unreadOnly ? undefined : "page"}>{t.filterAll}</a></li>
+        <li><a class={link} href={notificationsPath(locale, { unread: true })} aria-current={unreadOnly ? "page" : undefined}>{t.filterUnread}</a></li>
+      </ul>
+    </nav>
+    <div class="flex flex-wrap items-center gap-4">
+      {unread > 0 && (
+        <form method="post" action={self}>
+          <input type="hidden" name="intent" value="read-all" />
+          <Button type="submit" variant="outline">{t.markAllRead}</Button>
+        </form>
+      )}
+      <a class={link} href={`/${locale}/notifications/preferences`}>{t.preferences}</a>
+    </div>
+  </div>
+  {items.length === 0 ? (
+    <p class="text-foreground" data-testid="notifications-empty">{t.empty}</p>
+  ) : (
+    <ul class="grid gap-3" data-testid="notifications-list">
+      {items.map((n) => (
+        <li class:list={["grid gap-2 rounded-lg border border-border p-4 sm:flex sm:items-center sm:justify-between", { "bg-muted": !n.readAt }]}>
+          <div class="grid gap-1">
+            <p id={`notif-${n.id}`} class="font-medium text-foreground">{notificationLabel(t, n)}</p>
+            {n.message && <p class="text-foreground">{n.message}</p>}
+            <p class="text-sm text-foreground">
+              <span>{n.readAt ? t.read : t.unread}</span> · <span>{t.receivedAt} <time datetime={new Date(n.createdAt).toISOString()}>{when.format(new Date(n.createdAt))}</time></span>
+            </p>
+          </div>
+          {!n.readAt && (
+            <form method="post" action={self}>
+              <input type="hidden" name="id" value={n.id} />
+              <Button type="submit" variant="outline" size="sm" aria-describedby={`notif-${n.id}`}>{t.markRead}</Button>
+            </form>
+          )}
+        </li>
+      ))}
+    </ul>
+  )}
+  {(page > 1 || hasNext) && (
+    <nav aria-label={t.pagination} class="flex gap-6">
+      {page > 1 && <a class={link} rel="prev" href={notificationsPath(locale, { unread: unreadOnly, page: page - 1 })}>{t.previous}</a>}
+      {hasNext && <a class={link} rel="next" href={notificationsPath(locale, { unread: unreadOnly, page: page + 1 })}>{t.next}</a>}
+    </nav>
+  )}
+</section>
