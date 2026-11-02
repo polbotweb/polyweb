@@ -34,6 +34,8 @@ export interface EmailSection {
   buttonUrl: string;
   extra?: string;     // e.g. expiry notice
   footnote: string;   // e.g. "ignore this email if…"
+  /** Lien de désinscription (notifications, N5-A) affiché dans le pied de page. */
+  unsubscribe?: { label: string; url: string };
 }
 
 export function renderEmailHtml(
@@ -161,7 +163,10 @@ export function renderEmailHtml(
             <tr><td style="padding:16px;text-align:center">
               <p style="margin:0;font-size:11px;color:#94a3b8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.4">
                 ${layout.footer}
-              </p>
+              </p>${section.unsubscribe ? `
+              <p style="margin:8px 0 0;font-size:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.4">
+                <a href="${esc(section.unsubscribe.url)}" style="color:#6d28d9;text-decoration:underline">${esc(section.unsubscribe.label)}</a>
+              </p>` : ''}
             </td></tr>
           </table>
         </td></tr>
@@ -192,5 +197,6 @@ export function renderEmailText(
     lines.push('', section.extra);
   }
   lines.push('', '---', section.footnote);
+  if (section.unsubscribe) lines.push('', `${section.unsubscribe.label} : ${section.unsubscribe.url}`);
   return lines.join('\n');
 }
