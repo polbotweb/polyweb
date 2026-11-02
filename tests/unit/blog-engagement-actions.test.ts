@@ -40,7 +40,7 @@ vi.mock('@database/schemas', () => ({
   blogPostReactions: { postId: 'postId', userId: 'userId', reactionType: 'reactionType' },
   blogPostFavorites: { postId: 'postId', userId: 'userId' },
   blogReports: { id: 'id', postId: 'postId', commentId: 'commentId', reviewId: 'reviewId', status: 'status', reporterId: 'reporterId', createdAt: 'createdAt' },
-  blogNotifications: { id: 'id', userId: 'userId', isRead: 'isRead', postId: 'postId', commentId: 'commentId', reviewId: 'reviewId', fromUserId: 'fromUserId', createdAt: 'createdAt' },
+  notifications: { id: 'id', userId: 'userId', module: 'module', readAt: 'readAt', organizationId: 'organizationId', resourceType: 'resourceType', resourceId: 'resourceId', actorId: 'actorId', createdAt: 'createdAt' },
   blogPostViewStats: { id: 'id', postId: 'postId' },
 }));
 
@@ -266,7 +266,7 @@ describe('moderateBlogComment', () => {
     );
 
     expect(notificationInsert.values).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'COMMENT_APPROVED', commentId: 'comment-1' }),
+      expect.objectContaining({ module: 'blog', type: 'COMMENT_APPROVED', data: expect.objectContaining({ commentId: 'comment-1' }) }),
     );
     expect(notificationInsert.values.mock.calls[0][0]).not.toHaveProperty('postId');
     expect(mockTransaction).toHaveBeenCalledOnce();
@@ -295,7 +295,7 @@ describe('createBlogReview', () => {
       expect(result).toEqual({ success: true });
       expect(mockTransaction).toHaveBeenCalledOnce();
       expect(notificationInsert.values).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'REVIEW_APPROVED', reviewId: 'review-1' }),
+        expect.objectContaining({ module: 'blog', type: 'REVIEW_APPROVED', data: { reviewId: 'review-1' } }),
       );
       expect(notificationInsert.values.mock.calls[0][0]).not.toHaveProperty('postId');
     });
@@ -555,7 +555,7 @@ describe('notifications', () => {
     const result = await markRead.handler({ id: 'notif-1' }, userCtx('user-1'));
 
     expect(result).toEqual({ success: true });
-    expect(updateChain.set).toHaveBeenCalledWith({ isRead: true });
+    expect(updateChain.set).toHaveBeenCalledWith({ readAt: expect.any(Date) });
   });
 
   it('markAllBlogNotificationsRead requires authentication', async () => {

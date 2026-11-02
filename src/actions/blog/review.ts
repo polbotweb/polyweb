@@ -4,7 +4,8 @@ import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { eq, and, count, isNull } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
-import { blogPostReviews, blogPostReviewHelpful, blogPosts, blogNotifications } from "@database/schemas";
+import { blogPostReviews, blogPostReviewHelpful, blogPosts, notifications } from "@database/schemas";
+import { notificationRow } from "@/core/notifications";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { blogReviewFormSchema, blogReviewModerationSchema } from "@/lib/blog/validation";
 import { publicBlogPostScope } from "@/lib/blog/public-visibility";
@@ -51,15 +52,16 @@ export const createBlogReview = defineAction({
         .returning();
 
       if (post.authorId !== user.id) {
-        await tx.insert(blogNotifications).values({
+        await tx.insert(notifications).values(notificationRow({
           userId: post.authorId,
           organizationId: post.organizationId,
+          module: "blog",
           type: "NEW_REVIEW",
-          postId: input.postId,
-          reviewId: createdReview.id,
-          fromUserId: user.id,
-          metadata: { rating: input.rating },
-        });
+          resourceType: "post",
+          resourceId: input.postId,
+          actorId: user.id,
+          data: { reviewId: createdReview.id, metadata: { rating: input.rating } },
+        }));
       }
 
       return createdReview;
@@ -115,13 +117,16 @@ export const moderateBlogReview = defineAction({
         && review.authorId
         && review.authorId !== user.id
       ) {
-        await tx.insert(blogNotifications).values({
+        await tx.insert(notifications).values(notificationRow({
           userId: review.authorId,
           organizationId: review.organizationId,
+          module: "blog",
           type: "REVIEW_APPROVED",
-          reviewId: review.id,
-          fromUserId: user.id,
-        });
+          resourceType: "post",
+          resourceId: review.postId,
+          actorId: user.id,
+          data: { reviewId: review.id },
+        }));
       }
     });
 

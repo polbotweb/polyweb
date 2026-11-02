@@ -20,6 +20,7 @@ export * from "./schemas/site-access.schema";
 export * from "./schemas/api.schema";
 export * from "./schemas/webhooks.schema";
 export * from "./schemas/event-outbox.schema";
+export * from "./schemas/notifications.schema";
 export * from "./schemas/forms.schema";
 export * from "./schemas/plugins.schema";
 export * from "./schemas/search.schema";

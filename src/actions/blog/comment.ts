@@ -3,7 +3,8 @@ import { resolveBlogTenant, auditBlog, blogOrganizationIdSchema, invalidateBlogC
 import { defineAction, ActionError } from "astro:actions";
 import { eq, and, isNull } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
-import { blogComments, blogCommentModerations, blogPosts, blogNotifications } from "@database/schemas";
+import { blogComments, blogCommentModerations, blogPosts, notifications } from "@database/schemas";
+import { notificationRow } from "@/core/notifications";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { blogCommentFormSchema, blogCommentModerationSchema } from "@/lib/blog/validation";
 import { publicBlogPostScope } from "@/lib/blog/public-visibility";
@@ -170,22 +171,27 @@ export const moderateBlogComment = defineAction({
 
       if (comment.authorId && comment.authorId !== user.id) {
         if (becameApproved) {
-          await tx.insert(blogNotifications).values({
+          await tx.insert(notifications).values(notificationRow({
             userId: comment.authorId,
             organizationId: comment.organizationId,
+            module: "blog",
             type: "COMMENT_APPROVED",
-            commentId: comment.id,
-            fromUserId: user.id,
-            metadata: { content: newContent.slice(0, 200) },
-          });
+            resourceType: "post",
+            resourceId: comment.postId,
+            actorId: user.id,
+            data: { commentId: comment.id, metadata: { content: newContent.slice(0, 200) } },
+          }));
         } else if (becameRejected) {
-          await tx.insert(blogNotifications).values({
+          await tx.insert(notifications).values(notificationRow({
             userId: comment.authorId,
             organizationId: comment.organizationId,
+            module: "blog",
             type: "COMMENT_REJECTED",
-            commentId: comment.id,
-            fromUserId: user.id,
-          });
+            resourceType: "post",
+            resourceId: comment.postId,
+            actorId: user.id,
+            data: { commentId: comment.id },
+          }));
         }
       }
 
@@ -209,15 +215,16 @@ export const moderateBlogComment = defineAction({
         }
 
         if (recipientId && recipientId !== user.id && recipientId !== comment.authorId) {
-          await tx.insert(blogNotifications).values({
+          await tx.insert(notifications).values(notificationRow({
             userId: recipientId,
             organizationId: comment.organizationId,
+            module: "blog",
             type: notificationType,
-            postId: comment.postId,
-            commentId: comment.id,
-            fromUserId: comment.authorId,
-            metadata: { content: newContent.slice(0, 200) },
-          });
+            resourceType: "post",
+            resourceId: comment.postId,
+            actorId: comment.authorId,
+            data: { commentId: comment.id, metadata: { content: newContent.slice(0, 200) } },
+          }));
         }
       }
 

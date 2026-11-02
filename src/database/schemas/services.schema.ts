@@ -244,4 +244,4 @@ export const serviceReports = pgTable("service_reports", { id: text("id").primar
 
 export const serviceViewStats = pgTable("service_view_stats", { id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()), serviceId: text("service_id").notNull().references(() => services.id, { onDelete: "cascade" }), viewedAt: timestamp("viewed_at").defaultNow().notNull(), date: text("date").notNull(), hour: integer("hour").notNull(), referrer: text("referrer"), country: varchar("country", { length: 2 }) }, (table) => [index("service_view_stats_service_idx").on(table.serviceId), check("service_view_stats_hour_range", sql`${table.hour} BETWEEN 0 AND 23`)]);
 
-export { serviceReactions, serviceNotifications, serviceAttributeDefinitions, serviceAttributeValues } from "./services-engagement.schema";
+export { serviceReactions, serviceAttributeDefinitions, serviceAttributeValues } from "./services-engagement.schema";
