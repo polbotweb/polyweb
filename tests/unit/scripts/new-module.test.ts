@@ -39,6 +39,19 @@ describe('scripts/new-module.ts', () => {
     expect(index.match(/permProbesPermissions,/g)).toHaveLength(1);
   });
 
+  it('declares the module notifications and registers them in modules/notifications.ts between the markers (idempotent)', () => {
+    mkdirSync(join(dir, 'modules'), { recursive: true });
+    writeFileSync(join(dir, 'modules/notifications.ts'), 'import { a } from "x";\n// @module-notifications:imports\nexport const MODULE_NOTIFICATIONS = [\n  a,\n  // @module-notifications:list\n] as const;\n');
+    run(['notif-probes']);
+    run(['notif-probes-two']);
+    const defs = readFileSync(join(dir, 'modules/notif-probes/notifications/definitions.ts'), 'utf8');
+    expect(defs).toContain('export const notifProbesNotifications = defineModuleNotifications("notif-probes", [');
+    const index = readFileSync(join(dir, 'modules/notifications.ts'), 'utf8');
+    expect(index).toContain('import { notifProbesNotifications } from "@/modules/notif-probes/notifications/definitions";');
+    expect(index).toContain('  notifProbesNotifications,\n  notifProbesTwoNotifications,\n  // @module-notifications:list');
+    expect(index.match(/notifProbesNotifications,/g)).toHaveLength(1);
+  });
+
   it('generates a read-only public API stub for the core/api registry (scope, tenant reader, empty events)', () => {
     const api = readFileSync(join(dir, 'modules/event-tickets/api/public-api.ts'), 'utf8');
     expect(api).toContain('export const eventTicketsApi: ModuleApiDeclaration');

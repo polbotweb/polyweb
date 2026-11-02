@@ -546,6 +546,19 @@ export const require${pascal}ResourcePermission = (context: ActionAPIContext, pe
   );
 `,
 
+  [`${moduleDir}/notifications/definitions.ts`]: `/**
+ * Notifications du module ${name} (registre core \`notifications/registry\`, docs/notifications.md).
+ * Types déclarés ici, libellés dans \`core/notifications/i18n\` (\`types["${name}:TYPE"]\`, 4 locales).
+ * Envoi : \`notify\` (in-app, préférences) / \`enqueueEmail\` (outbox) depuis les services du module.
+ * 3e et 4e arguments optionnels : gabarits e-mail (\`EmailTemplate\`) et sources de relance (\`ReminderSource\`).
+ */
+import { defineModuleNotifications } from "@/core/notifications/registry";
+
+export const ${camel}Notifications = defineModuleNotifications("${name}", [
+  { type: "${upper}_PUBLISHED", category: "publishing", channels: ["in_app"] },
+]);
+`,
+
   [`${moduleDir}/permissions/statements.ts`]: `/** Permissions du module ${name} (registre core \`permissions/registry\`). Sans import serveur : chargé côté client. */
 import { defineModulePermissions } from "@/core/permissions/registry";
 
@@ -1100,12 +1113,34 @@ if (current !== null) {
   }
 }
 
+// Inscription au registre des notifications (src/modules/notifications.ts, entre les marqueurs).
+const notificationsIndex = join(root, "modules", "notifications.ts");
+const currentNotifications = (() => {
+  try {
+    return readFileSync(notificationsIndex, "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+})();
+if (currentNotifications !== null && !currentNotifications.includes(`${camel}Notifications`)) {
+  writeFileSync(
+    notificationsIndex,
+    currentNotifications
+      .replace("// @module-notifications:imports", `import { ${camel}Notifications } from "@/modules/${name}/notifications/definitions";\n// @module-notifications:imports`)
+      .replace("  // @module-notifications:list", `  ${camel}Notifications,\n  // @module-notifications:list`),
+    "utf8",
+  );
+  console.log(`  ${notificationsIndex} (notifications « ${name} » inscrites)`);
+}
+
 console.log(`
 Module « ${name} » généré.
 
 Étapes suivantes :
   1. exporter le schéma et générer la migration  (src/modules/${name}/schema → src/database/schemas.ts, pnpm db:generate)
      permissions : ajuster les rôles prédéfinis (permissions/statements.ts, inscrit dans src/modules/permissions.ts)
+     notifications : types et libellés (notifications/definitions.ts, inscrit dans src/modules/notifications.ts, docs/notifications.md)
      si le domaine encaisse : register${pascal}Refunds() dans src/core/modules/bootstrap.ts (refunds.ts, docs/refunds.md)
      compléter ${camel}Loader / load${pascal}()      (src/modules/${name}/loaders/${entity}.loader.ts)
      API publique : registerModuleApi(${camel}Api) dans src/core/modules/bootstrap.ts (api/public-api.ts, docs/public-api.md)
