@@ -118,8 +118,9 @@ export const requireTenantPermission = (context: Pick<ActionAPIContext, 'locals'
     const tenant = yield* actionTry('permissions.tenant', () => import('@/core/permissions/tenant'));
     if (tenant.isGlobalAdmin(user)) return user;
     if (organizationId === null) return yield* requireActionPermission(context, permissions);
-    const organizationRole = yield* tenant.organizationRoleOf(user.id, organizationId);
-    if (!tenant.tenantAdminDecision({ actor: user, organizationId, organizationRole })) {
+    // Propriétaire/admin d'org : tout dans SON org ; autres rôles : rôles dynamiques de l'org.
+    const decision = yield* tenant.tenantPermission(user, organizationId, permissions);
+    if (!decision.allowed) {
       return yield* fail('FORBIDDEN', "Vous ne pouvez gérer que le contenu de votre organisation.");
     }
     return user;
