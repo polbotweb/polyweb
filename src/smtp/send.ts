@@ -10,7 +10,7 @@
 import { appendFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Data, Duration, Effect, Exit, Schedule } from 'effect';
-import type { EmailPayload, EmailFrom, SmtpProvider } from './types';
+import { EMAIL_HEADER_NAMES, type EmailPayload, type EmailFrom, type SmtpProvider } from './types';
 import { getSmtpProvider, getSmtpFrom } from './env';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -59,7 +59,9 @@ export const validatePayload = (payload: EmailPayload) =>
     ? Effect.fail(new InvalidEmailPayload({ reason: 'Invalid recipient email address' }))
     : /[\r\n]/.test(payload.subject)
       ? Effect.fail(new InvalidEmailPayload({ reason: 'Invalid subject — contains line terminators' }))
-      : Effect.void;
+      : Object.entries(payload.headers ?? {}).some(([name, value]) => !(EMAIL_HEADER_NAMES as readonly string[]).includes(name) || typeof value !== 'string' || /[\r\n]/.test(value) || value.length > 998)
+        ? Effect.fail(new InvalidEmailPayload({ reason: 'Invalid header' }))
+        : Effect.void;
 
 const deadLetter = (payload: EmailPayload, error: SmtpProviderError, attempts: number) =>
   Effect.tryPromise(async () => {
