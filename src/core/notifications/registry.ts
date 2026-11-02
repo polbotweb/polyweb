@@ -7,6 +7,7 @@ import type { Effect } from "effect";
 import type { PolywebEvent } from "@/core/events";
 import type { NotificationCategory } from "./index";
 import { hasEmailTemplate, registerEmailTemplates, type EmailTemplate } from "./email-templates";
+import { registerReminderSources, type ReminderSource } from "./reminders";
 
 export type NotificationChannel = "in_app" | "email";
 export const NOTIFICATION_CHANNELS: readonly NotificationChannel[] = ["in_app", "email"];
@@ -44,6 +45,8 @@ export interface ModuleNotifications {
   readonly definitions: readonly NotificationDefinition[];
   /** Gabarits e-mail du module (`defineEmailTemplate`), enregistrés avec les définitions. */
   readonly emailTemplates?: readonly EmailTemplate[];
+  /** Sources de relances planifiées du module (N6-A), exécutées par `/api/cron/reminders`. */
+  readonly reminders?: readonly ReminderSource[];
 }
 
 const TYPE = /^[A-Z][A-Z0-9_]*$/;
@@ -55,12 +58,14 @@ export function defineModuleNotifications(
   module: string,
   defs: readonly Omit<NotificationDefinition, "module">[],
   emailTemplates: readonly EmailTemplate[] = [],
+  reminders: readonly ReminderSource[] = [],
 ): ModuleNotifications {
-  return { module, definitions: defs.map((d) => ({ ...d, module })), emailTemplates };
+  return { module, definitions: defs.map((d) => ({ ...d, module })), emailTemplates, reminders };
 }
 
 export function registerNotificationDefinitions(entry: ModuleNotifications): void {
   registerEmailTemplates(entry.emailTemplates ?? []);
+  registerReminderSources(entry.reminders ?? []);
   for (const d of entry.definitions) {
     if (d.module !== entry.module) throw new Error(`Notification ${d.type} declared outside its module ${entry.module}`);
     if (!TYPE.test(d.type)) throw new Error(`Invalid notification type: ${d.type}`);

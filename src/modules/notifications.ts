@@ -5,11 +5,13 @@
 import { registerNotificationDefinitions } from "@/core/notifications/registry";
 import { blogNotifications } from "@/modules/blog/notifications/definitions";
 import { servicesNotifications } from "@/modules/services/notifications/definitions";
+import { salesNotifications } from "@/modules/sales/notifications/definitions";
 // @module-notifications:imports
 
 export const MODULE_NOTIFICATIONS = [
   blogNotifications,
   servicesNotifications,
+  salesNotifications,
   // @module-notifications:list
 ] as const;
 
