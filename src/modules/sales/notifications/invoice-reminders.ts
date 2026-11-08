@@ -4,10 +4,17 @@
  * transaction, met en file l'e-mail client (`email_outbox`, clé `sales.reminder:<id>:<niveau>`)
  * et notifie in-app l'auteur de la facture. Rejouable sans doublon ; une facture en erreur
  * n'interrompt pas les autres. Aucune PII journalisée (seulement des compteurs).
+ * L'e-mail client est transactionnel (`INVOICE_REMINDER_DUE`, D3). Langue (D2) : `defaultLocale` du
+ * premier site de l'organisation (validée parmi les 4 langues), sinon `DEFAULT_LOCALE` ; le lien de
+ * paiement suit la même langue.
  */
 import { Effect } from "effect";
 import { AppConfig } from "@/lib/effect/config";
-import { DEFAULT_LOCALE } from "@i18n/config";
+import { asc, eq } from "drizzle-orm";
+import { getDrizzle } from "@database/drizzle";
+import { sites } from "@database/schemas/content.schema";
+import { dbTry } from "@/lib/effect/run";
+import { asLocale } from "@/core/notifications/email-templates";
 import { isPaymentsEnabled } from "@/core/payments";
 import { enqueueEmail } from "@/core/notifications/email-outbox";
 import { notify } from "@/core/notifications/service";
@@ -18,13 +25,23 @@ import { payLinkPath, payLinkToken } from "../payments";
 import { INVOICE_REMINDER_TEMPLATE } from "./invoice-reminder-email";
 
 export const INVOICE_REMINDER_SENT = "INVOICE_REMINDER_SENT";
+/** E-mail de relance au client (transactionnel). */
+export const INVOICE_REMINDER_DUE = "INVOICE_REMINDER_DUE";
 export const reminderDedupeKey = (documentId: string, level: number) => `sales.reminder:${documentId}:${level}`;
+
+/** Langue des relances d'une organisation : `defaultLocale` de son premier site (création), validée ; sinon langue par défaut. */
+export const reminderLocale = (organizationId: string | null, executor: Pick<DbTransaction, "select"> = getDrizzle()) =>
+  organizationId
+    ? dbTry("sales.reminder_locale", () =>
+        executor.select({ locale: sites.defaultLocale }).from(sites).where(eq(sites.organizationId, organizationId)).orderBy(asc(sites.createdAt), asc(sites.id)).limit(1),
+      ).pipe(Effect.map(([row]) => asLocale(row?.locale)))
+    : Effect.succeed(asLocale(null));
 
 const dispatch = (secret: string) => (tx: DbTransaction, r: RecordedReminder) =>
   Effect.gen(function* () {
     const key = reminderDedupeKey(r.documentId, r.level);
     const number = r.number ?? r.documentId;
-    const locale = DEFAULT_LOCALE;
+    const locale = yield* reminderLocale(r.organizationId, tx);
     if (r.customerEmail) {
       yield* enqueueEmail(
         {

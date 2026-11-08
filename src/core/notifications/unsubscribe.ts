@@ -41,8 +41,19 @@ export function verifyUnsubscribeToken(token: string, secret: string, now = Date
   }
 }
 
-/** URL publique de désinscription (page + POST un clic RFC 8058) pour un destinataire. */
+/** Chemin exact du point d'entrée « un clic » RFC 8058 (seul exempté du contrôle d'Origin, cf. origin-check). */
+export const ONE_CLICK_UNSUBSCRIBE_PATH = '/api/notifications/unsubscribe/one-click';
+/** Corps exact imposé par la RFC 8058 (§3.1) pour le POST « un clic ». */
+export const ONE_CLICK_BODY = 'List-Unsubscribe=One-Click';
+
+/** Page humaine de confirmation (GET non mutant, POST formulaire même origine). */
+export const unsubscribePageUrl = (siteUrl: string, locale: string, token: string) =>
+  `${siteUrl}/${locale}/notifications/unsubscribe?token=${encodeURIComponent(token)}`;
+
+/** Cible HTTPS unique de `List-Unsubscribe` + `List-Unsubscribe-Post` (RFC 8058). */
+export const oneClickUnsubscribeUrl = (siteUrl: string, locale: string, token: string) =>
+  `${siteUrl}${ONE_CLICK_UNSUBSCRIBE_PATH}?token=${encodeURIComponent(token)}&lang=${encodeURIComponent(locale)}`;
+
+/** URL publique de la page de désinscription pour un destinataire. */
 export const unsubscribeUrl = (claims: Omit<UnsubscribeClaims, 'expiresAt'>, locale: string) =>
-  AppConfig.use((config) =>
-    Effect.succeed(`${config.siteUrl}/${locale}/notifications/unsubscribe?token=${encodeURIComponent(signUnsubscribeToken(claims, config.signingSecret))}`),
-  );
+  AppConfig.use((config) => Effect.succeed(unsubscribePageUrl(config.siteUrl, locale, signUnsubscribeToken(claims, config.signingSecret))));

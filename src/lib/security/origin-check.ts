@@ -17,7 +17,16 @@
  * n'ajoute jamais cet en-tête de lui-même (pas de cookie ambiant) et un
  * formulaire HTML ne peut pas le poser : la requête n'est pas forgeable
  * cross-site, il n'y a donc pas de risque CSRF.
+ *
+ * Exemption « un clic » RFC 8058 : uniquement `POST` sur le chemin exact
+ * `ONE_CLICK_UNSUBSCRIBE_PATH`, en `application/x-www-form-urlencoded` (sans Origin : le POST
+ * vient du fournisseur de messagerie). L'autorisation repose sur le jeton signé expirant de l'URL,
+ * jamais sur la session ni les cookies ; le handler revalide jeton, hôte de confiance, canal et corps
+ * exact. L'action est seulement une désactivation idempotente : un POST forgé ne peut rien faire
+ * de plus que l'e-mail lui-même. Le corps n'est pas lu ici (il reste intact pour le handler).
  */
+import { ONE_CLICK_UNSUBSCRIBE_PATH } from '@/core/notifications/unsubscribe';
+
 const FORM_CONTENT_TYPES = ['application/x-www-form-urlencoded', 'multipart/form-data', 'text/plain'];
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -25,9 +34,15 @@ export function isBearerApiRequest(request: Request, url: URL): boolean {
   return url.pathname.startsWith('/api/v1/') && /^Bearer\s+\S+/i.test(request.headers.get('authorization') ?? '');
 }
 
+export function isOneClickUnsubscribeRequest(request: Request, url: URL): boolean {
+  const contentType = (request.headers.get('content-type') ?? '').toLowerCase().split(';')[0]?.trim();
+  return request.method === 'POST' && url.pathname === ONE_CLICK_UNSUBSCRIBE_PATH && contentType === 'application/x-www-form-urlencoded';
+}
+
 export function isForbiddenCrossOriginRequest(request: Request, url: URL): boolean {
   if (SAFE_METHODS.has(request.method)) return false;
   if (isBearerApiRequest(request, url)) return false;
+  if (isOneClickUnsubscribeRequest(request, url)) return false;
   const sameOrigin = isSameOrigin(request.headers.get('origin'), url, request.headers.get('host'));
   const contentType = request.headers.get('content-type');
   if (contentType !== null) {

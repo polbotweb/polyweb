@@ -38,6 +38,12 @@ export interface NotificationDefinition {
   readonly recipients?: (event: PolywebEvent) => Effect.Effect<readonly NotificationRecipient[], unknown>;
   /** Gabarit e-mail (registre `smtp/templates/registry`) pour le canal `email`. */
   readonly emailTemplate?: string;
+  /**
+   * Message transactionnel (D3) : lié à l'exécution d'un service (ex. relance de facture au client).
+   * E-mail seulement ; jamais soumis aux préférences, sans lien ni en-têtes de désinscription,
+   * absent de la page de préférences. Par défaut `false` : notification optionnelle.
+   */
+  readonly transactional?: boolean;
 }
 
 export interface ModuleNotifications {
@@ -73,6 +79,11 @@ export function registerNotificationDefinitions(entry: ModuleNotifications): voi
     if (d.channels.includes("email") && !d.emailTemplate) throw new Error(`Notification ${d.type} needs an emailTemplate for the email channel`);
     if (d.emailTemplate && !hasEmailTemplate(d.emailTemplate)) throw new Error(`Notification ${d.type} uses unknown email template ${d.emailTemplate}`);
     if (d.event && !d.recipients) throw new Error(`Notification ${d.type} listens to ${d.event} without recipients`);
+    if (d.transactional && (d.channels.length !== 1 || d.channels[0] !== "email")) throw new Error(`Transactional notification ${d.type} must use the email channel only`);
+    if (d.emailTemplate) {
+      const clash = [...definitions.values()].find((o) => o.emailTemplate === d.emailTemplate && Boolean(o.transactional) !== Boolean(d.transactional) && key(o.module, o.type) !== key(d.module, d.type));
+      if (clash) throw new Error(`Email template ${d.emailTemplate} cannot be both transactional and optional`);
+    }
     definitions.set(key(d.module, d.type), d);
   }
 }
@@ -81,10 +92,15 @@ export const getNotificationDefinition = (module: string, type: string): Notific
 export const listNotificationDefinitions = (): readonly NotificationDefinition[] => [...definitions.values()];
 export const definitionsForEvent = (name: string): readonly NotificationDefinition[] => listNotificationDefinitions().filter((d) => d.event === name);
 
-/** Catégories exposées dans la page de préférences, avec les canaux disponibles pour chacune. */
+/** Vrai si le gabarit e-mail est déclaré par une notification transactionnelle (D3). */
+export const isTransactionalEmailTemplate = (template: string): boolean =>
+  [...definitions.values()].some((d) => d.transactional === true && d.emailTemplate === template);
+
+/** Catégories exposées dans la page de préférences (notifications optionnelles seulement), avec leurs canaux. */
 export function listNotificationCategories(): readonly { category: NotificationCategory; channels: readonly NotificationChannel[] }[] {
   const byCategory = new Map<string, Set<NotificationChannel>>();
   for (const d of definitions.values()) {
+    if (d.transactional) continue;
     const set = byCategory.get(d.category) ?? new Set<NotificationChannel>();
     for (const c of d.channels) set.add(c);
     byCategory.set(d.category, set);

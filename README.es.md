@@ -1758,6 +1758,8 @@ api/
     [slug].ts
   health.ts
   media.ts
+  notifications/
+    unsubscribe/
   organizations/
     audit-export.ts
   payments/

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isForbiddenCrossOriginRequest } from '@/lib/security/origin-check';
+import { isForbiddenCrossOriginRequest, isOneClickUnsubscribeRequest } from '@/lib/security/origin-check';
 
 const url = new URL('https://site.test/fr/admin/x');
 const req = (method: string, headers: Record<string, string> = {}, u = url) => [new Request(u, { method, headers }), u] as const;
@@ -31,5 +31,24 @@ describe('origin check', () => {
     expect(isForbiddenCrossOriginRequest(...req('POST', { ...form, origin: 'http://localhost:4322' }, fallback))).toBe(true);
     expect(isForbiddenCrossOriginRequest(...req('POST', { ...form, origin: 'null', host: 'localhost:4322' }, fallback))).toBe(true);
   });
+  it('exempts only the exact RFC 8058 one-click POST (form-encoded, no Origin) — other CSRF rules unchanged', () => {
+    const oneClick = new URL('https://site.test/api/notifications/unsubscribe/one-click?token=t');
+    const form = { 'content-type': 'application/x-www-form-urlencoded' };
+    expect(isForbiddenCrossOriginRequest(...req('POST', form, oneClick))).toBe(false);
+    expect(isForbiddenCrossOriginRequest(...req('POST', { 'content-type': 'application/x-www-form-urlencoded; charset=utf-8', origin: 'https://mail.example' }, oneClick))).toBe(false);
+    expect(isOneClickUnsubscribeRequest(...req('POST', form, oneClick))).toBe(true);
+    // Méthode, chemin ou type différents : contrôle d'Origin habituel.
+    expect(isForbiddenCrossOriginRequest(...req('PUT', form, oneClick))).toBe(true);
+    expect(isForbiddenCrossOriginRequest(...req('DELETE', {}, oneClick))).toBe(true);
+    expect(isForbiddenCrossOriginRequest(...req('POST', { 'content-type': 'multipart/form-data; boundary=x' }, oneClick))).toBe(true);
+    expect(isForbiddenCrossOriginRequest(...req('POST', { 'content-type': 'text/plain' }, oneClick))).toBe(true);
+    expect(isForbiddenCrossOriginRequest(...req('POST', {}, oneClick))).toBe(true);
+    for (const path of ['/api/notifications/unsubscribe/one-click/', '/api/notifications/unsubscribe/one-click/x', '/fr/notifications/unsubscribe', '/api/notifications/unsubscribe/One-Click']) {
+      expect(isForbiddenCrossOriginRequest(...req('POST', form, new URL(`https://site.test${path}?token=t`)))).toBe(true);
+    }
+    // Le corps n'est pas consommé par le contrôle.
+    const request = new Request(oneClick, { method: 'POST', headers: form, body: 'List-Unsubscribe=One-Click' });
+    isForbiddenCrossOriginRequest(request, oneClick);
+    expect(request.bodyUsed).toBe(false);
+  });
 });
-

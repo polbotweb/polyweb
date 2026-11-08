@@ -7,6 +7,7 @@ import { emailOutbox, user } from '@/database/schemas';
 import { AppConfig, appConfigFrom } from '@/lib/effect/config';
 import { enqueueEmail, processEmailOutbox, cancelPendingEmails, EMAIL_OUTBOX_MAX_ATTEMPTS, type EmailSender } from '@/core/notifications/email-outbox';
 import { clearEmailTemplatesForTests, defineEmailTemplate, registerEmailTemplates } from '@/core/notifications/email-templates';
+import { clearNotificationDefinitionsForTests, defineModuleNotifications, registerNotificationDefinitions } from '@/core/notifications/registry';
 import { setNotificationPreference } from '@/core/notifications/service';
 import { verifyUnsubscribeToken } from '@/core/notifications/unsubscribe';
 import type { EmailPayload } from '@/smtp/types';
@@ -16,6 +17,11 @@ const tag = `eo-${Date.now()}`;
 const userId = crypto.randomUUID();
 const config = appConfigFrom({ NODE_ENV: 'test', SITE_URL: 'https://site.test', POLYWEB_SIGNING_SECRET: 'test-secret' });
 const run = <A, E>(e: Effect.Effect<A, E, AppConfig>) => Effect.runPromise(e.pipe(Effect.provide(Layer.succeed(AppConfig, config))));
+const receipt = defineEmailTemplate<{ n: number }>({
+  id: 'demo.receipt',
+  parse: (d) => (typeof d.n === 'number' ? { n: d.n } : null),
+  render: ({ n }) => ({ subject: `Receipt ${n}`, heading: 'H', greeting: 'G', body: 'B', buttonText: 'Go', buttonUrl: 'https://site.test/x', footnote: 'F' }),
+});
 const template = defineEmailTemplate<{ n: number }>({
   id: 'demo.hello',
   parse: (d) => (typeof d.n === 'number' ? { n: d.n } : null),
@@ -37,6 +43,7 @@ const process = (now: Date, send: EmailSender) => run(processEmailOutbox({ limit
 
 beforeAll(async () => {
   registerEmailTemplates([template]);
+  registerNotificationDefinitions(defineModuleNotifications('demo', [{ type: 'RECEIPT', category: 'billing', channels: ['email'], emailTemplate: 'demo.receipt', transactional: true }], [receipt]));
   await db.insert(user).values({ id: userId, name: 'E', email: `${tag}@example.test`, emailVerified: true });
 });
 beforeEach(() => {
@@ -44,21 +51,25 @@ beforeEach(() => {
 });
 afterAll(async () => {
   clearEmailTemplatesForTests();
+  clearNotificationDefinitionsForTests();
   await db.delete(emailOutbox).where(like(emailOutbox.dedupeKey, `${tag}:%`));
   await db.delete(user).where(eq(user.id, userId));
 });
 
 describe('email outbox', () => {
-  it('enqueues once per key and sends with List-Unsubscribe headers and a valid signed link', async () => {
+  it('enqueues once per key and sends RFC 8058 headers (single HTTPS one-click target) and a valid signed link', async () => {
     expect(await enqueue('a')).toBeTruthy();
     expect(await enqueue('a')).toBeNull();
     expect(await process(new Date(Date.now() + 1000), ok)).toEqual({ sent: 1, retry: 0, failed: 0, skipped: 0 });
     expect(sent).toHaveLength(1);
     expect(sent[0]!.subject).toBe('Hello 1');
     const header = sent[0]!.headers!['List-Unsubscribe']!;
-    expect(sent[0]!.headers!['List-Unsubscribe-Post']).toBeUndefined();
-    const token = decodeURIComponent(/token=([^>]+)>/.exec(header)![1]!);
-    expect(header.startsWith('<https://site.test/en/notifications/unsubscribe?token=')).toBe(true);
+    expect(sent[0]!.headers!['List-Unsubscribe-Post']).toBe('List-Unsubscribe=One-Click');
+    // Une seule cible, HTTPS, celle du POST « un clic » (pas de cibles HTTPS concurrentes).
+    expect(header.match(/</g)).toHaveLength(1);
+    expect(header.startsWith('<https://site.test/api/notifications/unsubscribe/one-click?token=')).toBe(true);
+    expect(header.endsWith('&lang=en>')).toBe(true);
+    const token = decodeURIComponent(/token=([^&>]+)/.exec(header)![1]!);
     expect(verifyUnsubscribeToken(token, 'test-secret')).toMatchObject({ userId, category: 'billing', channel: 'email' });
     expect(await rowOf('a')).toMatchObject({ status: 'sent', attempts: 1 });
     expect(await process(new Date(Date.now() + 2000), ok)).toEqual({ sent: 0, retry: 0, failed: 0, skipped: 0 });
@@ -94,5 +105,21 @@ describe('email outbox', () => {
     expect(await process(new Date(Date.now() + 1000), ok)).toMatchObject({ sent: 0 });
     expect(await run(cancelPendingEmails([key('f')]))).toBe(1);
     expect(sent).toHaveLength(0);
+  });
+
+  it('transactional templates ignore optional preferences and carry no unsubscribe link or headers', async () => {
+    await run(setNotificationPreference(userId, 'billing', 'email', false));
+    try {
+      expect(await enqueue('t', { template: 'demo.receipt' })).toBeTruthy();
+      expect(await enqueue('o')).toBeNull();
+      expect(await process(new Date(Date.now() + 1000), ok)).toMatchObject({ sent: 1 });
+      expect(sent).toHaveLength(1);
+      expect(sent[0]!.subject).toBe('Receipt 1');
+      expect(sent[0]!.headers).toBeUndefined();
+      expect(sent[0]!.text).not.toContain('/notifications/unsubscribe');
+      expect(sent[0]!.html).not.toContain('/notifications/unsubscribe');
+    } finally {
+      await run(setNotificationPreference(userId, 'billing', 'email', true));
+    }
   });
 });

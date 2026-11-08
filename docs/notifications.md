@@ -51,8 +51,38 @@ déclarent un `event`.
 
 Toutes sont `noindex`, `Cache-Control: private, no-store`, et figurent dans les listes pa11y et Lighthouse.
 
+## Notifications optionnelles et transactionnelles
+
+- **Optionnelle** (par défaut) : soumise aux préférences catégorie × canal ; un e-mail adressé à un
+  utilisateur porte un lien de désinscription (page de confirmation) et les en-têtes RFC 8058.
+- **Transactionnelle** (`transactional: true` dans la définition, canal `email` seul) : liée à
+  l'exécution d'un service — ex. `INVOICE_REMINDER_DUE` (relance de facture au client). Jamais soumise
+  aux préférences, sans lien ni en-tête de désinscription, absente de la page de préférences. Un même
+  gabarit ne peut pas être à la fois transactionnel et optionnel (contrôlé à l'enregistrement).
+- L'alerte interne `INVOICE_REMINDER_SENT` (in-app, auteur de la facture) reste optionnelle (`billing`).
+- Qualifier un message de transactionnel est un choix produit par type de message ; ce n'est pas une
+  qualification juridique automatique.
+
+## Désinscription « un clic » (RFC 8058)
+
+- En-têtes des e-mails optionnels : `List-Unsubscribe: <https://…/api/notifications/unsubscribe/one-click?token=…&lang=…>`
+  (une seule cible HTTPS, celle du POST) et `List-Unsubscribe-Post: List-Unsubscribe=One-Click`.
+  Le lien du corps de l'e-mail pointe vers la page humaine `/{lang}/notifications/unsubscribe`.
+- `POST /api/notifications/unsubscribe/one-click?token=…` : seul chemin exempté du contrôle d'Origin
+  (`src/lib/security/origin-check.ts`), et seulement en `POST` + `application/x-www-form-urlencoded`.
+  Le handler exige : Host = hôte de `SITE_URL`, corps exact `List-Unsubscribe=One-Click`, jeton HMAC
+  valide et non expiré pour le canal `email`. Aucune session ni cookie lus ou posés ; réponse `no-store`.
+- Rejouable : désactivation idempotente du canal e-mail de la catégorie ; un jeton ne réactive jamais.
+- `GET` sur cette URL : aucun effet, redirection 303 vers la page de confirmation.
+- Prérequis d'infrastructure (non vérifié par le code) : la signature DKIM du serveur d'envoi doit
+  couvrir `List-Unsubscribe` et `List-Unsubscribe-Post` pour que les messageries honorent le « un clic ».
+
+## Langue des relances de facture
+
+`defaultLocale` du premier site (ordre de création) de l'organisation émettrice, validée parmi
+fr/en/es/ar, sinon `DEFAULT_LOCALE`. Le lien de paiement suit la même langue. Aucune langue n'est
+stockée par client (pas de migration).
+
 ## Limites connues
 
-- Pas de désinscription « one-click » RFC 8058 (POST sans Origin) : elle demanderait une exemption CSRF, à décider.
-- Les relances de facture (`sales.invoice-reminder`) sont des e-mails de recouvrement : pas de lien de
-  désinscription, locale par défaut.
+- Les relances d'une facture sans organisation (plateforme) sont envoyées dans la langue par défaut.

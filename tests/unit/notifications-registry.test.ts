@@ -5,6 +5,7 @@ import {
   defineModuleNotifications,
   definitionsForEvent,
   getNotificationDefinition,
+  isTransactionalEmailTemplate,
   listNotificationCategories,
   registerNotificationDefinitions,
 } from '@/core/notifications/registry';
@@ -44,6 +45,19 @@ describe('notifications registry', () => {
     expect(() => registerNotificationDefinitions(defineModuleNotifications('demo', [{ type: 'EVT', category: 'x', channels: ['in_app'], event: 'demo.done' }]))).toThrow(/recipients/);
     expect(() => registerNotificationDefinitions(defineModuleNotifications('demo', [{ type: 'MAIL', category: 'x', channels: ['email'], emailTemplate: 'demo.missing' }]))).toThrow(/unknown email template/);
     expect(() => registerNotificationDefinitions({ module: 'a', definitions: [{ module: 'b', type: 'X', category: 'x', channels: ['in_app'] }] })).toThrow(/outside/);
+  });
+
+  it('declares transactional e-mails explicitly: email only, hidden from preferences, never mixed with optional', () => {
+    registerNotificationDefinitions(defineModuleNotifications('demo', [
+      { type: 'ALERT', category: 'billing', channels: ['in_app'] },
+      { type: 'RECEIPT', category: 'billing', channels: ['email'], emailTemplate: 'demo.b', transactional: true },
+    ], [demoTemplate]));
+    expect(isTransactionalEmailTemplate('demo.b')).toBe(true);
+    expect(isTransactionalEmailTemplate('demo.other')).toBe(false);
+    expect(listNotificationCategories()).toEqual([{ category: 'billing', channels: ['in_app'] }]);
+    expect(() => registerNotificationDefinitions(defineModuleNotifications('demo', [{ type: 'OPT', category: 'billing', channels: ['email'], emailTemplate: 'demo.b' }]))).toThrow(/both transactional and optional/);
+    expect(() => registerNotificationDefinitions(defineModuleNotifications('demo', [{ type: 'MIXED', category: 'billing', channels: ['in_app', 'email'], emailTemplate: 'demo.b', transactional: true }]))).toThrow(/email channel only/);
+    expect(() => registerNotificationDefinitions(defineModuleNotifications('demo', [{ type: 'INAPP', category: 'billing', channels: ['in_app'], transactional: true }]))).toThrow(/email channel only/);
   });
 
   it('indexes definitions by event', () => {
