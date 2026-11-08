@@ -13,6 +13,7 @@ export async function send(payload: EmailPayload, from: EmailFrom): Promise<void
     subject: payload.subject,
     htmlContent: payload.html,
     textContent: payload.text,
+    ...(payload.headers ? { headers: payload.headers } : {}),
   };
 
   const controller = new AbortController();

@@ -68,7 +68,7 @@ src/
 | Modération | `blog_reports` |
 | Médias | `blog_post_galleries`, `blog_post_gallery_media` |
 | SEO & analytics | `blog_post_seo`, `blog_post_view_stats` |
-| Autres | `blog_notifications`, `blog_post_links` |
+| Autres | `blog_post_links` (notifications : table partagée `notifications`, module `blog`) |
 
 Points clés :
 

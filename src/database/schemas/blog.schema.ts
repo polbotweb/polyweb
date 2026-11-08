@@ -407,32 +407,6 @@ export const blogPostViewStats = pgTable(
   ],
 );
 
-// ─── Notifications ──────────────────────────────────────────────────────────
-export const blogNotifications = pgTable(
-  "blog_notifications",
-  {
-    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-    userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
-    organizationId: text("organization_id").references(() => organization.id, { onDelete: "cascade" }),
-    type: text("type", { enum: ["NEW_COMMENT", "COMMENT_APPROVED", "COMMENT_REJECTED", "NEW_REVIEW", "REVIEW_APPROVED", "REVIEW_REJECTED", "POST_PUBLISHED", "POST_MENTION", "REPLY_TO_COMMENT"] }).notNull(),
-    postId: text("post_id").references(() => blogPosts.id, { onDelete: "cascade" }),
-    commentId: text("comment_id").references(() => blogComments.id, { onDelete: "cascade" }),
-    reviewId: text("review_id").references(() => blogPostReviews.id, { onDelete: "cascade" }),
-    fromUserId: text("from_user_id").references(() => user.id, { onDelete: "set null" }),
-    isRead: boolean("is_read").default(false).notNull(),
-    metadata: jsonb("metadata"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-  },
-  (table) => [
-    index("blog_notifications_user_idx").on(table.userId),
-    index("blog_notifications_org_user_idx").on(table.organizationId, table.userId),
-    index("blog_notifications_read_idx").on(table.isRead),
-    index("blog_notifications_type_idx").on(table.type),
-    index("blog_notifications_created_idx").on(table.createdAt),
-    check("blog_notifications_single_target", sql`(${table.postId} IS NOT NULL AND NOT (${table.commentId} IS NOT NULL AND ${table.reviewId} IS NOT NULL))`),
-  ],
-);
-
 // ─── Edit Locks ─────────────────────────────────────────────────────────────
 export const blogPostLocks = pgTable(
   "blog_post_locks",
@@ -622,15 +596,6 @@ export const blogPostSeoRelations = relations(blogPostSeo, ({ one }) => ({
 
 export const blogPostViewStatsRelations = relations(blogPostViewStats, ({ one }) => ({
   post: one(blogPosts, { fields: [blogPostViewStats.postId], references: [blogPosts.id] }),
-}));
-
-export const blogNotificationsRelations = relations(blogNotifications, ({ one }) => ({
-  user: one(user, { fields: [blogNotifications.userId], references: [user.id] }),
-  organization: one(organization, { fields: [blogNotifications.organizationId], references: [organization.id] }),
-  post: one(blogPosts, { fields: [blogNotifications.postId], references: [blogPosts.id] }),
-  comment: one(blogComments, { fields: [blogNotifications.commentId], references: [blogComments.id] }),
-  review: one(blogPostReviews, { fields: [blogNotifications.reviewId], references: [blogPostReviews.id] }),
-  fromUser: one(user, { fields: [blogNotifications.fromUserId], references: [user.id] }),
 }));
 
 export const blogPostLocksRelations = relations(blogPostLocks, ({ one }) => ({

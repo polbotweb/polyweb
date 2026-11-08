@@ -45,7 +45,6 @@ export const seedManifest: SeedEntry[] = [
   { dataFile: '19-blog-reports.data.ts', schemaExport: 'blogReports', label: 'blog reports' },
   { dataFile: '20-blog-post-links.data.ts', schemaExport: 'blogPostLinks', label: 'blog post links' },
   { dataFile: '20b-blog-post-locks.data.ts', schemaExport: 'blogPostLocks', label: 'blog post locks' },
-  { dataFile: '21-blog-notifications.data.ts', schemaExport: 'blogNotifications', label: 'blog notifications' },
   { dataFile: '22-blog-subscribers.data.ts', schemaExport: 'blogSubscribers', label: 'blog subscribers' },
   { dataFile: '23-blog-post-galleries.data.ts', schemaExport: 'blogPostGalleries', label: 'blog post galleries' },
   { dataFile: '23b-blog-post-gallery-media.data.ts', schemaExport: 'blogPostGalleryMedia', label: 'blog post gallery media' },
@@ -70,7 +69,7 @@ export const seedManifest: SeedEntry[] = [
   { dataFile: '36-service-reports.data.ts', schemaExport: 'serviceReports', label: 'service reports' },
   { dataFile: '37-service-view-stats.data.ts', schemaExport: 'serviceViewStats', label: 'service view stats' },
   { dataFile: '38-service-reactions.data.ts', schemaExport: 'serviceReactions', label: 'service reactions' },
-  { dataFile: '39-service-notifications.data.ts', schemaExport: 'serviceNotifications', label: 'service notifications' },
+  { dataFile: '39-notifications.data.ts', schemaExport: 'notifications', label: 'notifications (blog + services)' },
   { dataFile: '40-service-attribute-definitions.data.ts', schemaExport: 'serviceAttributeDefinitions', label: 'service attribute definitions' },
   { dataFile: '40b-service-attribute-values.data.ts', schemaExport: 'serviceAttributeValues', label: 'service attribute values' },
 ];

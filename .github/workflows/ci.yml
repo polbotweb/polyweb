@@ -175,7 +175,8 @@ jobs:
   e2e-tests:
     name: E2E Tests
     timeout-minutes: 60
-    runs-on: ubuntu-latest
+    # Figé sur 24.04 : sur ubuntu-latest (26.04), le WebKit de Playwright 1.64.1 ne démarre pas (libicudata.so.74 absente).
+    runs-on: ubuntu-24.04
     needs: [lint-and-check, unit-tests]
     services:
       postgres:

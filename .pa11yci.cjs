@@ -35,6 +35,8 @@ let shopReturn = null;
 let subscriptionsSeed = null;
 // Rôles : organisation dont l'admin seedé est propriétaire (accès par site, journal d'audit).
 let rolesOrg = null;
+// Notifications : jeton de désinscription signé du compte seedé (page publique « noindex »).
+let notificationsSeed = null;
 // Logistique : inventaires seedés (un en cours, un validé) — pages inventaires et grand livre.
 let logistics = null;
 if (fs.existsSync(COOKIES_PATH)) {
@@ -48,6 +50,7 @@ if (fs.existsSync(COOKIES_PATH)) {
   shopReturn = data.shopReturn ?? null;
   subscriptionsSeed = data.subscriptionsSeed ?? null;
   rolesOrg = data.rolesOrg ?? null;
+  notificationsSeed = data.notificationsSeed ?? null;
 }
 
 // ── Route definitions per locale ─────────────────────────────────────
@@ -120,6 +123,10 @@ for (const lang of locales) {
   }
   // Portail client (factures, commandes, réservations du compte seedé).
   authedUrls.push({ url: `${BASE}/${lang}/account`, headers: { Cookie: userCookie } });
+  // Notifications (liste seedée, préférences) et désinscription par lien signé.
+  authedUrls.push({ url: `${BASE}/${lang}/notifications`, headers: { Cookie: userCookie } });
+  authedUrls.push({ url: `${BASE}/${lang}/notifications/preferences`, headers: { Cookie: userCookie } });
+  if (notificationsSeed) authedUrls.push(`${BASE}/${lang}/notifications/unsubscribe?token=${encodeURIComponent(notificationsSeed.unsubscribeToken)}`);
 }
 
 // Admin pages (admin cookie) — all admin routes

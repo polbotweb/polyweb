@@ -32,7 +32,7 @@ vi.mock('@database/schemas', () => ({
   blogPostReactions: { postId: 'postId', userId: 'userId', reactionType: 'reactionType' },
   blogPostSeo: { id: 'id', postId: 'postId', locale: 'locale' },
   blogPostViewStats: { id: 'id', postId: 'postId', date: 'date', hour: 'hour', referrer: 'referrer', deviceType: 'deviceType' },
-  blogNotifications: { id: 'id', userId: 'userId', isRead: 'isRead', createdAt: 'createdAt', postId: 'postId', commentId: 'commentId', reviewId: 'reviewId', fromUserId: 'fromUserId' },
+  notifications: { id: 'id', userId: 'userId', module: 'module', readAt: 'readAt', organizationId: 'organizationId', resourceType: 'resourceType', resourceId: 'resourceId', actorId: 'actorId', createdAt: 'createdAt' },
   blogPostLocks: { id: 'id', postId: 'postId' },
   blogPostLinks: { id: 'id' },
   mediaFiles: { id: 'id', url: 'url', width: 'width', height: 'height' },
@@ -227,7 +227,7 @@ describe('getBlogReviewStats', () => {
 describe('getBlogNotifications', () => {
   it('lists notifications for the requesting user, most recent first', async () => {
     const rows = [
-      { notification: { id: 'n1', userId: 'user-1', isRead: false, createdAt: new Date() }, post: { id: 'post-1', slug: 'titre' }, fromUser: null },
+      { notification: { id: 'n1', userId: 'user-1', readAt: null, createdAt: new Date() }, post: { id: 'post-1', slug: 'titre' }, fromUser: null },
     ];
     mockSelect.mockReturnValueOnce(makeChain(rows));
 
@@ -242,7 +242,7 @@ describe('getBlogNotifications', () => {
 
     await getBlogNotifications('user-1', { limit: 10, organizationId: 'org-1' });
 
-    expect(chain.leftJoin).toHaveBeenCalledTimes(4);
+    expect(chain.leftJoin).toHaveBeenCalledTimes(2);
     expect(chain.where).toHaveBeenCalledOnce();
   });
 });

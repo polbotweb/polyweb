@@ -1,0 +1,26 @@
+---
+/** Désinscription d'une catégorie d'e-mails (lien signé) : confirmation explicite, puis message d'état. */
+import type { Locale } from "@i18n/config";
+import { categoryLabel, fill, getNotificationsTranslations } from "@/core/notifications/i18n";
+import type { UnsubscribeState } from "@/core/notifications/unsubscribe-page";
+import { Button } from "@atoms/button";
+import PublicNotice from "@/components/bookings/public/PublicNotice.astro";
+
+interface Props { locale: Locale; token: string; category: string; state: UnsubscribeState }
+const { locale, token, category, state } = Astro.props;
+const t = getNotificationsTranslations(locale);
+const label = categoryLabel(t, category);
+---
+<section class="mx-auto grid max-w-3xl gap-6 px-4 py-12" aria-labelledby="unsubscribe-title">
+  <h1 id="unsubscribe-title" class="font-heading text-3xl font-semibold text-foreground">{t.unsubscribe.title}</h1>
+  {state === "invalid" && <p class="text-foreground" data-testid="unsubscribe-invalid">{t.unsubscribe.invalid}</p>}
+  {state === "done" && <PublicNotice kind="success" id="unsubscribe-done"><p>{fill(t.unsubscribe.done, { category: label })}</p></PublicNotice>}
+  {state === "confirm" && (
+    <form method="post" class="grid gap-3" data-testid="unsubscribe-form">
+      <input type="hidden" name="token" value={token} />
+      <p id="unsubscribe-question" class="text-foreground">{fill(t.unsubscribe.confirm, { category: label })}</p>
+      <div><Button type="submit" aria-describedby="unsubscribe-question">{t.unsubscribe.button}</Button></div>
+    </form>
+  )}
+  <p><a class="text-foreground underline underline-offset-4" href={`/${locale}/notifications/preferences`}>{t.unsubscribe.manage}</a></p>
+</section>

@@ -17,9 +17,9 @@ import type {
   blogPostReactions,
   blogPostSeo,
   blogPostViewStats,
-  blogNotifications,
   blogPostLocks,
   blogPostLinks,
+  notifications,
 } from "@database/schemas";
 import type { Locale } from "@i18n/config";
 import type {
@@ -45,7 +45,7 @@ export type BlogPostFavorite = typeof blogPostFavorites.$inferSelect;
 export type BlogPostReaction = typeof blogPostReactions.$inferSelect;
 export type BlogPostSeo = typeof blogPostSeo.$inferSelect;
 export type BlogPostViewStat = typeof blogPostViewStats.$inferSelect;
-export type BlogNotification = typeof blogNotifications.$inferSelect;
+export type BlogNotification = typeof notifications.$inferSelect;
 export type BlogPostLock = typeof blogPostLocks.$inferSelect;
 export type BlogPostLink = typeof blogPostLinks.$inferSelect;
 

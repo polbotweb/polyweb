@@ -19,7 +19,6 @@ export {
   blogPostReactions,
   blogPostSeo,
   blogPostViewStats,
-  blogNotifications,
   blogPostLocks,
   blogPostLinks,
   blogSubscribers,

@@ -11,6 +11,7 @@ import type { AppUser } from '@/lib/types';
 import DashboardIcon from '@tabler/icons/outline/layout-dashboard.svg';
 import UserIcon from '@tabler/icons/outline/user.svg';
 import ReceiptIcon from '@tabler/icons/outline/receipt.svg';
+import BellIcon from '@tabler/icons/outline/bell.svg';
 import ShieldIcon from '@tabler/icons/outline/shield.svg';
 import LogoutIcon from '@tabler/icons/outline/logout.svg';
 
@@ -32,12 +33,15 @@ import { Avatar, AvatarImage, AvatarFallback } from '@atoms/avatar';
 import { safeUrl } from '@lib/sanitize';
 import { getPortalTranslations } from '@/modules/portal/i18n';
 import { portalPaths } from '@/modules/portal/public/links';
+import { runApp } from '@/lib/effect/http';
+import { unreadNotificationCount } from '@/core/notifications/service';
+import { fill, getNotificationsTranslations } from '@/core/notifications/i18n';
 
 interface Props {
   t: AuthTranslations;
   locale: Locale;
   user: AppUser;
-  activeItem?: 'dashboard' | 'profile' | 'account' | 'organizations' | 'admin';
+  activeItem?: 'dashboard' | 'profile' | 'account' | 'notifications' | 'organizations' | 'admin';
 }
 
 const { t, locale, user, activeItem } = Astro.props;
@@ -56,6 +60,11 @@ const navItems = [
   { id: 'profile' as const, title: t.userMenu.profile, url: profileUrl, icon: UserIcon },
   { id: 'account' as const, title: getPortalTranslations(locale).title, url: portalPaths.home(locale), icon: ReceiptIcon },
 ];
+
+// Cloche (N7-A) : lien vers la page des notifications avec le nombre de non lues (texte accessible).
+const notifT = getNotificationsTranslations(locale);
+const unread = user?.id ? await runApp(unreadNotificationCount({ userId: user.id })).catch(() => 0) : 0;
+const notificationsTitle = unread > 0 ? fill(notifT.notificationsLink, { count: unread }) : notifT.title;
 ---
 
 <Sidebar collapsible="icon">
@@ -91,6 +100,18 @@ const navItems = [
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
+          <SidebarMenuItem>
+            <SidebarMenuButton href={`/${locale}/notifications`} isActive={activeItem === 'notifications'} tooltip={notificationsTitle} data-testid="notifications-bell">
+              <BellIcon class="size-4" aria-hidden="true" />
+              <span>{notifT.title}</span>
+              {unread > 0 && (
+                <span class="ms-auto inline-flex min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground">
+                  <span aria-hidden="true">{unread > 99 ? '99+' : unread}</span>
+                  <span class="sr-only">{fill(notifT.unreadCount, { count: unread })}</span>
+                </span>
+              )}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>

@@ -1,12 +1,12 @@
 
-> polyweb@0.0.1 check /workspace/b5-roles
+> polyweb@0.0.1 check /workspace/b4-notif
 > astro check
 
-10:18:49 [@astrojs/node] Enabling sessions with filesystem storage
-10:18:49 [content] Syncing content
-10:18:49 [content] Synced content
-10:18:49 [types] Generated 120ms
-10:18:49 [check] Getting diagnostics for Astro files in /workspace/b5-roles...
+01:01:13 [@astrojs/node] Enabling sessions with filesystem storage
+01:01:13 [content] Syncing content
+01:01:13 [content] Synced content
+01:01:13 [types] Generated 157ms
+01:01:13 [check] Getting diagnostics for Astro files in /workspace/b4-notif...
 [96msrc/actions/admin/pages.ts[0m:[93m4[0m:[93m38[0m - [93mwarning[0m[90m ts(6133): [0m'isNotNull' is declared but its value is never read.
 
 [7m4[0m import { eq, and, asc, desc, isNull, isNotNull, inArray, max } from "drizzle-orm";
@@ -115,6 +115,15 @@
 
 [7m50[0m function columnSchema(column: CrudColumn): z.ZodTypeAny {
 [7m  [0m [93m                                             ~~~~~~~~~~[0m
+
+[96msrc/database/schemas/services-engagement.schema.ts[0m:[93m4[0m:[93m20[0m - [93mwarning[0m[90m ts(6133): [0m'serviceComments' is declared but its value is never read.
+
+[7m4[0m import { services, serviceComments, serviceReviews } from "./services.schema";
+[7m [0m [93m                   ~~~~~~~~~~~~~~~[0m
+[96msrc/database/schemas/services-engagement.schema.ts[0m:[93m2[0m:[93m86[0m - [93mwarning[0m[90m ts(6133): [0m'check' is declared but its value is never read.
+
+[7m2[0m import { pgTable, text, timestamp, boolean, integer, uniqueIndex, index, primaryKey, check } from "drizzle-orm/pg-core";
+[7m [0m [93m                                                                                     ~~~~~[0m
 
 [96msrc/database/schemas/services.schema.ts[0m:[93m1[0m:[93m10[0m - [93mwarning[0m[90m ts(6133): [0m'relations' is declared but its value is never read.
 
@@ -282,8 +291,8 @@
 [7m23[0m import { bookings, bookingsResources } from '@/modules/bookings/schema';
 [7m  [0m [93m                   ~~~~~~~~~~~~~~~~~[0m
 
-Result (1800 files): 
+Result (1832 files): 
 - 0 errors
 - 0 warnings
-- 62 hints
+- 64 hints
 

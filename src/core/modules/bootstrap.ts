@@ -20,6 +20,8 @@ import { blogInternalLinkResolver } from "@/lib/blog/blog-internal-link";
 import { serviceInternalLinkResolver } from "@/lib/services/services-internal-link";
 import { registerSearchResource } from "@/core/search/registry";
 import { registerWebhookDispatcher } from "@/modules/webhooks/subscribe";
+import { registerModuleNotifications } from "@/modules/notifications";
+import { registerNotificationSubscriber } from "@/core/notifications/subscriber";
 import { registerSearchIndexer } from "@/lib/search/indexer";
 import { registerBookingPayments } from "@/modules/bookings/payments";
 import { registerSalesPayments } from "@/modules/sales/payments";
@@ -63,6 +65,9 @@ export function bootstrapModules(): void {
   // API publique v1 + événements webhooks : chaque module déclare ses ressources, scopes et événements.
   for (const api of [salesApi, shopApi, logisticsApi, crmApi, bookingsApi, subscriptionsApi]) registerModuleApi(api);
   registerWebhookDispatcher();
+  // Notifications : types déclarés par module + abonné du bus (event_outbox → notifications).
+  registerModuleNotifications();
+  registerNotificationSubscriber();
   registerSearchIndexer();
   // Objets payables en ligne (core/payments) : sans effet tant que PAYMENTS_ENABLED est faux.
   registerBookingPayments();

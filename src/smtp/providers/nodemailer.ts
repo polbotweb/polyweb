@@ -29,6 +29,7 @@ export async function send(payload: EmailPayload, from: EmailFrom): Promise<void
     subject: payload.subject,
     html: payload.html,
     text: payload.text,
+    ...(payload.headers ? { headers: payload.headers } : {}),
   });
 }
 

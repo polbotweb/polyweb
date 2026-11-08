@@ -1,0 +1,16 @@
+---
+/** Désinscription d'une catégorie d'e-mails de notification — lien signé (`?token=`) expirant. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import UnsubscribeView from "@/components/notifications/UnsubscribeView.astro";
+import { getNotificationsTranslations } from "@/core/notifications/i18n";
+import { unsubscribePage } from "@/core/notifications/unsubscribe-page";
+
+export const prerender = false;
+const view = await unsubscribePage(Astro);
+const t = getNotificationsTranslations(view.locale);
+---
+<BaseLayout title={t.unsubscribe.title} description={t.unsubscribe.title}>
+  {/* same-origin : le jeton ne part jamais vers un tiers (Referer). */}
+  <meta slot="head" name="referrer" content="same-origin" />
+  <UnsubscribeView {...view} />
+</BaseLayout>

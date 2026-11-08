@@ -26,7 +26,10 @@ function buildTempConfig(urls, cookie, label) {
           // Back-office : exclu de l'indexation à dessein (robots.txt « Disallow: /<locale>/admin/ »).
           // On n'évalue donc pas « is-crawlable » ; le reste du score SEO garde le seuil de 0.9.
           // Tunnel boutique : pages privées (« noindex, nofollow », cache « no-store ») pour la même raison.
-          ...(label === 'admin' || label === 'shop' ? { skipAudits: ['is-crawlable'] } : {}),
+          // Espace compte (/account, /notifications, préférences, désinscription signée) : pages privées
+          // « noindex » (cache « no-store ») à dessein, même traitement. Les pages /auth publiques du lot
+          // restent indexables : seul « is-crawlable » est écarté, le seuil SEO de 0.9 est inchangé.
+          ...(label === 'admin' || label === 'shop' || label === 'authed' ? { skipAudits: ['is-crawlable'] } : {}),
         },
       },
       assert: {

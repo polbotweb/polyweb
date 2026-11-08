@@ -23,7 +23,7 @@ import {
   blogPostReactions,
   blogPostSeo,
   blogPostViewStats,
-  blogNotifications,
+  notifications,
   blogPostLocks,
   blogPostLinks,
   mediaFiles,
@@ -1226,9 +1226,9 @@ const blogModerationQueueEffect = (organizationId: string | null, opts: { page?:
 // ─── Notifications (Effect natif) ────────────────────────────────────────────
 
 const notificationPostJoin = () =>
-  or(eq(blogNotifications.postId, blogPosts.id), eq(blogComments.postId, blogPosts.id), eq(blogPostReviews.postId, blogPosts.id));
+  and(eq(notifications.resourceType, "post"), eq(notifications.resourceId, blogPosts.id));
 
-const blogNotificationsEffect = (
+const notificationsEffect = (
   userId: string,
   opts: { page?: number; limit?: number; unreadOnly?: boolean; organizationId?: string | null } = {},
 ) => {
@@ -1238,27 +1238,26 @@ const blogNotificationsEffect = (
   return dbTry("blog.notifications", () =>
     getDrizzle()
       .select({
-        notification: blogNotifications,
+        notification: notifications,
         post: { id: blogPosts.id, slug: blogPosts.slug },
         fromUser: { id: user.id, name: user.name, image: user.image },
       })
-      .from(blogNotifications)
-      .leftJoin(blogComments, eq(blogNotifications.commentId, blogComments.id))
-      .leftJoin(blogPostReviews, eq(blogNotifications.reviewId, blogPostReviews.id))
+      .from(notifications)
       .leftJoin(blogPosts, notificationPostJoin())
-      .leftJoin(user, eq(user.id, blogNotifications.fromUserId))
+      .leftJoin(user, eq(user.id, notifications.actorId))
       .where(
         and(
-          eq(blogNotifications.userId, userId),
-          opts.unreadOnly ? eq(blogNotifications.isRead, false) : undefined,
+          eq(notifications.userId, userId),
+          eq(notifications.module, "blog"),
+          opts.unreadOnly ? isNull(notifications.readAt) : undefined,
           Object.hasOwn(opts, "organizationId")
             ? opts.organizationId === null
-              ? isNull(blogNotifications.organizationId)
-              : eq(blogNotifications.organizationId, opts.organizationId!)
+              ? isNull(notifications.organizationId)
+              : eq(notifications.organizationId, opts.organizationId!)
             : undefined,
         ),
       )
-      .orderBy(desc(blogNotifications.createdAt))
+      .orderBy(desc(notifications.createdAt))
       .limit(limit)
       .offset(offset),
   );
@@ -1268,19 +1267,18 @@ const unreadBlogNotificationCountEffect = (userId: string, organizationId?: stri
   dbTry("blog.notifications.unread", () =>
     getDrizzle()
       .select({ value: count() })
-      .from(blogNotifications)
-      .leftJoin(blogComments, eq(blogNotifications.commentId, blogComments.id))
-      .leftJoin(blogPostReviews, eq(blogNotifications.reviewId, blogPostReviews.id))
+      .from(notifications)
       .leftJoin(blogPosts, notificationPostJoin())
       .where(
         and(
-          eq(blogNotifications.userId, userId),
-          eq(blogNotifications.isRead, false),
+          eq(notifications.userId, userId),
+          eq(notifications.module, "blog"),
+          isNull(notifications.readAt),
           organizationId === undefined
             ? undefined
             : organizationId === null
-              ? isNull(blogNotifications.organizationId)
-              : eq(blogNotifications.organizationId, organizationId),
+              ? isNull(notifications.organizationId)
+              : eq(notifications.organizationId, organizationId),
         ),
       ),
   ).pipe(Effect.map(([{ value }]) => Number(value)));
@@ -1291,14 +1289,14 @@ export const blogLoaderEffects = {
   getBlogPostForAdmin: blogPostForAdminEffect,
   getBlogPostsForAdmin: blogPostsForAdminEffect,
   getBlogModerationQueue: blogModerationQueueEffect,
-  getBlogNotifications: blogNotificationsEffect,
+  getBlogNotifications: notificationsEffect,
   getUnreadBlogNotificationCount: unreadBlogNotificationCountEffect,
 };
 
 export const getBlogPostForAdmin = (postId: string) => runOrThrow(blogPostForAdminEffect(postId));
 export const getBlogPostsForAdmin = (...args: Parameters<typeof blogPostsForAdminEffect>) => runOrThrow(blogPostsForAdminEffect(...args));
 export const getBlogModerationQueue = (...args: Parameters<typeof blogModerationQueueEffect>) => runOrThrow(blogModerationQueueEffect(...args));
-export const getBlogNotifications = (...args: Parameters<typeof blogNotificationsEffect>) => runOrThrow(blogNotificationsEffect(...args));
+export const getBlogNotifications = (...args: Parameters<typeof notificationsEffect>) => runOrThrow(notificationsEffect(...args));
 export const getUnreadBlogNotificationCount = (userId: string, organizationId?: string | null): Promise<number> =>
   runOrThrow(unreadBlogNotificationCountEffect(userId, organizationId));
 

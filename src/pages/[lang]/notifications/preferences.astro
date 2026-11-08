@@ -1,0 +1,21 @@
+---
+/** Préférences de notification (N5-A / N7-A) : catégorie × canal, session requise. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AuthSidebar from "@organisms/AuthSidebar/AuthSidebar.astro";
+import PreferencesView from "@/components/notifications/PreferencesView.astro";
+import { getNotificationsTranslations } from "@/core/notifications/i18n";
+import { preferencesPage } from "@/core/notifications/pages";
+
+export const prerender = false;
+const result = await preferencesPage(Astro);
+if ("redirect" in result) return result.redirect;
+const view = result;
+const t = getNotificationsTranslations(view.locale);
+---
+<BaseLayout title={t.preferences} description={t.preferencesIntro}>
+  <AuthLayout title={t.preferences}>
+    <AuthSidebar slot="sidebar" t={view.authT} locale={view.locale} user={view.user} activeItem="notifications" />
+    <PreferencesView locale={view.locale} rows={view.rows} saved={view.saved} />
+  </AuthLayout>
+</BaseLayout>

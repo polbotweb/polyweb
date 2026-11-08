@@ -1,6 +1,6 @@
 ════════════════════════════════════════════════════════════════════════════════
   VITEST UNIT & INTEGRATION TEST REPORT
-  Generated: 2026-11-02 10:20:16
+  Generated: 2026-11-03 01:03:00
 ════════════════════════════════════════════════════════════════════════════════
 
   ✅ tests/integration/audit-append-only.test.ts  (4/4 passed)
@@ -39,6 +39,10 @@
   ✅ tests/integration/logistics-module.test.ts  (6/6 passed)
   ✅ tests/integration/middleware.test.ts  (4/4 passed)
   ✅ tests/integration/navigation-cycle.test.ts  (6/6 passed)
+  ✅ tests/integration/notifications-core.test.ts  (3/3 passed)
+  ✅ tests/integration/notifications-email-outbox.test.ts  (3/3 passed)
+  ✅ tests/integration/notifications-migration.test.ts  (2/2 passed)
+  ✅ tests/integration/notifications-reminders.test.ts  (2/2 passed)
   ✅ tests/integration/numbering.test.ts  (2/2 passed)
   ✅ tests/integration/pages-bulk-core.test.ts  (4/4 passed)
   ✅ tests/integration/pages-facets.test.ts  (5/5 passed)
@@ -145,6 +149,10 @@
   ✅ tests/unit/navigation-loader.test.ts  (7/7 passed)
   ✅ tests/unit/navigation-menus.test.ts  (10/10 passed)
   ✅ tests/unit/navigation-tree.test.ts  (10/10 passed)
+  ✅ tests/unit/notifications-i18n.test.ts  (4/4 passed)
+  ✅ tests/unit/notifications-registry.test.ts  (8/8 passed)
+  ✅ tests/unit/notifications-reminders.test.ts  (7/7 passed)
+  ✅ tests/unit/notifications-unsubscribe.test.ts  (3/3 passed)
   ✅ tests/unit/origin-check.test.ts  (5/5 passed)
   ✅ tests/unit/pdf-chromium.test.ts  (9/9 passed)
   ✅ tests/unit/pdf-puppeteer.test.ts  (3/3 passed)
@@ -232,6 +240,8 @@
   ✅ tests/unit/modules/sales-fec.test.ts  (18/18 passed)
   ✅ tests/unit/modules/tax-domain.test.ts  (16/16 passed)
   ✅ tests/unit/payments/providers.test.ts  (4/4 passed)
+  ✅ tests/unit/purchasing/admin-resource.test.ts  (3/3 passed)
+  ✅ tests/unit/purchasing/domain.test.ts  (5/5 passed)
   ✅ tests/unit/platform/blocks.test.ts  (5/5 passed)
   ✅ tests/unit/platform/fields.test.ts  (5/5 passed)
   ✅ tests/unit/platform/revisions-diff.test.ts  (4/4 passed)
@@ -241,9 +251,10 @@
   ✅ tests/unit/sales/einvoice.test.ts  (8/8 passed)
   ✅ tests/unit/sales/pay-link.test.ts  (4/4 passed)
   ✅ tests/unit/sales/pdf-template.test.ts  (7/7 passed)
-  ✅ tests/unit/purchasing/admin-resource.test.ts  (3/3 passed)
-  ✅ tests/unit/purchasing/domain.test.ts  (5/5 passed)
-  ✅ tests/unit/scripts/new-module.test.ts  (8/8 passed)
+  ✅ tests/unit/scripts/new-module.test.ts  (9/9 passed)
+  ✅ tests/unit/shop/checkout-domain.test.ts  (12/12 passed)
+  ✅ tests/unit/shop/returns-domain.test.ts  (7/7 passed)
+  ✅ tests/unit/subscriptions/lifecycle.test.ts  (8/8 passed)
   ✅ tests/unit/services/admin-actions.test.ts  (4/4 passed)
   ✅ tests/unit/services/admin-contract.test.ts  (2/2 passed)
   ✅ tests/unit/services/admin-resource.test.ts  (3/3 passed)
@@ -251,21 +262,18 @@
   ✅ tests/unit/services/urls.test.ts  (3/3 passed)
   ✅ tests/unit/services/validation.test.ts  (6/6 passed)
   ✅ tests/unit/services/workflow.test.ts  (3/3 passed)
-  ✅ tests/unit/shop/checkout-domain.test.ts  (12/12 passed)
-  ✅ tests/unit/shop/returns-domain.test.ts  (7/7 passed)
-  ✅ tests/unit/subscriptions/lifecycle.test.ts  (8/8 passed)
   ✅ tests/unit/webhooks/signing-ssrf.test.ts  (7/7 passed)
 
 ════════════════════════════════════════════════════════════════════════════════
   SUMMARY
 ════════════════════════════════════════════════════════════════════════════════
 
-  Total tests:   2173
-  Passed:        2172  ✅
+  Total tests:   2206
+  Passed:        2205  ✅
   Failed:        0  
   Skipped:       1
-  Duration:      40s
+  Duration:      46s
 
 ════════════════════════════════════════════════════════════════════════════════
-  END OF REPORT — 2172/2173 passed
+  END OF REPORT — 2205/2206 passed
 ════════════════════════════════════════════════════════════════════════════════

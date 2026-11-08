@@ -13,6 +13,7 @@ import { getDrizzle } from "@database/drizzle";
 import { dbTry } from "@/lib/effect/run";
 import { dbTransaction, type DbTransaction } from "@/lib/effect/transaction";
 import { fail } from "@/lib/effect/failure";
+import type { DbError } from "@/lib/effect/errors";
 import { canTransition } from "@/core/workflow";
 import { assignDocumentNumber } from "@/core/numbering";
 import { allocate, parseCurrency } from "@/core/money";
@@ -37,6 +38,20 @@ import { dueDateFrom, nextReminderLevel, daysOverdue } from "../domain/reminders
 export type SalesDocumentRow = typeof sales.$inferSelect;
 export type SalesLineRow = typeof salesDocumentLines.$inferSelect;
 type Executor = ReturnType<typeof getDrizzle> | DbTransaction;
+
+/** Relance enregistrée (niveau dû + données utiles à la notification ; e-mail client = PII, jamais journalisé). */
+export interface RecordedReminder {
+  readonly documentId: string;
+  readonly number: string | null;
+  readonly level: number;
+  readonly daysOverdue: number;
+  readonly customerEmail: string | null;
+  readonly organizationId: string | null;
+  readonly createdBy: string | null;
+  readonly currency: string;
+  readonly amountDueMinor: number;
+  readonly dueDate: string;
+}
 
 export interface SalesPartyInput {
   readonly title: string;
@@ -462,7 +477,13 @@ export const salesService = {
       })),
 
   /** Relance : enregistre le prochain niveau dû (unique par facture et niveau), ou null si rien à relancer. */
-  recordReminder: (invoiceId: string, authorId: string | null, today = salesToday()) =>
+  recordReminder: (
+    invoiceId: string,
+    authorId: string | null,
+    today = salesToday(),
+    /** Effets dans la même transaction (ex. mise en file de l'e-mail de relance, N6-A). */
+    onRecorded?: (tx: DbTransaction, reminder: RecordedReminder) => Effect.Effect<void, DbError>,
+  ) =>
     dbTransaction("sales.recordReminder", (tx) =>
       Effect.gen(function* () {
         const invoice = yield* required(tx, invoiceId, true);
@@ -472,8 +493,23 @@ export const salesService = {
         const overdue = yield* daysOverdue(invoice.dueDate, today);
         yield* dbTry("sales.reminder.insert", () => tx.insert(salesReminders).values({ documentId: invoice.id, level, daysOverdue: overdue, sentBy: authorId }));
         yield* dbTry("sales.reminder.level", () => tx.update(sales).set({ reminderLevel: level }).where(eq(sales.id, invoice.id)));
-        return { documentId: invoice.id, number: invoice.number, level, daysOverdue: overdue, customerEmail: invoice.customerEmail };
+        const reminder: RecordedReminder = {
+          documentId: invoice.id, number: invoice.number, level, daysOverdue: overdue, customerEmail: invoice.customerEmail,
+          organizationId: invoice.organizationId, createdBy: invoice.createdBy, currency: invoice.currency,
+          amountDueMinor: invoice.grossMinor - invoice.paidMinor - invoice.creditedMinor, dueDate: invoice.dueDate,
+        };
+        if (onRecorded) yield* onRecorded(tx, reminder);
+        return reminder;
       })),
+
+  /** Identifiants des factures ouvertes échues, tous tenants confondus (cron de relances). */
+  overdueInvoiceIds: (today = salesToday(), limit = 200) =>
+    dbTry("sales.overdue.ids", () =>
+      getDrizzle().select({ id: sales.id }).from(sales).where(and(
+        eq(sales.kind, "invoice"),
+        inArray(sales.status, ["ISSUED", "PARTIALLY_PAID"]),
+        sql`${sales.dueDate} < ${today}`,
+      )).orderBy(sales.dueDate, sales.id).limit(limit)).pipe(Effect.map((rows) => rows.map((r) => r.id))),
 
   /** Factures ouvertes échues d'un tenant (candidates à relance). */
   overdueInvoices: (organizationId: string | null, today = salesToday()) =>

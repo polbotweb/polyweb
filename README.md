@@ -226,7 +226,12 @@ molecules/
   AdminPagination/
   AdminResourceStats.astro
   DataView/
+  ModulePermissionGrid/
   ScrollRegion/
+notifications/
+  NotificationsView.astro
+  PreferencesView.astro
+  UnsubscribeView.astro
 organisms/
   AdminBulkBar.astro
   AdminFacets.astro
@@ -311,7 +316,7 @@ images/
 ### Components
 
 - **atoms/** — 48 components
-- **molecules/** — 4 components
+- **molecules/** — 5 components
 - **organisms/** — 16 components
 - **pages/** — 10 components
 - **wow/** — 9 components
@@ -408,7 +413,6 @@ data/
   19-blog-reports.data.ts
   20-blog-post-links.data.ts
   20b-blog-post-locks.data.ts
-  21-blog-notifications.data.ts
   22-blog-subscribers.data.ts
   23-blog-post-galleries.data.ts
   23b-blog-post-gallery-media.data.ts
@@ -432,7 +436,7 @@ data/
   36-service-reports.data.ts
   37-service-view-stats.data.ts
   38-service-reactions.data.ts
-  39-service-notifications.data.ts
+  39-notifications.data.ts
   40-service-attribute-definitions.data.ts
   40b-service-attribute-values.data.ts
   manifest.ts
@@ -506,6 +510,11 @@ migrations/
   0047_exchange_rates.sql
   0048_public_api.sql
   0049_event_outbox_low_stock.sql
+  0050_site_access.sql
+  0051_audit_scope_append_only.sql
+  0052_notifications_core.sql
+  down/
+    0052_notifications_core.down.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -553,6 +562,9 @@ migrations/
     0047_snapshot.json
     0048_snapshot.json
     0049_snapshot.json
+    0050_snapshot.json
+    0051_snapshot.json
+    0052_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -566,6 +578,7 @@ schemas/
   forms.schema.ts
   media.schema.ts
   navigation.schema.ts
+  notifications.schema.ts
   numbering.schema.ts
   page-version.schema.ts
   page.schema.ts
@@ -576,6 +589,7 @@ schemas/
   search.schema.ts
   services-engagement.schema.ts
   services.schema.ts
+  site-access.schema.ts
   site.schema.ts
   webhooks.schema.ts
 schemas.ts
@@ -596,7 +610,7 @@ schemas.ts
 - `passkey`: `id`, `name`, `publicKey`, `userId`, `credentialID`, `counter`, `deviceType`, `backedUp`, `transports`, `createdAt`, `aaguid` _(user: one)_
 
 **audit-log.schema.ts**
-- `audit_log`: `id`, `userId`, `action`, `resource`, `resourceId`, `metadata`, `ipAddress`, `userAgent`, `createdAt` _(user: one)_
+- `audit_log`: `id`, `userId`, `action`, `resource`, `resourceId`, `metadata`, `organizationId`, `siteId`, `module`, `outcome`, `ipAddress`, `userAgent`, `createdAt` _(user: one)_
 
 **site.schema.ts**
 - `site_settings`: `id`, `locale`, `siteName`, `siteDescription`, `siteSlogan`, `metaTitle`, `metaDescription`, `logoLight`, `logoDark`, `favicon`, `ogImage`, `headerCtaText`, `headerCtaUrl`, `headerSecondaryText`, `headerSecondaryUrl`, `headerSticky`, `footerCopyrightText`, `footerCopyrightUrl`, `footerSocialHeading`, `footerNavPrimaryHeading`, `footerNavSecondaryHeading`, `footerLegalHeading`, `createdAt`, `updatedAt`
@@ -646,7 +660,6 @@ schemas.ts
 - `blog_post_reactions`: `postId`, `userId`, `reactionType`, `createdAt`, `updatedAt` _(post: one, user: one)_
 - `blog_post_seo`: `id`, `postId`, `locale`, `focusKeyword`, `focusKeywordScore`, `readabilityScore`, `metaRobots`, `metaOgType`, `metaOgLocale`, `metaTwitterCard`, `schemaMarkup`, `createdAt`, `updatedAt` _(post: one)_
 - `blog_post_view_stats`: `id`, `postId`, `viewedAt`, `date`, `hour`, `referrer`, `country`, `deviceType`, `sessionId` _(post: one)_
-- `blog_notifications`: `id`, `userId`, `organizationId`, `type`, `postId`, `commentId`, `reviewId`, `fromUserId`, `isRead`, `metadata`, `createdAt` _(user: one, organization: one, post: one, comment: one, review: one, fromUser: one)_
 - `blog_post_locks`: `id`, `postId`, `userId`, `sessionId`, `lockedAt`, `expiresAt` _(post: one, user: one)_
 - `blog_post_links`: `id`, `sourcePostId`, `targetPostId`, `linkType`, `sortOrder`, `createdAt` _(sourcePost: one, targetPost: one)_
 - `blog_subscribers`: `id`, `organizationId`, `email`, `locale`, `token`, `tokenUsedAt`, `confirmationTokenHash`, `confirmationTokenExpiresAt`, `confirmationTokenUsedAt`, `unsubscribeTokenHash`, `unsubscribeTokenUsedAt`, `status`, `confirmedAt`, `unsubscribedAt`, `createdAt`, `updatedAt`
@@ -673,7 +686,6 @@ schemas.ts
 
 **services-engagement.schema.ts**
 - `service_reactions`: `serviceId`
-- `service_notifications`: `id`
 - `service_attribute_definitions`: `id`
 - `service_attribute_values`: `serviceId`
 - `service_review_helpful`: `reviewId`, `userId`, `isHelpful`, `createdAt`
@@ -697,6 +709,9 @@ schemas.ts
 - `content_entry_translations`: `id`, `entryId`, `locale`, `title`, `data`, `blocks`, `seo`, `updatedAt`
 - `content_entry_revisions`: `id`, `entryId`, `version`, `snapshot`, `message`, `authorId`, `createdAt`
 
+**site-access.schema.ts**
+- `site_access`: `id`, `organizationId`, `siteId`, `userId`, `role`, `createdAt`, `createdBy` _(organization: one, site: one, user: one)_
+
 **api.schema.ts**
 - `api_tokens`: `id`, `siteId`, `name`, `prefix`, `tokenHash`, `scopes`, `createdBy`, `lastUsedAt`, `expiresAt`, `revokedAt`, `rateLimitPerMinute`, `createdAt`
 - `api_rate_windows`: `tokenId`, `windowStart`, `count`
@@ -708,6 +723,11 @@ schemas.ts
 
 **event-outbox.schema.ts**
 - `event_outbox`: `id`, `name`, `organizationId`, `payload`, `occurredAt`, `dispatchedAt`, `lockedUntil`, `attempts`, `lastError`
+
+**notifications.schema.ts**
+- `notifications`: `id`, `userId`, `organizationId`, `module`, `type`, `category`, `actorId`, `resourceType`, `resourceId`, `data`, `title`, `message`, `readAt`, `createdAt`, `dedupeKey`
+- `notification_preferences`: `userId`, `category`, `channel`, `enabled`, `updatedAt`
+- `email_outbox`: `id`, `dedupeKey`, `userId`, `organizationId`, `toEmail`, `locale`, `template`, `category`, `data`, `status`, `attempts`, `nextAttemptAt`, `lockedUntil`, `lastError`, `sentAt`, `createdAt`
 
 **forms.schema.ts**
 - `forms`: `id`, `siteId`, `slug`, `name`, `description`, `fields`, `settings`, `status`, `createdAt`, `updatedAt`
@@ -777,6 +797,9 @@ schemas.ts
 - `0047_exchange_rates.sql`
 - `0048_public_api.sql`
 - `0049_event_outbox_low_stock.sql`
+- `0050_site_access.sql`
+- `0051_audit_scope_append_only.sql`
+- `0052_notifications_core.sql`
 
 ### Commands
 
@@ -863,6 +886,7 @@ src/middleware.ts
 ### Tests
 
 - `tests/e2e/auth.spec.ts`
+- `tests/integration/audit-append-only.test.ts`
 - `tests/integration/audit.test.ts`
 - `tests/integration/auth-advanced.test.ts`
 - `tests/integration/auth-extensions.test.ts`
@@ -871,13 +895,17 @@ src/middleware.ts
 - `tests/integration/auth-plugins.test.ts`
 - `tests/integration/auth.test.ts`
 - `tests/integration/middleware.test.ts`
+- `tests/integration/site-access-audit.test.ts`
 - `tests/unit/audit-fallback.test.ts`
+- `tests/unit/audit-query.test.ts`
+- `tests/unit/audit-retention.test.ts`
 - `tests/unit/auth-guards.test.ts`
 - `tests/unit/auth-providers.test.ts`
 - `tests/unit/cms-audit.test.ts`
 - `tests/unit/extract-ip.test.ts`
 - `tests/unit/mask-utils.test.ts`
 - `tests/unit/middleware-timeout.test.ts`
+- `tests/unit/permissions-registry.test.ts`
 - `tests/unit/permissions.test.ts`
 - `tests/unit/production-hardening.test.ts`
 - `tests/unit/rate-limit.test.ts`
@@ -903,6 +931,8 @@ attributes/
   index.ts
 audit/
   index.ts
+  query.ts
+  retention.ts
 blocks/
   index.ts
   registry.ts
@@ -983,7 +1013,17 @@ money/
   rounding.ts
   vat.ts
 notifications/
+  email-outbox.ts
+  email-templates.ts
+  i18n.ts
   index.ts
+  pages.ts
+  registry.ts
+  reminders.ts
+  service.ts
+  subscriber.ts
+  unsubscribe-page.ts
+  unsubscribe.ts
 numbering/
   errors.ts
   format.ts
@@ -1003,6 +1043,8 @@ payments/
   subscription-sink.ts
   transitions.ts
 permissions/
+  registry.ts
+  site-access.ts
   tenant.ts
 plugins/
   contract.ts
@@ -1069,8 +1111,11 @@ blog/
     index.ts
   locks.ts
   module.ts
+  notifications/
+    definitions.ts
   permissions/
     index.ts
+    statements.ts
   schema/
     index.ts
   search/
@@ -1115,6 +1160,7 @@ bookings/
   payments.ts
   permissions/
     index.ts
+    statements.ts
   public/
     email.ts
     flow.ts
@@ -1155,6 +1201,7 @@ courses/
   module.ts
   permissions/
     index.ts
+    statements.ts
   schema/
     index.ts
   services/
@@ -1189,6 +1236,7 @@ crm/
   module.ts
   permissions/
     index.ts
+    statements.ts
   schema/
     index.ts
   services/
@@ -1224,6 +1272,7 @@ events/
   module.ts
   permissions/
     index.ts
+    statements.ts
   schema/
     index.ts
   services/
@@ -1250,6 +1299,7 @@ formations/
   module.ts
   permissions/
     index.ts
+    statements.ts
   schema/
     index.ts
   services/
@@ -1290,12 +1340,14 @@ logistics/
   module.ts
   permissions/
     index.ts
+    statements.ts
   schema/
     index.ts
   services/
     inventory.service.ts
     logistics.service.ts
     low-stock.ts
+notifications.ts
 payments/
   domain/
     payment-service.ts
@@ -1303,6 +1355,7 @@ payments/
     transitions.ts
   index.ts
   module.ts
+permissions.ts
 portal/
   domain/
     ownership.ts
@@ -1341,6 +1394,7 @@ purchasing/
   module.ts
   permissions/
     index.ts
+    statements.ts
   schema/
     index.ts
   services/
@@ -1387,9 +1441,14 @@ sales/
     sellerProfile.loader.ts
   locks.ts
   module.ts
+  notifications/
+    definitions.ts
+    invoice-reminder-email.ts
+    invoice-reminders.ts
   payments.ts
   permissions/
     index.ts
+    statements.ts
   public/
     pay-page.ts
   refunds.ts
@@ -1437,8 +1496,11 @@ services/
     index.ts
   locks.ts
   module.ts
+  notifications/
+    definitions.ts
   permissions/
     index.ts
+    statements.ts
   schema/
     index.ts
   search/
@@ -1487,6 +1549,7 @@ shop/
   payments.ts
   permissions/
     index.ts
+    statements.ts
   public/
     flow.ts
     format.ts
@@ -1526,6 +1589,7 @@ subscriptions/
   module.ts
   permissions/
     index.ts
+    statements.ts
   public/
     routes.ts
   register.ts
@@ -1561,6 +1625,7 @@ tax/
   module.ts
   permissions/
     index.ts
+    statements.ts
   schema/
     index.ts
   services/
@@ -1642,6 +1707,10 @@ src/pages/
     [slug].astro
     index.astro
   index.astro
+  notifications/
+    index.astro
+    preferences.astro
+    unsubscribe.astro
   organizations/
     [slug]/
   pay/
@@ -1674,9 +1743,12 @@ api/
   content-export.ts
   content-import.ts
   cron/
+    audit-retention.ts
     fx-rates.ts
+    notifications.ts
     payments-expire.ts
     publish.ts
+    reminders.ts
     search-reindex.ts
     webhooks.ts
   crud/
@@ -1686,6 +1758,8 @@ api/
     [slug].ts
   health.ts
   media.ts
+  organizations/
+    audit-export.ts
   payments/
     webhook.ts
   preview.ts
@@ -1928,6 +2002,7 @@ All routes are prefixed with the locale: `/fr/`, `/en/`, `/es/`, `/ar/`. Default
 - `tests/unit/i18n-translations.test.ts`
 - `tests/unit/i18n-urls.test.ts`
 - `tests/unit/i18n-utils.test.ts`
+- `tests/unit/notifications-i18n.test.ts`
 
 ## CI/CD & Quality
 

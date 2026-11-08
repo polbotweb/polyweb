@@ -66,11 +66,11 @@ function formatRelative(date: Date): string {
           <DropdownItem
             as="a"
             href={post ? `${baseAdminUrl}/${post.id}/edit` : baseAdminUrl}
-            class:list={["notification-item flex flex-col items-start gap-0.5 whitespace-normal", { "bg-muted/50": !notification.isRead }]}
+            class:list={["notification-item flex flex-col items-start gap-0.5 whitespace-normal", { "bg-muted/50": notification.readAt === null }]}
             data-notification-id={notification.id}
             data-organization-id={organizationId ?? ""}
           >
-            <span class="text-sm font-medium">{blogT.admin.notificationTypes[notification.type]}</span>
+            <span class="text-sm font-medium">{blogT.admin.notificationTypes[notification.type as keyof typeof blogT.admin.notificationTypes] ?? notification.type}</span>
             {post?.slug && <span class="text-xs text-muted-foreground">/{post.slug}</span>}
             <span class="text-xs text-muted-foreground">{formatRelative(notification.createdAt)}</span>
           </DropdownItem>

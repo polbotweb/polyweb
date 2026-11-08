@@ -428,6 +428,31 @@ async function seedRoles() {
   return { rolesOrg: { slug: A11Y_ROLES_ORG } };
 }
 
+/**
+ * Notifications (N7-A) : deux notifications du compte seedé (une non lue, une lue) pour auditer la
+ * liste, et un jeton de désinscription signé (catégorie « comments », canal e-mail) pour la page
+ * de désinscription. Les lignes disparaissent avec l'utilisateur (ON DELETE CASCADE).
+ */
+async function seedNotifications() {
+  const { getDrizzle, schema } = await import('../../src/database/drizzle');
+  const { notifications } = await import('../../src/database/schemas');
+  const { eq, like } = await import('drizzle-orm');
+  const { Effect } = await import('effect');
+  const { appRuntime } = await import('../../src/lib/effect/runtime');
+  const { AppConfig } = await import('../../src/lib/effect/config');
+  const { signUnsubscribeToken } = await import('../../src/core/notifications/unsubscribe');
+  const db = getDrizzle();
+  const [account] = await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, SEED_USER.email)).limit(1);
+  if (!account) throw new Error('[a11y] compte seed introuvable');
+  await db.delete(notifications).where(like(notifications.dedupeKey, 'a11y-notif:%'));
+  await db.insert(notifications).values([
+    { userId: account.id, module: 'sales', type: 'INVOICE_REMINDER_SENT', category: 'billing', data: { number: 'A11Y-1', level: 1, daysOverdue: 8 }, dedupeKey: 'a11y-notif:unread' },
+    { userId: account.id, module: 'blog', type: 'NEW_COMMENT', category: 'comments', dedupeKey: 'a11y-notif:read', readAt: new Date() },
+  ]);
+  const secret = await appRuntime.runPromise(Effect.gen(function* () { return (yield* AppConfig).signingSecret; }) as import('effect').Effect.Effect<string, never, never>);
+  return { notificationsSeed: { unsubscribeToken: signUnsubscribeToken({ userId: account.id, category: 'comments', channel: 'email' }, secret) } };
+}
+
 async function setup() {
   process.env.NODE_ENV = 'test';
 
@@ -491,7 +516,10 @@ async function setup() {
   const roles = await seedRoles();
   console.log(`[a11y] Organization ${A11Y_ROLES_ORG} with site access and audit entries seeded`);
 
-  const data = { userCookie, adminCookie: freshAdminCookie, ...shop, ...logistics, ...subs, ...roles };
+  const notifs = await seedNotifications();
+  console.log('[a11y] Notifications and an unsubscribe token seeded for the seed user');
+
+  const data = { userCookie, adminCookie: freshAdminCookie, ...shop, ...logistics, ...subs, ...roles, ...notifs };
   writeFileSync(COOKIES_PATH, JSON.stringify(data, null, 2));
   console.log(`[a11y] Cookies written to ${COOKIES_PATH}`);
 }

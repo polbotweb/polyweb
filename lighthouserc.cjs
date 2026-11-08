@@ -36,6 +36,8 @@ let shopReturn = null;
 let subscriptionsSeed = null;
 // Rôles : organisation dont l'admin seedé est propriétaire (accès par site, journal d'audit).
 let rolesOrg = null;
+// Notifications : jeton de désinscription signé du compte seedé (page publique « noindex »).
+let notificationsSeed = null;
 // Logistique : inventaires seedés (un en cours, un validé).
 let logistics = null;
 if (fs.existsSync(COOKIES_PATH)) {
@@ -48,6 +50,7 @@ if (fs.existsSync(COOKIES_PATH)) {
   shopReturn = data.shopReturn ?? null;
   subscriptionsSeed = data.subscriptionsSeed ?? null;
   rolesOrg = data.rolesOrg ?? null;
+  notificationsSeed = data.notificationsSeed ?? null;
   logistics = data.logistics ?? null;
 }
 
@@ -113,6 +116,9 @@ for (const lang of locales) {
   }
   // Portail client (factures, commandes, réservations du compte seedé).
   authedUrls.push(`${BASE}/${lang}/account`);
+  // Notifications (liste seedée, préférences) et désinscription par lien signé.
+  authedUrls.push(`${BASE}/${lang}/notifications`, `${BASE}/${lang}/notifications/preferences`);
+  if (notificationsSeed) authedUrls.push(`${BASE}/${lang}/notifications/unsubscribe?token=${encodeURIComponent(notificationsSeed.unsubscribeToken)}`);
 }
 
 const adminUrls = [];

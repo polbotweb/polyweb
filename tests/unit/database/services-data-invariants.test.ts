@@ -87,7 +87,7 @@ describe("Services seed invariants", () => {
       expect([row.serviceId, row.commentId, row.reviewId].filter((value) => value != null)).toHaveLength(1);
     }
 
-    const notifications = await dataset("serviceNotifications");
+    const notifications = (await import("@database/data/39-notifications.data.ts")).default.filter((row) => row.module === "services").map((row) => ({ type: row.type, commentId: (row.data as Record<string, unknown>).commentId ?? null, reviewId: (row.data as Record<string, unknown>).reviewId ?? null }));
     const commentTypes = new Set(["NEW_COMMENT", "REPLY_TO_COMMENT"]);
     const reviewTypes = new Set(["NEW_REVIEW", "REVIEW_APPROVED", "REVIEW_REJECTED"]);
     for (const row of notifications) {
