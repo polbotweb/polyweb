@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-07 20:12:57",
+  "generatedAt": "2026-11-08 15:52:21",
   "overall": "red",
   "reportsAvailable": 6,
   "sections": [
@@ -28,10 +28,10 @@
       "key": "vitest",
       "title": "Unit & Integration Tests (Vitest)",
       "ok": true,
-      "summary": "2205/2206 passed, 1 skipped",
+      "summary": "2215/2216 passed, 1 skipped",
       "metrics": {
-        "total": 2206,
-        "passed": 2205,
+        "total": 2216,
+        "passed": 2215,
         "failed": 0,
         "skipped": 1
       }
@@ -39,26 +39,26 @@
     {
       "key": "playwright",
       "title": "End-to-End Tests (Playwright)",
-      "ok": true,
-      "summary": "305/387 passed, 82 skipped",
+      "ok": false,
+      "summary": "304/387 passed, 82 skipped, 1 failed",
       "metrics": {
         "total": 387,
-        "passed": 305,
-        "failed": 0,
+        "passed": 304,
+        "failed": 1,
         "skipped": 82
       }
     },
     {
       "key": "pa11y",
       "title": "Accessibility Audit (Pa11y — WCAG 2.1 AAA)",
-      "ok": false,
-      "summary": "187/188 URLs clean, 1 URL(s) not audited (run error)",
+      "ok": true,
+      "summary": "188/188 URLs clean",
       "metrics": {
         "urls": 188,
-        "passes": 187,
+        "passes": 188,
         "errors": 0,
-        "notAudited": 1,
-        "rules": 1
+        "notAudited": 0,
+        "rules": 0
       }
     },
     {

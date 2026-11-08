@@ -4,8 +4,11 @@
  * `/api/cron/notifications` appelle `processEmailOutbox` : verrou par ligne, rendu du gabarit,
  * envoi, backoff exponentiel persistant, abandon (`failed`) après `EMAIL_OUTBOX_MAX_ATTEMPTS`.
  * Les e-mails d'authentification restent envoyés en direct (hors outbox).
- * `List-Unsubscribe` pointe vers la page de confirmation (RFC 2369) ; le POST « un clic » RFC 8058
- * n'est pas annoncé tant que le contrôle d'Origin CSRF ne l'exempte pas (décision à valider).
+ * Notifications optionnelles (destinataire connu) : lien de désinscription dans le corps (page de
+ * confirmation) et en-têtes RFC 8058 — `List-Unsubscribe` = unique cible HTTPS, le point d'entrée
+ * « un clic », + `List-Unsubscribe-Post: List-Unsubscribe=One-Click`. Gabarits transactionnels (D3,
+ * `transactional` dans la définition) : ni préférence, ni lien, ni en-tête de désinscription.
+ * La signature DKIM couvrant ces en-têtes relève de l'infrastructure d'envoi (non vérifiée ici).
  * Aucune PII dans les logs : `last_error` ne contient qu'un code d'erreur.
  */
 import { and, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
@@ -19,8 +22,9 @@ import { AppConfig } from "@/lib/effect/config";
 import { sendEmailEffect } from "@/smtp/send";
 import type { EmailPayload } from "@/smtp/types";
 import { asLocale, renderNotificationEmail } from "./email-templates";
+import { isTransactionalEmailTemplate } from "./registry";
 import { isChannelEnabled } from "./service";
-import { signUnsubscribeToken } from "./unsubscribe";
+import { ONE_CLICK_BODY, oneClickUnsubscribeUrl, signUnsubscribeToken, unsubscribePageUrl } from "./unsubscribe";
 
 type Executor = DrizzleDB | DbTransaction;
 
@@ -40,10 +44,14 @@ export interface EnqueueEmailInput {
   readonly notBefore?: Date;
 }
 
+/** E-mail soumis aux préférences et désinscriptible : destinataire connu et gabarit non transactionnel. */
+const optionalRecipient = (userId: string | null | undefined, template: string): string | null => (userId && !isTransactionalEmailTemplate(template) ? userId : null);
+
 /** Met un e-mail en file. Renvoie l'id créé, ou `null` (doublon ou préférence désactivée). */
 export const enqueueEmail = (input: EnqueueEmailInput, executor: Executor = getDrizzle()): Effect.Effect<string | null, DbError> =>
   Effect.gen(function* () {
-    if (input.userId && !(yield* isChannelEnabled(input.userId, input.category, "email", executor))) return null;
+    const recipient = optionalRecipient(input.userId, input.template);
+    if (recipient && !(yield* isChannelEnabled(recipient, input.category, "email", executor))) return null;
     const [row] = yield* dbTry("email_outbox.enqueue", () =>
       executor
         .insert(emailOutbox)
@@ -87,21 +95,24 @@ const deliverOne = (id: string, now: Date, send: EmailSender): Effect.Effect<Out
     );
     if (!row) return "skipped";
     // Préférence relue à l'envoi : une désinscription entre la mise en file et l'envoi est respectée.
-    if (row.userId && !(yield* isChannelEnabled(row.userId, row.category, "email"))) {
+    const recipient = optionalRecipient(row.userId, row.template);
+    if (recipient && !(yield* isChannelEnabled(recipient, row.category, "email"))) {
       yield* dbTry("email_outbox.cancel", () => db.update(emailOutbox).set({ status: "cancelled", lockedUntil: null }).where(eq(emailOutbox.id, id)));
       return "skipped";
     }
     const config = yield* AppConfig;
     const locale = asLocale(row.locale);
-    const unsubscribeUrl = row.userId
-      ? `${config.siteUrl}/${locale}/notifications/unsubscribe?token=${encodeURIComponent(signUnsubscribeToken({ userId: row.userId, category: row.category, channel: "email" }, config.signingSecret, now.getTime()))}`
+    const token = recipient ? signUnsubscribeToken({ userId: recipient, category: row.category, channel: "email" }, config.signingSecret, now.getTime()) : null;
+    const unsubscribeUrl = token ? unsubscribePageUrl(config.siteUrl, locale, token) : undefined;
+    const headers = token
+      ? { "List-Unsubscribe": `<${oneClickUnsubscribeUrl(config.siteUrl, locale, token)}>`, "List-Unsubscribe-Post": ONE_CLICK_BODY }
       : undefined;
     const result = yield* renderNotificationEmail(row.template, row.data, { locale, siteUrl: config.siteUrl, unsubscribeUrl }).pipe(
       Effect.flatMap((email) =>
         send({
           to: row.toEmail,
           ...email,
-          ...(unsubscribeUrl ? { headers: { "List-Unsubscribe": `<${unsubscribeUrl}>` } } : {}),
+          ...(headers ? { headers } : {}),
         }),
       ),
       Effect.result,

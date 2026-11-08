@@ -1,4 +1,4 @@
 
-> polyweb@0.0.1 lint /workspace/b4-notif
+> polyweb@0.0.1 lint /workspace/b4-unsub
 > eslint "src/**/*.{js,ts,astro}" --max-warnings 0
 
