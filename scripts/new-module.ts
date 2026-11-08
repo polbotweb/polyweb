@@ -559,6 +559,18 @@ export const ${camel}Notifications = defineModuleNotifications("${name}", [
 ]);
 `,
 
+  [`${moduleDir}/moderation/adapters.ts`]: `/**
+ * Cibles de modération du module ${name} (registre core \`moderation/registry\`, docs/moderation.md),
+ * inscrites dans src/modules/moderation.ts. Ajouter un adaptateur par type modérable :
+ * \`load\` (organisation, auteur, statut, visibilité publique), \`excerpt\` (modérateurs seulement),
+ * \`apply\` (hide / restore / spam sur le statut métier, dans la transaction fournie) ;
+ * sans \`apply\`, la cible n'accepte que le traitement des signalements.
+ */
+import { defineModuleModeration } from "@/core/moderation/registry";
+
+export const ${camel}Moderation = defineModuleModeration("${name}", []);
+`,
+
   [`${moduleDir}/permissions/statements.ts`]: `/** Permissions du module ${name} (registre core \`permissions/registry\`). Sans import serveur : chargé côté client. */
 import { defineModulePermissions } from "@/core/permissions/registry";
 
@@ -1134,6 +1146,27 @@ if (currentNotifications !== null && !currentNotifications.includes(`${camel}Not
   console.log(`  ${notificationsIndex} (notifications « ${name} » inscrites)`);
 }
 
+// Inscription au registre de modération (src/modules/moderation.ts, entre les marqueurs).
+const moderationIndex = join(root, "modules", "moderation.ts");
+const currentModeration = (() => {
+  try {
+    return readFileSync(moderationIndex, "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+})();
+if (currentModeration !== null && !currentModeration.includes(`${camel}Moderation`)) {
+  writeFileSync(
+    moderationIndex,
+    currentModeration
+      .replace("// @module-moderation:imports", `import { ${camel}Moderation } from "@/modules/${name}/moderation/adapters";\n// @module-moderation:imports`)
+      .replace("  // @module-moderation:list", `  ${camel}Moderation,\n  // @module-moderation:list`),
+    "utf8",
+  );
+  console.log(`  ${moderationIndex} (modération « ${name} » inscrite)`);
+}
+
 console.log(`
 Module « ${name} » généré.
 
@@ -1141,6 +1174,7 @@ Module « ${name} » généré.
   1. exporter le schéma et générer la migration  (src/modules/${name}/schema → src/database/schemas.ts, pnpm db:generate)
      permissions : ajuster les rôles prédéfinis (permissions/statements.ts, inscrit dans src/modules/permissions.ts)
      notifications : types et libellés (notifications/definitions.ts, inscrit dans src/modules/notifications.ts, docs/notifications.md)
+     modération : cibles signalables (moderation/adapters.ts, inscrit dans src/modules/moderation.ts, docs/moderation.md)
      si le domaine encaisse : register${pascal}Refunds() dans src/core/modules/bootstrap.ts (refunds.ts, docs/refunds.md)
      compléter ${camel}Loader / load${pascal}()      (src/modules/${name}/loaders/${entity}.loader.ts)
      API publique : registerModuleApi(${camel}Api) dans src/core/modules/bootstrap.ts (api/public-api.ts, docs/public-api.md)

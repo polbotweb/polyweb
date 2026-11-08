@@ -21,6 +21,7 @@ import { serviceInternalLinkResolver } from "@/lib/services/services-internal-li
 import { registerSearchResource } from "@/core/search/registry";
 import { registerWebhookDispatcher } from "@/modules/webhooks/subscribe";
 import { registerModuleNotifications } from "@/modules/notifications";
+import { registerModerationTargets } from "@/modules/moderation";
 import { registerNotificationSubscriber } from "@/core/notifications/subscriber";
 import { registerSearchIndexer } from "@/lib/search/indexer";
 import { registerBookingPayments } from "@/modules/bookings/payments";
@@ -66,6 +67,8 @@ export function bootstrapModules(): void {
   for (const api of [salesApi, shopApi, logisticsApi, crmApi, bookingsApi, subscriptionsApi]) registerModuleApi(api);
   registerWebhookDispatcher();
   // Notifications : types déclarés par module + abonné du bus (event_outbox → notifications).
+  // Modération générique : cibles déclarées par module (registre core/moderation).
+  registerModerationTargets();
   registerModuleNotifications();
   registerNotificationSubscriber();
   registerSearchIndexer();
