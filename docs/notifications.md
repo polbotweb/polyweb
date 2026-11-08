@@ -33,7 +33,8 @@ identiques vérifiées par test). Sans libellé, la liste affiche le titre stock
 | `listNotifications` / `unreadNotificationCount` / `markNotificationsRead` | lecture et accusé de lecture, toujours limités à l'utilisateur courant |
 
 Les événements du bus (`subscriber.ts`) créent aussi des notifications pour les définitions qui
-déclarent un `event`.
+déclarent un `event` (ex. catégorie `moderation` : `CONTENT_HIDDEN` / `CONTENT_RESTORED` sur
+`moderation.decided`, voir [`moderation.md`](./moderation.md)).
 
 ## Crons (Bearer `CRON_SECRET`)
 

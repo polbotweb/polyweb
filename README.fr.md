@@ -222,6 +222,8 @@ forms/
   PolywebForm.astro
 logistics/
   admin/
+moderation/
+  ModerationQueuePage.astro
 molecules/
   AdminPagination/
   AdminResourceStats.astro
@@ -405,12 +407,10 @@ data/
   15-blog-post-seo.data.ts
   15b-blog-post-revisions.data.ts
   16-blog-comments.data.ts
-  16b-blog-comment-moderations.data.ts
   17-blog-reviews.data.ts
   17b-blog-review-helpful.data.ts
   18-blog-reactions.data.ts
   18b-blog-favorites.data.ts
-  19-blog-reports.data.ts
   20-blog-post-links.data.ts
   20b-blog-post-locks.data.ts
   22-blog-subscribers.data.ts
@@ -433,7 +433,8 @@ data/
   34-service-reviews.data.ts
   34b-service-review-helpful.data.ts
   35-service-comments.data.ts
-  36-service-reports.data.ts
+  36-moderation-reports.data.ts
+  36b-moderation-actions.data.ts
   37-service-view-stats.data.ts
   38-service-reactions.data.ts
   39-notifications.data.ts
@@ -513,8 +514,10 @@ migrations/
   0050_site_access.sql
   0051_audit_scope_append_only.sql
   0052_notifications_core.sql
+  0053_moderation_core.sql
   down/
     0052_notifications_core.down.sql
+    0053_moderation_core.down.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -565,6 +568,7 @@ migrations/
     0050_snapshot.json
     0051_snapshot.json
     0052_snapshot.json
+    0053_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -577,6 +581,7 @@ schemas/
   exchange-rates.schema.ts
   forms.schema.ts
   media.schema.ts
+  moderation.schema.ts
   navigation.schema.ts
   notifications.schema.ts
   numbering.schema.ts
@@ -648,14 +653,12 @@ schemas.ts
 - `blog_tag_translations`: `id`, `tagId`, `organizationId`, `locale`, `name`, `slug`, `createdAt`, `updatedAt` _(tag: one)_
 - `blog_post_categories`: `postId`, `categoryId` _(post: one, category: one)_
 - `blog_post_tags`: `postId`, `tagId` _(post: one, tag: one)_
-- `blog_comments`: `id`, `postId`, `authorId`, `parentId`, `guestName`, `guestEmail`, `content`, `status`, `karma`, `ipAddress`, `userAgent`, `isEdited`, `createdAt`, `updatedAt` _(post: one, author: one, parent: one, replies: many, moderations: many)_
-- `blog_comment_moderations`: `id`, `commentId`, `moderatorId`, `action`, `reason`, `previousValues`, `createdAt` _(comment: one, moderator: one)_
+- `blog_comments`: `id`, `postId`, `authorId`, `parentId`, `guestName`, `guestEmail`, `content`, `status`, `karma`, `ipAddress`, `userAgent`, `isEdited`, `createdAt`, `updatedAt` _(post: one, author: one, parent: one, replies: many)_
 - `blog_post_revisions`: `id`, `postId`, `authorId`, `locale`, `title`, `slug`, `content`, `excerpt`, `status`, `revisionNote`, `createdAt` _(post: one, author: one)_
 - `blog_post_galleries`: `id`, `postId`, `title`, `description`, `sortOrder`, `createdAt`, `updatedAt` _(post: one, media: many)_
 - `blog_post_gallery_media`: `galleryId`, `mediaId`, `altText`, `caption`, `sortOrder` _(gallery: one, file: one)_
 - `blog_post_reviews`: `id`, `postId`, `authorId`, `rating`, `title`, `content`, `status`, `isRecommended`, `helpfulCount`, `ipAddress`, `createdAt`, `updatedAt` _(post: one, author: one, helpfulVotes: many)_
 - `blog_post_review_helpful`: `reviewId`, `userId`, `isHelpful`, `createdAt` _(review: one, user: one)_
-- `blog_reports`: `id`, `postId`, `commentId`, `reviewId`, `reporterId`, `reason`, `description`, `status`, `resolvedBy`, `resolvedAt`, `createdAt` _(post: one, comment: one, review: one, reporter: one, resolver: one)_
 - `blog_post_favorites`: `postId`, `userId`, `createdAt` _(post: one, user: one)_
 - `blog_post_reactions`: `postId`, `userId`, `reactionType`, `createdAt`, `updatedAt` _(post: one, user: one)_
 - `blog_post_seo`: `id`, `postId`, `locale`, `focusKeyword`, `focusKeywordScore`, `readabilityScore`, `metaRobots`, `metaOgType`, `metaOgLocale`, `metaTwitterCard`, `schemaMarkup`, `createdAt`, `updatedAt` _(post: one)_
@@ -681,7 +684,6 @@ schemas.ts
 - `service_favorites`: `serviceId`
 - `service_comments`: `id`
 - `service_reviews`: `id`
-- `service_reports`: `id`
 - `service_view_stats`: `id`
 
 **services-engagement.schema.ts**
@@ -728,6 +730,10 @@ schemas.ts
 - `notifications`: `id`, `userId`, `organizationId`, `module`, `type`, `category`, `actorId`, `resourceType`, `resourceId`, `data`, `title`, `message`, `readAt`, `createdAt`, `dedupeKey`
 - `notification_preferences`: `userId`, `category`, `channel`, `enabled`, `updatedAt`
 - `email_outbox`: `id`, `dedupeKey`, `userId`, `organizationId`, `toEmail`, `locale`, `template`, `category`, `data`, `status`, `attempts`, `nextAttemptAt`, `lockedUntil`, `lastError`, `sentAt`, `createdAt`
+
+**moderation.schema.ts**
+- `moderation_reports`: `id`, `module`, `targetType`, `targetId`, `organizationId`, `reporterId`, `reporterKey`, `reason`, `description`, `status`, `resolvedBy`, `resolvedAt`, `createdAt`, `legacy`
+- `moderation_actions`: `id`, `module`, `targetType`, `targetId`, `organizationId`, `actorId`, `action`, `reasonCode`, `note`, `fromStatus`, `toStatus`, `previousValues`, `legacy`, `createdAt`
 
 **forms.schema.ts**
 - `forms`: `id`, `siteId`, `slug`, `name`, `description`, `fields`, `settings`, `status`, `createdAt`, `updatedAt`
@@ -800,6 +806,7 @@ schemas.ts
 - `0050_site_access.sql`
 - `0051_audit_scope_append_only.sql`
 - `0052_notifications_core.sql`
+- `0053_moderation_core.sql`
 
 ### Commandes
 
@@ -855,6 +862,7 @@ src/actions/
   admin/
   blog/
   index.ts
+  moderation.ts
   org/
   services/
 src/middleware.ts
@@ -999,7 +1007,12 @@ locks/
 media/
   index.ts
 moderation/
+  i18n.ts
   index.ts
+  notifications.ts
+  registry.ts
+  reporter-key.ts
+  service.ts
 modules/
   bootstrap.ts
   index.ts
@@ -1110,6 +1123,8 @@ blog/
   loaders/
     index.ts
   locks.ts
+  moderation/
+    adapters.ts
   module.ts
   notifications/
     definitions.ts
@@ -1347,6 +1362,7 @@ logistics/
     inventory.service.ts
     logistics.service.ts
     low-stock.ts
+moderation.ts
 notifications.ts
 payments/
   domain/
@@ -1495,6 +1511,8 @@ services/
   loaders/
     index.ts
   locks.ts
+  moderation/
+    adapters.ts
   module.ts
   notifications/
     definitions.ts
@@ -1664,6 +1682,7 @@ src/pages/
     index.astro
     logistics/
     media.astro
+    moderation.astro
     navigation.astro
     orders/
     organizations.astro

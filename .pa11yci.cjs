@@ -131,7 +131,7 @@ for (const lang of locales) {
 
 // Admin pages (admin cookie) — all admin routes
 const adminUrls = [];
-const adminPages = ['stats', 'site', 'navigation', 'theme', 'blog'];
+const adminPages = ['stats', 'site', 'navigation', 'theme', 'blog', 'moderation'];
 for (const lang of locales) {
   for (const page of adminPages) {
     adminUrls.push({
@@ -171,7 +171,7 @@ for (const lang of locales) {
   }
   // Organisation : rôles (grille des modules), accès par site et journal d'audit.
   if (rolesOrg) {
-    for (const sub of ['roles', 'sites', 'audit']) adminUrls.push({ url: `${BASE}/${lang}/organizations/${encodeURIComponent(rolesOrg.slug)}/${sub}`, headers: { Cookie: adminCookie } });
+    for (const sub of ['roles', 'sites', 'audit', 'moderation']) adminUrls.push({ url: `${BASE}/${lang}/organizations/${encodeURIComponent(rolesOrg.slug)}/${sub}`, headers: { Cookie: adminCookie } });
   }
 }
 
