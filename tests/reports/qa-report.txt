@@ -1,6 +1,6 @@
 ══════════════════════════════════════════════════════════════════════════════════
   POLYWEB — GLOBAL QA REPORT
-  Generated: 2026-11-07 20:12:57
+  Generated: 2026-11-08 15:52:21
 ══════════════════════════════════════════════════════════════════════════════════
 
   ✅ Type & Template Check (astro check)
@@ -10,16 +10,16 @@
      0 errors, 0 warnings
 
   ✅ Unit & Integration Tests (Vitest)
-     2205/2206 passed, 1 skipped
+     2215/2216 passed, 1 skipped
 
-  ✅ End-to-End Tests (Playwright)
-     305/387 passed, 82 skipped
+  ❌ End-to-End Tests (Playwright)
+     304/387 passed, 82 skipped, 1 failed
 
-  ❌ Accessibility Audit (Pa11y — WCAG 2.1 AAA)
-     187/188 URLs clean, 1 URL(s) not audited (run error)
+  • bulk-actions.spec.ts › blog admin: bulk publish then bulk delete with confirmation
+    [31mTest timeout of 30000ms exceeded.[39m
 
-  ✗ http://localhost:4321/en/bookings/A11YROOM — non auditée : Navigation timeout of 30000 ms exceeded
-  • execution-error: 1 occurrence(s)
+  ✅ Accessibility Audit (Pa11y — WCAG 2.1 AAA)
+     188/188 URLs clean
 
   ✅ Performance & Quality Audit (Lighthouse CI)
      188 page(s) audited, all ≥90
@@ -36,9 +36,9 @@
   ├─────────────────────────────────────────────┼──────────────┼─────────┤
   │ Astro check                                 │ GREEN        │ 0 error │
   │ ESLint                                      │ GREEN        │ 0 error │
-  │ Vitest (unit/integration)                   │ GREEN        │ 2205/22 │
-  │ Playwright (e2e)                            │ GREEN        │ 305/387 │
-  │ Pa11y (a11y)                                │ RED          │ 187/188 │
+  │ Vitest (unit/integration)                   │ GREEN        │ 2215/22 │
+  │ Playwright (e2e)                            │ RED          │ 304/387 │
+  │ Pa11y (a11y)                                │ GREEN        │ 188/188 │
   │ Lighthouse (perf)                           │ GREEN        │ 188 pag │
   └─────────────────────────────────────────────┴──────────────┴─────────┘
 
