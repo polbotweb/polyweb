@@ -6,13 +6,13 @@ import type {
   blogTags,
   blogTagTranslations,
   blogComments,
-  blogCommentModerations,
   blogPostRevisions,
   blogPostGalleries,
   blogPostGalleryMedia,
   blogPostReviews,
   blogPostReviewHelpful,
-  blogReports,
+  moderationActions,
+  moderationReports,
   blogPostFavorites,
   blogPostReactions,
   blogPostSeo,
@@ -34,13 +34,15 @@ export type BlogCategoryTranslation = typeof blogCategoryTranslations.$inferSele
 export type BlogTag = typeof blogTags.$inferSelect;
 export type BlogTagTranslation = typeof blogTagTranslations.$inferSelect;
 export type BlogComment = typeof blogComments.$inferSelect;
-export type BlogCommentModeration = typeof blogCommentModerations.$inferSelect;
+/** Historique de modération d'un commentaire (table commune `moderation_actions`, migration 0053). */
+export type BlogCommentModeration = typeof moderationActions.$inferSelect;
 export type BlogPostRevision = typeof blogPostRevisions.$inferSelect;
 export type BlogPostGallery = typeof blogPostGalleries.$inferSelect;
 export type BlogPostGalleryMedia = typeof blogPostGalleryMedia.$inferSelect;
 export type BlogPostReview = typeof blogPostReviews.$inferSelect;
 export type BlogPostReviewHelpful = typeof blogPostReviewHelpful.$inferSelect;
-export type BlogReport = typeof blogReports.$inferSelect;
+/** Signalement du blog (table commune `moderation_reports`, migration 0053). */
+export type BlogReport = typeof moderationReports.$inferSelect;
 export type BlogPostFavorite = typeof blogPostFavorites.$inferSelect;
 export type BlogPostReaction = typeof blogPostReactions.$inferSelect;
 export type BlogPostSeo = typeof blogPostSeo.$inferSelect;

@@ -3,7 +3,7 @@ import { resolveBlogTenant, auditBlog, blogOrganizationIdSchema, invalidateBlogC
 import { defineAction, ActionError } from "astro:actions";
 import { eq, and, isNull } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
-import { blogComments, blogCommentModerations, blogPosts, notifications } from "@database/schemas";
+import { blogComments, blogPosts, moderationActions, notifications } from "@database/schemas";
 import { notificationRow } from "@/core/notifications";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { blogCommentFormSchema, blogCommentModerationSchema } from "@/lib/blog/validation";
@@ -14,6 +14,9 @@ import { actionTry, effectHandler } from "@/lib/effect/action";
 // Public loaders render roots plus one reply level; reject deeper trees so no
 // accepted comment becomes unreachable in the public thread.
 const MAX_COMMENT_REPLY_DEPTH = 1;
+
+/** Actions du flux d'approbation → noms communs de `moderation_actions` (correspondance de la migration 0053). */
+const BLOG_WORKFLOW_ACTIONS = { APPROVE: "approve", REJECT: "reject", DELETE: "trash", RESTORE: "reset", EDIT: "edit" } as const;
 
 export const createBlogComment = defineAction({
   input: blogCommentFormSchema,
@@ -161,11 +164,17 @@ export const moderateBlogComment = defineAction({
         })
         .where(eq(blogComments.id, input.commentId));
 
-      await tx.insert(blogCommentModerations).values({
-        commentId: input.commentId,
-        moderatorId: user.id,
-        action: input.moderationAction,
-        reason: input.reason,
+      // Historique commun (moderation_actions, docs/moderation.md) : flux d'approbation du blog.
+      await tx.insert(moderationActions).values({
+        module: "blog",
+        targetType: "comment",
+        targetId: input.commentId,
+        organizationId: comment.organizationId,
+        actorId: user.id,
+        action: BLOG_WORKFLOW_ACTIONS[input.moderationAction],
+        note: input.reason ?? null,
+        fromStatus: comment.status,
+        toStatus: newStatus,
         previousValues: { status: comment.status, content: comment.content },
       });
 

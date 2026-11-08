@@ -2,6 +2,7 @@
 import type { AuthTranslations, Locale } from '@i18n/config';
 import { getAuthUrl, getOrgUrl } from '@i18n/utils';
 import { getModuleLabel } from '@/core/localization/module-labels';
+import { getModerationTranslations } from '@/core/moderation/i18n';
 import type { FullOrganization } from '@/lib/auth-data';
 import type { OrgSubpage } from '@i18n/utils';
 import ArrowLeftIcon from '@tabler/icons/outline/arrow-left.svg';
@@ -12,6 +13,7 @@ import ShieldIcon from '@tabler/icons/outline/shield.svg';
 import SettingsIcon from '@tabler/icons/outline/settings.svg';
 import WorldIcon from '@tabler/icons/outline/world.svg';
 import HistoryIcon from '@tabler/icons/outline/history.svg';
+import FlagIcon from '@tabler/icons/outline/flag.svg';
 import BriefcaseIcon from '@tabler/icons/outline/briefcase.svg';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail, SidebarSeparator } from '@atoms/sidebar';
 import { Avatar, AvatarImage, AvatarFallback } from '@atoms/avatar';
@@ -26,6 +28,7 @@ const navItems: { id: OrgSubpage; title: string; url: string; icon: typeof Users
   { id: 'roles', title: t.organizations.roles.title, url: getOrgUrl(locale, org.slug, 'roles'), icon: ShieldIcon, show: canManage },
   { id: 'sites', title: t.organizations.siteAccess.title, url: getOrgUrl(locale, org.slug, 'sites'), icon: WorldIcon, show: canManage },
   { id: 'audit', title: t.organizations.audit.title, url: getOrgUrl(locale, org.slug, 'audit'), icon: HistoryIcon, show: canManage },
+  { id: 'moderation', title: getModerationTranslations(locale).title, url: getOrgUrl(locale, org.slug, 'moderation'), icon: FlagIcon, show: canManage },
   { id: 'blog', title: t.organizations.blog.title, url: getOrgUrl(locale, org.slug, 'blog'), icon: FileTextIcon, show: canManage },
   { id: 'services', title: getModuleLabel('services', locale), url: getOrgUrl(locale, org.slug, 'services'), icon: BriefcaseIcon, show: canManage },
   { id: 'media', title: t.organizations.media.title, url: getOrgUrl(locale, org.slug, 'media'), icon: PhotoIcon, show: canManage },

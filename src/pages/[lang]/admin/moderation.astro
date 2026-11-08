@@ -1,0 +1,33 @@
+---
+/** File de modération de la plateforme (contenus sans organisation) — docs/moderation.md. */
+import { Effect } from 'effect';
+import { requireAuth } from '@/lib/auth-guards';
+import { moderatorTargets } from '@/lib/moderation/access';
+import { listModerationQueue } from '@/core/moderation/service';
+import { getModerationTranslations } from '@/core/moderation/i18n';
+import { MODERATION_REPORT_STATUSES, type ModerationReportStatus } from '@database/schemas/moderation.schema';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import AuthLayout from '@organisms/AuthLayout/AuthLayout.astro';
+import AdminSidebar from '@organisms/AdminSidebar/AdminSidebar.astro';
+import ModerationQueuePage from '@/components/moderation/ModerationQueuePage.astro';
+
+export const prerender = false;
+const PAGE_SIZE = 20;
+
+const result = await requireAuth(Astro);
+if ('redirect' in result) return result.redirect;
+const { user, locale, authT } = result;
+const targets = await Effect.runPromise(moderatorTargets(user, null));
+if (targets.length === 0) return Astro.redirect(`/${locale}/auth/${authT.routes['dashboard']}`);
+const requested = Astro.url.searchParams.get('status') as ModerationReportStatus | null;
+const status: ModerationReportStatus = requested && MODERATION_REPORT_STATUSES.includes(requested) ? requested : 'open';
+const page = Math.max(1, Number(Astro.url.searchParams.get('page')) || 1);
+const { items, total } = await Effect.runPromise(listModerationQueue({ organizationId: null, keys: targets.map((t) => t.key), status, page, pageSize: PAGE_SIZE, locale }));
+const mt = getModerationTranslations(locale);
+---
+<BaseLayout title={mt.title} description={mt.description}>
+  <AuthLayout title={mt.title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="moderation" />
+    <ModerationQueuePage locale={locale} items={items} total={total} page={page} pageSize={PAGE_SIZE} status={status} />
+  </AuthLayout>
+</BaseLayout>

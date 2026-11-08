@@ -30,6 +30,8 @@ interface Props {
   tags: TaxonomyItem[];
   moderation: Awaited<ReturnType<typeof getBlogModerationQueue>>;
   baseAdminUrl: string;
+  /** File de modération commune (signalements). */
+  moderationUrl: string;
   basePublicUrl: string;
   organizationId?: string | null;
   userId: string;
@@ -39,7 +41,7 @@ interface Props {
   canDelete: boolean;
   filterOptions: FilterOptions;
 }
-const { facets = {}, savedViews = [], title, locale, blogT, posts, postsMeta, stats, moderationCount, categories, tags, moderation, baseAdminUrl, basePublicUrl, organizationId, userId, canCreate, canUpdate, canPublish, canDelete, filterOptions } = Astro.props;
+const { facets = {}, savedViews = [], title, locale, blogT, posts, postsMeta, stats, moderationCount, categories, tags, moderation, baseAdminUrl, moderationUrl, basePublicUrl, organizationId, userId, canCreate, canUpdate, canPublish, canDelete, filterOptions } = Astro.props;
 const localeSwitcherT = blogT.admin.localeSwitcher;
 const currentPath = Astro.url.pathname;
 const pathWithoutLocale = currentPath.replace(new RegExp(`^/${locale}(?=/|$)`), "") || "/";
@@ -77,7 +79,7 @@ function buildLocaleHref(targetLocale: Locale): string { return `${getRelativeLo
         </TabsContent>
         <TabsContent value="categories" class="pt-4"><AdminTaxonomyManager locale={locale} blogT={blogT} kind="category" items={categories} organizationId={organizationId} /></TabsContent>
         <TabsContent value="tags" class="pt-4"><AdminTaxonomyManager locale={locale} blogT={blogT} kind="tag" items={tags} organizationId={organizationId} /></TabsContent>
-        <TabsContent value="moderation" class="pt-4"><AdminModerationQueue blogT={blogT} moderation={moderation} organizationId={organizationId} /></TabsContent>
+        <TabsContent value="moderation" class="pt-4"><AdminModerationQueue blogT={blogT} moderation={moderation} organizationId={organizationId} locale={locale} moderationUrl={moderationUrl} /></TabsContent>
         <TabsContent value="stats" class="pt-4">
           <AdminResourceStats stats={[
             { label: blogT.admin.posts, value: stats.total },

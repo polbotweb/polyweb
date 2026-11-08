@@ -13,6 +13,8 @@ import UsersIcon from '@tabler/icons/outline/users.svg';
 import BuildingIcon from '@tabler/icons/outline/building.svg';
 import FileTextIcon from '@tabler/icons/outline/file-text.svg';
 import ShieldIcon from '@tabler/icons/outline/shield.svg';
+import FlagIcon from '@tabler/icons/outline/flag.svg';
+import { getModerationTranslations } from '@/core/moderation/i18n';
 import ShieldLockIcon from '@tabler/icons/outline/shield-lock.svg';
 import SettingsIcon from '@tabler/icons/outline/settings.svg';
 import MenuIcon from '@tabler/icons/outline/menu-2.svg';
@@ -43,6 +45,7 @@ const navItems: { id: AdminSubpage; title: string; url: string; icon: typeof Cha
   { id: 'users', title: t.admin.tabs.users, url: getAdminUrl(locale, 'users'), icon: UsersIcon },
   { id: 'organizations', title: t.admin.tabs.organizations, url: getAdminUrl(locale, 'organizations'), icon: BuildingIcon },
   { id: 'audit', title: t.admin.tabs.auditLog, url: getAdminUrl(locale, 'audit'), icon: FileTextIcon },
+  { id: 'moderation', title: getModerationTranslations(locale).title, url: getAdminUrl(locale, 'moderation'), icon: FlagIcon },
   { id: 'roles', title: t.admin.tabs.roles, url: getAdminUrl(locale, 'roles'), icon: ShieldLockIcon },
 ];
 const cmsItems: { id: AdminSubpage; title: string; url: string; icon: typeof SettingsIcon }[] = [

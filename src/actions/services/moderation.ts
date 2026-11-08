@@ -3,14 +3,15 @@ import { ActionError, defineAction } from "astro:actions";
 import { and, avg, count, eq } from "drizzle-orm";
 import { z } from "astro/zod";
 import { getDrizzle } from "@database/drizzle";
-import { serviceComments, serviceReviews, serviceReports, services } from "@database/schemas";
+import { moderationReports, serviceComments, serviceReviews, services } from "@database/schemas";
 import { isValidLocale } from "@/i18n/utils";
 import { getServiceTranslations } from "@/modules/services/i18n";
 import { getServiceNotificationTranslations } from "@/modules/services/i18n/notifications";
 import { resolveServiceTenant, serviceOrganizationIdSchema } from "./_helpers";
 import { auditService, invalidateServicesCache } from "./_helpers";
 import { createServiceNotification } from "./notification";
-import { actionTry, effectHandler } from "@/lib/effect/action";
+import { ActionFailure, actionTry, effectHandler, fail } from "@/lib/effect/action";
+import { resolveModerationReports } from "@/core/moderation/service";
 import { requireServicePermission, serviceInTenant } from "@/modules/services/permissions";
 
 function requestLocale(headers: Headers) { const candidate = headers.get("accept-language")?.split(",", 1)[0]?.split("-", 1)[0] ?? "fr"; return isValidLocale(candidate) ? candidate : "fr"; }
@@ -37,13 +38,27 @@ export const moderateServiceReview = defineAction({ input: z.object({ id: z.uuid
   return { success: true, ratingCount, ratingAverage100 };
 }); })) });
 
+/**
+ * Façade historique : clôt UN signalement générique d'un service (docs/moderation.md).
+ * `REVIEWED` n'existe plus (le signalement reste ouvert) ; `RESOLVED` → resolved, `REJECTED` → dismissed.
+ */
 export const resolveServiceReport = defineAction({ input: z.object({ id: z.uuid(), serviceId: z.uuid(), organizationId: serviceOrganizationIdSchema, status: z.enum(["REVIEWED", "RESOLVED", "REJECTED"]) }), handler: effectHandler((input, context) => Effect.gen(function* () {
-  const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["moderate"] }); yield* serviceInTenant(input.serviceId, tenant); return yield* actionTry("services/moderation.resolveServiceReport", async () => { const t = getServiceTranslations(requestLocale(context.request.headers));
-  const db = getDrizzle(); const [report] = await db.select({ id: serviceReports.id, serviceId: serviceReports.serviceId, commentId: serviceReports.commentId, reviewId: serviceReports.reviewId }).from(serviceReports).where(eq(serviceReports.id, input.id)).limit(1);
-  if (!report) throw new ActionError({ code: "NOT_FOUND", message: t.admin.errors.notFound });
-  if (report.serviceId !== null && report.serviceId !== input.serviceId) throw new ActionError({ code: "FORBIDDEN", message: t.admin.errors.forbidden });
-  if (report.commentId) { const [comment] = await db.select({ serviceId: serviceComments.serviceId }).from(serviceComments).where(eq(serviceComments.id, report.commentId)).limit(1); if (!comment || comment.serviceId !== input.serviceId) throw new ActionError({ code: "FORBIDDEN", message: t.admin.errors.forbidden }); }
-  if (report.reviewId) { const [review] = await db.select({ serviceId: serviceReviews.serviceId }).from(serviceReviews).where(eq(serviceReviews.id, report.reviewId)).limit(1); if (!review || review.serviceId !== input.serviceId) throw new ActionError({ code: "FORBIDDEN", message: t.admin.errors.forbidden }); }
-  await db.update(serviceReports).set({ status: input.status, resolvedBy: user.id, resolvedAt: new Date() }).where(eq(serviceReports.id, input.id));
-  auditService(context, user.id, "SERVICE_REPORT_RESOLVE", { resource: "serviceReports", resourceId: input.id, metadata: { status: input.status, organizationId: tenant.organizationId } }); return { success: true };
-}); })) });
+  const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["moderate"] }); yield* serviceInTenant(input.serviceId, tenant);
+  const t = getServiceTranslations(requestLocale(context.request.headers));
+  const report = yield* actionTry("services/moderation.resolveServiceReport", async () => {
+    const db = getDrizzle();
+    const [row] = await db.select({ id: moderationReports.id, targetType: moderationReports.targetType, targetId: moderationReports.targetId, organizationId: moderationReports.organizationId }).from(moderationReports).where(and(eq(moderationReports.id, input.id), eq(moderationReports.module, "services"))).limit(1);
+    if (!row || row.organizationId !== tenant.organizationId) return null;
+    if (row.targetType === "service") return row.targetId === input.serviceId ? row : null;
+    const [owner] = row.targetType === "comment"
+      ? await db.select({ serviceId: serviceComments.serviceId }).from(serviceComments).where(eq(serviceComments.id, row.targetId)).limit(1)
+      : await db.select({ serviceId: serviceReviews.serviceId }).from(serviceReviews).where(eq(serviceReviews.id, row.targetId)).limit(1);
+    return owner?.serviceId === input.serviceId ? row : null;
+  });
+  if (!report) return yield* fail("NOT_FOUND", t.admin.errors.notFound);
+  if (input.status === "REVIEWED") return { success: true };
+  yield* resolveModerationReports({ key: `services.${report.targetType}`, targetId: report.targetId, outcome: input.status === "RESOLVED" ? "resolved" : "dismissed", actorId: user.id, organizationId: report.organizationId, siteId: null, note: "Traité depuis la file historique des services.", reportId: report.id })
+    .pipe(Effect.mapError((e) => (e._tag === "ModerationUnavailableError" ? new ActionFailure({ code: "NOT_FOUND", message: t.admin.errors.notFound }) : e)));
+  invalidateServicesCache();
+  return { success: true };
+})) });

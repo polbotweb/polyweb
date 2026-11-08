@@ -1,4 +1,5 @@
 ---
+import { getModerationTranslations } from "@/core/moderation/i18n";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@atoms/tabs";
 import AdminResourceShell from "@organisms/AdminResourceShell.astro";
 import AdminResourceStats from "@molecules/AdminResourceStats.astro";
@@ -35,11 +36,14 @@ interface Props {
   moderation: {
     reviews: { review: { id: string; serviceId: string; title: string | null; content: string; rating: number; createdAt: Date } }[];
     comments: { comment: { id: string; serviceId: string; content: string; createdAt: Date } }[];
-    reports: { report: { id: string; serviceId: string | null; commentId: string | null; reviewId: string | null; reason: string; description: string | null; createdAt: Date }; serviceId: string }[];
+    reports: { report: { id: string; targetType: string; targetId: string; reason: string; description: string | null; createdAt: Date } }[];
   };
+  /** Organisation courante (lien vers sa file de modération) ; absent : plateforme. */
+  organizationSlug?: string | null;
 }
 
 const props = Astro.props as Props;
+const mt = getModerationTranslations(props.locale);
 const t = getServiceTranslations(props.locale);
 const et = getServiceEngagementTranslations(props.locale);
 ---
@@ -107,7 +111,7 @@ const et = getServiceEngagementTranslations(props.locale);
           {props.canModerate && <>
             <section class="space-y-3"><h2 class="text-xl font-semibold">{et.reviewTitle}</h2>{props.moderation.reviews.length ? props.moderation.reviews.map(({ review }) => <article class="rounded-xl border p-4"><div class="text-sm text-muted-foreground">{new Intl.DateTimeFormat(props.locale, { dateStyle: "medium" }).format(review.createdAt)}</div><div class="mt-2 font-semibold">{review.title ?? ""} · {review.rating}/5</div><p class="mt-2 whitespace-pre-wrap text-sm">{review.content}</p><div class="mt-3 flex flex-wrap gap-2"><button type="button" data-moderate-review="APPROVED" data-id={review.id} data-service-id={review.serviceId} class="rounded-md border px-3 py-1.5 text-sm">{et.admin.approve}</button><button type="button" data-moderate-review="REJECTED" data-id={review.id} data-service-id={review.serviceId} class="rounded-md border px-3 py-1.5 text-sm">{et.admin.reject}</button><button type="button" data-moderate-review="SPAM" data-id={review.id} data-service-id={review.serviceId} class="rounded-md border px-3 py-1.5 text-sm">{et.admin.spam}</button></div></article>) : <p class="text-sm text-muted-foreground">{et.admin.noPending}</p>}</section>
             <section class="space-y-3"><h2 class="text-xl font-semibold">{et.commentTitle}</h2>{props.moderation.comments.length ? props.moderation.comments.map(({ comment }) => <article class="rounded-xl border p-4"><p class="whitespace-pre-wrap text-sm">{comment.content}</p><div class="mt-3 flex flex-wrap gap-2"><button type="button" data-moderate-comment="APPROVED" data-id={comment.id} data-service-id={comment.serviceId} class="rounded-md border px-3 py-1.5 text-sm">{et.admin.approve}</button><button type="button" data-moderate-comment="REJECTED" data-id={comment.id} data-service-id={comment.serviceId} class="rounded-md border px-3 py-1.5 text-sm">{et.admin.reject}</button><button type="button" data-moderate-comment="SPAM" data-id={comment.id} data-service-id={comment.serviceId} class="rounded-md border px-3 py-1.5 text-sm">{et.admin.spam}</button></div></article>) : <p class="text-sm text-muted-foreground">{et.admin.noPending}</p>}</section>
-            <section class="space-y-3"><h2 class="text-xl font-semibold">{et.report}</h2>{props.moderation.reports.length ? props.moderation.reports.map(({ report, serviceId }) => <article class="rounded-xl border p-4"><div class="text-sm font-medium">{report.reason}</div>{report.description && <p class="mt-2 text-sm text-muted-foreground">{report.description}</p>}<button type="button" data-resolve-report="RESOLVED" data-id={report.id} data-service-id={serviceId} class="mt-3 rounded-md border px-3 py-1.5 text-sm">{et.admin.resolve}</button></article>) : <p class="text-sm text-muted-foreground">{et.admin.noPending}</p>}</section>
+            <section class="space-y-3" data-open-reports={props.moderation.reports.length}><h2 class="text-xl font-semibold">{et.report}</h2><p class="text-sm font-medium">{props.moderation.reports.length ? mt.reports.replace("{count}", String(props.moderation.reports.length)) : et.admin.noPending}</p><p class="text-sm text-muted-foreground">{mt.legacyNotice}</p><a href={props.organizationSlug ? `/${props.locale}/organizations/${props.organizationSlug}/moderation` : `/${props.locale}/admin/moderation`} class="inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium underline-offset-4 hover:underline">{mt.legacyLink}</a></section>
           </>}
         </TabsContent>
 
@@ -165,9 +169,6 @@ const et = getServiceEngagementTranslations(props.locale);
     }));
     root.querySelectorAll<HTMLButtonElement>("[data-moderate-comment]").forEach((button) => button.addEventListener("click", async () => {
       const result = await actions.moderateServiceComment({ id: button.dataset.id!, serviceId: button.dataset.serviceId!, organizationId, status: button.dataset.moderateComment as "APPROVED" | "REJECTED" | "SPAM" | "TRASH" }); if (result.error) showError(result.error); else refresh();
-    }));
-    root.querySelectorAll<HTMLButtonElement>("[data-resolve-report]").forEach((button) => button.addEventListener("click", async () => {
-      const result = await actions.resolveServiceReport({ id: button.dataset.id!, serviceId: button.dataset.serviceId!, organizationId, status: button.dataset.resolveReport as "REVIEWED" | "RESOLVED" | "REJECTED" }); if (result.error) showError(result.error); else refresh();
     }));
   }
 </script>
