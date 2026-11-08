@@ -215,23 +215,6 @@ export const blogComments = pgTable(
   ],
 );
 
-export const blogCommentModerations = pgTable(
-  "blog_comment_moderations",
-  {
-    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-    commentId: text("comment_id").notNull().references(() => blogComments.id, { onDelete: "cascade" }),
-    moderatorId: text("moderator_id").notNull().references(() => user.id, { onDelete: "cascade" }),
-    action: text("action", { enum: ["APPROVE", "REJECT", "DELETE", "RESTORE", "EDIT"] }).notNull(),
-    reason: text("reason"),
-    previousValues: jsonb("previous_values"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-  },
-  (table) => [
-    index("blog_comment_moderations_comment_idx").on(table.commentId),
-    index("blog_comment_moderations_moderator_idx").on(table.moderatorId),
-  ],
-);
-
 // ─── Revisions ──────────────────────────────────────────────────────────────
 export const blogPostRevisions = pgTable(
   "blog_post_revisions",
@@ -316,29 +299,6 @@ export const blogPostReviewHelpful = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [primaryKey({ columns: [table.reviewId, table.userId] })],
-);
-
-// ─── Reports ─────────────────────────────────────────────────────────────────
-export const blogReports = pgTable(
-  "blog_reports",
-  {
-    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-    postId: text("post_id").references(() => blogPosts.id, { onDelete: "cascade" }),
-    commentId: text("comment_id").references(() => blogComments.id, { onDelete: "cascade" }),
-    reviewId: text("review_id").references(() => blogPostReviews.id, { onDelete: "cascade" }),
-    reporterId: text("reporter_id").references(() => user.id, { onDelete: "set null" }),
-    reason: text("reason", { enum: ["SPAM", "ABUSIVE", "OFF_TOPIC", "HATE_SPEECH", "OTHER"] }).notNull(),
-    description: text("description"),
-    status: text("status", { enum: ["PENDING", "REVIEWED", "RESOLVED", "REJECTED"] }).default("PENDING").notNull(),
-    resolvedBy: text("resolved_by").references(() => user.id, { onDelete: "set null" }),
-    resolvedAt: timestamp("resolved_at"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-  },
-  (table) => [
-    index("blog_reports_status_idx").on(table.status),
-    index("blog_reports_reporter_idx").on(table.reporterId),
-    check("blog_reports_single_target", sql`(((${table.postId} IS NOT NULL)::int + (${table.commentId} IS NOT NULL)::int + (${table.reviewId} IS NOT NULL)::int) = 1)`),
-  ],
 );
 
 // ─── Favorites & Reactions ──────────────────────────────────────────────────
@@ -538,12 +498,6 @@ export const blogCommentsRelations = relations(blogComments, ({ one, many }) => 
   author: one(user, { fields: [blogComments.authorId], references: [user.id] }),
   parent: one(blogComments, { fields: [blogComments.parentId], references: [blogComments.id], relationName: "blogCommentParent" }),
   replies: many(blogComments, { relationName: "blogCommentParent" }),
-  moderations: many(blogCommentModerations),
-}));
-
-export const blogCommentModerationsRelations = relations(blogCommentModerations, ({ one }) => ({
-  comment: one(blogComments, { fields: [blogCommentModerations.commentId], references: [blogComments.id] }),
-  moderator: one(user, { fields: [blogCommentModerations.moderatorId], references: [user.id] }),
 }));
 
 export const blogPostRevisionsRelations = relations(blogPostRevisions, ({ one }) => ({
@@ -570,14 +524,6 @@ export const blogPostReviewsRelations = relations(blogPostReviews, ({ one, many 
 export const blogPostReviewHelpfulRelations = relations(blogPostReviewHelpful, ({ one }) => ({
   review: one(blogPostReviews, { fields: [blogPostReviewHelpful.reviewId], references: [blogPostReviews.id] }),
   user: one(user, { fields: [blogPostReviewHelpful.userId], references: [user.id] }),
-}));
-
-export const blogReportsRelations = relations(blogReports, ({ one }) => ({
-  post: one(blogPosts, { fields: [blogReports.postId], references: [blogPosts.id] }),
-  comment: one(blogComments, { fields: [blogReports.commentId], references: [blogComments.id] }),
-  review: one(blogPostReviews, { fields: [blogReports.reviewId], references: [blogPostReviews.id] }),
-  reporter: one(user, { fields: [blogReports.reporterId], references: [user.id] }),
-  resolver: one(user, { fields: [blogReports.resolvedBy], references: [user.id] }),
 }));
 
 export const blogPostFavoritesRelations = relations(blogPostFavorites, ({ one }) => ({
