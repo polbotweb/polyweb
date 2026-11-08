@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-11-02 11:23:13",
-  "overall": "green",
+  "generatedAt": "2026-11-07 20:12:57",
+  "overall": "red",
   "reportsAvailable": 6,
   "sections": [
     {
       "key": "check",
       "title": "Type & Template Check (astro check)",
       "ok": true,
-      "summary": "0 errors, 0 warnings, 62 hints",
+      "summary": "0 errors, 0 warnings, 64 hints",
       "metrics": {
         "errors": 0,
         "warnings": 0,
-        "hints": 62
+        "hints": 64
       }
     },
     {
@@ -28,10 +28,10 @@
       "key": "vitest",
       "title": "Unit & Integration Tests (Vitest)",
       "ok": true,
-      "summary": "2172/2173 passed, 1 skipped",
+      "summary": "2205/2206 passed, 1 skipped",
       "metrics": {
-        "total": 2173,
-        "passed": 2172,
+        "total": 2206,
+        "passed": 2205,
         "failed": 0,
         "skipped": 1
       }
@@ -51,23 +51,23 @@
     {
       "key": "pa11y",
       "title": "Accessibility Audit (Pa11y — WCAG 2.1 AAA)",
-      "ok": true,
-      "summary": "176/176 URLs clean",
+      "ok": false,
+      "summary": "187/188 URLs clean, 1 URL(s) not audited (run error)",
       "metrics": {
-        "urls": 176,
-        "passes": 176,
+        "urls": 188,
+        "passes": 187,
         "errors": 0,
-        "notAudited": 0,
-        "rules": 0
+        "notAudited": 1,
+        "rules": 1
       }
     },
     {
       "key": "lighthouse",
       "title": "Performance & Quality Audit (Lighthouse CI)",
       "ok": true,
-      "summary": "176 page(s) audited, all ≥90",
+      "summary": "188 page(s) audited, all ≥90",
       "metrics": {
-        "pages": 176,
+        "pages": 188,
         "belowThreshold": 0
       }
     }

@@ -1,44 +1,47 @@
 ══════════════════════════════════════════════════════════════════════════════════
   POLYWEB — GLOBAL QA REPORT
-  Generated: 2026-11-02 11:23:13
+  Generated: 2026-11-07 20:12:57
 ══════════════════════════════════════════════════════════════════════════════════
 
   ✅ Type & Template Check (astro check)
-     0 errors, 0 warnings, 62 hints
+     0 errors, 0 warnings, 64 hints
 
   ✅ Lint (ESLint)
      0 errors, 0 warnings
 
   ✅ Unit & Integration Tests (Vitest)
-     2172/2173 passed, 1 skipped
+     2205/2206 passed, 1 skipped
 
   ✅ End-to-End Tests (Playwright)
      305/387 passed, 82 skipped
 
-  ✅ Accessibility Audit (Pa11y — WCAG 2.1 AAA)
-     176/176 URLs clean
+  ❌ Accessibility Audit (Pa11y — WCAG 2.1 AAA)
+     187/188 URLs clean, 1 URL(s) not audited (run error)
+
+  ✗ http://localhost:4321/en/bookings/A11YROOM — non auditée : Navigation timeout of 30000 ms exceeded
+  • execution-error: 1 occurrence(s)
 
   ✅ Performance & Quality Audit (Lighthouse CI)
-     176 page(s) audited, all ≥90
+     188 page(s) audited, all ≥90
 
 ══════════════════════════════════════════════════════════════════════════════════
   GLOBAL STATUS
 ══════════════════════════════════════════════════════════════════════════════════
 
   Reports in scope: 6/6 (check, lint, vitest, playwright, pa11y, lighthouse)
-  Overall:           ✅ ALL GREEN
+  Overall:           ❌ ISSUES DETECTED
 
   ┌─────────────────────────────────────────────┬──────────────┬─────────┐
   │ Report                                      │ Status       │ Result  │
   ├─────────────────────────────────────────────┼──────────────┼─────────┤
   │ Astro check                                 │ GREEN        │ 0 error │
   │ ESLint                                      │ GREEN        │ 0 error │
-  │ Vitest (unit/integration)                   │ GREEN        │ 2172/21 │
+  │ Vitest (unit/integration)                   │ GREEN        │ 2205/22 │
   │ Playwright (e2e)                            │ GREEN        │ 305/387 │
-  │ Pa11y (a11y)                                │ GREEN        │ 176/176 │
-  │ Lighthouse (perf)                           │ GREEN        │ 176 pag │
+  │ Pa11y (a11y)                                │ RED          │ 187/188 │
+  │ Lighthouse (perf)                           │ GREEN        │ 188 pag │
   └─────────────────────────────────────────────┴──────────────┴─────────┘
 
 ══════════════════════════════════════════════════════════════════════════════════
-  END OF GLOBAL REPORT — ALL GREEN
+  END OF GLOBAL REPORT — ACTION REQUIRED
 ══════════════════════════════════════════════════════════════════════════════════
