@@ -60,7 +60,7 @@ describe('scripts/new-module.ts', () => {
     const adapters = readFileSync(join(dir, 'modules/mod-probes/moderation/adapters.ts'), 'utf8');
     expect(adapters).toContain('export const modProbesModeration = defineModuleModeration("mod-probes", []);');
     const index = readFileSync(join(dir, 'modules/moderation.ts'), 'utf8');
-    expect(index).toContain('import { modProbesModeration } from "@/modules/mod-probes/moderation/adapters";\n// @module-moderation:imports');
+    expect(index).toContain('import { modProbesModeration } from "@/modules/mod-probes/moderation/adapters";\nimport { modProbesTwoModeration } from "@/modules/mod-probes-two/moderation/adapters";\n// @module-moderation:imports');
     expect(index).toContain('  modProbesModeration,\n  modProbesTwoModeration,\n  // @module-moderation:list');
     expect(index.match(/modProbesModeration,/g)).toHaveLength(1);
   });

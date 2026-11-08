@@ -8,6 +8,7 @@ import { blogComments, blogPostReviews, blogPosts, moderationReports, MODERATION
 import { blogReportFormSchema, blogReportStatusSchema } from "@/lib/blog/validation";
 import { ActionFailure, actionTry, effectHandler, fail } from "@/lib/effect/action";
 import { resolveModerationReports } from "@/core/moderation/service";
+import { registerModerationTargets } from "@/modules/moderation";
 import { reportModerationTarget } from "@/actions/moderation";
 
 /**
@@ -47,6 +48,7 @@ export const updateBlogReport = defineAction({
     );
     if (!report || report.organizationId !== tenant.organizationId) return yield* fail("NOT_FOUND", "Signalement introuvable.");
     if (input.status === "REVIEWED" || input.status === "PENDING") return { success: true };
+    registerModerationTargets();
     yield* resolveModerationReports({
       key: `blog.${report.targetType}`,
       targetId: report.targetId,

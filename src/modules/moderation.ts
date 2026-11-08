@@ -15,7 +15,12 @@ export const MODULE_MODERATION = [
   // @module-moderation:list
 ] as const;
 
+let registered = false;
+
+/** Idempotent : appelé au démarrage (bootstrap) et par les actions de modération. */
 export function registerModerationTargets(): void {
+  if (registered) return;
+  registered = true;
   registerEventNames([{ name: MODERATION_DECIDED_EVENT, module: "core", description: "Décision de modération (masquer, rétablir, spam) sur un contenu." }]);
   for (const entry of MODULE_MODERATION) registerModuleModeration(entry);
 }

@@ -5,6 +5,7 @@
 import { Effect } from "effect";
 import { isGlobalAdmin, tenantPermission, type TenantActor } from "@/core/permissions/tenant";
 import { listModerationTargets, type RegisteredModerationTarget } from "@/core/moderation/registry";
+import { registerModerationTargets } from "@/modules/moderation";
 
 type Actor = TenantActor & { readonly id: string };
 
@@ -23,6 +24,7 @@ const platformAllowed = (actor: Actor, target: RegisteredModerationTarget) =>
 export const moderatorTargets = (actor: Actor | null | undefined, organizationId: string | null) =>
   Effect.gen(function* () {
     if (!actor) return [] as RegisteredModerationTarget[];
+    registerModerationTargets();
     const checks = yield* Effect.forEach(listModerationTargets(), (target) =>
       (organizationId === null
         ? platformAllowed(actor, target)

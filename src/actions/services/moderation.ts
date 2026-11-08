@@ -12,6 +12,7 @@ import { auditService, invalidateServicesCache } from "./_helpers";
 import { createServiceNotification } from "./notification";
 import { ActionFailure, actionTry, effectHandler, fail } from "@/lib/effect/action";
 import { resolveModerationReports } from "@/core/moderation/service";
+import { registerModerationTargets } from "@/modules/moderation";
 import { requireServicePermission, serviceInTenant } from "@/modules/services/permissions";
 
 function requestLocale(headers: Headers) { const candidate = headers.get("accept-language")?.split(",", 1)[0]?.split("-", 1)[0] ?? "fr"; return isValidLocale(candidate) ? candidate : "fr"; }
@@ -57,6 +58,7 @@ export const resolveServiceReport = defineAction({ input: z.object({ id: z.uuid(
   });
   if (!report) return yield* fail("NOT_FOUND", t.admin.errors.notFound);
   if (input.status === "REVIEWED") return { success: true };
+  registerModerationTargets();
   yield* resolveModerationReports({ key: `services.${report.targetType}`, targetId: report.targetId, outcome: input.status === "RESOLVED" ? "resolved" : "dismissed", actorId: user.id, organizationId: report.organizationId, siteId: null, note: "Traité depuis la file historique des services.", reportId: report.id })
     .pipe(Effect.mapError((e) => (e._tag === "ModerationUnavailableError" ? new ActionFailure({ code: "NOT_FOUND", message: t.admin.errors.notFound }) : e)));
   invalidateServicesCache();

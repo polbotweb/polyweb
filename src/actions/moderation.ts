@@ -15,6 +15,7 @@ import { getModerationTarget, MODERATION_DECISIONS, MODERATION_OUTCOMES } from "
 import { decideModeration, moderationScope, MODERATION_DESCRIPTION_MAX, MODERATION_NOTE_MAX, resolveModerationReports, submitReport } from "@/core/moderation/service";
 import { reporterKey } from "@/core/moderation/reporter-key";
 import { appConfigFrom } from "@/lib/effect/config";
+import { registerModerationTargets } from "@/modules/moderation";
 import { extractIp } from "@/lib/audit";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ActionFailure, actionRateLimit, effectHandler, fail, requireTenantPermission, requireUser } from "@/lib/effect/action";
@@ -43,6 +44,7 @@ const reportInput = z.object({
 /** Signalement : même logique que les façades historiques `createBlogReport` / `createServiceReport`. */
 export const reportModerationTarget = (input: z.infer<typeof reportInput>, context: ActionAPIContext) =>
   Effect.gen(function* () {
+    registerModerationTargets();
     const target = getModerationTarget(input.target);
     if (!target) return yield* fail("NOT_FOUND", NOT_FOUND);
     const user = context.locals.user ?? null;
@@ -55,6 +57,7 @@ export const reportModerationTarget = (input: z.infer<typeof reportInput>, conte
 
 const guardTarget = (context: ActionAPIContext, key: string, id: string) =>
   Effect.gen(function* () {
+    registerModerationTargets();
     const user = yield* requireUser(context);
     yield* actionRateLimit(user.id, "moderation", { window: 60, max: 60 });
     const scope = yield* moderationScope(key, id);
