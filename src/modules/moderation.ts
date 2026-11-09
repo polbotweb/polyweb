@@ -9,12 +9,14 @@ import { MESSAGING_MESSAGE_CREATED_EVENT } from "@/core/messaging/service";
 import { blogModeration } from "@/modules/blog/moderation/adapters";
 import { messagingModeration } from "@/modules/messaging/moderation/adapters";
 import { servicesModeration } from "@/modules/services/moderation/adapters";
+import { forumsModeration } from "@/modules/forums/moderation/adapters";
 // @module-moderation:imports
 
 export const MODULE_MODERATION = [
   blogModeration,
   servicesModeration,
   messagingModeration,
+  forumsModeration,
   // @module-moderation:list
 ] as const;
 

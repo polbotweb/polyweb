@@ -16,6 +16,7 @@ import { logisticsPermissions } from "@/modules/logistics/permissions/statements
 import { purchasingPermissions } from "@/modules/purchasing/permissions/statements";
 import { subscriptionsPermissions } from "@/modules/subscriptions/permissions/statements";
 import { bookingsPermissions } from "@/modules/bookings/permissions/statements";
+import { forumsPermissions } from "@/modules/forums/permissions/statements";
 // @module-permissions:imports
 
 export const MODULE_PERMISSIONS = [
@@ -33,6 +34,7 @@ export const MODULE_PERMISSIONS = [
   purchasingPermissions,
   subscriptionsPermissions,
   bookingsPermissions,
+  forumsPermissions,
   // @module-permissions:list
 ] as const;
 

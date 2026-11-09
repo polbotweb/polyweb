@@ -1,0 +1,27 @@
+---
+/**
+ * Page de détail du domaine forums.
+ *
+ * La DTO arrive par props : la page a fait appel au loader. Ce composant se
+ * contente de composer les atomes de `molecules/`.
+ */
+import type { ForumsDTO } from "@/modules/forums/loaders/forum.loader";
+import ForumsCard from "@/components/forums/ForumsCard.astro";
+
+interface Props {
+  item: ForumsDTO;
+}
+
+const { item } = Astro.props as Props;
+---
+
+<section class="flex flex-col gap-6">
+  <ForumsCard id={item.id} title={item.id} href="#" />
+</section>
+
+<script>
+  import { initForums } from "@/modules/forums/client/init";
+
+  initForums();
+  document.addEventListener("astro:after-swap", initForums);
+</script>
