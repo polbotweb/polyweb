@@ -9,8 +9,12 @@ import type { PolywebModuleCapabilityProviders } from "@/core/modules/module-con
  */
 export const forumsCapabilityProviders = {
   content: "forums",
-  localization: "forumsTranslations",
+  localization: "forum_categories.translations",
   publication: "forumsWorkflow",
   revisions: "forum_revisions",
   locks: "forum_locks",
+  engagement: "forum_votes",
+  moderation: "forumsModeration",
+  notifications: "forumsNotifications",
+  audit: "forumsAudit",
 } as unknown as PolywebModuleCapabilityProviders;

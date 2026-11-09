@@ -10,7 +10,7 @@ import { getDrizzle } from "@database/drizzle";
 import { requireTenantPermission, requireTenantResourcePermission } from "@/lib/effect/action";
 import { forums } from "../schema";
 
-export type ForumsPermission = "create" | "read" | "update" | "publish" | "delete";
+export type ForumsPermission = "create" | "read" | "update" | "publish" | "delete" | "moderate" | "configure";
 
 /** Contenu de l'organisation `organizationId` (`null` = plateforme) : création, actions groupées. */
 export const requireForumsPermission = (context: ActionAPIContext, permissions: readonly ForumsPermission[], organizationId: string | null) =>

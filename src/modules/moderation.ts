@@ -6,6 +6,7 @@ import { registerEventNames } from "@/core/events";
 import { registerModuleModeration } from "@/core/moderation/registry";
 import { MODERATION_DECIDED_EVENT } from "@/core/moderation/service";
 import { MESSAGING_MESSAGE_CREATED_EVENT } from "@/core/messaging/service";
+import { FORUMS_EVENT_DEFINITIONS } from "@/modules/forums/domain/events";
 import { blogModeration } from "@/modules/blog/moderation/adapters";
 import { messagingModeration } from "@/modules/messaging/moderation/adapters";
 import { servicesModeration } from "@/modules/services/moderation/adapters";
@@ -29,6 +30,7 @@ export function registerModerationTargets(): void {
   registerEventNames([
     { name: MODERATION_DECIDED_EVENT, module: "core", description: "Décision de modération (masquer, rétablir, spam) sur un contenu." },
     { name: MESSAGING_MESSAGE_CREATED_EVENT, module: "messaging", description: "Nouveau message privé (sans corps)." },
+    ...FORUMS_EVENT_DEFINITIONS,
   ]);
   for (const entry of MODULE_MODERATION) registerModuleModeration(entry);
 }

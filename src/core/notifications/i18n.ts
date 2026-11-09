@@ -23,8 +23,8 @@ const fr: NotificationsTranslations = {
   receivedAt: "Reçue le", preferences: "Préférences de notification", preferencesIntro: "Choisissez, pour chaque catégorie, comment être prévenu.",
   category: "Catégorie", save: "Enregistrer les préférences", saved: "Préférences enregistrées.", noCategories: "Aucune catégorie de notification n'est disponible.",
   channels: { in_app: "Dans l'application", email: "Par e-mail" },
-  categories: { comments: "Commentaires", reviews: "Avis", publishing: "Publications", mentions: "Mentions", billing: "Facturation", system: "Système", messaging: "Messagerie", moderation: "Modération" },
-  types: { "messaging:MESSAGE_RECEIVED": "Nouveau message privé.", "moderation:CONTENT_HIDDEN": "Un de vos contenus a été masqué par la modération.", "moderation:CONTENT_RESTORED": "Un de vos contenus a été rétabli par la modération.", "sales:INVOICE_REMINDER_SENT": "Relance n°{level} envoyée pour la facture {number} ({daysOverdue} jours de retard)" },
+  categories: { comments: "Commentaires", reviews: "Avis", publishing: "Publications", mentions: "Mentions", billing: "Facturation", system: "Système", messaging: "Messagerie", forums: "Forums", moderation: "Modération" },
+  types: { "messaging:MESSAGE_RECEIVED": "Nouveau message privé.", "forums:TOPIC_REPLY": "Nouvelle réponse dans un sujet que vous suivez.", "forums:MENTION": "Vous avez été mentionné dans un forum.", "forums:BADGE_AWARDED": "Nouveau badge de forum obtenu ({badge}).", "forums:SANCTION_APPLIED": "Votre participation aux forums est restreinte jusqu'au {endsAt}.", "forums:SANCTION_LIFTED": "Votre restriction de participation aux forums a été levée.", "moderation:CONTENT_HIDDEN": "Un de vos contenus a été masqué par la modération.", "moderation:CONTENT_RESTORED": "Un de vos contenus a été rétabli par la modération.", "sales:INVOICE_REMINDER_SENT": "Relance n°{level} envoyée pour la facture {number} ({daysOverdue} jours de retard)" },
   status: "État", actions: "Actions", notificationsLink: "Notifications ({count} non lue(s))",
   unsubscribe: {
     title: "Se désinscrire", confirm: "Ne plus recevoir les e-mails de la catégorie « {category} » ?", button: "Confirmer la désinscription",
@@ -39,8 +39,8 @@ const en: NotificationsTranslations = {
   receivedAt: "Received on", preferences: "Notification preferences", preferencesIntro: "Choose, for each category, how you want to be notified.",
   category: "Category", save: "Save preferences", saved: "Preferences saved.", noCategories: "No notification category is available.",
   channels: { in_app: "In the app", email: "By email" },
-  categories: { comments: "Comments", reviews: "Reviews", publishing: "Publishing", mentions: "Mentions", billing: "Billing", system: "System", messaging: "Messaging", moderation: "Moderation" },
-  types: { "messaging:MESSAGE_RECEIVED": "New private message.", "moderation:CONTENT_HIDDEN": "One of your contributions was hidden by moderation.", "moderation:CONTENT_RESTORED": "One of your contributions was restored by moderation.", "sales:INVOICE_REMINDER_SENT": "Reminder #{level} sent for invoice {number} ({daysOverdue} days overdue)" },
+  categories: { comments: "Comments", reviews: "Reviews", publishing: "Publishing", mentions: "Mentions", billing: "Billing", system: "System", messaging: "Messaging", forums: "Forums", moderation: "Moderation" },
+  types: { "messaging:MESSAGE_RECEIVED": "New private message.", "forums:TOPIC_REPLY": "New reply in a topic you follow.", "forums:MENTION": "You were mentioned in a forum.", "forums:BADGE_AWARDED": "New forum badge earned ({badge}).", "forums:SANCTION_APPLIED": "Your forum participation is restricted until {endsAt}.", "forums:SANCTION_LIFTED": "Your forum participation restriction was lifted.", "moderation:CONTENT_HIDDEN": "One of your contributions was hidden by moderation.", "moderation:CONTENT_RESTORED": "One of your contributions was restored by moderation.", "sales:INVOICE_REMINDER_SENT": "Reminder #{level} sent for invoice {number} ({daysOverdue} days overdue)" },
   status: "Status", actions: "Actions", notificationsLink: "Notifications ({count} unread)",
   unsubscribe: {
     title: "Unsubscribe", confirm: "Stop receiving emails in the “{category}” category?", button: "Confirm unsubscribe",
@@ -55,8 +55,8 @@ const es: NotificationsTranslations = {
   receivedAt: "Recibida el", preferences: "Preferencias de notificación", preferencesIntro: "Elija, para cada categoría, cómo quiere ser avisado.",
   category: "Categoría", save: "Guardar preferencias", saved: "Preferencias guardadas.", noCategories: "No hay ninguna categoría de notificación disponible.",
   channels: { in_app: "En la aplicación", email: "Por correo" },
-  categories: { comments: "Comentarios", reviews: "Opiniones", publishing: "Publicaciones", mentions: "Menciones", billing: "Facturación", system: "Sistema", messaging: "Mensajería", moderation: "Moderación" },
-  types: { "messaging:MESSAGE_RECEIVED": "Nuevo mensaje privado.", "moderation:CONTENT_HIDDEN": "La moderación ha ocultado una de sus contribuciones.", "moderation:CONTENT_RESTORED": "La moderación ha restablecido una de sus contribuciones.", "sales:INVOICE_REMINDER_SENT": "Recordatorio n.º {level} enviado para la factura {number} ({daysOverdue} días de retraso)" },
+  categories: { comments: "Comentarios", reviews: "Opiniones", publishing: "Publicaciones", mentions: "Menciones", billing: "Facturación", system: "Sistema", messaging: "Mensajería", forums: "Foros", moderation: "Moderación" },
+  types: { "messaging:MESSAGE_RECEIVED": "Nuevo mensaje privado.", "forums:TOPIC_REPLY": "Nueva respuesta en un tema que sigue.", "forums:MENTION": "Le han mencionado en un foro.", "forums:BADGE_AWARDED": "Nueva insignia de foro obtenida ({badge}).", "forums:SANCTION_APPLIED": "Su participación en los foros está restringida hasta el {endsAt}.", "forums:SANCTION_LIFTED": "Se ha levantado la restricción de su participación en los foros.", "moderation:CONTENT_HIDDEN": "La moderación ha ocultado una de sus contribuciones.", "moderation:CONTENT_RESTORED": "La moderación ha restablecido una de sus contribuciones.", "sales:INVOICE_REMINDER_SENT": "Recordatorio n.º {level} enviado para la factura {number} ({daysOverdue} días de retraso)" },
   status: "Estado", actions: "Acciones", notificationsLink: "Notificaciones ({count} sin leer)",
   unsubscribe: {
     title: "Darse de baja", confirm: "¿Dejar de recibir correos de la categoría «{category}»?", button: "Confirmar la baja",
@@ -71,8 +71,8 @@ const ar: NotificationsTranslations = {
   receivedAt: "تاريخ الاستلام", preferences: "تفضيلات الإشعارات", preferencesIntro: "اختر لكل فئة طريقة إعلامك.",
   category: "الفئة", save: "حفظ التفضيلات", saved: "تم حفظ التفضيلات.", noCategories: "لا توجد فئة إشعارات متاحة.",
   channels: { in_app: "داخل التطبيق", email: "عبر البريد الإلكتروني" },
-  categories: { comments: "التعليقات", reviews: "المراجعات", publishing: "النشر", mentions: "الإشارات", billing: "الفوترة", system: "النظام", messaging: "الرسائل", moderation: "الإشراف" },
-  types: { "messaging:MESSAGE_RECEIVED": "رسالة خاصة جديدة.", "moderation:CONTENT_HIDDEN": "أخفى الإشراف إحدى مساهماتك.", "moderation:CONTENT_RESTORED": "أعاد الإشراف إحدى مساهماتك.", "sales:INVOICE_REMINDER_SENT": "تم إرسال التذكير رقم {level} للفاتورة {number} (تأخير {daysOverdue} يومًا)" },
+  categories: { comments: "التعليقات", reviews: "المراجعات", publishing: "النشر", mentions: "الإشارات", billing: "الفوترة", system: "النظام", messaging: "الرسائل", forums: "المنتديات", moderation: "الإشراف" },
+  types: { "messaging:MESSAGE_RECEIVED": "رسالة خاصة جديدة.", "forums:TOPIC_REPLY": "رد جديد في موضوع تتابعه.", "forums:MENTION": "تمت الإشارة إليك في منتدى.", "forums:BADGE_AWARDED": "حصلت على شارة منتدى جديدة ({badge}).", "forums:SANCTION_APPLIED": "مشاركتك في المنتديات مقيدة حتى {endsAt}.", "forums:SANCTION_LIFTED": "تم رفع القيد عن مشاركتك في المنتديات.", "moderation:CONTENT_HIDDEN": "أخفى الإشراف إحدى مساهماتك.", "moderation:CONTENT_RESTORED": "أعاد الإشراف إحدى مساهماتك.", "sales:INVOICE_REMINDER_SENT": "تم إرسال التذكير رقم {level} للفاتورة {number} (تأخير {daysOverdue} يومًا)" },
   status: "الحالة", actions: "الإجراءات", notificationsLink: "الإشعارات ({count} غير مقروء)",
   unsubscribe: {
     title: "إلغاء الاشتراك", confirm: "هل تريد التوقف عن تلقي رسائل فئة «{category}»؟", button: "تأكيد إلغاء الاشتراك",
