@@ -515,9 +515,11 @@ migrations/
   0051_audit_scope_append_only.sql
   0052_notifications_core.sql
   0053_moderation_core.sql
+  0054_messaging_core.sql
   down/
     0052_notifications_core.down.sql
     0053_moderation_core.down.sql
+    0054_messaging_core.down.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -569,6 +571,7 @@ migrations/
     0051_snapshot.json
     0052_snapshot.json
     0053_snapshot.json
+    0054_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -581,6 +584,7 @@ schemas/
   exchange-rates.schema.ts
   forms.schema.ts
   media.schema.ts
+  messaging.schema.ts
   moderation.schema.ts
   navigation.schema.ts
   notifications.schema.ts
@@ -751,6 +755,13 @@ schemas.ts
 **numbering.schema.ts**
 - `document_sequences`: `id`, `organizationId`, `key`, `period`, `lastValue`, `updatedAt`
 
+**messaging.schema.ts**
+- `messaging_preferences`: `userId`, `whoCanMessage`, `updatedAt`
+- `messaging_blocks`: `id`, `blockerId`, `blockedId`, `createdAt`
+- `messaging_conversations`: `id`, `userLo`, `userHi`, `createdAt`, `lastMessageAt`
+- `messaging_conversation_states`: `conversationId`, `userId`, `lastReadAt`, `deletedAt`
+- `messaging_messages`: `id`, `conversationId`, `senderId`, `body`, `status`, `organizationId`, `createdAt`
+
 ### Migrations
 
 - `0000_plain_old_lace.sql`
@@ -807,6 +818,7 @@ schemas.ts
 - `0051_audit_scope_append_only.sql`
 - `0052_notifications_core.sql`
 - `0053_moderation_core.sql`
+- `0054_messaging_core.sql`
 
 ### Commandes
 
@@ -862,6 +874,7 @@ src/actions/
   admin/
   blog/
   index.ts
+  messaging.ts
   moderation.ts
   org/
   services/
@@ -1006,6 +1019,11 @@ locks/
   service.ts
 media/
   index.ts
+messaging/
+  i18n.ts
+  index.ts
+  notifications.ts
+  service.ts
 moderation/
   i18n.ts
   index.ts
@@ -1362,6 +1380,13 @@ logistics/
     inventory.service.ts
     logistics.service.ts
     low-stock.ts
+messaging/
+  moderation/
+    adapters.ts
+  notifications/
+    definitions.ts
+  permissions/
+    statements.ts
 moderation.ts
 notifications.ts
 payments/
@@ -1726,6 +1751,9 @@ src/pages/
     [slug].astro
     index.astro
   index.astro
+  messages/
+    [id].astro
+    index.astro
   notifications/
     index.astro
     preferences.astro
