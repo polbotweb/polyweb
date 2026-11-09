@@ -68,3 +68,4 @@ packages/create-polyweb/dist/
 
 # Stockage privé (exports comptables), hors public/
 storage/private/
+.lighthouseci-admin.json
