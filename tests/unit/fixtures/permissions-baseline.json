@@ -76,6 +76,59 @@
       "read",
       "update"
     ],
+    "contentType": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "contentEntry": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "apiToken": [
+      "create",
+      "read",
+      "revoke"
+    ],
+    "webhook": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "form": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "formSubmission": [
+      "read",
+      "delete",
+      "export"
+    ],
+    "plugin": [
+      "read",
+      "update"
+    ],
+    "tenant": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "payment": [
+      "read",
+      "refund"
+    ],
+    "messaging": [
+      "read",
+      "moderate"
+    ],
     "blog": [
       "create",
       "read",
@@ -140,54 +193,26 @@
       "delete",
       "moderate"
     ],
-    "contentType": [
-      "create",
-      "read",
-      "update",
-      "delete"
-    ],
-    "contentEntry": [
+    "events": [
       "create",
       "read",
       "update",
       "delete",
       "publish"
     ],
-    "apiToken": [
-      "create",
-      "read",
-      "revoke"
-    ],
-    "webhook": [
+    "formations": [
       "create",
       "read",
       "update",
-      "delete"
-    ],
-    "form": [
-      "create",
-      "read",
-      "update",
-      "delete"
-    ],
-    "formSubmission": [
-      "read",
       "delete",
-      "export"
+      "publish"
     ],
-    "plugin": [
-      "read",
-      "update"
-    ],
-    "tenant": [
+    "courses": [
       "create",
       "read",
       "update",
-      "delete"
-    ],
-    "payment": [
-      "read",
-      "refund"
+      "delete",
+      "publish"
     ],
     "shop": [
       "create",
@@ -240,27 +265,6 @@
       "read",
       "update",
       "delete"
-    ],
-    "courses": [
-      "create",
-      "read",
-      "update",
-      "delete",
-      "publish"
-    ],
-    "formations": [
-      "create",
-      "read",
-      "update",
-      "delete",
-      "publish"
-    ],
-    "events": [
-      "create",
-      "read",
-      "update",
-      "delete",
-      "publish"
     ]
   },
   "adminRole": {
@@ -315,6 +319,59 @@
       "read",
       "update"
     ],
+    "contentType": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "contentEntry": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "apiToken": [
+      "create",
+      "read",
+      "revoke"
+    ],
+    "webhook": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "form": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "formSubmission": [
+      "read",
+      "delete",
+      "export"
+    ],
+    "plugin": [
+      "read",
+      "update"
+    ],
+    "tenant": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "payment": [
+      "read",
+      "refund"
+    ],
+    "messaging": [
+      "read",
+      "moderate"
+    ],
     "blog": [
       "create",
       "read",
@@ -378,55 +435,6 @@
       "update",
       "delete",
       "moderate"
-    ],
-    "contentType": [
-      "create",
-      "read",
-      "update",
-      "delete"
-    ],
-    "contentEntry": [
-      "create",
-      "read",
-      "update",
-      "delete",
-      "publish"
-    ],
-    "apiToken": [
-      "create",
-      "read",
-      "revoke"
-    ],
-    "webhook": [
-      "create",
-      "read",
-      "update",
-      "delete"
-    ],
-    "form": [
-      "create",
-      "read",
-      "update",
-      "delete"
-    ],
-    "formSubmission": [
-      "read",
-      "delete",
-      "export"
-    ],
-    "plugin": [
-      "read",
-      "update"
-    ],
-    "tenant": [
-      "create",
-      "read",
-      "update",
-      "delete"
-    ],
-    "payment": [
-      "read",
-      "refund"
     ],
     "events": [
       "create",
@@ -503,8 +511,6 @@
     ]
   },
   "editorRole": {
-    "user": [],
-    "session": [],
     "page": [
       "create",
       "read",
@@ -533,6 +539,28 @@
       "read"
     ],
     "theme": [
+      "read"
+    ],
+    "contentType": [
+      "read"
+    ],
+    "contentEntry": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "form": [
+      "create",
+      "read",
+      "update"
+    ],
+    "formSubmission": [
+      "read",
+      "export"
+    ],
+    "messaging": [
       "read"
     ],
     "blog": [
@@ -593,30 +621,6 @@
       "update",
       "moderate"
     ],
-    "contentType": [
-      "read"
-    ],
-    "contentEntry": [
-      "create",
-      "read",
-      "update",
-      "delete",
-      "publish"
-    ],
-    "apiToken": [],
-    "webhook": [],
-    "form": [
-      "create",
-      "read",
-      "update"
-    ],
-    "formSubmission": [
-      "read",
-      "export"
-    ],
-    "plugin": [],
-    "tenant": [],
-    "payment": [],
     "events": [
       "create",
       "read",
@@ -654,8 +658,6 @@
     ]
   },
   "userRole": {
-    "user": [],
-    "session": [],
     "page": [
       "read"
     ],
@@ -672,6 +674,18 @@
       "read"
     ],
     "theme": [
+      "read"
+    ],
+    "contentType": [
+      "read"
+    ],
+    "contentEntry": [
+      "read"
+    ],
+    "form": [
+      "read"
+    ],
+    "messaging": [
       "read"
     ],
     "blog": [
@@ -704,21 +718,6 @@
     "serviceReview": [
       "read"
     ],
-    "contentType": [
-      "read"
-    ],
-    "contentEntry": [
-      "read"
-    ],
-    "apiToken": [],
-    "webhook": [],
-    "form": [
-      "read"
-    ],
-    "formSubmission": [],
-    "plugin": [],
-    "tenant": [],
-    "payment": [],
     "events": [
       "read"
     ],
@@ -794,6 +793,29 @@
       "read",
       "update"
     ],
+    "contentType": [
+      "read"
+    ],
+    "contentEntry": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "form": [
+      "create",
+      "read",
+      "update"
+    ],
+    "formSubmission": [
+      "read",
+      "export"
+    ],
+    "messaging": [
+      "read",
+      "moderate"
+    ],
     "blog": [
       "create",
       "read",
@@ -858,30 +880,6 @@
       "delete",
       "moderate"
     ],
-    "contentType": [
-      "read"
-    ],
-    "contentEntry": [
-      "create",
-      "read",
-      "update",
-      "delete",
-      "publish"
-    ],
-    "apiToken": [],
-    "webhook": [],
-    "form": [
-      "create",
-      "read",
-      "update"
-    ],
-    "formSubmission": [
-      "read",
-      "export"
-    ],
-    "plugin": [],
-    "tenant": [],
-    "payment": [],
     "events": [
       "create",
       "read",
@@ -1011,6 +1009,29 @@
     "theme": [
       "read"
     ],
+    "contentType": [
+      "read"
+    ],
+    "contentEntry": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "publish"
+    ],
+    "form": [
+      "create",
+      "read",
+      "update"
+    ],
+    "formSubmission": [
+      "read",
+      "export"
+    ],
+    "messaging": [
+      "read",
+      "moderate"
+    ],
     "blog": [
       "create",
       "read",
@@ -1075,30 +1096,6 @@
       "delete",
       "moderate"
     ],
-    "contentType": [
-      "read"
-    ],
-    "contentEntry": [
-      "create",
-      "read",
-      "update",
-      "delete",
-      "publish"
-    ],
-    "apiToken": [],
-    "webhook": [],
-    "form": [
-      "create",
-      "read",
-      "update"
-    ],
-    "formSubmission": [
-      "read",
-      "export"
-    ],
-    "plugin": [],
-    "tenant": [],
-    "payment": [],
     "events": [
       "create",
       "read",
@@ -1174,10 +1171,6 @@
     ]
   },
   "orgMemberRole": {
-    "organization": [],
-    "member": [],
-    "invitation": [],
-    "team": [],
     "ac": [
       "read"
     ],
@@ -1197,6 +1190,18 @@
       "read"
     ],
     "theme": [
+      "read"
+    ],
+    "contentType": [
+      "read"
+    ],
+    "contentEntry": [
+      "read"
+    ],
+    "form": [
+      "read"
+    ],
+    "messaging": [
       "read"
     ],
     "blog": [
@@ -1229,21 +1234,6 @@
     "serviceReview": [
       "read"
     ],
-    "contentType": [
-      "read"
-    ],
-    "contentEntry": [
-      "read"
-    ],
-    "apiToken": [],
-    "webhook": [],
-    "form": [
-      "read"
-    ],
-    "formSubmission": [],
-    "plugin": [],
-    "tenant": [],
-    "payment": [],
     "events": [
       "read"
     ],
