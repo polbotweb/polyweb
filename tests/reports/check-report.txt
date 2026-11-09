@@ -1,13 +1,12 @@
 
-> polyweb@0.0.1 check /workspace/b5-messaging
+> polyweb@0.0.1 check /workspace/b5-forums
 > astro check
 
-10:22:24 [@astrojs/node] Enabling sessions with filesystem storage
-10:22:24 [vite] Re-optimizing dependencies because vite config has changed
-10:22:24 [content] Syncing content
-10:22:24 [content] Synced content
-10:22:24 [types] Generated 187ms
-10:22:24 [check] Getting diagnostics for Astro files in /workspace/b5-messaging...
+16:36:57 [@astrojs/node] Enabling sessions with filesystem storage
+16:36:57 [content] Syncing content
+16:36:57 [content] Synced content
+16:36:57 [types] Generated 165ms
+16:36:57 [check] Getting diagnostics for Astro files in /workspace/b5-forums...
 [96msrc/actions/admin/pages.ts[0m:[93m4[0m:[93m38[0m - [93mwarning[0m[90m ts(6133): [0m'isNotNull' is declared but its value is never read.
 
 [7m4[0m import { eq, and, asc, desc, isNull, isNotNull, inArray, max } from "drizzle-orm";
@@ -292,7 +291,7 @@
 [7m23[0m import { bookings, bookingsResources } from '@/modules/bookings/schema';
 [7m  [0m [93m                   ~~~~~~~~~~~~~~~~~[0m
 
-Result (1864 files): 
+Result (1910 files): 
 - 0 errors
 - 0 warnings
 - 64 hints

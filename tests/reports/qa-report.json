@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-09 11:28:39",
+  "generatedAt": "2026-11-09 18:02:45",
   "overall": "green",
   "reportsAvailable": 6,
   "sections": [
@@ -28,10 +28,10 @@
       "key": "vitest",
       "title": "Unit & Integration Tests (Vitest)",
       "ok": true,
-      "summary": "2241/2242 passed, 1 skipped",
+      "summary": "2276/2277 passed, 1 skipped",
       "metrics": {
-        "total": 2242,
-        "passed": 2241,
+        "total": 2277,
+        "passed": 2276,
         "failed": 0,
         "skipped": 1
       }
@@ -40,22 +40,22 @@
       "key": "playwright",
       "title": "End-to-End Tests (Playwright)",
       "ok": true,
-      "summary": "306/390 passed, 84 skipped",
+      "summary": "307/393 passed, 86 skipped",
       "metrics": {
-        "total": 390,
-        "passed": 306,
+        "total": 393,
+        "passed": 307,
         "failed": 0,
-        "skipped": 84
+        "skipped": 86
       }
     },
     {
       "key": "pa11y",
       "title": "Accessibility Audit (Pa11y — WCAG 2.1 AAA)",
       "ok": true,
-      "summary": "200/200 URLs clean",
+      "summary": "232/232 URLs clean",
       "metrics": {
-        "urls": 200,
-        "passes": 200,
+        "urls": 232,
+        "passes": 232,
         "errors": 0,
         "notAudited": 0,
         "rules": 0
@@ -65,9 +65,9 @@
       "key": "lighthouse",
       "title": "Performance & Quality Audit (Lighthouse CI)",
       "ok": true,
-      "summary": "200 page(s) audited, all ≥90",
+      "summary": "220 page(s) audited, all ≥90",
       "metrics": {
-        "pages": 200,
+        "pages": 220,
         "belowThreshold": 0
       }
     }

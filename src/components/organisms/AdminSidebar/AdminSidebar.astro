@@ -33,6 +33,7 @@ import { getReturnTranslations } from '@/modules/shop/i18n/returns';
 import ReportAnalyticsIcon from '@tabler/icons/outline/report-analytics.svg';
 import { getDashboardTranslations } from '@/modules/dashboard/i18n';
 import CalendarEventIcon from '@tabler/icons/outline/calendar-event.svg';
+import MessagesIcon from '@tabler/icons/outline/messages.svg';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail, SidebarSeparator } from '@atoms/sidebar';
 
 interface Props { t: AuthTranslations; locale: Locale; activeItem?: AdminSubpage; activePlatform?: PlatformSection; }
@@ -61,6 +62,7 @@ const cmsItems: { id: AdminSubpage; title: string; url: string; icon: typeof Set
   { id: 'purchasing', title: getModuleLabel('purchasing', locale), url: getAdminUrl(locale, 'purchasing'), icon: ShoppingCartIcon },
   { id: 'subscriptions', title: getModuleLabel('subscriptions', locale), url: getAdminUrl(locale, 'subscriptions'), icon: RepeatIcon },
   { id: 'bookings', title: getModuleLabel('bookings', locale), url: getAdminUrl(locale, 'bookings'), icon: CalendarEventIcon },
+  { id: 'forums', title: getModuleLabel('forums', locale), url: getAdminUrl(locale, 'forums'), icon: MessagesIcon },
   { id: 'site', title: t.admin.tabs.site, url: getAdminUrl(locale, 'site'), icon: SettingsIcon },
   { id: 'navigation', title: t.admin.tabs.navigation, url: getAdminUrl(locale, 'navigation'), icon: MenuIcon },
   { id: 'pages', title: t.admin.tabs.pages, url: getAdminUrl(locale, 'pages'), icon: LayoutIcon },

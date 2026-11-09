@@ -1,7 +1,7 @@
 ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
   LIGHTHOUSE CI PERFORMANCE & QUALITY REPORT
-  Generated: 2026-11-09 11:28:23
-  Pages audited: 200
+  Generated: 2026-11-09 18:02:27
+  Pages audited: 220
 ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
   CATEGORY SCORES
@@ -11,35 +11,40 @@
   ✅ ar--account                           99    100   96    100
   ✅ ar--admin--blog                       96    100   96    100
   ✅ ar--admin--dashboard                  97    100   96    100
-  ✅ ar--admin--logistics--inventories--2c950cc2-eec1-4701-aff6-478ffa06cbb697    100   96    100
-  ✅ ar--admin--logistics--inventories--94146331-be16-473a-bb70-852decd47f0b97    100   96    100
-  ✅ ar--admin--logistics--inventories     97    100   96    100
-  ✅ ar--admin--logistics--items           97    100   96    100
-  ✅ ar--admin--logistics--movements       98    100   96    100
+  ✅ ar--admin--forums--sanctions          98    100   96    100
+  ✅ ar--admin--forums                     98    100   96    100
+  ✅ ar--admin--logistics--inventories--38745490-b96f-42e1-927a-9005dd753e5a97    100   96    100
+  ✅ ar--admin--logistics--inventories--4853da62-4f21-400f-a7f0-a216e9b53bf898    100   96    100
+  ✅ ar--admin--logistics--inventories     98    100   96    100
+  ✅ ar--admin--logistics--items           98    100   96    100
+  ✅ ar--admin--logistics--movements       97    100   96    100
   ✅ ar--admin--moderation                 97    100   96    100
-  ✅ ar--admin--navigation                 98    100   96    100
+  ✅ ar--admin--navigation                 97    100   96    100
   ✅ ar--admin--orders--detail-2           98    100   96    100
   ✅ ar--admin--orders--detail             98    100   96    100
   ✅ ar--admin--orders                     98    100   96    100
   ✅ ar--admin--platform--api-tokens       98    100   96    100
-  ✅ ar--admin--returns--b92d0880-a334-4a52-a973-81ad48f4679c98    100   96    100
+  ✅ ar--admin--returns--eaa7a586-a024-4159-902a-3449a7324fb198    100   96    100
   ✅ ar--admin--returns                    98    100   96    100
-  ✅ ar--admin--sales--fec                 97    100   96    100
-  ✅ ar--admin--sales--fx                  97    100   96    100
+  ✅ ar--admin--sales--fec                 98    100   96    100
+  ✅ ar--admin--sales--fx                  96    100   96    100
   ✅ ar--admin--site                       95    100   96    100
   ✅ ar--admin--stats                      98    100   96    100
-  ✅ ar--admin--subscriptions--3156141d-e580-4a77-87ba-a99c610c517297    100   96    100
-  ✅ ar--admin--subscriptions--plans--3bd5d877-5b48-4cc6-90e1-e96af8d7730797    100   96    100
-  ✅ ar--admin--subscriptions              98    100   96    100
+  ✅ ar--admin--subscriptions--6532b14f-0086-4c86-a9e8-38177cd366f798    100   96    100
+  ✅ ar--admin--subscriptions--plans--7872dc8d-d365-46ee-a1c5-4f04adb04d9997    100   96    100
+  ✅ ar--admin--subscriptions              97    100   96    100
   ✅ ar--admin--theme                      96    100   96    100
-  ✅ ar--auth--الملف-الشخصي                99    100   96    100
+  ✅ ar--auth--الملف-الشخصي                98    100   96    100
   ✅ ar--auth--انشاء-حساب                  99    100   96    100
   ✅ ar--auth--تسجيل-الدخول                99    100   96    100
   ✅ ar--auth--لوحة-التحكم                 99    100   96    100
   ✅ ar--auth--نسيت-كلمة-المرور            99    100   96    100
-  ✅ ar--blog                              98    100   96    100
+  ✅ ar--blog                              99    100   96    100
   ✅ ar--bookings--A11YROOM                99    100   96    100
-  ✅ ar--bookings                          100   100   96    100
+  ✅ ar--bookings                          99    100   96    100
+  ✅ ar--forums--communaute--t--44b5f581-fad0-4f62-ad71-26b97addaea9100   100   96    100
+  ✅ ar--forums--communaute                99    100   96    100
+  ✅ ar--forums                            99    100   96    100
   ✅ ar--home                              96    100   96    100
   ✅ ar--messages                          99    100   96    100
   ✅ ar--notifications--preferences        99    100   96    100
@@ -50,48 +55,53 @@
   ✅ ar--organizations--a11y-roles-org--roles98    100   96    100
   ✅ ar--organizations--a11y-roles-org--sites99    100   96    100
   ✅ ar--shop--a11y-qamis                  99    100   96    100
-  ✅ ar--shop--cart                        100   100   96    100
+  ✅ ar--shop--cart                        99    100   96    100
   ✅ ar--shop--checkout                    99    100   96    100
   ✅ ar--shop--order-2                     99    100   96    100
   ✅ ar--shop--order                       99    100   96    100
   ✅ ar--subscriptions                     99    100   96    100
   ✅ ar--اتصل-بنا                          99    100   96    100
   ✅ ar--الشروط-القانونية                  99    100   96    100
-  ✅ ar--من-نحن                            99    100   96    100
+  ✅ ar--من-نحن                            96    100   96    100
   ✅ en--about                             98    100   96    100
   ✅ en--account                           99    100   96    100
   ✅ en--admin--blog                       96    100   96    100
-  ✅ en--admin--dashboard                  98    100   96    100
-  ✅ en--admin--logistics--inventories--2c950cc2-eec1-4701-aff6-478ffa06cbb697    100   96    100
-  ✅ en--admin--logistics--inventories--94146331-be16-473a-bb70-852decd47f0b97    100   96    100
+  ✅ en--admin--dashboard                  97    100   96    100
+  ✅ en--admin--forums--sanctions          98    100   96    100
+  ✅ en--admin--forums                     98    100   96    100
+  ✅ en--admin--logistics--inventories--38745490-b96f-42e1-927a-9005dd753e5a98    100   96    100
+  ✅ en--admin--logistics--inventories--4853da62-4f21-400f-a7f0-a216e9b53bf897    100   96    100
   ✅ en--admin--logistics--inventories     97    100   96    100
   ✅ en--admin--logistics--items           98    100   96    100
-  ✅ en--admin--logistics--movements       98    100   96    100
-  ✅ en--admin--moderation                 98    100   96    100
-  ✅ en--admin--navigation                 98    100   96    100
+  ✅ en--admin--logistics--movements       97    100   96    100
+  ✅ en--admin--moderation                 97    100   96    100
+  ✅ en--admin--navigation                 97    100   96    100
   ✅ en--admin--orders--detail-2           98    100   96    100
   ✅ en--admin--orders--detail             98    100   96    100
   ✅ en--admin--orders                     98    100   96    100
   ✅ en--admin--platform--api-tokens       98    100   96    100
-  ✅ en--admin--returns--b92d0880-a334-4a52-a973-81ad48f4679c98    100   96    100
+  ✅ en--admin--returns--eaa7a586-a024-4159-902a-3449a7324fb198    100   96    100
   ✅ en--admin--returns                    98    100   96    100
   ✅ en--admin--sales--fec                 97    100   96    100
   ✅ en--admin--sales--fx                  97    100   96    100
   ✅ en--admin--site                       95    100   96    100
   ✅ en--admin--stats                      98    100   96    100
-  ✅ en--admin--subscriptions--3156141d-e580-4a77-87ba-a99c610c517297    100   96    100
-  ✅ en--admin--subscriptions--plans--3bd5d877-5b48-4cc6-90e1-e96af8d7730798    100   96    100
-  ✅ en--admin--subscriptions              98    100   96    100
+  ✅ en--admin--subscriptions--6532b14f-0086-4c86-a9e8-38177cd366f798    100   96    100
+  ✅ en--admin--subscriptions--plans--7872dc8d-d365-46ee-a1c5-4f04adb04d9997    100   96    100
+  ✅ en--admin--subscriptions              97    100   96    100
   ✅ en--admin--theme                      96    100   96    100
   ✅ en--auth--dashboard                   99    100   96    100
   ✅ en--auth--forgot-password             99    100   96    100
-  ✅ en--auth--profile                     99    100   96    100
+  ✅ en--auth--profile                     98    100   96    100
   ✅ en--auth--sign-in                     99    100   96    100
   ✅ en--auth--sign-up                     99    100   96    100
   ✅ en--blog                              99    100   96    100
   ✅ en--bookings--A11YROOM                99    100   96    100
   ✅ en--bookings                          99    100   96    100
   ✅ en--contact                           99    100   96    100
+  ✅ en--forums--communaute--t--44b5f581-fad0-4f62-ad71-26b97addaea999    100   96    100
+  ✅ en--forums--communaute                99    100   96    100
+  ✅ en--forums                            99    100   96    100
   ✅ en--home                              97    100   96    100
   ✅ en--legal-notice                      99    100   96    100
   ✅ en--messages                          99    100   96    100
@@ -101,7 +111,7 @@
   ✅ en--organizations--a11y-roles-org--audit99    100   96    100
   ✅ en--organizations--a11y-roles-org--moderation99    100   96    100
   ✅ en--organizations--a11y-roles-org--roles98    100   96    100
-  ✅ en--organizations--a11y-roles-org--sites98    100   96    100
+  ✅ en--organizations--a11y-roles-org--sites99    100   96    100
   ✅ en--shop--a11y-t-shirt                99    100   96    100
   ✅ en--shop--cart                        99    100   96    100
   ✅ en--shop--checkout                    99    100   96    100
@@ -110,39 +120,44 @@
   ✅ en--subscriptions                     99    100   96    100
   ✅ es--account                           99    100   96    100
   ✅ es--acerca-de                         98    100   96    100
-  ✅ es--admin--blog                       96    100   96    100
+  ✅ es--admin--blog                       95    100   96    100
   ✅ es--admin--dashboard                  98    100   96    100
-  ✅ es--admin--logistics--inventories--2c950cc2-eec1-4701-aff6-478ffa06cbb697    100   96    100
-  ✅ es--admin--logistics--inventories--94146331-be16-473a-bb70-852decd47f0b97    100   96    100
+  ✅ es--admin--forums--sanctions          98    100   96    100
+  ✅ es--admin--forums                     98    100   96    100
+  ✅ es--admin--logistics--inventories--38745490-b96f-42e1-927a-9005dd753e5a96    100   96    100
+  ✅ es--admin--logistics--inventories--4853da62-4f21-400f-a7f0-a216e9b53bf897    100   96    100
   ✅ es--admin--logistics--inventories     98    100   96    100
   ✅ es--admin--logistics--items           97    100   96    100
-  ✅ es--admin--logistics--movements       98    100   96    100
-  ✅ es--admin--moderation                 98    100   96    100
-  ✅ es--admin--navigation                 98    100   96    100
+  ✅ es--admin--logistics--movements       97    100   96    100
+  ✅ es--admin--moderation                 97    100   96    100
+  ✅ es--admin--navigation                 97    100   96    100
   ✅ es--admin--orders--detail-2           98    100   96    100
   ✅ es--admin--orders--detail             98    100   96    100
   ✅ es--admin--orders                     98    100   96    100
   ✅ es--admin--platform--api-tokens       98    100   96    100
-  ✅ es--admin--returns--b92d0880-a334-4a52-a973-81ad48f4679c98    100   96    100
+  ✅ es--admin--returns--eaa7a586-a024-4159-902a-3449a7324fb198    100   96    100
   ✅ es--admin--returns                    98    100   96    100
   ✅ es--admin--sales--fec                 97    100   96    100
   ✅ es--admin--sales--fx                  97    100   96    100
-  ✅ es--admin--site                       96    100   96    100
-  ✅ es--admin--stats                      97    100   96    100
-  ✅ es--admin--subscriptions--3156141d-e580-4a77-87ba-a99c610c517298    100   96    100
-  ✅ es--admin--subscriptions--plans--3bd5d877-5b48-4cc6-90e1-e96af8d7730798    100   96    100
-  ✅ es--admin--subscriptions              97    100   96    100
+  ✅ es--admin--site                       95    100   96    100
+  ✅ es--admin--stats                      98    100   96    100
+  ✅ es--admin--subscriptions--6532b14f-0086-4c86-a9e8-38177cd366f798    100   96    100
+  ✅ es--admin--subscriptions--plans--7872dc8d-d365-46ee-a1c5-4f04adb04d9997    100   96    100
+  ✅ es--admin--subscriptions              98    100   96    100
   ✅ es--admin--theme                      96    100   96    100
   ✅ es--auth--contrasena-olvidada         99    100   96    100
   ✅ es--auth--iniciar-sesion              99    100   96    100
   ✅ es--auth--panel                       99    100   96    100
-  ✅ es--auth--perfil                      98    100   96    100
+  ✅ es--auth--perfil                      99    100   96    100
   ✅ es--auth--registro                    99    100   96    100
   ✅ es--aviso-legal                       99    100   96    100
   ✅ es--blog                              99    100   96    100
   ✅ es--bookings--A11YROOM                99    100   96    100
   ✅ es--bookings                          99    100   96    100
   ✅ es--contacto                          99    100   96    100
+  ✅ es--forums--communaute--t--44b5f581-fad0-4f62-ad71-26b97addaea999    100   96    100
+  ✅ es--forums--communaute                99    100   96    100
+  ✅ es--forums                            99    100   96    100
   ✅ es--home                              97    100   96    100
   ✅ es--messages                          99    100   96    100
   ✅ es--notifications--preferences        99    100   96    100
@@ -162,26 +177,28 @@
   ✅ fr--account                           99    100   96    100
   ✅ fr--admin--blog                       96    100   96    100
   ✅ fr--admin--dashboard                  98    100   96    100
-  ✅ fr--admin--logistics--inventories--2c950cc2-eec1-4701-aff6-478ffa06cbb697    100   96    100
-  ✅ fr--admin--logistics--inventories--94146331-be16-473a-bb70-852decd47f0b97    100   96    100
+  ✅ fr--admin--forums--sanctions          98    100   96    100
+  ✅ fr--admin--forums                     97    100   96    100
+  ✅ fr--admin--logistics--inventories--38745490-b96f-42e1-927a-9005dd753e5a98    100   96    100
+  ✅ fr--admin--logistics--inventories--4853da62-4f21-400f-a7f0-a216e9b53bf897    100   96    100
   ✅ fr--admin--logistics--inventories     97    100   96    100
-  ✅ fr--admin--logistics--items           98    100   96    100
-  ✅ fr--admin--logistics--movements       98    100   96    100
-  ✅ fr--admin--moderation                 98    100   96    100
+  ✅ fr--admin--logistics--items           97    100   96    100
+  ✅ fr--admin--logistics--movements       97    100   96    100
+  ✅ fr--admin--moderation                 97    100   96    100
   ✅ fr--admin--navigation                 97    100   96    100
   ✅ fr--admin--orders--detail-2           98    100   96    100
   ✅ fr--admin--orders--detail             98    100   96    100
   ✅ fr--admin--orders                     98    100   96    100
   ✅ fr--admin--platform--api-tokens       98    100   96    100
-  ✅ fr--admin--returns--b92d0880-a334-4a52-a973-81ad48f4679c98    100   96    100
+  ✅ fr--admin--returns--eaa7a586-a024-4159-902a-3449a7324fb198    100   96    100
   ✅ fr--admin--returns                    98    100   96    100
   ✅ fr--admin--sales--fec                 98    100   96    100
   ✅ fr--admin--sales--fx                  97    100   96    100
   ✅ fr--admin--site                       95    100   96    100
   ✅ fr--admin--stats                      98    100   96    100
-  ✅ fr--admin--subscriptions--3156141d-e580-4a77-87ba-a99c610c517298    100   96    100
-  ✅ fr--admin--subscriptions--plans--3bd5d877-5b48-4cc6-90e1-e96af8d7730797    100   96    100
-  ✅ fr--admin--subscriptions              98    100   96    100
+  ✅ fr--admin--subscriptions--6532b14f-0086-4c86-a9e8-38177cd366f797    100   96    100
+  ✅ fr--admin--subscriptions--plans--7872dc8d-d365-46ee-a1c5-4f04adb04d9997    100   96    100
+  ✅ fr--admin--subscriptions              97    100   96    100
   ✅ fr--admin--theme                      95    100   96    100
   ✅ fr--auth--connexion                   99    100   96    100
   ✅ fr--auth--inscription                 99    100   96    100
@@ -192,6 +209,9 @@
   ✅ fr--bookings--A11YROOM                99    100   96    100
   ✅ fr--bookings                          99    100   96    100
   ✅ fr--contact                           99    100   96    100
+  ✅ fr--forums--communaute--t--44b5f581-fad0-4f62-ad71-26b97addaea999    100   96    100
+  ✅ fr--forums--communaute                99    100   96    100
+  ✅ fr--forums                            99    100   96    100
   ✅ fr--home                              97    100   96    100
   ✅ fr--mentions-legales                  99    100   96    100
   ✅ fr--messages                          99    100   96    100
@@ -199,220 +219,240 @@
   ✅ fr--notifications--unsubscribe        99    100   96    100
   ✅ fr--notifications                     99    100   96    100
   ✅ fr--organizations--a11y-roles-org--audit99    100   96    100
-  ✅ fr--organizations--a11y-roles-org--moderation98    100   96    100
+  ✅ fr--organizations--a11y-roles-org--moderation99    100   96    100
   ✅ fr--organizations--a11y-roles-org--roles98    100   96    100
   ✅ fr--organizations--a11y-roles-org--sites99    100   96    100
   ✅ fr--shop--a11y-t-shirt                99    100   96    100
   ✅ fr--shop--cart                        99    100   96    100
   ✅ fr--shop--checkout                    99    100   96    100
   ✅ fr--shop--order-2                     100   100   96    100
-  ✅ fr--shop--order                       99    100   96    100
+  ✅ fr--shop--order                       100   100   96    100
   ✅ fr--subscriptions                     99    100   96    100
 
   CORE WEB VITALS
 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
   Page                                    FCP       LCP       SI        TBT       CLS
   ──────────────────────────────────────────────────────────────────────────────────────────────────────────
-  ar--account                             🟢661ms   🟢861ms   🟢661ms   🟢0ms     🟢0.000   
-  ar--admin--blog                         🟢969ms   🟢1.2s    🟢969ms   🟢0ms     🟢0.000   
-  ar--admin--dashboard                    🟢874ms   🟢1.1s    🟢874ms   🟢0ms     🟢0.000   
-  ar--admin--logistics--inventories--2c950cc2-eec1-4701-aff6-478ffa06cbb6🟢846ms   🟢1.1s    🟢846ms   🟢0ms     🟢0.000   
-  ar--admin--logistics--inventories--94146331-be16-473a-bb70-852decd47f0b🟢842ms   🟢1.1s    🟢842ms   🟢0ms     🟢0.000   
-  ar--admin--logistics--inventories       🟢811ms   🟢1.1s    🟢811ms   🟢0ms     🟢0.000   
-  ar--admin--logistics--items             🟢811ms   🟢1.1s    🟢811ms   🟢0ms     🟢0.000   
-  ar--admin--logistics--movements         🟢830ms   🟢1.0s    🟢830ms   🟢0ms     🟢0.000   
-  ar--admin--moderation                   🟢870ms   🟢1.1s    🟢870ms   🟢0ms     🟢0.000   
-  ar--admin--navigation                   🟢836ms   🟢1.1s    🟢836ms   🟢0ms     🟢0.000   
-  ar--admin--orders--detail-2             🟢791ms   🟢1.0s    🟢791ms   🟢0ms     🟢0.000   
-  ar--admin--orders--detail               🟢794ms   🟢974ms   🟢794ms   🟢0ms     🟢0.000   
-  ar--admin--orders                       🟢832ms   🟢1.0s    🟢832ms   🟢0ms     🟢0.000   
-  ar--admin--platform--api-tokens         🟢831ms   🟢1.0s    🟢831ms   🟢0ms     🟢0.000   
-  ar--admin--returns--b92d0880-a334-4a52-a973-81ad48f4679c🟢826ms   🟢1.0s    🟢826ms   🟢0ms     🟢0.000   
-  ar--admin--returns                      🟢814ms   🟢1.0s    🟢814ms   🟢0ms     🟢0.000   
-  ar--admin--sales--fec                   🟢867ms   🟢1.1s    🟢867ms   🟢0ms     🟢0.000   
-  ar--admin--sales--fx                    🟢897ms   🟢1.1s    🟢897ms   🟢0ms     🟢0.000   
-  ar--admin--site                         🟢1.0s    🟢1.3s    🟢1.0s    🟢0ms     🟢0.000   
-  ar--admin--stats                        🟢793ms   🟢1.0s    🟢793ms   🟢0ms     🟢0.000   
-  ar--admin--subscriptions--3156141d-e580-4a77-87ba-a99c610c5172🟢847ms   🟢1.1s    🟢847ms   🟢0ms     🟢0.000   
-  ar--admin--subscriptions--plans--3bd5d877-5b48-4cc6-90e1-e96af8d77307🟢890ms   🟢1.1s    🟢890ms   🟢0ms     🟢0.000   
-  ar--admin--subscriptions                🟢825ms   🟢1.0s    🟢825ms   🟢0ms     🟢0.000   
-  ar--admin--theme                        🟢974ms   🟢1.2s    🟢974ms   🟢0ms     🟢0.000   
-  ar--auth--الملف-الشخصي                  🟢687ms   🟢967ms   🟢687ms   🟢0ms     🟢0.000   
-  ar--auth--انشاء-حساب                    🟢663ms   🟢823ms   🟢663ms   🟢0ms     🟢0.000   
-  ar--auth--تسجيل-الدخول                  🟢652ms   🟢812ms   🟢652ms   🟢0ms     🟢0.000   
-  ar--auth--لوحة-التحكم                   🟢743ms   🟢903ms   🟢743ms   🟢0ms     🟢0.000   
-  ar--auth--نسيت-كلمة-المرور              🟢652ms   🟢812ms   🟢652ms   🟢0ms     🟢0.000   
-  ar--blog                                🟢616ms   🟢1.0s    🟢616ms   🟢0ms     🟢0.011   
-  ar--bookings--A11YROOM                  🟢581ms   🟢741ms   🟢581ms   🟢0ms     🟢0.000   
-  ar--bookings                            🟢573ms   🟢733ms   🟢573ms   🟢0ms     🟢0.000   
-  ar--home                                🟢681ms   🟢1.2s    🟢1.0s    🟢0ms     🟢0.000   
-  ar--messages                            🟢668ms   🟢868ms   🟢668ms   🟢0ms     🟢0.000   
-  ar--notifications--preferences          🟢681ms   🟢861ms   🟢681ms   🟢0ms     🟢0.000   
-  ar--notifications--unsubscribe          🟢594ms   🟢794ms   🟢594ms   🟢0ms     🟢0.000   
-  ar--notifications                       🟢692ms   🟢912ms   🟢692ms   🟢0ms     🟢0.000   
-  ar--organizations--a11y-roles-org--audit🟢678ms   🟢858ms   🟢678ms   🟢0ms     🟢0.000   
-  ar--organizations--a11y-roles-org--moderation🟢716ms   🟢936ms   🟢716ms   🟢0ms     🟢0.000   
-  ar--organizations--a11y-roles-org--roles🟢804ms   🟢1.0s    🟢804ms   🟢0ms     🟢0.000   
+  ar--account                             🟢674ms   🟢894ms   🟢674ms   🟢0ms     🟢0.000   
+  ar--admin--blog                         🟢965ms   🟢1.2s    🟢965ms   🟢0ms     🟢0.000   
+  ar--admin--dashboard                    🟢852ms   🟢1.1s    🟢852ms   🟢0ms     🟢0.000   
+  ar--admin--forums--sanctions            🟢813ms   🟢973ms   🟢813ms   🟢0ms     🟢0.000   
+  ar--admin--forums                       🟢836ms   🟢1.0s    🟢836ms   🟢0ms     🟢0.000   
+  ar--admin--logistics--inventories--38745490-b96f-42e1-927a-9005dd753e5a🟢850ms   🟢1.1s    🟢850ms   🟢0ms     🟢0.000   
+  ar--admin--logistics--inventories--4853da62-4f21-400f-a7f0-a216e9b53bf8🟢842ms   🟢1.0s    🟢842ms   🟢0ms     🟢0.000   
+  ar--admin--logistics--inventories       🟢812ms   🟢1.0s    🟢812ms   🟢0ms     🟢0.000   
+  ar--admin--logistics--items             🟢814ms   🟢1.0s    🟢814ms   🟢0ms     🟢0.000   
+  ar--admin--logistics--movements         🟢840ms   🟢1.1s    🟢840ms   🟢0ms     🟢0.000   
+  ar--admin--moderation                   🟢819ms   🟢1.1s    🟢819ms   🟢0ms     🟢0.000   
+  ar--admin--navigation                   🟢849ms   🟢1.1s    🟢849ms   🟢0ms     🟢0.000   
+  ar--admin--orders--detail-2             🟢832ms   🟢972ms   🟢832ms   🟢0ms     🟢0.000   
+  ar--admin--orders--detail               🟢792ms   🟢1.1s    🟢792ms   🟢0ms     🟢0.000   
+  ar--admin--orders                       🟢780ms   🟢980ms   🟢780ms   🟢0ms     🟢0.000   
+  ar--admin--platform--api-tokens         🟢818ms   🟢1.0s    🟢818ms   🟢0ms     🟢0.000   
+  ar--admin--returns--eaa7a586-a024-4159-902a-3449a7324fb1🟢832ms   🟢1.0s    🟢832ms   🟢0ms     🟢0.000   
+  ar--admin--returns                      🟢831ms   🟢1.0s    🟢831ms   🟢0ms     🟢0.000   
+  ar--admin--sales--fec                   🟢806ms   🟢966ms   🟢806ms   🟢0ms     🟢0.000   
+  ar--admin--sales--fx                    🟢938ms   🟢1.1s    🟢938ms   🟢0ms     🟢0.000   
+  ar--admin--site                         🟢970ms   🟢1.3s    🟢970ms   🟢0ms     🟢0.000   
+  ar--admin--stats                        🟢786ms   🟢1.0s    🟢786ms   🟢0ms     🟢0.000   
+  ar--admin--subscriptions--6532b14f-0086-4c86-a9e8-38177cd366f7🟢809ms   🟢1.0s    🟢809ms   🟢0ms     🟢0.000   
+  ar--admin--subscriptions--plans--7872dc8d-d365-46ee-a1c5-4f04adb04d99🟢888ms   🟢1.0s    🟢888ms   🟢0ms     🟢0.000   
+  ar--admin--subscriptions                🟢848ms   🟢1.0s    🟢848ms   🟢0ms     🟢0.000   
+  ar--admin--theme                        🟢970ms   🟢1.2s    🟢970ms   🟢0ms     🟢0.000   
+  ar--auth--الملف-الشخصي                  🟢709ms   🟢969ms   🟢709ms   🟢0ms     🟢0.000   
+  ar--auth--انشاء-حساب                    🟢687ms   🟢807ms   🟢687ms   🟢0ms     🟢0.000   
+  ar--auth--تسجيل-الدخول                  🟢648ms   🟢768ms   🟢648ms   🟢0ms     🟢0.000   
+  ar--auth--لوحة-التحكم                   🟢713ms   🟢933ms   🟢713ms   🟢0ms     🟢0.000   
+  ar--auth--نسيت-كلمة-المرور              🟢689ms   🟢809ms   🟢689ms   🟢0ms     🟢0.000   
+  ar--blog                                🟢647ms   🟢807ms   🟢647ms   🟢0ms     🟢0.000   
+  ar--bookings--A11YROOM                  🟢613ms   🟢813ms   🟢613ms   🟢0ms     🟢0.000   
+  ar--bookings                            🟢576ms   🟢776ms   🟢576ms   🟢0ms     🟢0.000   
+  ar--forums--communaute--t--44b5f581-fad0-4f62-ad71-26b97addaea9🟢573ms   🟢733ms   🟢573ms   🟢0ms     🟢0.000   
+  ar--forums--communaute                  🟢613ms   🟢813ms   🟢613ms   🟢0ms     🟢0.000   
+  ar--forums                              🟢581ms   🟢821ms   🟢581ms   🟢0ms     🟢0.000   
+  ar--home                                🟢704ms   🟢1.2s    🟢981ms   🟢0ms     🟢0.000   
+  ar--messages                            🟢694ms   🟢854ms   🟢694ms   🟢0ms     🟢0.000   
+  ar--notifications--preferences          🟢651ms   🟢811ms   🟢651ms   🟢0ms     🟢0.000   
+  ar--notifications--unsubscribe          🟢541ms   🟢771ms   🟢541ms   🟢0ms     🟢0.000   
+  ar--notifications                       🟢671ms   🟢851ms   🟢671ms   🟢0ms     🟢0.000   
+  ar--organizations--a11y-roles-org--audit🟢690ms   🟢890ms   🟢690ms   🟢0ms     🟢0.000   
+  ar--organizations--a11y-roles-org--moderation🟢712ms   🟢932ms   🟢712ms   🟢0ms     🟢0.000   
+  ar--organizations--a11y-roles-org--roles🟢787ms   🟢1.0s    🟢787ms   🟢0ms     🟢0.000   
   ar--organizations--a11y-roles-org--sites🟢709ms   🟢889ms   🟢709ms   🟢0ms     🟢0.000   
-  ar--shop--a11y-qamis                    🟢577ms   🟢737ms   🟢577ms   🟢0ms     🟢0.000   
-  ar--shop--cart                          🟢610ms   🟢730ms   🟢610ms   🟢0ms     🟢0.000   
-  ar--shop--checkout                      🟢570ms   🟢770ms   🟢570ms   🟢0ms     🟢0.000   
-  ar--shop--order-2                       🟢609ms   🟢809ms   🟢609ms   🟢0ms     🟢0.000   
-  ar--shop--order                         🟢610ms   🟢810ms   🟢610ms   🟢0ms     🟢0.000   
-  ar--subscriptions                       🟢571ms   🟢771ms   🟢571ms   🟢0ms     🟢0.000   
-  ar--اتصل-بنا                            🟢653ms   🟢913ms   🟢814ms   🟢0ms     🟢0.000   
-  ar--الشروط-القانونية                    🟢667ms   🟢787ms   🟢667ms   🟢0ms     🟢0.000   
-  ar--من-نحن                              🟢621ms   🟢871ms   🟢621ms   🟢0ms     🟢0.000   
-  en--about                               🟢667ms   🟢1.1s    🟢669ms   🟢0ms     🟢0.000   
-  en--account                             🟢651ms   🟢891ms   🟢651ms   🟢0ms     🟢0.000   
-  en--admin--blog                         🟢968ms   🟢1.2s    🟢968ms   🟢0ms     🟢0.000   
-  en--admin--dashboard                    🟢813ms   🟢1.0s    🟢813ms   🟢0ms     🟢0.000   
-  en--admin--logistics--inventories--2c950cc2-eec1-4701-aff6-478ffa06cbb6🟢834ms   🟢1.2s    🟢834ms   🟢0ms     🟢0.000   
-  en--admin--logistics--inventories--94146331-be16-473a-bb70-852decd47f0b🟢813ms   🟢1.1s    🟢813ms   🟢0ms     🟢0.000   
-  en--admin--logistics--inventories       🟢813ms   🟢1.1s    🟢813ms   🟢0ms     🟢0.000   
-  en--admin--logistics--items             🟢808ms   🟢1.0s    🟢808ms   🟢0ms     🟢0.000   
-  en--admin--logistics--movements         🟢796ms   🟢1.1s    🟢796ms   🟢0ms     🟢0.000   
-  en--admin--moderation                   🟢834ms   🟢1.1s    🟢834ms   🟢0ms     🟢0.000   
-  en--admin--navigation                   🟢821ms   🟢1.1s    🟢821ms   🟢0ms     🟢0.000   
-  en--admin--orders--detail-2             🟢794ms   🟢1.0s    🟢794ms   🟢0ms     🟢0.000   
-  en--admin--orders--detail               🟢783ms   🟢1.1s    🟢783ms   🟢0ms     🟢0.000   
-  en--admin--orders                       🟢833ms   🟢1.0s    🟢833ms   🟢0ms     🟢0.000   
-  en--admin--platform--api-tokens         🟢841ms   🟢1.0s    🟢841ms   🟢0ms     🟢0.000   
-  en--admin--returns--b92d0880-a334-4a52-a973-81ad48f4679c🟢813ms   🟢1.0s    🟢813ms   🟢0ms     🟢0.000   
-  en--admin--returns                      🟢814ms   🟢1.0s    🟢814ms   🟢0ms     🟢0.000   
-  en--admin--sales--fec                   🟢778ms   🟢1.1s    🟢778ms   🟢0ms     🟢0.000   
-  en--admin--sales--fx                    🟢817ms   🟢1.1s    🟢817ms   🟢0ms     🟢0.000   
-  en--admin--site                         🟢936ms   🟢1.3s    🟢936ms   🟢0ms     🟢0.000   
-  en--admin--stats                        🟢795ms   🟢1.0s    🟢795ms   🟢0ms     🟢0.000   
-  en--admin--subscriptions--3156141d-e580-4a77-87ba-a99c610c5172🟢851ms   🟢1.1s    🟢851ms   🟢0ms     🟢0.000   
-  en--admin--subscriptions--plans--3bd5d877-5b48-4cc6-90e1-e96af8d77307🟢812ms   🟢972ms   🟢812ms   🟢0ms     🟢0.000   
-  en--admin--subscriptions                🟢817ms   🟢1.0s    🟢817ms   🟢0ms     🟢0.000   
-  en--admin--theme                        🟢980ms   🟢1.2s    🟢980ms   🟢0ms     🟢0.000   
-  en--auth--dashboard                     🟢629ms   🟢869ms   🟢629ms   🟢0ms     🟢0.000   
-  en--auth--forgot-password               🟢651ms   🟢891ms   🟢651ms   🟢0ms     🟢0.000   
-  en--auth--profile                       🟢691ms   🟢891ms   🟢691ms   🟢0ms     🟢0.000   
-  en--auth--sign-in                       🟢713ms   🟢873ms   🟢713ms   🟢0ms     🟢0.000   
-  en--auth--sign-up                       🟢653ms   🟢893ms   🟢653ms   🟢0ms     🟢0.000   
-  en--blog                                🟢606ms   🟢846ms   🟢606ms   🟢0ms     🟢0.000   
-  en--bookings--A11YROOM                  🟢583ms   🟢743ms   🟢583ms   🟢0ms     🟢0.003   
-  en--bookings                            🟢582ms   🟢822ms   🟢582ms   🟢0ms     🟢0.000   
-  en--contact                             🟢687ms   🟢827ms   🟢804ms   🟢0ms     🟢0.000   
-  en--home                                🟢673ms   🟢1.3s    🟢916ms   🟢0ms     🟢0.000   
-  en--legal-notice                        🟢631ms   🟢791ms   🟢631ms   🟢0ms     🟢0.000   
-  en--messages                            🟢692ms   🟢892ms   🟢692ms   🟢0ms     🟢0.000   
-  en--notifications--preferences          🟢679ms   🟢899ms   🟢679ms   🟢0ms     🟢0.000   
-  en--notifications--unsubscribe          🟢569ms   🟢809ms   🟢569ms   🟢0ms     🟢0.000   
-  en--notifications                       🟢643ms   🟢903ms   🟢643ms   🟢0ms     🟢0.000   
-  en--organizations--a11y-roles-org--audit🟢676ms   🟢916ms   🟢676ms   🟢0ms     🟢0.000   
-  en--organizations--a11y-roles-org--moderation🟢719ms   🟢899ms   🟢719ms   🟢0ms     🟢0.000   
-  en--organizations--a11y-roles-org--roles🟢773ms   🟢1.1s    🟢773ms   🟢0ms     🟢0.000   
-  en--organizations--a11y-roles-org--sites🟢677ms   🟢1.1s    🟢677ms   🟢0ms     🟢0.000   
-  en--shop--a11y-t-shirt                  🟢614ms   🟢814ms   🟢614ms   🟢0ms     🟢0.000   
-  en--shop--cart                          🟢578ms   🟢818ms   🟢578ms   🟢0ms     🟢0.000   
-  en--shop--checkout                      🟢614ms   🟢814ms   🟢614ms   🟢0ms     🟢0.000   
-  en--shop--order-2                       🟢610ms   🟢730ms   🟢610ms   🟢0ms     🟢0.000   
-  en--shop--order                         🟢609ms   🟢809ms   🟢609ms   🟢0ms     🟢0.000   
-  en--subscriptions                       🟢610ms   🟢810ms   🟢610ms   🟢0ms     🟢0.000   
-  es--account                             🟢676ms   🟢896ms   🟢676ms   🟢0ms     🟢0.000   
-  es--acerca-de                           🟢653ms   🟢1.1s    🟢653ms   🟢0ms     🟢0.000   
-  es--admin--blog                         🟢972ms   🟢1.3s    🟢972ms   🟢0ms     🟢0.000   
-  es--admin--dashboard                    🟢783ms   🟢1.0s    🟢783ms   🟢0ms     🟢0.000   
-  es--admin--logistics--inventories--2c950cc2-eec1-4701-aff6-478ffa06cbb6🟢848ms   🟢1.1s    🟢848ms   🟢0ms     🟢0.000   
-  es--admin--logistics--inventories--94146331-be16-473a-bb70-852decd47f0b🟢811ms   🟢1.1s    🟢811ms   🟢0ms     🟢0.000   
-  es--admin--logistics--inventories       🟢812ms   🟢1.0s    🟢812ms   🟢0ms     🟢0.000   
-  es--admin--logistics--items             🟢823ms   🟢1.1s    🟢823ms   🟢0ms     🟢0.000   
-  es--admin--logistics--movements         🟢791ms   🟢1.0s    🟢791ms   🟢0ms     🟢0.000   
-  es--admin--moderation                   🟢830ms   🟢1.1s    🟢830ms   🟢0ms     🟢0.000   
-  es--admin--navigation                   🟢814ms   🟢1.1s    🟢814ms   🟢0ms     🟢0.000   
-  es--admin--orders--detail-2             🟢812ms   🟢1.0s    🟢812ms   🟢0ms     🟢0.000   
-  es--admin--orders--detail               🟢838ms   🟢1.0s    🟢838ms   🟢0ms     🟢0.000   
-  es--admin--orders                       🟢839ms   🟢1.0s    🟢839ms   🟢0ms     🟢0.000   
-  es--admin--platform--api-tokens         🟢794ms   🟢1.1s    🟢794ms   🟢0ms     🟢0.000   
-  es--admin--returns--b92d0880-a334-4a52-a973-81ad48f4679c🟢829ms   🟢1.0s    🟢829ms   🟢0ms     🟢0.000   
-  es--admin--returns                      🟢831ms   🟢1.0s    🟢831ms   🟢0ms     🟢0.000   
-  es--admin--sales--fec                   🟢886ms   🟢1.1s    🟢886ms   🟢0ms     🟢0.000   
-  es--admin--sales--fx                    🟢929ms   🟢1.1s    🟢929ms   🟢0ms     🟢0.000   
-  es--admin--site                         🟢969ms   🟢1.2s    🟢969ms   🟢0ms     🟢0.000   
-  es--admin--stats                        🟢854ms   🟢1.1s    🟢854ms   🟢0ms     🟢0.000   
-  es--admin--subscriptions--3156141d-e580-4a77-87ba-a99c610c5172🟢809ms   🟢1.0s    🟢809ms   🟢0ms     🟢0.000   
-  es--admin--subscriptions--plans--3bd5d877-5b48-4cc6-90e1-e96af8d77307🟢810ms   🟢1.0s    🟢810ms   🟢0ms     🟢0.000   
-  es--admin--subscriptions                🟢848ms   🟢1.1s    🟢848ms   🟢0ms     🟢0.000   
-  es--admin--theme                        🟢973ms   🟢1.3s    🟢973ms   🟢0ms     🟢0.000   
-  es--auth--contrasena-olvidada           🟢694ms   🟢854ms   🟢694ms   🟢0ms     🟢0.000   
-  es--auth--iniciar-sesion                🟢649ms   🟢889ms   🟢649ms   🟢0ms     🟢0.000   
-  es--auth--panel                         🟢691ms   🟢851ms   🟢691ms   🟢0ms     🟢0.000   
-  es--auth--perfil                        🟢735ms   🟢975ms   🟢735ms   🟢0ms     🟢0.000   
-  es--auth--registro                      🟢692ms   🟢812ms   🟢692ms   🟢0ms     🟢0.000   
-  es--aviso-legal                         🟢632ms   🟢792ms   🟢632ms   🟢0ms     🟢0.000   
-  es--blog                                🟢637ms   🟢857ms   🟢637ms   🟢0ms     🟢0.000   
-  es--bookings--A11YROOM                  🟢588ms   🟢748ms   🟢588ms   🟢0ms     🟢0.000   
-  es--bookings                            🟢583ms   🟢823ms   🟢583ms   🟢0ms     🟢0.000   
-  es--contacto                            🟢653ms   🟢813ms   🟢690ms   🟢0ms     🟢0.000   
-  es--home                                🟢713ms   🟢1.2s    🟢935ms   🟢0ms     🟢0.000   
-  es--messages                            🟢614ms   🟢934ms   🟢614ms   🟢0ms     🟢0.000   
-  es--notifications--preferences          🟢673ms   🟢893ms   🟢673ms   🟢0ms     🟢0.000   
-  es--notifications--unsubscribe          🟢586ms   🟢826ms   🟢586ms   🟢0ms     🟢0.000   
-  es--notifications                       🟢674ms   🟢894ms   🟢674ms   🟢0ms     🟢0.000   
-  es--organizations--a11y-roles-org--audit🟢718ms   🟢898ms   🟢718ms   🟢0ms     🟢0.000   
-  es--organizations--a11y-roles-org--moderation🟢700ms   🟢940ms   🟢700ms   🟢0ms     🟢0.000   
-  es--organizations--a11y-roles-org--roles🟢810ms   🟢1.1s    🟢810ms   🟢0ms     🟢0.000   
-  es--organizations--a11y-roles-org--sites🟢712ms   🟢892ms   🟢712ms   🟢0ms     🟢0.000   
-  es--shop--a11y-camiseta                 🟢593ms   🟢993ms   🟢593ms   🟢0ms     🟢0.000   
-  es--shop--cart                          🟢572ms   🟢812ms   🟢572ms   🟢0ms     🟢0.000   
-  es--shop--checkout                      🟢611ms   🟢811ms   🟢611ms   🟢0ms     🟢0.000   
-  es--shop--order-2                       🟢529ms   🟢689ms   🟢529ms   🟢0ms     🟢0.000   
-  es--shop--order                         🟢610ms   🟢810ms   🟢610ms   🟢0ms     🟢0.000   
-  es--subscriptions                       🟢622ms   🟢742ms   🟢622ms   🟢0ms     🟢0.000   
-  fr--a-propos                            🟢622ms   🟢913ms   🟢622ms   🟢0ms     🟢0.000   
-  fr--account                             🟢669ms   🟢889ms   🟢669ms   🟢0ms     🟢0.000   
-  fr--admin--blog                         🟢936ms   🟢1.2s    🟢936ms   🟢0ms     🟢0.000   
-  fr--admin--dashboard                    🟢794ms   🟢974ms   🟢794ms   🟢0ms     🟢0.000   
-  fr--admin--logistics--inventories--2c950cc2-eec1-4701-aff6-478ffa06cbb6🟢795ms   🟢1.2s    🟢795ms   🟢0ms     🟢0.000   
-  fr--admin--logistics--inventories--94146331-be16-473a-bb70-852decd47f0b🟢827ms   🟢1.1s    🟢827ms   🟢0ms     🟢0.000   
-  fr--admin--logistics--inventories       🟢852ms   🟢1.1s    🟢852ms   🟢0ms     🟢0.000   
-  fr--admin--logistics--items             🟢833ms   🟢1.1s    🟢833ms   🟢0ms     🟢0.000   
-  fr--admin--logistics--movements         🟢786ms   🟢1.1s    🟢786ms   🟢0ms     🟢0.000   
-  fr--admin--moderation                   🟢830ms   🟢1.0s    🟢830ms   🟢0ms     🟢0.000   
-  fr--admin--navigation                   🟢849ms   🟢1.1s    🟢849ms   🟢0ms     🟢0.000   
-  fr--admin--orders--detail-2             🟢832ms   🟢972ms   🟢832ms   🟢0ms     🟢0.000   
-  fr--admin--orders--detail               🟢831ms   🟢1.0s    🟢831ms   🟢0ms     🟢0.000   
-  fr--admin--orders                       🟢836ms   🟢1.0s    🟢836ms   🟢0ms     🟢0.000   
-  fr--admin--platform--api-tokens         🟢774ms   🟢1.0s    🟢774ms   🟢0ms     🟢0.000   
-  fr--admin--returns--b92d0880-a334-4a52-a973-81ad48f4679c🟢813ms   🟢1.0s    🟢813ms   🟢0ms     🟢0.000   
-  fr--admin--returns                      🟢849ms   🟢1.0s    🟢849ms   🟢0ms     🟢0.000   
-  fr--admin--sales--fec                   🟢779ms   🟢939ms   🟢779ms   🟢0ms     🟢0.000   
-  fr--admin--sales--fx                    🟢894ms   🟢1.1s    🟢894ms   🟢0ms     🟢0.000   
-  fr--admin--site                         🟢973ms   🟢1.3s    🟢973ms   🟢0ms     🟢0.000   
-  fr--admin--stats                        🟢809ms   🟢969ms   🟢809ms   🟢0ms     🟢0.000   
-  fr--admin--subscriptions--3156141d-e580-4a77-87ba-a99c610c5172🟢812ms   🟢1.1s    🟢812ms   🟢0ms     🟢0.000   
-  fr--admin--subscriptions--plans--3bd5d877-5b48-4cc6-90e1-e96af8d77307🟢840ms   🟢1.1s    🟢840ms   🟢0ms     🟢0.000   
-  fr--admin--subscriptions                🟢832ms   🟢1.0s    🟢832ms   🟢0ms     🟢0.000   
-  fr--admin--theme                        🟢969ms   🟢1.3s    🟢969ms   🟢0ms     🟢0.000   
-  fr--auth--connexion                     🟢661ms   🟢821ms   🟢661ms   🟢0ms     🟢0.000   
-  fr--auth--inscription                   🟢660ms   🟢820ms   🟢660ms   🟢0ms     🟢0.000   
-  fr--auth--mot-de-passe-oublie           🟢656ms   🟢896ms   🟢656ms   🟢0ms     🟢0.000   
-  fr--auth--profil                        🟢733ms   🟢893ms   🟢733ms   🟢0ms     🟢0.000   
-  fr--auth--tableau-de-bord               🟢704ms   🟢944ms   🟢704ms   🟢0ms     🟢0.000   
-  fr--blog                                🟢629ms   🟢849ms   🟢629ms   🟢0ms     🟢0.000   
-  fr--bookings--A11YROOM                  🟢614ms   🟢814ms   🟢614ms   🟢0ms     🟢0.000   
-  fr--bookings                            🟢576ms   🟢736ms   🟢576ms   🟢0ms     🟢0.000   
-  fr--contact                             🟢637ms   🟢777ms   🟢691ms   🟢0ms     🟢0.000   
-  fr--home                                🟢664ms   🟢1.2s    🟢847ms   🟢0ms     🟢0.000   
-  fr--mentions-legales                    🟢650ms   🟢810ms   🟢650ms   🟢0ms     🟢0.000   
-  fr--messages                            🟢693ms   🟢893ms   🟢693ms   🟢0ms     🟢0.000   
-  fr--notifications--preferences          🟢672ms   🟢852ms   🟢672ms   🟢0ms     🟢0.000   
-  fr--notifications--unsubscribe          🟢610ms   🟢810ms   🟢610ms   🟢0ms     🟢0.000   
-  fr--notifications                       🟢621ms   🟢861ms   🟢621ms   🟢0ms     🟢0.000   
-  fr--organizations--a11y-roles-org--audit🟢676ms   🟢856ms   🟢676ms   🟢0ms     🟢0.000   
-  fr--organizations--a11y-roles-org--moderation🟢653ms   🟢1.1s    🟢653ms   🟢0ms     🟢0.000   
-  fr--organizations--a11y-roles-org--roles🟢782ms   🟢982ms   🟢782ms   🟢0ms     🟢0.000   
-  fr--organizations--a11y-roles-org--sites🟢671ms   🟢851ms   🟢671ms   🟢0ms     🟢0.000   
-  fr--shop--a11y-t-shirt                  🟢617ms   🟢777ms   🟢617ms   🟢0ms     🟢0.000   
-  fr--shop--cart                          🟢573ms   🟢773ms   🟢573ms   🟢0ms     🟢0.000   
-  fr--shop--checkout                      🟢610ms   🟢810ms   🟢610ms   🟢0ms     🟢0.000   
-  fr--shop--order-2                       🟢612ms   🟢732ms   🟢612ms   🟢0ms     🟢0.000   
-  fr--shop--order                         🟢608ms   🟢768ms   🟢608ms   🟢0ms     🟢0.000   
-  fr--subscriptions                       🟢618ms   🟢818ms   🟢618ms   🟢0ms     🟢0.000   
+  ar--shop--a11y-qamis                    🟢610ms   🟢810ms   🟢610ms   🟢0ms     🟢0.000   
+  ar--shop--cart                          🟢619ms   🟢819ms   🟢619ms   🟢0ms     🟢0.000   
+  ar--shop--checkout                      🟢573ms   🟢773ms   🟢573ms   🟢0ms     🟢0.000   
+  ar--shop--order-2                       🟢579ms   🟢779ms   🟢579ms   🟢0ms     🟢0.000   
+  ar--shop--order                         🟢612ms   🟢772ms   🟢612ms   🟢0ms     🟢0.000   
+  ar--subscriptions                       🟢623ms   🟢783ms   🟢623ms   🟢0ms     🟢0.000   
+  ar--اتصل-بنا                            🟢654ms   🟢834ms   🟢875ms   🟢0ms     🟢0.000   
+  ar--الشروط-القانونية                    🟢651ms   🟢811ms   🟢651ms   🟢0ms     🟢0.000   
+  ar--من-نحن                              🟢756ms   🟢1.2s    🟢1.2s    🟢0ms     🟢0.033   
+  en--about                               🟢629ms   🟢1.1s    🟢629ms   🟢0ms     🟢0.002   
+  en--account                             🟢671ms   🟢891ms   🟢671ms   🟢0ms     🟢0.000   
+  en--admin--blog                         🟢937ms   🟢1.3s    🟢937ms   🟢0ms     🟢0.000   
+  en--admin--dashboard                    🟢854ms   🟢1.1s    🟢854ms   🟢0ms     🟢0.000   
+  en--admin--forums--sanctions            🟢831ms   🟢1.0s    🟢831ms   🟢0ms     🟢0.000   
+  en--admin--forums                       🟢833ms   🟢1.1s    🟢833ms   🟢0ms     🟢0.000   
+  en--admin--logistics--inventories--38745490-b96f-42e1-927a-9005dd753e5a🟢853ms   🟢1.0s    🟢853ms   🟢0ms     🟢0.000   
+  en--admin--logistics--inventories--4853da62-4f21-400f-a7f0-a216e9b53bf8🟢849ms   🟢1.0s    🟢849ms   🟢0ms     🟢0.000   
+  en--admin--logistics--inventories       🟢847ms   🟢1.1s    🟢847ms   🟢0ms     🟢0.000   
+  en--admin--logistics--items             🟢768ms   🟢1.0s    🟢768ms   🟢0ms     🟢0.000   
+  en--admin--logistics--movements         🟢871ms   🟢1.1s    🟢871ms   🟢0ms     🟢0.000   
+  en--admin--moderation                   🟢853ms   🟢1.1s    🟢853ms   🟢0ms     🟢0.000   
+  en--admin--navigation                   🟢911ms   🟢1.1s    🟢911ms   🟢0ms     🟢0.000   
+  en--admin--orders--detail-2             🟢832ms   🟢1.0s    🟢832ms   🟢0ms     🟢0.000   
+  en--admin--orders--detail               🟢833ms   🟢1.0s    🟢833ms   🟢0ms     🟢0.000   
+  en--admin--orders                       🟢802ms   🟢1.1s    🟢802ms   🟢0ms     🟢0.000   
+  en--admin--platform--api-tokens         🟢795ms   🟢1.1s    🟢795ms   🟢0ms     🟢0.000   
+  en--admin--returns--eaa7a586-a024-4159-902a-3449a7324fb1🟢843ms   🟢1.0s    🟢843ms   🟢0ms     🟢0.000   
+  en--admin--returns                      🟢790ms   🟢1.1s    🟢790ms   🟢0ms     🟢0.000   
+  en--admin--sales--fec                   🟢886ms   🟢1.1s    🟢886ms   🟢0ms     🟢0.000   
+  en--admin--sales--fx                    🟢883ms   🟢1.1s    🟢883ms   🟢0ms     🟢0.000   
+  en--admin--site                         🟢984ms   🟢1.3s    🟢984ms   🟢0ms     🟢0.000   
+  en--admin--stats                        🟢815ms   🟢975ms   🟢815ms   🟢0ms     🟢0.000   
+  en--admin--subscriptions--6532b14f-0086-4c86-a9e8-38177cd366f7🟢805ms   🟢1.1s    🟢805ms   🟢0ms     🟢0.000   
+  en--admin--subscriptions--plans--7872dc8d-d365-46ee-a1c5-4f04adb04d99🟢868ms   🟢1.1s    🟢868ms   🟢0ms     🟢0.000   
+  en--admin--subscriptions                🟢846ms   🟢1.1s    🟢846ms   🟢0ms     🟢0.000   
+  en--admin--theme                        🟢971ms   🟢1.2s    🟢971ms   🟢0ms     🟢0.000   
+  en--auth--dashboard                     🟢661ms   🟢941ms   🟢661ms   🟢0ms     🟢0.000   
+  en--auth--forgot-password               🟢690ms   🟢890ms   🟢690ms   🟢0ms     🟢0.000   
+  en--auth--profile                       🟢698ms   🟢978ms   🟢698ms   🟢0ms     🟢0.000   
+  en--auth--sign-in                       🟢648ms   🟢888ms   🟢648ms   🟢0ms     🟢0.000   
+  en--auth--sign-up                       🟢692ms   🟢812ms   🟢692ms   🟢0ms     🟢0.000   
+  en--blog                                🟢629ms   🟢849ms   🟢629ms   🟢0ms     🟢0.000   
+  en--bookings--A11YROOM                  🟢618ms   🟢818ms   🟢618ms   🟢0ms     🟢0.003   
+  en--bookings                            🟢612ms   🟢812ms   🟢612ms   🟢0ms     🟢0.000   
+  en--contact                             🟢670ms   🟢810ms   🟢786ms   🟢0ms     🟢0.010   
+  en--forums--communaute--t--44b5f581-fad0-4f62-ad71-26b97addaea9🟢614ms   🟢814ms   🟢614ms   🟢0ms     🟢0.000   
+  en--forums--communaute                  🟢539ms   🟢819ms   🟢539ms   🟢0ms     🟢0.000   
+  en--forums                              🟢612ms   🟢812ms   🟢612ms   🟢0ms     🟢0.000   
+  en--home                                🟢691ms   🟢1.3s    🟢882ms   🟢0ms     🟢0.000   
+  en--legal-notice                        🟢657ms   🟢817ms   🟢657ms   🟢0ms     🟢0.000   
+  en--messages                            🟢650ms   🟢890ms   🟢650ms   🟢0ms     🟢0.000   
+  en--notifications--preferences          🟢673ms   🟢813ms   🟢673ms   🟢0ms     🟢0.000   
+  en--notifications--unsubscribe          🟢611ms   🟢811ms   🟢611ms   🟢0ms     🟢0.000   
+  en--notifications                       🟢675ms   🟢895ms   🟢675ms   🟢0ms     🟢0.000   
+  en--organizations--a11y-roles-org--audit🟢652ms   🟢912ms   🟢652ms   🟢0ms     🟢0.000   
+  en--organizations--a11y-roles-org--moderation🟢696ms   🟢936ms   🟢696ms   🟢0ms     🟢0.000   
+  en--organizations--a11y-roles-org--roles🟢791ms   🟢1.1s    🟢791ms   🟢0ms     🟢0.000   
+  en--organizations--a11y-roles-org--sites🟢673ms   🟢893ms   🟢673ms   🟢0ms     🟢0.000   
+  en--shop--a11y-t-shirt                  🟢570ms   🟢810ms   🟢570ms   🟢0ms     🟢0.000   
+  en--shop--cart                          🟢574ms   🟢774ms   🟢574ms   🟢0ms     🟢0.000   
+  en--shop--checkout                      🟢620ms   🟢820ms   🟢620ms   🟢0ms     🟢0.000   
+  en--shop--order-2                       🟢573ms   🟢733ms   🟢573ms   🟢0ms     🟢0.000   
+  en--shop--order                         🟢580ms   🟢820ms   🟢580ms   🟢0ms     🟢0.000   
+  en--subscriptions                       🟢614ms   🟢814ms   🟢614ms   🟢0ms     🟢0.000   
+  es--account                             🟢656ms   🟢856ms   🟢656ms   🟢0ms     🟢0.000   
+  es--acerca-de                           🟢622ms   🟢1.1s    🟢622ms   🟢0ms     🟢0.002   
+  es--admin--blog                         🟢1.0s    🟢1.3s    🟢1.0s    🟢0ms     🟢0.000   
+  es--admin--dashboard                    🟢810ms   🟢930ms   🟢810ms   🟢0ms     🟢0.000   
+  es--admin--forums--sanctions            🟢830ms   🟢1.0s    🟢830ms   🟢0ms     🟢0.000   
+  es--admin--forums                       🟢837ms   🟢1.1s    🟢837ms   🟢0ms     🟢0.000   
+  es--admin--logistics--inventories--38745490-b96f-42e1-927a-9005dd753e5a🟢863ms   🟢1.3s    🟢1.1s    🟢0ms     🟢0.005   
+  es--admin--logistics--inventories--4853da62-4f21-400f-a7f0-a216e9b53bf8🟢850ms   🟢1.1s    🟢850ms   🟢0ms     🟢0.000   
+  es--admin--logistics--inventories       🟢813ms   🟢1.1s    🟢813ms   🟢0ms     🟢0.000   
+  es--admin--logistics--items             🟢847ms   🟢1.1s    🟢847ms   🟢0ms     🟢0.000   
+  es--admin--logistics--movements         🟢843ms   🟢1.1s    🟢843ms   🟢0ms     🟢0.000   
+  es--admin--moderation                   🟢870ms   🟢1.1s    🟢870ms   🟢0ms     🟢0.000   
+  es--admin--navigation                   🟢926ms   🟢1.1s    🟢926ms   🟢0ms     🟢0.000   
+  es--admin--orders--detail-2             🟢831ms   🟢1.0s    🟢831ms   🟢0ms     🟢0.000   
+  es--admin--orders--detail               🟢813ms   🟢1.0s    🟢813ms   🟢0ms     🟢0.000   
+  es--admin--orders                       🟢828ms   🟢1.0s    🟢828ms   🟢0ms     🟢0.000   
+  es--admin--platform--api-tokens         🟢807ms   🟢1.0s    🟢807ms   🟢0ms     🟢0.000   
+  es--admin--returns--eaa7a586-a024-4159-902a-3449a7324fb1🟢832ms   🟢1.0s    🟢832ms   🟢0ms     🟢0.000   
+  es--admin--returns                      🟢816ms   🟢1.0s    🟢816ms   🟢0ms     🟢0.000   
+  es--admin--sales--fec                   🟢869ms   🟢1.1s    🟢869ms   🟢0ms     🟢0.000   
+  es--admin--sales--fx                    🟢915ms   🟢1.1s    🟢915ms   🟢0ms     🟢0.000   
+  es--admin--site                         🟢970ms   🟢1.3s    🟢970ms   🟢0ms     🟢0.000   
+  es--admin--stats                        🟢794ms   🟢974ms   🟢794ms   🟢0ms     🟢0.000   
+  es--admin--subscriptions--6532b14f-0086-4c86-a9e8-38177cd366f7🟢833ms   🟢1.1s    🟢833ms   🟢0ms     🟢0.000   
+  es--admin--subscriptions--plans--7872dc8d-d365-46ee-a1c5-4f04adb04d99🟢863ms   🟢1.1s    🟢863ms   🟢0ms     🟢0.000   
+  es--admin--subscriptions                🟢830ms   🟢1.1s    🟢830ms   🟢0ms     🟢0.000   
+  es--admin--theme                        🟢970ms   🟢1.2s    🟢970ms   🟢0ms     🟢0.000   
+  es--auth--contrasena-olvidada           🟢690ms   🟢810ms   🟢690ms   🟢0ms     🟢0.000   
+  es--auth--iniciar-sesion                🟢687ms   🟢847ms   🟢687ms   🟢0ms     🟢0.000   
+  es--auth--panel                         🟢688ms   🟢848ms   🟢688ms   🟢0ms     🟢0.000   
+  es--auth--perfil                        🟢691ms   🟢971ms   🟢691ms   🟢0ms     🟢0.000   
+  es--auth--registro                      🟢693ms   🟢813ms   🟢693ms   🟢0ms     🟢0.000   
+  es--aviso-legal                         🟢653ms   🟢813ms   🟢653ms   🟢0ms     🟢0.000   
+  es--blog                                🟢626ms   🟢846ms   🟢626ms   🟢0ms     🟢0.000   
+  es--bookings--A11YROOM                  🟢612ms   🟢812ms   🟢612ms   🟢0ms     🟢0.000   
+  es--bookings                            🟢619ms   🟢819ms   🟢619ms   🟢0ms     🟢0.000   
+  es--contacto                            🟢615ms   🟢815ms   🟢664ms   🟢0ms     🟢0.000   
+  es--forums--communaute--t--44b5f581-fad0-4f62-ad71-26b97addaea9🟢578ms   🟢778ms   🟢578ms   🟢0ms     🟢0.000   
+  es--forums--communaute                  🟢576ms   🟢816ms   🟢576ms   🟢0ms     🟢0.000   
+  es--forums                              🟢612ms   🟢812ms   🟢612ms   🟢0ms     🟢0.000   
+  es--home                                🟢703ms   🟢1.2s    🟢863ms   🟢0ms     🟢0.000   
+  es--messages                            🟢687ms   🟢887ms   🟢687ms   🟢0ms     🟢0.000   
+  es--notifications--preferences          🟢612ms   🟢812ms   🟢612ms   🟢0ms     🟢0.000   
+  es--notifications--unsubscribe          🟢613ms   🟢773ms   🟢613ms   🟢0ms     🟢0.000   
+  es--notifications                       🟢639ms   🟢819ms   🟢639ms   🟢0ms     🟢0.000   
+  es--organizations--a11y-roles-org--audit🟢707ms   🟢887ms   🟢707ms   🟢0ms     🟢0.000   
+  es--organizations--a11y-roles-org--moderation🟢708ms   🟢888ms   🟢708ms   🟢0ms     🟢0.000   
+  es--organizations--a11y-roles-org--roles🟢776ms   🟢1.0s    🟢776ms   🟢0ms     🟢0.000   
+  es--organizations--a11y-roles-org--sites🟢715ms   🟢895ms   🟢715ms   🟢0ms     🟢0.000   
+  es--shop--a11y-camiseta                 🟢574ms   🟢814ms   🟢574ms   🟢0ms     🟢0.000   
+  es--shop--cart                          🟢619ms   🟢819ms   🟢619ms   🟢0ms     🟢0.000   
+  es--shop--checkout                      🟢574ms   🟢814ms   🟢574ms   🟢0ms     🟢0.000   
+  es--shop--order-2                       🟢573ms   🟢733ms   🟢573ms   🟢0ms     🟢0.000   
+  es--shop--order                         🟢612ms   🟢812ms   🟢612ms   🟢0ms     🟢0.000   
+  es--subscriptions                       🟢571ms   🟢811ms   🟢571ms   🟢0ms     🟢0.000   
+  fr--a-propos                            🟢594ms   🟢874ms   🟢594ms   🟢0ms     🟢0.000   
+  fr--account                             🟢672ms   🟢852ms   🟢672ms   🟢0ms     🟢0.000   
+  fr--admin--blog                         🟢1.0s    🟢1.2s    🟢1.0s    🟢0ms     🟢0.000   
+  fr--admin--dashboard                    🟢829ms   🟢1.0s    🟢829ms   🟢0ms     🟢0.000   
+  fr--admin--forums--sanctions            🟢812ms   🟢972ms   🟢812ms   🟢0ms     🟢0.000   
+  fr--admin--forums                       🟢869ms   🟢1.0s    🟢869ms   🟢0ms     🟢0.000   
+  fr--admin--logistics--inventories--38745490-b96f-42e1-927a-9005dd753e5a🟢768ms   🟢1.0s    🟢768ms   🟢0ms     🟢0.000   
+  fr--admin--logistics--inventories--4853da62-4f21-400f-a7f0-a216e9b53bf8🟢850ms   🟢1.1s    🟢850ms   🟢0ms     🟢0.000   
+  fr--admin--logistics--inventories       🟢818ms   🟢1.1s    🟢818ms   🟢0ms     🟢0.000   
+  fr--admin--logistics--items             🟢812ms   🟢1.1s    🟢812ms   🟢0ms     🟢0.000   
+  fr--admin--logistics--movements         🟢872ms   🟢1.1s    🟢872ms   🟢0ms     🟢0.000   
+  fr--admin--moderation                   🟢851ms   🟢1.1s    🟢851ms   🟢0ms     🟢0.000   
+  fr--admin--navigation                   🟢892ms   🟢1.1s    🟢892ms   🟢0ms     🟢0.000   
+  fr--admin--orders--detail-2             🟢838ms   🟢1.0s    🟢838ms   🟢0ms     🟢0.000   
+  fr--admin--orders--detail               🟢799ms   🟢979ms   🟢799ms   🟢0ms     🟢0.000   
+  fr--admin--orders                       🟢792ms   🟢1.1s    🟢792ms   🟢0ms     🟢0.000   
+  fr--admin--platform--api-tokens         🟢833ms   🟢1.0s    🟢833ms   🟢0ms     🟢0.000   
+  fr--admin--returns--eaa7a586-a024-4159-902a-3449a7324fb1🟢829ms   🟢1.0s    🟢829ms   🟢0ms     🟢0.000   
+  fr--admin--returns                      🟢793ms   🟢1.0s    🟢793ms   🟢0ms     🟢0.000   
+  fr--admin--sales--fec                   🟢810ms   🟢1.0s    🟢810ms   🟢0ms     🟢0.000   
+  fr--admin--sales--fx                    🟢888ms   🟢1.0s    🟢888ms   🟢0ms     🟢0.000   
+  fr--admin--site                         🟢969ms   🟢1.3s    🟢969ms   🟢0ms     🟢0.000   
+  fr--admin--stats                        🟢828ms   🟢1.0s    🟢828ms   🟢0ms     🟢0.000   
+  fr--admin--subscriptions--6532b14f-0086-4c86-a9e8-38177cd366f7🟢811ms   🟢1.1s    🟢811ms   🟢0ms     🟢0.000   
+  fr--admin--subscriptions--plans--7872dc8d-d365-46ee-a1c5-4f04adb04d99🟢868ms   🟢1.1s    🟢868ms   🟢0ms     🟢0.000   
+  fr--admin--subscriptions                🟢810ms   🟢1.1s    🟢810ms   🟢0ms     🟢0.000   
+  fr--admin--theme                        🟢946ms   🟢1.3s    🟢946ms   🟢0ms     🟢0.000   
+  fr--auth--connexion                     🟢686ms   🟢886ms   🟢686ms   🟢0ms     🟢0.000   
+  fr--auth--inscription                   🟢613ms   🟢893ms   🟢613ms   🟢0ms     🟢0.000   
+  fr--auth--mot-de-passe-oublie           🟢649ms   🟢889ms   🟢649ms   🟢0ms     🟢0.000   
+  fr--auth--profil                        🟢730ms   🟢890ms   🟢730ms   🟢0ms     🟢0.000   
+  fr--auth--tableau-de-bord               🟢652ms   🟢852ms   🟢652ms   🟢0ms     🟢0.000   
+  fr--blog                                🟢630ms   🟢850ms   🟢630ms   🟢0ms     🟢0.000   
+  fr--bookings--A11YROOM                  🟢613ms   🟢773ms   🟢613ms   🟢0ms     🟢0.000   
+  fr--bookings                            🟢613ms   🟢773ms   🟢613ms   🟢0ms     🟢0.000   
+  fr--contact                             🟢671ms   🟢851ms   🟢702ms   🟢0ms     🟢0.000   
+  fr--forums--communaute--t--44b5f581-fad0-4f62-ad71-26b97addaea9🟢613ms   🟢813ms   🟢613ms   🟢0ms     🟢0.000   
+  fr--forums--communaute                  🟢607ms   🟢807ms   🟢607ms   🟢0ms     🟢0.000   
+  fr--forums                              🟢617ms   🟢777ms   🟢617ms   🟢0ms     🟢0.000   
+  fr--home                                🟢683ms   🟢1.3s    🟢880ms   🟢0ms     🟢0.000   
+  fr--mentions-legales                    🟢651ms   🟢811ms   🟢651ms   🟢0ms     🟢0.000   
+  fr--messages                            🟢692ms   🟢892ms   🟢692ms   🟢0ms     🟢0.000   
+  fr--notifications--preferences          🟢645ms   🟢825ms   🟢645ms   🟢0ms     🟢0.000   
+  fr--notifications--unsubscribe          🟢619ms   🟢819ms   🟢619ms   🟢0ms     🟢0.000   
+  fr--notifications                       🟢671ms   🟢891ms   🟢671ms   🟢0ms     🟢0.000   
+  fr--organizations--a11y-roles-org--audit🟢696ms   🟢856ms   🟢696ms   🟢0ms     🟢0.000   
+  fr--organizations--a11y-roles-org--moderation🟢693ms   🟢853ms   🟢693ms   🟢0ms     🟢0.000   
+  fr--organizations--a11y-roles-org--roles🟢771ms   🟢1.1s    🟢771ms   🟢0ms     🟢0.000   
+  fr--organizations--a11y-roles-org--sites🟢667ms   🟢927ms   🟢667ms   🟢0ms     🟢0.000   
+  fr--shop--a11y-t-shirt                  🟢613ms   🟢813ms   🟢613ms   🟢0ms     🟢0.000   
+  fr--shop--cart                          🟢614ms   🟢814ms   🟢614ms   🟢0ms     🟢0.000   
+  fr--shop--checkout                      🟢612ms   🟢812ms   🟢612ms   🟢0ms     🟢0.000   
+  fr--shop--order-2                       🟢532ms   🟢652ms   🟢532ms   🟢0ms     🟢0.000   
+  fr--shop--order                         🟢529ms   🟢809ms   🟢529ms   🟢0ms     🟢0.000   
+  fr--subscriptions                       🟢572ms   🟢772ms   🟢572ms   🟢0ms     🟢0.000   
 
   Thresholds: 🟢 Good  🟡 Needs Improvement  🔴 Poor
     Largest Contentful Paint: 🟢 ≤2500ms  🟡 ≤4000ms  🔴 >4000ms
@@ -425,10 +465,10 @@
   SUMMARY
 ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-  Performance          >= 90:  200/200  ✅
-  Accessibility        >= 90:  200/200  ✅
-  Best-practices       >= 90:  200/200  ✅
-  Seo                  >= 90:  200/200  ✅
+  Performance          >= 90:  220/220  ✅
+  Accessibility        >= 90:  220/220  ✅
+  Best-practices       >= 90:  220/220  ✅
+  Seo                  >= 90:  220/220  ✅
 
   Averages:
     Performance          98.2
@@ -454,11 +494,11 @@
       0  Browser errors were logged to the console
       0  Largest Contentful Paint element (1,250 ms)
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 662 KiB)
+      0  Enable text compression (Est savings of 669 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused CSS (Est savings of 13 KiB)
-     50  Avoid an excessive DOM size (2,024 elements)
+     50  Avoid an excessive DOM size (2,048 elements)
      88  First Contentful Paint (1.0 s)
      88  Largest Contentful Paint (1.2 s)
 
@@ -466,202 +506,221 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 534 KiB)
+      0  Enable text compression (Est savings of 541 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,480 elements)
+     50  Avoid an excessive DOM size (1,504 elements)
 
-  📄 ar--admin--logistics--inventories--2c950cc2-eec1-4701-aff6-478ffa06cbb6
+  📄 ar--admin--forums--sanctions
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 530 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,303 elements)
-
-  📄 ar--admin--logistics--inventories--94146331-be16-473a-bb70-852decd47f0b
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 528 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,309 elements)
-
-  📄 ar--admin--logistics--inventories
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 530 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,318 elements)
-
-  📄 ar--admin--logistics--items
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 530 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,295 elements)
-
-  📄 ar--admin--logistics--movements
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 531 KiB)
+      0  Enable text compression (Est savings of 527 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,398 elements)
+     50  Avoid an excessive DOM size (1,319 elements)
 
-  📄 ar--admin--moderation
+  📄 ar--admin--forums
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 549 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,665 elements)
+
+  📄 ar--admin--logistics--inventories--38745490-b96f-42e1-927a-9005dd753e5a
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 535 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,333 elements)
+
+  📄 ar--admin--logistics--inventories--4853da62-4f21-400f-a7f0-a216e9b53bf8
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Enable text compression (Est savings of 537 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,370 elements)
-
-  📄 ar--admin--navigation
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 584 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,565 elements)
-
-  📄 ar--admin--orders--detail-2
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 522 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,340 elements)
-
-  📄 ar--admin--orders--detail
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 523 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,339 elements)
-
-  📄 ar--admin--orders
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 524 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
      50  Avoid an excessive DOM size (1,327 elements)
 
-  📄 ar--admin--platform--api-tokens
+  📄 ar--admin--logistics--inventories
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 522 KiB)
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 538 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,342 elements)
+
+  📄 ar--admin--logistics--items
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 538 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,319 elements)
+
+  📄 ar--admin--logistics--movements
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 538 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,422 elements)
+
+  📄 ar--admin--moderation
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 544 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,394 elements)
+
+  📄 ar--admin--navigation
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 592 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,589 elements)
+
+  📄 ar--admin--orders--detail-2
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 530 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
      50  Avoid an excessive DOM size (1,364 elements)
 
-  📄 ar--admin--returns--b92d0880-a334-4a52-a973-81ad48f4679c
+  📄 ar--admin--orders--detail
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 522 KiB)
+      0  Enable text compression (Est savings of 530 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,322 elements)
+     50  Avoid an excessive DOM size (1,363 elements)
 
-  📄 ar--admin--returns
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 522 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,311 elements)
-
-  📄 ar--admin--sales--fec
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 91 KiB)
-      0  Enable text compression (Est savings of 576 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,326 elements)
-
-  📄 ar--admin--sales--fx
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 91 KiB)
-      0  Enable text compression (Est savings of 595 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,489 elements)
-
-  📄 ar--admin--site
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Largest Contentful Paint element (1,250 ms)
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 704 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (2,079 elements)
-     86  First Contentful Paint (1.0 s)
-     88  Largest Contentful Paint (1.3 s)
-
-  📄 ar--admin--stats
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 519 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,282 elements)
-
-  📄 ar--admin--subscriptions--3156141d-e580-4a77-87ba-a99c610c5172
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 524 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,294 elements)
-
-  📄 ar--admin--subscriptions--plans--3bd5d877-5b48-4cc6-90e1-e96af8d77307
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 537 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,358 elements)
-
-  📄 ar--admin--subscriptions
+  📄 ar--admin--orders
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 531 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,351 elements)
+
+  📄 ar--admin--platform--api-tokens
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 529 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,388 elements)
+
+  📄 ar--admin--returns--eaa7a586-a024-4159-902a-3449a7324fb1
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 529 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,346 elements)
+
+  📄 ar--admin--returns
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 529 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,335 elements)
+
+  📄 ar--admin--sales--fec
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 91 KiB)
+      0  Enable text compression (Est savings of 583 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Avoid an excessive DOM size (1,350 elements)
+
+  📄 ar--admin--sales--fx
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 91 KiB)
+      0  Enable text compression (Est savings of 603 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,513 elements)
+     89  First Contentful Paint (0.9 s)
+
+  📄 ar--admin--site
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Largest Contentful Paint element (1,310 ms)
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 711 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (2,103 elements)
+     86  Largest Contentful Paint (1.3 s)
+     88  First Contentful Paint (1.0 s)
+
+  📄 ar--admin--stats
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 527 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,306 elements)
+
+  📄 ar--admin--subscriptions--6532b14f-0086-4c86-a9e8-38177cd366f7
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 532 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,318 elements)
+
+  📄 ar--admin--subscriptions--plans--7872dc8d-d365-46ee-a1c5-4f04adb04d99
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 544 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,382 elements)
+
+  📄 ar--admin--subscriptions
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 539 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,374 elements)
 
   📄 ar--admin--theme
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 703 KiB)
+      0  Enable text compression (Est savings of 710 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (2,537 elements)
+     50  Avoid an excessive DOM size (2,561 elements)
      88  First Contentful Paint (1.0 s)
 
   📄 ar--auth--الملف-الشخصي
@@ -677,7 +736,7 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 93 KiB)
-      0  Enable text compression (Est savings of 307 KiB)
+      0  Enable text compression (Est savings of 308 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -685,7 +744,7 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 93 KiB)
-      0  Enable text compression (Est savings of 311 KiB)
+      0  Enable text compression (Est savings of 312 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -694,7 +753,7 @@
       0  Browser errors were logged to the console
       0  Elements with visible text labels do not have matching accessible names.
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 339 KiB)
+      0  Enable text compression (Est savings of 340 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -702,30 +761,55 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 93 KiB)
-      0  Enable text compression (Est savings of 305 KiB)
+      0  Enable text compression (Est savings of 306 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
   📄 ar--blog
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 292 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 ar--bookings--A11YROOM
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 269 KiB)
+      0  Enable text compression (Est savings of 267 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
   📄 ar--bookings
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 258 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+
+  📄 ar--forums--communaute--t--44b5f581-fad0-4f62-ad71-26b97addaea9
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 261 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+
+  📄 ar--forums--communaute
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Elements with visible text labels do not have matching accessible names.
+      0  Enable text compression (Est savings of 269 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+
+  📄 ar--forums
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 259 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
@@ -746,25 +830,25 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Elements with visible text labels do not have matching accessible names.
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 335 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 ar--notifications--preferences
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Elements with visible text labels do not have matching accessible names.
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 332 KiB)
+      0  Enable text compression (Est savings of 333 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 ar--notifications--unsubscribe
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Elements with visible text labels do not have matching accessible names.
-      0  Enable text compression (Est savings of 265 KiB)
+      0  Enable text compression (Est savings of 266 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
@@ -781,10 +865,10 @@
   📄 ar--organizations--a11y-roles-org--audit
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 371 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 ar--organizations--a11y-roles-org--moderation
   ──────────────────────────────────────────────────────────────────────
@@ -798,34 +882,34 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 453 KiB)
+      0  Enable text compression (Est savings of 455 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,546 elements)
+     50  Avoid an excessive DOM size (1,573 elements)
 
   📄 ar--organizations--a11y-roles-org--sites
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 367 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 ar--shop--a11y-qamis
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 259 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 ar--shop--cart
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 260 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 ar--shop--checkout
   ──────────────────────────────────────────────────────────────────────
@@ -838,10 +922,10 @@
   📄 ar--shop--order-2
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 263 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 ar--shop--order
   ──────────────────────────────────────────────────────────────────────
@@ -862,18 +946,18 @@
   📄 ar--اتصل-بنا
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 299 KiB)
+      0  Enable text compression (Est savings of 300 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 ar--الشروط-القانونية
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 309 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 ar--من-نحن
   ──────────────────────────────────────────────────────────────────────
@@ -905,232 +989,250 @@
   📄 en--admin--blog
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Largest Contentful Paint element (1,250 ms)
+      0  Largest Contentful Paint element (1,260 ms)
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 658 KiB)
+      0  Enable text compression (Est savings of 665 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused CSS (Est savings of 13 KiB)
-     50  Avoid an excessive DOM size (2,024 elements)
-     88  First Contentful Paint (1.0 s)
-     88  Largest Contentful Paint (1.2 s)
+     50  Avoid an excessive DOM size (2,048 elements)
+     88  Largest Contentful Paint (1.3 s)
+     89  First Contentful Paint (0.9 s)
 
   📄 en--admin--dashboard
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 538 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,504 elements)
+
+  📄 en--admin--forums--sanctions
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 525 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,319 elements)
+
+  📄 en--admin--forums
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 546 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,665 elements)
+
+  📄 en--admin--logistics--inventories--38745490-b96f-42e1-927a-9005dd753e5a
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 533 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,333 elements)
+
+  📄 en--admin--logistics--inventories--4853da62-4f21-400f-a7f0-a216e9b53bf8
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 535 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,327 elements)
+
+  📄 en--admin--logistics--inventories
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 536 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,342 elements)
+
+  📄 en--admin--logistics--items
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 536 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,319 elements)
+
+  📄 en--admin--logistics--movements
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 536 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,422 elements)
+
+  📄 en--admin--moderation
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 542 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,394 elements)
+
+  📄 en--admin--navigation
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 589 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,589 elements)
+
+  📄 en--admin--orders--detail-2
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 528 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,364 elements)
+
+  📄 en--admin--orders--detail
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 528 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,363 elements)
+
+  📄 en--admin--orders
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 529 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,351 elements)
+
+  📄 en--admin--platform--api-tokens
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 527 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,388 elements)
+
+  📄 en--admin--returns--eaa7a586-a024-4159-902a-3449a7324fb1
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 527 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,346 elements)
+
+  📄 en--admin--returns
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 527 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,335 elements)
+
+  📄 en--admin--sales--fec
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 91 KiB)
+      0  Enable text compression (Est savings of 581 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,350 elements)
+
+  📄 en--admin--sales--fx
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 91 KiB)
+      0  Enable text compression (Est savings of 600 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,513 elements)
+
+  📄 en--admin--site
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Largest Contentful Paint element (1,260 ms)
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 708 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (2,103 elements)
+     87  First Contentful Paint (1.0 s)
+     88  Largest Contentful Paint (1.3 s)
+
+  📄 en--admin--stats
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 525 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,306 elements)
+
+  📄 en--admin--subscriptions--6532b14f-0086-4c86-a9e8-38177cd366f7
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 530 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,480 elements)
-
-  📄 en--admin--logistics--inventories--2c950cc2-eec1-4701-aff6-478ffa06cbb6
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 528 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,303 elements)
-
-  📄 en--admin--logistics--inventories--94146331-be16-473a-bb70-852decd47f0b
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 526 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,309 elements)
-
-  📄 en--admin--logistics--inventories
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 528 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Avoid an excessive DOM size (1,318 elements)
 
-  📄 en--admin--logistics--items
+  📄 en--admin--subscriptions--plans--7872dc8d-d365-46ee-a1c5-4f04adb04d99
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 528 KiB)
+      0  Enable text compression (Est savings of 542 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,295 elements)
-
-  📄 en--admin--logistics--movements
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 529 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,398 elements)
-
-  📄 en--admin--moderation
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 535 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,370 elements)
-
-  📄 en--admin--navigation
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 582 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,565 elements)
-
-  📄 en--admin--orders--detail-2
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 520 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,340 elements)
-
-  📄 en--admin--orders--detail
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 521 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,339 elements)
-
-  📄 en--admin--orders
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 522 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,327 elements)
-
-  📄 en--admin--platform--api-tokens
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 520 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,364 elements)
-
-  📄 en--admin--returns--b92d0880-a334-4a52-a973-81ad48f4679c
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 520 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,322 elements)
-
-  📄 en--admin--returns
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 520 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,311 elements)
-
-  📄 en--admin--sales--fec
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 91 KiB)
-      0  Enable text compression (Est savings of 574 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,326 elements)
-
-  📄 en--admin--sales--fx
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 91 KiB)
-      0  Enable text compression (Est savings of 593 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,489 elements)
-
-  📄 en--admin--site
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Largest Contentful Paint element (1,320 ms)
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 701 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (2,079 elements)
-     86  Largest Contentful Paint (1.3 s)
-     89  First Contentful Paint (0.9 s)
-
-  📄 en--admin--stats
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 518 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,282 elements)
-
-  📄 en--admin--subscriptions--3156141d-e580-4a77-87ba-a99c610c5172
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 522 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,294 elements)
-
-  📄 en--admin--subscriptions--plans--3bd5d877-5b48-4cc6-90e1-e96af8d77307
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 535 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,358 elements)
+     50  Avoid an excessive DOM size (1,382 elements)
 
   📄 en--admin--subscriptions
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 529 KiB)
+      0  Enable text compression (Est savings of 537 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,350 elements)
+     50  Avoid an excessive DOM size (1,374 elements)
 
   📄 en--admin--theme
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 701 KiB)
+      0  Enable text compression (Est savings of 709 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (2,537 elements)
-     87  First Contentful Paint (1.0 s)
+     50  Avoid an excessive DOM size (2,561 elements)
+     88  First Contentful Paint (1.0 s)
 
   📄 en--auth--dashboard
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Elements with visible text labels do not have matching accessible names.
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 338 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 en--auth--forgot-password
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 93 KiB)
-      0  Enable text compression (Est savings of 303 KiB)
+      0  Enable text compression (Est savings of 304 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -1138,16 +1240,16 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Elements with visible text labels do not have matching accessible names.
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 358 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 en--auth--sign-in
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 93 KiB)
-      0  Enable text compression (Est savings of 309 KiB)
+      0  Enable text compression (Est savings of 310 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -1155,41 +1257,66 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 93 KiB)
-      0  Enable text compression (Est savings of 305 KiB)
+      0  Enable text compression (Est savings of 306 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
   📄 en--blog
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 291 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 en--bookings--A11YROOM
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 268 KiB)
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 266 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 en--bookings
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 257 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 en--contact
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 296 KiB)
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 297 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
+
+  📄 en--forums--communaute--t--44b5f581-fad0-4f62-ad71-26b97addaea9
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 260 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+
+  📄 en--forums--communaute
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Elements with visible text labels do not have matching accessible names.
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 268 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+
+  📄 en--forums
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 258 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
 
   📄 en--home
   ──────────────────────────────────────────────────────────────────────
@@ -1206,17 +1333,17 @@
   📄 en--legal-notice
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 304 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 en--messages
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Elements with visible text labels do not have matching accessible names.
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 333 KiB)
+      0  Enable text compression (Est savings of 334 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -1224,16 +1351,16 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Elements with visible text labels do not have matching accessible names.
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 331 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 en--notifications--unsubscribe
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Elements with visible text labels do not have matching accessible names.
-      0  Enable text compression (Est savings of 264 KiB)
+      0  Enable text compression (Est savings of 265 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
@@ -1242,41 +1369,41 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Elements with visible text labels do not have matching accessible names.
-      0  Enable text compression (Est savings of 330 KiB)
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 331 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 en--organizations--a11y-roles-org--audit
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 369 KiB)
+      0  Enable text compression (Est savings of 370 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 en--organizations--a11y-roles-org--moderation
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 363 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 en--organizations--a11y-roles-org--roles
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 452 KiB)
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 454 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,546 elements)
+     50  Avoid an excessive DOM size (1,573 elements)
 
   📄 en--organizations--a11y-roles-org--sites
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 365 KiB)
+      0  Enable text compression (Est savings of 366 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -1291,10 +1418,10 @@
   📄 en--shop--cart
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 259 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 en--shop--checkout
   ──────────────────────────────────────────────────────────────────────
@@ -1315,10 +1442,10 @@
   📄 en--shop--order
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 258 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 en--subscriptions
   ──────────────────────────────────────────────────────────────────────
@@ -1351,217 +1478,235 @@
       0  Browser errors were logged to the console
       0  Largest Contentful Paint element (1,250 ms)
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 659 KiB)
+      0  Enable text compression (Est savings of 666 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused CSS (Est savings of 13 KiB)
-     50  Avoid an excessive DOM size (2,024 elements)
-     88  First Contentful Paint (1.0 s)
+     50  Avoid an excessive DOM size (2,048 elements)
+     86  First Contentful Paint (1.0 s)
      88  Largest Contentful Paint (1.3 s)
 
   📄 es--admin--dashboard
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 531 KiB)
+      0  Enable text compression (Est savings of 538 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,480 elements)
+     50  Avoid an excessive DOM size (1,504 elements)
 
-  📄 es--admin--logistics--inventories--2c950cc2-eec1-4701-aff6-478ffa06cbb6
+  📄 es--admin--forums--sanctions
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 528 KiB)
+      0  Enable text compression (Est savings of 525 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,303 elements)
+     50  Avoid an excessive DOM size (1,319 elements)
 
-  📄 es--admin--logistics--inventories--94146331-be16-473a-bb70-852decd47f0b
+  📄 es--admin--forums
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 526 KiB)
+      0  Enable text compression (Est savings of 547 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,309 elements)
+     50  Avoid an excessive DOM size (1,665 elements)
+
+  📄 es--admin--logistics--inventories--38745490-b96f-42e1-927a-9005dd753e5a
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Largest Contentful Paint element (1,260 ms)
+      0  Enable text compression (Est savings of 533 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,333 elements)
+     88  Largest Contentful Paint (1.3 s)
+
+  📄 es--admin--logistics--inventories--4853da62-4f21-400f-a7f0-a216e9b53bf8
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 535 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,327 elements)
 
   📄 es--admin--logistics--inventories
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 529 KiB)
+      0  Enable text compression (Est savings of 536 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,318 elements)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,342 elements)
 
   📄 es--admin--logistics--items
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 529 KiB)
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 536 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,295 elements)
+     50  Avoid an excessive DOM size (1,319 elements)
 
   📄 es--admin--logistics--movements
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 529 KiB)
+      0  Enable text compression (Est savings of 536 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,398 elements)
+     50  Avoid an excessive DOM size (1,422 elements)
 
   📄 es--admin--moderation
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 535 KiB)
+      0  Enable text compression (Est savings of 542 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,370 elements)
+     50  Avoid an excessive DOM size (1,394 elements)
 
   📄 es--admin--navigation
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 582 KiB)
+      0  Enable text compression (Est savings of 589 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,565 elements)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,589 elements)
 
   📄 es--admin--orders--detail-2
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 521 KiB)
+      0  Enable text compression (Est savings of 528 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,340 elements)
+     50  Avoid an excessive DOM size (1,364 elements)
 
   📄 es--admin--orders--detail
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 521 KiB)
+      0  Enable text compression (Est savings of 528 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,339 elements)
+     50  Avoid an excessive DOM size (1,363 elements)
 
   📄 es--admin--orders
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 522 KiB)
+      0  Enable text compression (Est savings of 529 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,327 elements)
+     50  Avoid an excessive DOM size (1,351 elements)
 
   📄 es--admin--platform--api-tokens
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 520 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,364 elements)
-
-  📄 es--admin--returns--b92d0880-a334-4a52-a973-81ad48f4679c
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 520 KiB)
+      0  Enable text compression (Est savings of 528 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,322 elements)
+     50  Avoid an excessive DOM size (1,388 elements)
+
+  📄 es--admin--returns--eaa7a586-a024-4159-902a-3449a7324fb1
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 528 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,346 elements)
 
   📄 es--admin--returns
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 520 KiB)
+      0  Enable text compression (Est savings of 528 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,311 elements)
+     50  Avoid an excessive DOM size (1,335 elements)
 
   📄 es--admin--sales--fec
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 91 KiB)
-      0  Enable text compression (Est savings of 574 KiB)
+      0  Enable text compression (Est savings of 582 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,326 elements)
+     50  Avoid an excessive DOM size (1,350 elements)
 
   📄 es--admin--sales--fx
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 91 KiB)
-      0  Enable text compression (Est savings of 593 KiB)
+      0  Enable text compression (Est savings of 600 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,489 elements)
+     50  Avoid an excessive DOM size (1,513 elements)
 
   📄 es--admin--site
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Largest Contentful Paint element (1,230 ms)
-      0  Enable text compression (Est savings of 701 KiB)
+      0  Largest Contentful Paint element (1,310 ms)
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 708 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (2,079 elements)
+     50  Avoid an excessive DOM size (2,103 elements)
+     86  Largest Contentful Paint (1.3 s)
      88  First Contentful Paint (1.0 s)
-     89  Largest Contentful Paint (1.2 s)
 
   📄 es--admin--stats
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 518 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,282 elements)
-
-  📄 es--admin--subscriptions--3156141d-e580-4a77-87ba-a99c610c5172
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 523 KiB)
+      0  Enable text compression (Est savings of 525 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,294 elements)
+     50  Avoid an excessive DOM size (1,306 elements)
 
-  📄 es--admin--subscriptions--plans--3bd5d877-5b48-4cc6-90e1-e96af8d77307
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 535 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,358 elements)
-
-  📄 es--admin--subscriptions
+  📄 es--admin--subscriptions--6532b14f-0086-4c86-a9e8-38177cd366f7
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 530 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,350 elements)
+     50  Avoid an excessive DOM size (1,318 elements)
+
+  📄 es--admin--subscriptions--plans--7872dc8d-d365-46ee-a1c5-4f04adb04d99
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 543 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,382 elements)
+
+  📄 es--admin--subscriptions
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 537 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,374 elements)
 
   📄 es--admin--theme
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Largest Contentful Paint element (1,250 ms)
-      0  Enable text compression (Est savings of 702 KiB)
+      0  Enable text compression (Est savings of 709 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (2,537 elements)
+     50  Avoid an excessive DOM size (2,561 elements)
      88  First Contentful Paint (1.0 s)
-     88  Largest Contentful Paint (1.3 s)
 
   📄 es--auth--contrasena-olvidada
   ──────────────────────────────────────────────────────────────────────
@@ -1608,26 +1753,26 @@
   📄 es--aviso-legal
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 305 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 es--blog
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 291 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 es--bookings--A11YROOM
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 268 KiB)
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 266 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 es--bookings
   ──────────────────────────────────────────────────────────────────────
@@ -1641,21 +1786,46 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 298 KiB)
+      0  Enable text compression (Est savings of 299 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+
+  📄 es--forums--communaute--t--44b5f581-fad0-4f62-ad71-26b97addaea9
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 261 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+
+  📄 es--forums--communaute
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Elements with visible text labels do not have matching accessible names.
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 268 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+
+  📄 es--forums
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 258 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
   📄 es--home
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Largest Contentful Paint element (1,240 ms)
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 361 KiB)
       0  Properly size images (Est savings of 174 KiB)
-     50  Largest Contentful Paint element (1,220 ms)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
      50  Avoid an excessive DOM size (896 elements)
-     89  Largest Contentful Paint (1.2 s)
+     88  Largest Contentful Paint (1.2 s)
 
   📄 es--messages
   ──────────────────────────────────────────────────────────────────────
@@ -1670,19 +1840,19 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Elements with visible text labels do not have matching accessible names.
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 331 KiB)
+      0  Enable text compression (Est savings of 332 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 es--notifications--unsubscribe
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Elements with visible text labels do not have matching accessible names.
-      0  Enable text compression (Est savings of 264 KiB)
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 265 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 es--notifications
   ──────────────────────────────────────────────────────────────────────
@@ -1704,19 +1874,19 @@
   📄 es--organizations--a11y-roles-org--moderation
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 363 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 es--organizations--a11y-roles-org--roles
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 452 KiB)
+      0  Enable text compression (Est savings of 454 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,546 elements)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,573 elements)
 
   📄 es--organizations--a11y-roles-org--sites
   ──────────────────────────────────────────────────────────────────────
@@ -1738,7 +1908,7 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 259 KiB)
+      0  Enable text compression (Est savings of 260 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -1753,7 +1923,7 @@
   📄 es--shop--order-2
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 262 KiB)
+      0  Enable text compression (Est savings of 263 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
@@ -1769,15 +1939,15 @@
   📄 es--subscriptions
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 257 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 fr--a-propos
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 304 KiB)
+      0  Enable text compression (Est savings of 305 KiB)
       0  Properly size images (Est savings of 292 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
@@ -1795,219 +1965,235 @@
   📄 fr--admin--blog
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 659 KiB)
-     50  Largest Contentful Paint element (1,220 ms)
+      0  Enable text compression (Est savings of 667 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused CSS (Est savings of 13 KiB)
-     50  Avoid an excessive DOM size (2,024 elements)
-     89  First Contentful Paint (0.9 s)
-     89  Largest Contentful Paint (1.2 s)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (2,048 elements)
+     85  First Contentful Paint (1.0 s)
 
   📄 fr--admin--dashboard
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 531 KiB)
+      0  Enable text compression (Est savings of 538 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,480 elements)
+     50  Avoid an excessive DOM size (1,504 elements)
 
-  📄 fr--admin--logistics--inventories--2c950cc2-eec1-4701-aff6-478ffa06cbb6
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 528 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,303 elements)
-
-  📄 fr--admin--logistics--inventories--94146331-be16-473a-bb70-852decd47f0b
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 526 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,309 elements)
-
-  📄 fr--admin--logistics--inventories
+  📄 fr--admin--forums--sanctions
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 529 KiB)
+      0  Enable text compression (Est savings of 525 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,318 elements)
+     50  Avoid an excessive DOM size (1,319 elements)
 
-  📄 fr--admin--logistics--items
+  📄 fr--admin--forums
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 529 KiB)
+      0  Enable text compression (Est savings of 547 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,295 elements)
+     50  Avoid an excessive DOM size (1,665 elements)
 
-  📄 fr--admin--logistics--movements
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 529 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,398 elements)
-
-  📄 fr--admin--moderation
+  📄 fr--admin--logistics--inventories--38745490-b96f-42e1-927a-9005dd753e5a
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 535 KiB)
+      0  Enable text compression (Est savings of 534 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,370 elements)
+     50  Avoid an excessive DOM size (1,333 elements)
 
-  📄 fr--admin--navigation
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 583 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,565 elements)
-
-  📄 fr--admin--orders--detail-2
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 521 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,340 elements)
-
-  📄 fr--admin--orders--detail
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 521 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,339 elements)
-
-  📄 fr--admin--orders
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 522 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,327 elements)
-
-  📄 fr--admin--platform--api-tokens
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 521 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,364 elements)
-
-  📄 fr--admin--returns--b92d0880-a334-4a52-a973-81ad48f4679c
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 521 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,322 elements)
-
-  📄 fr--admin--returns
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 520 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,311 elements)
-
-  📄 fr--admin--sales--fec
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 574 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 91 KiB)
-     50  Avoid an excessive DOM size (1,326 elements)
-
-  📄 fr--admin--sales--fx
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 91 KiB)
-      0  Enable text compression (Est savings of 593 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,489 elements)
-
-  📄 fr--admin--site
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Largest Contentful Paint element (1,310 ms)
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 702 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (2,079 elements)
-     86  Largest Contentful Paint (1.3 s)
-     88  First Contentful Paint (1.0 s)
-
-  📄 fr--admin--stats
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 518 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,282 elements)
-
-  📄 fr--admin--subscriptions--3156141d-e580-4a77-87ba-a99c610c5172
-  ──────────────────────────────────────────────────────────────────────
-      0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 523 KiB)
-     50  Image elements do not have explicit `width` and `height`
-     50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,294 elements)
-
-  📄 fr--admin--subscriptions--plans--3bd5d877-5b48-4cc6-90e1-e96af8d77307
+  📄 fr--admin--logistics--inventories--4853da62-4f21-400f-a7f0-a216e9b53bf8
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 536 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,358 elements)
+     50  Avoid an excessive DOM size (1,327 elements)
 
-  📄 fr--admin--subscriptions
+  📄 fr--admin--logistics--inventories
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 536 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,342 elements)
+
+  📄 fr--admin--logistics--items
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 536 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,319 elements)
+
+  📄 fr--admin--logistics--movements
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 537 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,422 elements)
+
+  📄 fr--admin--moderation
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 543 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,394 elements)
+
+  📄 fr--admin--navigation
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 590 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,589 elements)
+
+  📄 fr--admin--orders--detail-2
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 528 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,364 elements)
+
+  📄 fr--admin--orders--detail
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 528 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,363 elements)
+
+  📄 fr--admin--orders
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 529 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,351 elements)
+
+  📄 fr--admin--platform--api-tokens
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 528 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,388 elements)
+
+  📄 fr--admin--returns--eaa7a586-a024-4159-902a-3449a7324fb1
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 528 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,346 elements)
+
+  📄 fr--admin--returns
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 528 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,335 elements)
+
+  📄 fr--admin--sales--fec
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 91 KiB)
+      0  Enable text compression (Est savings of 582 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,350 elements)
+
+  📄 fr--admin--sales--fx
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 91 KiB)
+      0  Enable text compression (Est savings of 601 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,513 elements)
+
+  📄 fr--admin--site
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Largest Contentful Paint element (1,310 ms)
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 709 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (2,103 elements)
+     86  Largest Contentful Paint (1.3 s)
+     88  First Contentful Paint (1.0 s)
+
+  📄 fr--admin--stats
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Enable text compression (Est savings of 525 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
+     50  Avoid an excessive DOM size (1,306 elements)
+
+  📄 fr--admin--subscriptions--6532b14f-0086-4c86-a9e8-38177cd366f7
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 530 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (1,350 elements)
+     50  Avoid an excessive DOM size (1,318 elements)
+
+  📄 fr--admin--subscriptions--plans--7872dc8d-d365-46ee-a1c5-4f04adb04d99
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 543 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,382 elements)
+
+  📄 fr--admin--subscriptions
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 537 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Avoid an excessive DOM size (1,374 elements)
 
   📄 fr--admin--theme
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Largest Contentful Paint element (1,290 ms)
+      0  Largest Contentful Paint element (1,310 ms)
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 702 KiB)
+      0  Enable text compression (Est savings of 709 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Avoid an excessive DOM size (2,537 elements)
-     87  Largest Contentful Paint (1.3 s)
-     88  First Contentful Paint (1.0 s)
+     50  Avoid an excessive DOM size (2,561 elements)
+     86  Largest Contentful Paint (1.3 s)
+     89  First Contentful Paint (0.9 s)
 
   📄 fr--auth--connexion
   ──────────────────────────────────────────────────────────────────────
@@ -2037,17 +2223,17 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Elements with visible text labels do not have matching accessible names.
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 358 KiB)
+      0  Enable text compression (Est savings of 359 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 fr--auth--tableau-de-bord
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Elements with visible text labels do not have matching accessible names.
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 338 KiB)
+      0  Enable text compression (Est savings of 339 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -2063,45 +2249,70 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 269 KiB)
+      0  Enable text compression (Est savings of 266 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
   📄 fr--bookings
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 257 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 fr--contact
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 297 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+
+  📄 fr--forums--communaute--t--44b5f581-fad0-4f62-ad71-26b97addaea9
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 261 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
+
+  📄 fr--forums--communaute
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Elements with visible text labels do not have matching accessible names.
+      0  Enable text compression (Est savings of 268 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
+
+  📄 fr--forums
+  ──────────────────────────────────────────────────────────────────────
+      0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 259 KiB)
+     50  Image elements do not have explicit `width` and `height`
+     50  Eliminate render-blocking resources (Est savings of 0 ms)
 
   📄 fr--home
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Largest Contentful Paint element (1,240 ms)
+      0  Largest Contentful Paint element (1,260 ms)
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 361 KiB)
+      0  Enable text compression (Est savings of 362 KiB)
       0  Properly size images (Est savings of 174 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Avoid an excessive DOM size (896 elements)
-     88  Largest Contentful Paint (1.2 s)
+     88  Largest Contentful Paint (1.3 s)
 
   📄 fr--mentions-legales
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 306 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 fr--messages
   ──────────────────────────────────────────────────────────────────────
@@ -2117,7 +2328,7 @@
       0  Browser errors were logged to the console
       0  Elements with visible text labels do not have matching accessible names.
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 331 KiB)
+      0  Enable text compression (Est savings of 332 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -2142,35 +2353,35 @@
   📄 fr--organizations--a11y-roles-org--audit
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 370 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 fr--organizations--a11y-roles-org--moderation
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 363 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 fr--organizations--a11y-roles-org--roles
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 453 KiB)
+      0  Reduce unused JavaScript (Est savings of 38 KiB)
+      0  Enable text compression (Est savings of 455 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
-     50  Reduce unused JavaScript (Est savings of 38 KiB)
-     50  Avoid an excessive DOM size (1,546 elements)
+     50  Avoid an excessive DOM size (1,573 elements)
 
   📄 fr--organizations--a11y-roles-org--sites
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Reduce unused JavaScript (Est savings of 38 KiB)
       0  Enable text compression (Est savings of 366 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
+     50  Reduce unused JavaScript (Est savings of 38 KiB)
 
   📄 fr--shop--a11y-t-shirt
   ──────────────────────────────────────────────────────────────────────
@@ -2184,7 +2395,7 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 259 KiB)
+      0  Enable text compression (Est savings of 260 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -2192,14 +2403,14 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 270 KiB)
+      0  Enable text compression (Est savings of 271 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
   📄 fr--shop--order-2
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
-      0  Enable text compression (Est savings of 262 KiB)
+      0  Enable text compression (Est savings of 263 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
      50  Reduce unused JavaScript (Est savings of 38 KiB)
@@ -2216,7 +2427,7 @@
   ──────────────────────────────────────────────────────────────────────
       0  Browser errors were logged to the console
       0  Reduce unused JavaScript (Est savings of 38 KiB)
-      0  Enable text compression (Est savings of 257 KiB)
+      0  Enable text compression (Est savings of 258 KiB)
      50  Image elements do not have explicit `width` and `height`
      50  Eliminate render-blocking resources (Est savings of 0 ms)
 
@@ -2245,6 +2456,16 @@
 
 
   📄 ar--auth--لوحة-التحكم  (1 issue)
+  ──────────────────────────────────────────────────────────────────────
+    Rule:     label-content-name-mismatch
+    Title:    Elements with visible text labels do not have matching accessible names.
+    Selector: div.mx-auto > div.hidden > div.starwind-dropdown > button#starwind-dropdown0-trigger
+    Element:  <button class="starwind-dropdown-trigger inline-flex items-center justify-center transiti…" type="button" aria-haspopup=
+    Issue:    Fix any of the following:
+  Text inside the element is not included in the accessible name
+
+
+  📄 ar--forums--communaute  (1 issue)
   ──────────────────────────────────────────────────────────────────────
     Rule:     label-content-name-mismatch
     Title:    Elements with visible text labels do not have matching accessible names.
@@ -2324,6 +2545,16 @@
   Text inside the element is not included in the accessible name
 
 
+  📄 en--forums--communaute  (1 issue)
+  ──────────────────────────────────────────────────────────────────────
+    Rule:     label-content-name-mismatch
+    Title:    Elements with visible text labels do not have matching accessible names.
+    Selector: div.mx-auto > div.hidden > div.starwind-dropdown > button#starwind-dropdown0-trigger
+    Element:  <button class="starwind-dropdown-trigger inline-flex items-center justify-center transiti…" type="button" aria-haspopup=
+    Issue:    Fix any of the following:
+  Text inside the element is not included in the accessible name
+
+
   📄 en--messages  (1 issue)
   ──────────────────────────────────────────────────────────────────────
     Rule:     label-content-name-mismatch
@@ -2385,6 +2616,16 @@
 
 
   📄 es--auth--perfil  (1 issue)
+  ──────────────────────────────────────────────────────────────────────
+    Rule:     label-content-name-mismatch
+    Title:    Elements with visible text labels do not have matching accessible names.
+    Selector: div.mx-auto > div.hidden > div.starwind-dropdown > button#starwind-dropdown0-trigger
+    Element:  <button class="starwind-dropdown-trigger inline-flex items-center justify-center transiti…" type="button" aria-haspopup=
+    Issue:    Fix any of the following:
+  Text inside the element is not included in the accessible name
+
+
+  📄 es--forums--communaute  (1 issue)
   ──────────────────────────────────────────────────────────────────────
     Rule:     label-content-name-mismatch
     Title:    Elements with visible text labels do not have matching accessible names.
@@ -2464,6 +2705,16 @@
   Text inside the element is not included in the accessible name
 
 
+  📄 fr--forums--communaute  (1 issue)
+  ──────────────────────────────────────────────────────────────────────
+    Rule:     label-content-name-mismatch
+    Title:    Elements with visible text labels do not have matching accessible names.
+    Selector: div.mx-auto > div.hidden > div.starwind-dropdown > button#starwind-dropdown0-trigger
+    Element:  <button class="starwind-dropdown-trigger inline-flex items-center justify-center transiti…" type="button" aria-haspopup=
+    Issue:    Fix any of the following:
+  Text inside the element is not included in the accessible name
+
+
   📄 fr--messages  (1 issue)
   ──────────────────────────────────────────────────────────────────────
     Rule:     label-content-name-mismatch
@@ -2510,35 +2761,40 @@
   ✅ ar--account  (99/100/96/100)
   ✅ ar--admin--blog  (96/100/96/100)
   ✅ ar--admin--dashboard  (97/100/96/100)
-  ✅ ar--admin--logistics--inventories--2c950cc2-eec1-4701-aff6-478ffa06cbb6  (97/100/96/100)
-  ✅ ar--admin--logistics--inventories--94146331-be16-473a-bb70-852decd47f0b  (97/100/96/100)
-  ✅ ar--admin--logistics--inventories  (97/100/96/100)
-  ✅ ar--admin--logistics--items  (97/100/96/100)
-  ✅ ar--admin--logistics--movements  (98/100/96/100)
+  ✅ ar--admin--forums--sanctions  (98/100/96/100)
+  ✅ ar--admin--forums  (98/100/96/100)
+  ✅ ar--admin--logistics--inventories--38745490-b96f-42e1-927a-9005dd753e5a  (97/100/96/100)
+  ✅ ar--admin--logistics--inventories--4853da62-4f21-400f-a7f0-a216e9b53bf8  (98/100/96/100)
+  ✅ ar--admin--logistics--inventories  (98/100/96/100)
+  ✅ ar--admin--logistics--items  (98/100/96/100)
+  ✅ ar--admin--logistics--movements  (97/100/96/100)
   ✅ ar--admin--moderation  (97/100/96/100)
-  ✅ ar--admin--navigation  (98/100/96/100)
+  ✅ ar--admin--navigation  (97/100/96/100)
   ✅ ar--admin--orders--detail-2  (98/100/96/100)
   ✅ ar--admin--orders--detail  (98/100/96/100)
   ✅ ar--admin--orders  (98/100/96/100)
   ✅ ar--admin--platform--api-tokens  (98/100/96/100)
-  ✅ ar--admin--returns--b92d0880-a334-4a52-a973-81ad48f4679c  (98/100/96/100)
+  ✅ ar--admin--returns--eaa7a586-a024-4159-902a-3449a7324fb1  (98/100/96/100)
   ✅ ar--admin--returns  (98/100/96/100)
-  ✅ ar--admin--sales--fec  (97/100/96/100)
-  ✅ ar--admin--sales--fx  (97/100/96/100)
+  ✅ ar--admin--sales--fec  (98/100/96/100)
+  ✅ ar--admin--sales--fx  (96/100/96/100)
   ✅ ar--admin--site  (95/100/96/100)
   ✅ ar--admin--stats  (98/100/96/100)
-  ✅ ar--admin--subscriptions--3156141d-e580-4a77-87ba-a99c610c5172  (97/100/96/100)
-  ✅ ar--admin--subscriptions--plans--3bd5d877-5b48-4cc6-90e1-e96af8d77307  (97/100/96/100)
-  ✅ ar--admin--subscriptions  (98/100/96/100)
+  ✅ ar--admin--subscriptions--6532b14f-0086-4c86-a9e8-38177cd366f7  (98/100/96/100)
+  ✅ ar--admin--subscriptions--plans--7872dc8d-d365-46ee-a1c5-4f04adb04d99  (97/100/96/100)
+  ✅ ar--admin--subscriptions  (97/100/96/100)
   ✅ ar--admin--theme  (96/100/96/100)
-  ✅ ar--auth--الملف-الشخصي  (99/100/96/100)
+  ✅ ar--auth--الملف-الشخصي  (98/100/96/100)
   ✅ ar--auth--انشاء-حساب  (99/100/96/100)
   ✅ ar--auth--تسجيل-الدخول  (99/100/96/100)
   ✅ ar--auth--لوحة-التحكم  (99/100/96/100)
   ✅ ar--auth--نسيت-كلمة-المرور  (99/100/96/100)
-  ✅ ar--blog  (98/100/96/100)
+  ✅ ar--blog  (99/100/96/100)
   ✅ ar--bookings--A11YROOM  (99/100/96/100)
-  ✅ ar--bookings  (100/100/96/100)
+  ✅ ar--bookings  (99/100/96/100)
+  ✅ ar--forums--communaute--t--44b5f581-fad0-4f62-ad71-26b97addaea9  (100/100/96/100)
+  ✅ ar--forums--communaute  (99/100/96/100)
+  ✅ ar--forums  (99/100/96/100)
   ✅ ar--home  (96/100/96/100)
   ✅ ar--messages  (99/100/96/100)
   ✅ ar--notifications--preferences  (99/100/96/100)
@@ -2549,48 +2805,53 @@
   ✅ ar--organizations--a11y-roles-org--roles  (98/100/96/100)
   ✅ ar--organizations--a11y-roles-org--sites  (99/100/96/100)
   ✅ ar--shop--a11y-qamis  (99/100/96/100)
-  ✅ ar--shop--cart  (100/100/96/100)
+  ✅ ar--shop--cart  (99/100/96/100)
   ✅ ar--shop--checkout  (99/100/96/100)
   ✅ ar--shop--order-2  (99/100/96/100)
   ✅ ar--shop--order  (99/100/96/100)
   ✅ ar--subscriptions  (99/100/96/100)
   ✅ ar--اتصل-بنا  (99/100/96/100)
   ✅ ar--الشروط-القانونية  (99/100/96/100)
-  ✅ ar--من-نحن  (99/100/96/100)
+  ✅ ar--من-نحن  (96/100/96/100)
   ✅ en--about  (98/100/96/100)
   ✅ en--account  (99/100/96/100)
   ✅ en--admin--blog  (96/100/96/100)
-  ✅ en--admin--dashboard  (98/100/96/100)
-  ✅ en--admin--logistics--inventories--2c950cc2-eec1-4701-aff6-478ffa06cbb6  (97/100/96/100)
-  ✅ en--admin--logistics--inventories--94146331-be16-473a-bb70-852decd47f0b  (97/100/96/100)
+  ✅ en--admin--dashboard  (97/100/96/100)
+  ✅ en--admin--forums--sanctions  (98/100/96/100)
+  ✅ en--admin--forums  (98/100/96/100)
+  ✅ en--admin--logistics--inventories--38745490-b96f-42e1-927a-9005dd753e5a  (98/100/96/100)
+  ✅ en--admin--logistics--inventories--4853da62-4f21-400f-a7f0-a216e9b53bf8  (97/100/96/100)
   ✅ en--admin--logistics--inventories  (97/100/96/100)
   ✅ en--admin--logistics--items  (98/100/96/100)
-  ✅ en--admin--logistics--movements  (98/100/96/100)
-  ✅ en--admin--moderation  (98/100/96/100)
-  ✅ en--admin--navigation  (98/100/96/100)
+  ✅ en--admin--logistics--movements  (97/100/96/100)
+  ✅ en--admin--moderation  (97/100/96/100)
+  ✅ en--admin--navigation  (97/100/96/100)
   ✅ en--admin--orders--detail-2  (98/100/96/100)
   ✅ en--admin--orders--detail  (98/100/96/100)
   ✅ en--admin--orders  (98/100/96/100)
   ✅ en--admin--platform--api-tokens  (98/100/96/100)
-  ✅ en--admin--returns--b92d0880-a334-4a52-a973-81ad48f4679c  (98/100/96/100)
+  ✅ en--admin--returns--eaa7a586-a024-4159-902a-3449a7324fb1  (98/100/96/100)
   ✅ en--admin--returns  (98/100/96/100)
   ✅ en--admin--sales--fec  (97/100/96/100)
   ✅ en--admin--sales--fx  (97/100/96/100)
   ✅ en--admin--site  (95/100/96/100)
   ✅ en--admin--stats  (98/100/96/100)
-  ✅ en--admin--subscriptions--3156141d-e580-4a77-87ba-a99c610c5172  (97/100/96/100)
-  ✅ en--admin--subscriptions--plans--3bd5d877-5b48-4cc6-90e1-e96af8d77307  (98/100/96/100)
-  ✅ en--admin--subscriptions  (98/100/96/100)
+  ✅ en--admin--subscriptions--6532b14f-0086-4c86-a9e8-38177cd366f7  (98/100/96/100)
+  ✅ en--admin--subscriptions--plans--7872dc8d-d365-46ee-a1c5-4f04adb04d99  (97/100/96/100)
+  ✅ en--admin--subscriptions  (97/100/96/100)
   ✅ en--admin--theme  (96/100/96/100)
   ✅ en--auth--dashboard  (99/100/96/100)
   ✅ en--auth--forgot-password  (99/100/96/100)
-  ✅ en--auth--profile  (99/100/96/100)
+  ✅ en--auth--profile  (98/100/96/100)
   ✅ en--auth--sign-in  (99/100/96/100)
   ✅ en--auth--sign-up  (99/100/96/100)
   ✅ en--blog  (99/100/96/100)
   ✅ en--bookings--A11YROOM  (99/100/96/100)
   ✅ en--bookings  (99/100/96/100)
   ✅ en--contact  (99/100/96/100)
+  ✅ en--forums--communaute--t--44b5f581-fad0-4f62-ad71-26b97addaea9  (99/100/96/100)
+  ✅ en--forums--communaute  (99/100/96/100)
+  ✅ en--forums  (99/100/96/100)
   ✅ en--home  (97/100/96/100)
   ✅ en--legal-notice  (99/100/96/100)
   ✅ en--messages  (99/100/96/100)
@@ -2600,7 +2861,7 @@
   ✅ en--organizations--a11y-roles-org--audit  (99/100/96/100)
   ✅ en--organizations--a11y-roles-org--moderation  (99/100/96/100)
   ✅ en--organizations--a11y-roles-org--roles  (98/100/96/100)
-  ✅ en--organizations--a11y-roles-org--sites  (98/100/96/100)
+  ✅ en--organizations--a11y-roles-org--sites  (99/100/96/100)
   ✅ en--shop--a11y-t-shirt  (99/100/96/100)
   ✅ en--shop--cart  (99/100/96/100)
   ✅ en--shop--checkout  (99/100/96/100)
@@ -2609,39 +2870,44 @@
   ✅ en--subscriptions  (99/100/96/100)
   ✅ es--account  (99/100/96/100)
   ✅ es--acerca-de  (98/100/96/100)
-  ✅ es--admin--blog  (96/100/96/100)
+  ✅ es--admin--blog  (95/100/96/100)
   ✅ es--admin--dashboard  (98/100/96/100)
-  ✅ es--admin--logistics--inventories--2c950cc2-eec1-4701-aff6-478ffa06cbb6  (97/100/96/100)
-  ✅ es--admin--logistics--inventories--94146331-be16-473a-bb70-852decd47f0b  (97/100/96/100)
+  ✅ es--admin--forums--sanctions  (98/100/96/100)
+  ✅ es--admin--forums  (98/100/96/100)
+  ✅ es--admin--logistics--inventories--38745490-b96f-42e1-927a-9005dd753e5a  (96/100/96/100)
+  ✅ es--admin--logistics--inventories--4853da62-4f21-400f-a7f0-a216e9b53bf8  (97/100/96/100)
   ✅ es--admin--logistics--inventories  (98/100/96/100)
   ✅ es--admin--logistics--items  (97/100/96/100)
-  ✅ es--admin--logistics--movements  (98/100/96/100)
-  ✅ es--admin--moderation  (98/100/96/100)
-  ✅ es--admin--navigation  (98/100/96/100)
+  ✅ es--admin--logistics--movements  (97/100/96/100)
+  ✅ es--admin--moderation  (97/100/96/100)
+  ✅ es--admin--navigation  (97/100/96/100)
   ✅ es--admin--orders--detail-2  (98/100/96/100)
   ✅ es--admin--orders--detail  (98/100/96/100)
   ✅ es--admin--orders  (98/100/96/100)
   ✅ es--admin--platform--api-tokens  (98/100/96/100)
-  ✅ es--admin--returns--b92d0880-a334-4a52-a973-81ad48f4679c  (98/100/96/100)
+  ✅ es--admin--returns--eaa7a586-a024-4159-902a-3449a7324fb1  (98/100/96/100)
   ✅ es--admin--returns  (98/100/96/100)
   ✅ es--admin--sales--fec  (97/100/96/100)
   ✅ es--admin--sales--fx  (97/100/96/100)
-  ✅ es--admin--site  (96/100/96/100)
-  ✅ es--admin--stats  (97/100/96/100)
-  ✅ es--admin--subscriptions--3156141d-e580-4a77-87ba-a99c610c5172  (98/100/96/100)
-  ✅ es--admin--subscriptions--plans--3bd5d877-5b48-4cc6-90e1-e96af8d77307  (98/100/96/100)
-  ✅ es--admin--subscriptions  (97/100/96/100)
+  ✅ es--admin--site  (95/100/96/100)
+  ✅ es--admin--stats  (98/100/96/100)
+  ✅ es--admin--subscriptions--6532b14f-0086-4c86-a9e8-38177cd366f7  (98/100/96/100)
+  ✅ es--admin--subscriptions--plans--7872dc8d-d365-46ee-a1c5-4f04adb04d99  (97/100/96/100)
+  ✅ es--admin--subscriptions  (98/100/96/100)
   ✅ es--admin--theme  (96/100/96/100)
   ✅ es--auth--contrasena-olvidada  (99/100/96/100)
   ✅ es--auth--iniciar-sesion  (99/100/96/100)
   ✅ es--auth--panel  (99/100/96/100)
-  ✅ es--auth--perfil  (98/100/96/100)
+  ✅ es--auth--perfil  (99/100/96/100)
   ✅ es--auth--registro  (99/100/96/100)
   ✅ es--aviso-legal  (99/100/96/100)
   ✅ es--blog  (99/100/96/100)
   ✅ es--bookings--A11YROOM  (99/100/96/100)
   ✅ es--bookings  (99/100/96/100)
   ✅ es--contacto  (99/100/96/100)
+  ✅ es--forums--communaute--t--44b5f581-fad0-4f62-ad71-26b97addaea9  (99/100/96/100)
+  ✅ es--forums--communaute  (99/100/96/100)
+  ✅ es--forums  (99/100/96/100)
   ✅ es--home  (97/100/96/100)
   ✅ es--messages  (99/100/96/100)
   ✅ es--notifications--preferences  (99/100/96/100)
@@ -2661,26 +2927,28 @@
   ✅ fr--account  (99/100/96/100)
   ✅ fr--admin--blog  (96/100/96/100)
   ✅ fr--admin--dashboard  (98/100/96/100)
-  ✅ fr--admin--logistics--inventories--2c950cc2-eec1-4701-aff6-478ffa06cbb6  (97/100/96/100)
-  ✅ fr--admin--logistics--inventories--94146331-be16-473a-bb70-852decd47f0b  (97/100/96/100)
+  ✅ fr--admin--forums--sanctions  (98/100/96/100)
+  ✅ fr--admin--forums  (97/100/96/100)
+  ✅ fr--admin--logistics--inventories--38745490-b96f-42e1-927a-9005dd753e5a  (98/100/96/100)
+  ✅ fr--admin--logistics--inventories--4853da62-4f21-400f-a7f0-a216e9b53bf8  (97/100/96/100)
   ✅ fr--admin--logistics--inventories  (97/100/96/100)
-  ✅ fr--admin--logistics--items  (98/100/96/100)
-  ✅ fr--admin--logistics--movements  (98/100/96/100)
-  ✅ fr--admin--moderation  (98/100/96/100)
+  ✅ fr--admin--logistics--items  (97/100/96/100)
+  ✅ fr--admin--logistics--movements  (97/100/96/100)
+  ✅ fr--admin--moderation  (97/100/96/100)
   ✅ fr--admin--navigation  (97/100/96/100)
   ✅ fr--admin--orders--detail-2  (98/100/96/100)
   ✅ fr--admin--orders--detail  (98/100/96/100)
   ✅ fr--admin--orders  (98/100/96/100)
   ✅ fr--admin--platform--api-tokens  (98/100/96/100)
-  ✅ fr--admin--returns--b92d0880-a334-4a52-a973-81ad48f4679c  (98/100/96/100)
+  ✅ fr--admin--returns--eaa7a586-a024-4159-902a-3449a7324fb1  (98/100/96/100)
   ✅ fr--admin--returns  (98/100/96/100)
   ✅ fr--admin--sales--fec  (98/100/96/100)
   ✅ fr--admin--sales--fx  (97/100/96/100)
   ✅ fr--admin--site  (95/100/96/100)
   ✅ fr--admin--stats  (98/100/96/100)
-  ✅ fr--admin--subscriptions--3156141d-e580-4a77-87ba-a99c610c5172  (98/100/96/100)
-  ✅ fr--admin--subscriptions--plans--3bd5d877-5b48-4cc6-90e1-e96af8d77307  (97/100/96/100)
-  ✅ fr--admin--subscriptions  (98/100/96/100)
+  ✅ fr--admin--subscriptions--6532b14f-0086-4c86-a9e8-38177cd366f7  (97/100/96/100)
+  ✅ fr--admin--subscriptions--plans--7872dc8d-d365-46ee-a1c5-4f04adb04d99  (97/100/96/100)
+  ✅ fr--admin--subscriptions  (97/100/96/100)
   ✅ fr--admin--theme  (95/100/96/100)
   ✅ fr--auth--connexion  (99/100/96/100)
   ✅ fr--auth--inscription  (99/100/96/100)
@@ -2691,6 +2959,9 @@
   ✅ fr--bookings--A11YROOM  (99/100/96/100)
   ✅ fr--bookings  (99/100/96/100)
   ✅ fr--contact  (99/100/96/100)
+  ✅ fr--forums--communaute--t--44b5f581-fad0-4f62-ad71-26b97addaea9  (99/100/96/100)
+  ✅ fr--forums--communaute  (99/100/96/100)
+  ✅ fr--forums  (99/100/96/100)
   ✅ fr--home  (97/100/96/100)
   ✅ fr--mentions-legales  (99/100/96/100)
   ✅ fr--messages  (99/100/96/100)
@@ -2698,17 +2969,17 @@
   ✅ fr--notifications--unsubscribe  (99/100/96/100)
   ✅ fr--notifications  (99/100/96/100)
   ✅ fr--organizations--a11y-roles-org--audit  (99/100/96/100)
-  ✅ fr--organizations--a11y-roles-org--moderation  (98/100/96/100)
+  ✅ fr--organizations--a11y-roles-org--moderation  (99/100/96/100)
   ✅ fr--organizations--a11y-roles-org--roles  (98/100/96/100)
   ✅ fr--organizations--a11y-roles-org--sites  (99/100/96/100)
   ✅ fr--shop--a11y-t-shirt  (99/100/96/100)
   ✅ fr--shop--cart  (99/100/96/100)
   ✅ fr--shop--checkout  (99/100/96/100)
   ✅ fr--shop--order-2  (100/100/96/100)
-  ✅ fr--shop--order  (99/100/96/100)
+  ✅ fr--shop--order  (100/100/96/100)
   ✅ fr--subscriptions  (99/100/96/100)
 
 ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
-  END OF REPORT — 800/800 checks passed across 200 pages
+  END OF REPORT — 880/880 checks passed across 220 pages
   HTML reports available in: tests/reports/lighthouse/
 ══════════════════════════════════════════════════════════════════════════════════════════════════════════════

@@ -1,6 +1,6 @@
 ══════════════════════════════════════════════════════════════════════════════════
   POLYWEB — GLOBAL QA REPORT
-  Generated: 2026-11-09 11:28:39
+  Generated: 2026-11-09 18:02:45
 ══════════════════════════════════════════════════════════════════════════════════
 
   ✅ Type & Template Check (astro check)
@@ -10,16 +10,16 @@
      0 errors, 0 warnings
 
   ✅ Unit & Integration Tests (Vitest)
-     2241/2242 passed, 1 skipped
+     2276/2277 passed, 1 skipped
 
   ✅ End-to-End Tests (Playwright)
-     306/390 passed, 84 skipped
+     307/393 passed, 86 skipped
 
   ✅ Accessibility Audit (Pa11y — WCAG 2.1 AAA)
-     200/200 URLs clean
+     232/232 URLs clean
 
   ✅ Performance & Quality Audit (Lighthouse CI)
-     200 page(s) audited, all ≥90
+     220 page(s) audited, all ≥90
 
 ══════════════════════════════════════════════════════════════════════════════════
   GLOBAL STATUS
@@ -33,10 +33,10 @@
   ├─────────────────────────────────────────────┼──────────────┼─────────┤
   │ Astro check                                 │ GREEN        │ 0 error │
   │ ESLint                                      │ GREEN        │ 0 error │
-  │ Vitest (unit/integration)                   │ GREEN        │ 2241/22 │
-  │ Playwright (e2e)                            │ GREEN        │ 306/390 │
-  │ Pa11y (a11y)                                │ GREEN        │ 200/200 │
-  │ Lighthouse (perf)                           │ GREEN        │ 200 pag │
+  │ Vitest (unit/integration)                   │ GREEN        │ 2276/22 │
+  │ Playwright (e2e)                            │ GREEN        │ 307/393 │
+  │ Pa11y (a11y)                                │ GREEN        │ 232/232 │
+  │ Lighthouse (perf)                           │ GREEN        │ 220 pag │
   └─────────────────────────────────────────────┴──────────────┴─────────┘
 
 ══════════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,48 @@
+---
+/**
+ * Forums du site courant : forums accessibles au lecteur et leurs catégories (nombre de sujets
+ * visibles par CE lecteur). Le premier affichage crée, une seule fois, le forum par défaut du
+ * site avec ses catégories pré-remplies (`ensureSiteForum`, idempotent, audité).
+ */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { toLocale } from "@i18n/utils";
+import { runApp } from "@/lib/effect/http";
+import { ensureDefaultSite } from "@/modules/sites/domain/sites";
+import { ensureSiteForum } from "@/modules/forums/services/forum.service";
+import { forumsOverview } from "@/modules/forums/loaders";
+import { fillForums, getForumsTranslations } from "@/modules/forums/i18n";
+
+export const prerender = false;
+const locale = toLocale(Astro.params.lang);
+const t = getForumsTranslations(locale);
+const site = Astro.locals.site ?? (await ensureDefaultSite());
+await runApp(ensureSiteForum({ siteId: site.id, organizationId: site.organizationId ?? null }));
+const forums = await runApp(forumsOverview(site.id, Astro.locals.user ?? null, locale));
+Astro.response.headers.set("Cache-Control", "private, no-store");
+---
+<BaseLayout title={t.title} description={t.intro}>
+  <main class="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8" data-testid="forums-index">
+    <h1 class="mb-2 font-heading text-3xl font-bold">{t.title}</h1>
+    <p class="mb-8 text-muted-foreground">{t.intro}</p>
+    {forums.length === 0 ? <p>{t.noForums}</p> : (
+      <div class="grid gap-8">
+        {forums.map((forum) => (
+          <section aria-labelledby={`forum-${forum.id}`} class="rounded-xl border p-5">
+            <h2 id={`forum-${forum.id}`} class="font-heading text-2xl font-semibold"><a class="underline-offset-4 hover:underline" href={`/${locale}/forums/${forum.slug}`}>{forum.title}</a></h2>
+            {forum.description && <p class="mt-1 text-muted-foreground">{forum.description}</p>}
+            <h3 class="mt-4 text-sm font-medium">{t.categories}</h3>
+            <ul class="mt-2 grid gap-2 sm:grid-cols-2">
+              {forum.categories.map((c) => (
+                <li class="rounded-md border p-3">
+                  <a class="font-medium underline-offset-4 hover:underline" href={`/${locale}/forums/${forum.slug}?category=${c.slug}`}>{c.name}</a>
+                  {c.description && <p class="text-sm text-muted-foreground">{c.description}</p>}
+                  <p class="text-sm">{fillForums(t.topicCount, { count: c.topics })}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    )}
+  </main>
+</BaseLayout>

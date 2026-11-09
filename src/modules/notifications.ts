@@ -8,6 +8,7 @@ import { moderationNotifications } from "@/core/moderation/notifications";
 import { blogNotifications } from "@/modules/blog/notifications/definitions";
 import { servicesNotifications } from "@/modules/services/notifications/definitions";
 import { salesNotifications } from "@/modules/sales/notifications/definitions";
+import { forumsNotifications } from "@/modules/forums/notifications/definitions";
 // @module-notifications:imports
 
 export const MODULE_NOTIFICATIONS = [
@@ -16,6 +17,7 @@ export const MODULE_NOTIFICATIONS = [
   blogNotifications,
   servicesNotifications,
   salesNotifications,
+  forumsNotifications,
   // @module-notifications:list
 ] as const;
 

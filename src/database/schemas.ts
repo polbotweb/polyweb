@@ -41,3 +41,5 @@ export * from "../modules/purchasing/schema";
 export * from "../modules/subscriptions/schema";
 export * from "../modules/bookings/schema";
 export * from "./schemas/messaging.schema";
+export * from "./schemas/badges.schema";
+export * from "../modules/forums/schema";

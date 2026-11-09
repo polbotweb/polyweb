@@ -1,6 +1,6 @@
 import type { Locale } from "@i18n/config";
 
-export type ModuleId = "blog" | "services" | "tax" | "sales" | "crm" | "logistics" | "purchasing" | "subscriptions" | "bookings" | "events" | "formations" | "courses" | "shop";
+export type ModuleId = "blog" | "services" | "tax" | "sales" | "crm" | "logistics" | "purchasing" | "subscriptions" | "bookings" | "events" | "formations" | "courses" | "shop" | "forums";
 
 const labels: Record<ModuleId, Record<Locale, string>> = {
   blog: { fr: "Blog", en: "Blog", es: "Blog", ar: "المدونة" },
@@ -16,6 +16,7 @@ const labels: Record<ModuleId, Record<Locale, string>> = {
   formations: { fr: "Formations", en: "Training", es: "Formaciones", ar: "التدريب" },
   courses: { fr: "Cours", en: "Courses", es: "Cursos", ar: "الدورات" },
   shop: { fr: "Boutique", en: "Shop", es: "Tienda", ar: "المتجر" },
+  forums: { fr: "Forums", en: "Forums", es: "Foros", ar: "المنتديات" },
 };
 
 export const isModuleId = (value: string): value is ModuleId => Object.hasOwn(labels, value);
