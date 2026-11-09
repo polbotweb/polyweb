@@ -29,7 +29,7 @@ import {
 } from "../domain/rules";
 import { FORUMS_MENTIONED_EVENT, FORUMS_POST_CREATED_EVENT } from "../domain/events";
 import { forumById, forumRateLimit, forumsCan, isOrgMember, notFound, requireParticipant, topicAccess, type ForumViewer, type TopicAccess } from "./access";
-import { recomputeMemberStats, recomputeScore } from "./reputation";
+import { lockVoteTarget, recomputeMemberStats, recomputeScore } from "./reputation";
 import { forumsAudit } from "./audit";
 import { visibleReplyCount } from "./counters";
 
@@ -195,6 +195,7 @@ export const vote = (input: { targetType: "topic" | "post"; targetId: string; va
     yield* forumRateLimit(actor.id, "vote");
     return yield* dbTransaction("forums.vote", (tx) =>
       Effect.gen(function* () {
+        yield* lockVoteTarget(tx, input.targetType, input.targetId);
         const key = and(eq(forumVotes.targetType, input.targetType), eq(forumVotes.targetId, input.targetId), eq(forumVotes.userId, actor.id));
         if (input.value === 0) yield* dbTry("forums.vote.delete", () => tx.delete(forumVotes).where(key));
         else yield* dbTry("forums.vote.upsert", () =>
@@ -234,7 +235,8 @@ export const acceptAnswer = (input: { topicId: string; postId: string | null }, 
       Effect.gen(function* () {
         const [previous] = topic.acceptedPostId ? yield* dbTry("forums.accept.previous", () => tx.select({ authorId: forumPosts.authorId }).from(forumPosts).where(eq(forumPosts.id, topic.acceptedPostId!)).limit(1)) : [];
         yield* dbTry("forums.accept.set", () => tx.update(forumTopics).set({ acceptedPostId: post?.id ?? null }).where(eq(forumTopics.id, topic.id)));
-        for (const authorId of new Set([previous?.authorId ?? null, post?.authorId ?? null])) yield* recomputeMemberStats(tx, { siteId: topic.siteId, userId: authorId, organizationId: topic.organizationId });
+        // Membres triés : ordre de verrouillage stable entre transactions concurrentes (pas d'interblocage).
+        for (const authorId of [...new Set([previous?.authorId, post?.authorId].filter((u): u is string => Boolean(u)))].sort()) yield* recomputeMemberStats(tx, { siteId: topic.siteId, userId: authorId, organizationId: topic.organizationId });
         if (topic.authorId !== actor.id) yield* forumsAudit(tx, { actorId: actor.id, action: "forums.topic.accept", resource: "forums.topic", resourceId: topic.id, organizationId: topic.organizationId, siteId: topic.siteId, metadata: { postId: post?.id ?? null, previous: topic.acceptedPostId } });
         return { acceptedPostId: post?.id ?? null };
       }),
@@ -244,10 +246,11 @@ export const acceptAnswer = (input: { topicId: string; postId: string | null }, 
 export const setFollow = (input: { topicId: string; follow: boolean }, viewer: ForumViewer) =>
   Effect.gen(function* () {
     const access = yield* topicAccess(input.topicId, viewer);
-    if (!viewer) return yield* fail("UNAUTHORIZED", "Vous devez être connecté pour effectuer cette action.");
-    yield* forumRateLimit(viewer.id, "follow");
-    if (input.follow) yield* dbTry("forums.follow.add", () => getDrizzle().insert(forumTopicFollows).values({ topicId: access.topic.id, userId: viewer.id }).onConflictDoNothing());
-    else yield* dbTry("forums.follow.remove", () => getDrizzle().delete(forumTopicFollows).where(and(eq(forumTopicFollows.topicId, access.topic.id), eq(forumTopicFollows.userId, viewer.id))));
+    // Suspension : toute interaction bloquée, abonnement compris (la sourdine ne bloque que la publication).
+    const actor = yield* requireParticipant(viewer, access.topic.siteId, "interact");
+    yield* forumRateLimit(actor.id, "follow");
+    if (input.follow) yield* dbTry("forums.follow.add", () => getDrizzle().insert(forumTopicFollows).values({ topicId: access.topic.id, userId: actor.id }).onConflictDoNothing());
+    else yield* dbTry("forums.follow.remove", () => getDrizzle().delete(forumTopicFollows).where(and(eq(forumTopicFollows.topicId, access.topic.id), eq(forumTopicFollows.userId, actor.id))));
     return { following: input.follow };
   });
 

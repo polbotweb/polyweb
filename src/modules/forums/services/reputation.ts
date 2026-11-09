@@ -2,6 +2,11 @@
  * Réputation et badges : recalcul EXACT depuis les sources (votes reçus sur les contenus visibles,
  * réponses acceptées, contributions) dans la transaction de l'écriture qui les modifie, puis
  * attribution idempotente des badges (core/badges) ; un badge nouveau émet un événement outbox.
+ *
+ * Concurrence : le recalcul d'un membre est sérialisé par un verrou consultatif transactionnel
+ * (site, membre) pris AVANT l'agrégat ; en READ COMMITTED, l'agrégat (instruction suivante) voit
+ * donc les écritures des transactions concurrentes déjà validées — pas de mise à jour perdue.
+ * Ordre des verrous dans toutes les écritures : contenu (ligne) puis membres (triés).
  */
 import { sql } from "drizzle-orm";
 import { Effect } from "effect";
@@ -19,6 +24,7 @@ export const recomputeMemberStats = (tx: DbTransaction, input: { siteId: string;
   Effect.gen(function* () {
     if (!input.userId) return null;
     const { siteId, userId } = input;
+    yield* dbTry("forums.stats.lock", () => tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`forums:stats:${siteId}:${userId}`}, 0))`));
     const result = yield* dbTry("forums.stats.aggregate", () =>
       tx.execute(sql`
         with own_topics as (select id from forum_topics where site_id = ${siteId} and author_id = ${userId} and status = 'visible'),
@@ -50,6 +56,17 @@ export const recomputeMemberStats = (tx: DbTransaction, input: { siteId: string;
     for (const badge of awarded) yield* recordEvent(tx, FORUMS_BADGE_AWARDED_EVENT, { siteId, userId, badge }, { organizationId: input.organizationId });
     return { stats, awarded };
   });
+
+/**
+ * Verrou de ligne sur la cible d'un vote, pris en DÉBUT de transaction (avant l'écriture du vote) :
+ * les votes concurrents sur une même cible sont sérialisés, chaque recalcul voit les précédents.
+ */
+export const lockVoteTarget = (tx: DbTransaction, targetType: "topic" | "post", targetId: string) =>
+  dbTry("forums.vote.lock", () =>
+    targetType === "topic"
+      ? tx.execute(sql`select id from forum_topics where id = ${targetId} for update`)
+      : tx.execute(sql`select id from forum_posts where id = ${targetId} for update`),
+  );
 
 /** Score d'une cible = somme des votes (recalcul exact, sans dérive). */
 export const recomputeScore = (tx: DbTransaction, targetType: "topic" | "post", targetId: string) =>

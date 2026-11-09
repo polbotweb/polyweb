@@ -62,6 +62,12 @@ const mentionRecipients = (event: PolywebEvent) =>
     const topicId = str(p.topicId), authorId = str(p.authorId);
     const userIds = Array.isArray(p.userIds) ? p.userIds.filter((u): u is string => typeof u === "string" && u !== authorId).slice(0, 10) : [];
     if (!topicId) return [];
+    // Mention dans une réponse masquée entre-temps : aucune notification.
+    if (str(p.targetType) === "post") {
+      const postId = str(p.targetId);
+      const [post] = postId ? yield* dbTry("forums.notify.mentionPost", () => getDrizzle().select({ status: forumPosts.status }).from(forumPosts).where(eq(forumPosts.id, postId)).limit(1)) : [];
+      if (post?.status !== "visible") return [];
+    }
     const audience = yield* topicAudience(topicId, userIds);
     return audience.map((userId): NotificationRecipient => ({ userId, organizationId: event.organizationId ?? null, actorId: authorId, resourceType: "forums.topic", resourceId: topicId, data: { targetType: str(p.targetType) ?? "topic" } }));
   });

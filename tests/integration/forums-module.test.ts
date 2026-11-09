@@ -195,6 +195,22 @@ describe('forums — participation', () => {
     expect(detail.authors[M2].badges.sort()).toEqual(['first_reply', 'helpful']);
   });
 
+  it('votes concurrents : score et réputation exacts (pas de mise à jour perdue)', async () => {
+    const reply = await call(C.reply)({ topicId, body: 'Réponse soumise aux votes simultanés' }, ctx(M1));
+    const statsOf = async () => (await db().select().from(forumUserStats).where(and(eq(forumUserStats.siteId, SITE), eq(forumUserStats.userId, M1))))[0];
+    const before = await statsOf();
+    await Promise.all([M2, M3, OWNER, OUT, ADMIN].map((u) => call(C.vote)({ targetType: 'post', targetId: reply.id, value: 1 }, ctx(u))));
+    const [post] = await db().select({ score: forumPosts.score }).from(forumPosts).where(eq(forumPosts.id, reply.id));
+    expect(post.score).toBe(5);
+    const after = await statsOf();
+    expect(after.upvotesReceived - before.upvotesReceived).toBe(5);
+    expect(after.reputation - before.reputation).toBe(50);
+    // Votes inversés en rafale : toujours exact.
+    await Promise.all([M2, M3].map((u) => call(C.vote)({ targetType: 'post', targetId: reply.id, value: -1 }, ctx(u))));
+    expect((await db().select({ score: forumPosts.score }).from(forumPosts).where(eq(forumPosts.id, reply.id)))[0].score).toBe(1);
+    expect((await statsOf()).upvotesReceived - before.upvotesReceived).toBe(3);
+  });
+
   it('recherche plein texte (sujet et réponses), filtres catégorie et étiquette, pagination', async () => {
     const access = await run<any>(forumBySlug(SITE, DEFAULT_FORUM.slug, null));
     const byReply = await run<any>(listTopics({ access, viewer: null, q: 'flamboyant', page: 1 }));
@@ -251,6 +267,12 @@ describe('forums — visibilité indiscernable', () => {
     const access = await run<any>(forumBySlug(SITE, DEFAULT_FORUM.slug, viewer(M3)));
     expect((await run<any>(listTopics({ access, viewer: viewer(M3), q: 'privée', page: 1 }))).total).toBe(0);
     expect((await run<any>(listTopics({ access, viewer: viewer(M2), q: 'privée', page: 1 }))).total).toBe(1);
+    // Mention d'un non-participant dans un fil privé : événement filtré, aucune notification.
+    await call(C.reply)({ topicId: t.id, body: `Faut-il prévenir @${tag}carol ?` }, ctx(M1));
+    const [privMention] = await db().select().from(eventOutbox).where(and(eq(eventOutbox.name, FORUMS_MENTIONED_EVENT), sql`${eventOutbox.payload}->>'topicId' = ${t.id}`));
+    expect((privMention.payload as any).userIds).toEqual([M3]);
+    await run(handleNotificationEvent({ id: privMention.id, name: privMention.name, occurredAt: new Date(privMention.occurredAt).toISOString(), siteId: null, organizationId: privMention.organizationId ?? null, payload: privMention.payload } as any));
+    expect(await db().select().from(notifications).where(and(eq(notifications.userId, M3), eq(notifications.resourceId, t.id)))).toEqual([]);
     // Préférence « personne » de la messagerie : invitation refusée comme un pseudo inconnu.
     await call(messaging.preferenceSet)({ whoCanMessage: 'nobody' }, ctx(M3));
     const unknown = await err(call(C.invite)({ topicId: t.id, username: `${tag}nobody` }, ctx(M1)));
@@ -302,6 +324,7 @@ describe('forums — modération, sanctions automatiques et limites', () => {
     active = await db().select().from(forumSanctions).where(and(eq(forumSanctions.siteId, SITE), eq(forumSanctions.userId, M3)));
     expect(active.map((s) => s.kind).sort()).toEqual(['mute', 'suspension']);
     expect((await err(call(C.react)({ targetType: 'topic', targetId: (await firstVisibleTopic()).id, reaction: 'like' }, ctx(M3))))?.code).toBe('FORBIDDEN');
+    expect((await err(call(C.follow)({ topicId: (await firstVisibleTopic()).id, follow: true }, ctx(M3))))?.code).toBe('FORBIDDEN');
     const events = await db().select().from(eventOutbox).where(and(eq(eventOutbox.name, FORUMS_SANCTION_APPLIED_EVENT), sql`${eventOutbox.payload}->>'userId' = ${M3}`));
     expect(events).toHaveLength(2);
     const serialized = JSON.stringify(events.map((e) => e.payload));
@@ -316,9 +339,15 @@ describe('forums — modération, sanctions automatiques et limites', () => {
     expect((await err(call(A.sanctionRevoke)({ siteId: SITE, sanctionId: suspension.id, note }, ctx(M1))))?.code).toBe('FORBIDDEN');
     expect(await call(A.sanctionRevoke)({ siteId: SITE, sanctionId: suspension.id, note }, ctx(OWNER))).toEqual({ revoked: true });
     expect((await err(call(A.sanctionRevoke)({ siteId: SITE, sanctionId: suspension.id, note }, ctx(OWNER))))?.code).toBe('NOT_FOUND');
+    // Sourdine toujours active après la levée de la suspension ; puis échue → publication rétablie.
+    expect((await err(call(C.reply)({ topicId: (await firstVisibleTopic()).id, body: 'Toujours muet ?' }, ctx(M3))))?.code).toBe('FORBIDDEN');
+    expect(await call(C.follow)({ topicId: (await firstVisibleTopic()).id, follow: true }, ctx(M3))).toEqual({ following: true });
     const mute = active.find((s) => s.kind === 'mute')!;
-    await call(A.sanctionRevoke)({ siteId: SITE, sanctionId: mute.id, note }, ctx(OWNER));
+    await db().update(forumSanctions).set({ startsAt: new Date(Date.now() - 2 * 86_400_000), endsAt: new Date(Date.now() - 1000) }).where(eq(forumSanctions.id, mute.id));
     expect((await call(C.reply)({ topicId: (await firstVisibleTopic()).id, body: 'De retour, poliment.' }, ctx(M3))).id).toBeTruthy();
+    const revokes = await db().select().from(auditLog).where(and(eq(auditLog.action, 'forums.sanction.revoke'), eq(auditLog.resourceId, suspension.id)));
+    expect(revokes).toHaveLength(1);
+    expect(revokes[0].userId).toBe(OWNER);
   });
 
   it('limite de débit : 5 sujets / 10 min', async () => {

@@ -43,7 +43,9 @@ mentions `@pseudo`. Tout le texte source est échappé, puis le HTML repasse par
 
 ## Communauté
 
-- Votes : pas de vote sur son propre contenu ; changer de sens remplace le vote.
+- Votes : pas de vote sur son propre contenu ; changer de sens remplace le vote. Votes concurrents
+  sérialisés (verrou de ligne sur la cible, verrou consultatif par membre pour la réputation) : score et
+  réputation recalculés exactement, sans mise à jour perdue.
 - Réputation : +10 vote positif reçu, −2 vote négatif, +15 réponse acceptée (plancher 0).
 - Badges (`src/modules/forums/domain/badges.ts`, registre typé `src/core/badges`) :
   `first_topic`, `first_reply`, `helpful`, `appreciated`, `contributor`, `solver`, `respected` ;
@@ -64,7 +66,8 @@ mentions `@pseudo`. Tout le texte source est échappé, puis le HTML repasse par
 Politique par site (défaut : fenêtre 30 jours, sourdine dès 3 contenus masqués pour 24 h, suspension
 dès 5 pour 7 jours). Après une décision retenue : seuil de suspension atteint ou récidive après une
 sourdine → suspension ; sinon sourdine. Jamais de doublon si une sanction équivalente est active.
-Sourdine : publication bloquée ; suspension : toute interaction bloquée. Chaque sanction est auditée,
+Sourdine : publication bloquée ; suspension : toute interaction bloquée (votes, réactions, sondages,
+solution, invitations, abonnements). Une sanction échue ne bloque plus rien. Chaque sanction est auditée,
 notifiée (`SANCTION_APPLIED` / `SANCTION_LIFTED`) et révocable avec motif depuis
 `/{lang}/admin/forums/sanctions`. Les messages d'erreur ne révèlent ni le nombre de signalements
 ni les signaleurs.
@@ -74,7 +77,7 @@ ni les signaleurs.
 | Événement | Type | Destinataires |
 | --- | --- | --- |
 | `forums.post_created` | `TOPIC_REPLY` | abonnés du sujet (sauf l'auteur, participants seulement pour un fil privé) |
-| `forums.mentioned` | `MENTION` | membres mentionnés qui voient le sujet |
+| `forums.mentioned` | `MENTION` | membres mentionnés qui voient le sujet (réponse encore visible) |
 | `forums.badge_awarded` | `BADGE_AWARDED` | le membre |
 | `forums.sanction_applied` / `forums.sanction_revoked` | `SANCTION_APPLIED` / `SANCTION_LIFTED` | le membre |
 
