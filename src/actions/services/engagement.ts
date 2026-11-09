@@ -3,7 +3,7 @@ import { and, count, desc, eq } from "drizzle-orm";
 import { ActionError, defineAction } from "astro:actions";
 import { z } from "astro/zod";
 import { getDrizzle } from "@database/drizzle";
-import { serviceComments, serviceFavorites, serviceReports, serviceReviews, serviceReviewHelpful } from "@database/schemas";
+import { serviceComments, serviceFavorites, serviceReviews, serviceReviewHelpful } from "@database/schemas";
 import { sanitizeHtml } from "@lib/sanitize";
 import { stripHtml } from "@/core/content/text";
 import type { Locale } from "@i18n/config";
@@ -14,7 +14,8 @@ import { serviceReportSchema } from "@/modules/services/validation";
 import { resolveServiceTenant, serviceOrganizationIdSchema } from "./_helpers";
 import { auditService, invalidateServicesCache } from "./_helpers";
 import { createServiceNotification } from "./notification";
-import { actionTry, effectHandler } from "@/lib/effect/action";
+import { actionTry, effectHandler, fail } from "@/lib/effect/action";
+import { reportModerationTarget } from "@/actions/moderation";
 import { publishedServiceInTenant, requireServicePermission, serviceRateLimitEffect } from "@/modules/services/permissions";
 
 const serviceIdInput = z.object({ serviceId: z.uuid(), organizationId: serviceOrganizationIdSchema });
@@ -53,17 +54,27 @@ export const createServiceComment = defineAction({
   }); })),
 });
 
+/**
+ * Façade historique du signalement services : vérifications propres au module (lecture du service
+ * publié dans le tenant, rattachement de la cible) puis signalement générique dédoublonné
+ * (`moderation.report`, docs/moderation.md). Aucun identifiant de signalement n'est renvoyé.
+ */
 export const createServiceReport = defineAction({
   input: serviceReportSchema,
   handler: effectHandler((input, context) => Effect.gen(function* () {
-    const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["read"] }); yield* publishedServiceInTenant(input.serviceId, tenant); yield* serviceRateLimitEffect(user.id, "report"); return yield* actionTry("services/engagement.createServiceReport", async () => {
-    const db = getDrizzle(); const locale = requestLocale(context.request.headers); const t = getServiceTranslations(locale);
-    if (input.commentId) { const [comment] = await db.select({ id: serviceComments.id }).from(serviceComments).where(and(eq(serviceComments.id, input.commentId), eq(serviceComments.serviceId, input.serviceId))).limit(1); if (!comment) throw new ActionError({ code: "NOT_FOUND", message: t.admin.errors.notFound }); }
-    if (input.reviewId) { const [review] = await db.select({ id: serviceReviews.id }).from(serviceReviews).where(and(eq(serviceReviews.id, input.reviewId), eq(serviceReviews.serviceId, input.serviceId))).limit(1); if (!review) throw new ActionError({ code: "NOT_FOUND", message: t.admin.errors.notFound }); }
-    const description = input.description ? stripHtml(input.description).trim() : null;
-    const [report] = await db.insert(serviceReports).values({ serviceId: null, commentId: input.commentId ?? null, reviewId: input.reviewId ?? null, reporterId: user.id, reason: input.reason, description }).returning({ id: serviceReports.id });
-    auditService(context, user.id, "SERVICE_REPORT_CREATE", { resource: "serviceReports", resourceId: report.id, metadata: { organizationId: tenant.organizationId } }); invalidateServicesCache(); return report;
-  }); })),
+    const tenant = resolveServiceTenant(input); const user = yield* requireServicePermission(context, tenant, { service: ["read"] }); yield* publishedServiceInTenant(input.serviceId, tenant); yield* serviceRateLimitEffect(user.id, "report");
+    const t = getServiceTranslations(requestLocale(context.request.headers));
+    const [type, id] = input.commentId ? ["comment", input.commentId] : ["review", input.reviewId ?? ""];
+    const owner = yield* actionTry("services/engagement.createServiceReport", () => {
+      const db = getDrizzle();
+      return type === "comment"
+        ? db.select({ id: serviceComments.id }).from(serviceComments).where(and(eq(serviceComments.id, id), eq(serviceComments.serviceId, input.serviceId))).limit(1)
+        : db.select({ id: serviceReviews.id }).from(serviceReviews).where(and(eq(serviceReviews.id, id), eq(serviceReviews.serviceId, input.serviceId))).limit(1);
+    });
+    if (owner.length === 0) return yield* fail("NOT_FOUND", t.admin.errors.notFound);
+    yield* reportModerationTarget({ target: `services.${type}`, id, reason: input.reason.toLowerCase() as "spam", description: input.description ?? null }, context);
+    return { success: true };
+  })),
 });
 
 export const voteServiceReviewHelpful = defineAction({ input: serviceIdInput.extend({ reviewId: z.uuid(), isHelpful: z.boolean() }), handler: effectHandler((input, context) => Effect.gen(function* () {

@@ -16,7 +16,7 @@ vi.mock('astro:actions', () => {
 
 import { getDrizzle } from '@database/drizzle';
 import { asc, eq, and, isNull, sql } from 'drizzle-orm';
-import { blogPosts, blogReports, blogPostTranslations, blogPostViewStats, user } from '@database/schemas';
+import { blogPosts, blogPostTranslations, blogPostViewStats, moderationActions, moderationReports, user } from '@database/schemas';
 import { listBlogPostRevisions } from '@/actions/blog/post';
 import { updateBlogReport, getBlogModerationQueue } from '@/actions/blog/moderation';
 import { resolveBlogInternalLink } from '@/actions/blog/internal-link';
@@ -109,32 +109,22 @@ describe('blog actions — integration (real DB)', () => {
     expect(Array.isArray(queue.reports)).toBe(true);
   });
 
-  it('updateBlogReport resolves a PENDING report and persists it', async () => {
-    const [pending] = await db
-      .select({ id: blogReports.id })
-      .from(blogReports)
-      .where(eq(blogReports.status, 'PENDING'))
-      .limit(1);
-
-    if (!pending) {
-      // No pending report seeded in this environment — skip gracefully.
-      console.warn('[test] no PENDING blog report seeded; skipping resolve assertion');
-      return;
+  it('updateBlogReport (façade) closes one generic blog report and records the decision', async () => {
+    // Signalement propre au test (table commune moderation_reports) sur l'article global du test.
+    const reportId = crypto.randomUUID();
+    await db.insert(moderationReports).values({ id: reportId, module: 'blog', targetType: 'post', targetId: globalPostId, organizationId: null, reporterId: null, reporterKey: `test:${reportId}`, reason: 'spam' });
+    try {
+      const res = await updateReport({ reportId, status: 'RESOLVED', organizationId: null }, adminCtx(realUserId));
+      expect(res.success).toBe(true);
+      const [updated] = await db.select({ status: moderationReports.status, resolvedBy: moderationReports.resolvedBy }).from(moderationReports).where(eq(moderationReports.id, reportId)).limit(1);
+      expect(updated.status).toBe('resolved');
+      expect(updated.resolvedBy).toBe(realUserId);
+      const actions = await db.select({ action: moderationActions.action }).from(moderationActions).where(and(eq(moderationActions.targetId, globalPostId), eq(moderationActions.actorId, realUserId)));
+      expect(actions.map((a) => a.action)).toContain('resolve');
+    } finally {
+      await db.delete(moderationActions).where(and(eq(moderationActions.targetId, globalPostId), eq(moderationActions.actorId, realUserId)));
+      await db.delete(moderationReports).where(eq(moderationReports.id, reportId));
     }
-
-    const res = await updateReport(
-      { reportId: pending.id, status: 'RESOLVED', organizationId: null },
-      adminCtx(realUserId),
-    );
-    expect(res.success).toBe(true);
-
-    const [updated] = await db
-      .select({ status: blogReports.status, resolvedBy: blogReports.resolvedBy })
-      .from(blogReports)
-      .where(eq(blogReports.id, pending.id))
-      .limit(1);
-    expect(updated.status).toBe('RESOLVED');
-    expect(updated.resolvedBy).toBe(realUserId);
   });
 
   it('resolveBlogInternalLink resolves a real slug', async () => {

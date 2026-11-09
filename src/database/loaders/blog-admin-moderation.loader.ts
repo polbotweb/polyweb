@@ -1,7 +1,7 @@
 import { and, count, eq, isNull, or } from "drizzle-orm";
 import { Effect } from "effect";
 import { getDrizzle } from "@database/drizzle";
-import { blogComments, blogPostReviews, blogReports, blogPosts } from "@database/schemas";
+import { blogComments, blogPostReviews, blogPosts, moderationReports } from "@database/schemas";
 import type { DbError } from "@/lib/effect/errors";
 import { dbTry, runOrThrow } from "@/lib/effect/run";
 
@@ -9,7 +9,7 @@ function postTenantScope(organizationId: string | null) {
   return organizationId === null ? isNull(blogPosts.organizationId) : eq(blogPosts.organizationId, organizationId);
 }
 
-/** Total des éléments à modérer du tenant (commentaires, avis, signalements) : 5 comptes parallèles. */
+/** Total des éléments à modérer du tenant (commentaires, avis, signalements ouverts de `moderation_reports`) : 3 comptes parallèles. */
 const blogAdminModerationCountEffect = (organizationId: string | null): Effect.Effect<number, DbError> =>
   Effect.suspend(() => {
     const db = getDrizzle();
@@ -22,14 +22,8 @@ const blogAdminModerationCountEffect = (organizationId: string | null): Effect.E
         dbTry("blogAdmin.pendingReviews", () =>
           db.select({ count: count() }).from(blogPostReviews).innerJoin(blogPosts, eq(blogPosts.id, blogPostReviews.postId)).where(and(scope, eq(blogPostReviews.status, "PENDING"))),
         ),
-        dbTry("blogAdmin.postReports", () =>
-          db.select({ count: count() }).from(blogReports).innerJoin(blogPosts, eq(blogPosts.id, blogReports.postId)).where(and(scope, eq(blogReports.status, "PENDING"))),
-        ),
-        dbTry("blogAdmin.commentReports", () =>
-          db.select({ count: count() }).from(blogReports).innerJoin(blogComments, eq(blogComments.id, blogReports.commentId)).innerJoin(blogPosts, eq(blogPosts.id, blogComments.postId)).where(and(scope, eq(blogReports.status, "PENDING"))),
-        ),
-        dbTry("blogAdmin.reviewReports", () =>
-          db.select({ count: count() }).from(blogReports).innerJoin(blogPostReviews, eq(blogPostReviews.id, blogReports.reviewId)).innerJoin(blogPosts, eq(blogPosts.id, blogPostReviews.postId)).where(and(scope, eq(blogReports.status, "PENDING"))),
+        dbTry("blogAdmin.openReports", () =>
+          db.select({ count: count() }).from(moderationReports).where(and(eq(moderationReports.module, "blog"), eq(moderationReports.status, "open"), organizationId === null ? isNull(moderationReports.organizationId) : eq(moderationReports.organizationId, organizationId))),
         ),
       ],
       { concurrency: "unbounded" },

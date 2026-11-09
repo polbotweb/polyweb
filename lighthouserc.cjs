@@ -122,7 +122,7 @@ for (const lang of locales) {
 }
 
 const adminUrls = [];
-const adminPages = ['stats', 'site', 'navigation', 'theme', 'blog'];
+const adminPages = ['stats', 'site', 'navigation', 'theme', 'blog', 'moderation'];
 for (const lang of locales) {
   for (const page of adminPages) {
     adminUrls.push(`${BASE}/${lang}/admin/${page}`);
@@ -149,7 +149,7 @@ for (const lang of locales) {
     adminUrls.push(`${BASE}/${lang}/admin/subscriptions/${encodeURIComponent(subscriptionsSeed.subscriptionId)}`);
   }
   // Organisation : rôles (grille des modules), accès par site et journal d'audit.
-  if (rolesOrg) for (const sub of ['roles', 'sites', 'audit']) adminUrls.push(`${BASE}/${lang}/organizations/${encodeURIComponent(rolesOrg.slug)}/${sub}`);
+  if (rolesOrg) for (const sub of ['roles', 'sites', 'audit', 'moderation']) adminUrls.push(`${BASE}/${lang}/organizations/${encodeURIComponent(rolesOrg.slug)}/${sub}`);
 }
 
 module.exports = {

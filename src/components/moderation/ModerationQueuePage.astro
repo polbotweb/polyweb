@@ -1,0 +1,168 @@
+---
+/**
+ * File de modération commune (plateforme et organisation, docs/moderation.md) : signalements
+ * groupés par contenu, décisions motivées (hide / restore / spam) et clôture (resolve / dismiss).
+ * Contenus et motifs signalés sont des données non fiables : rendus en texte (échappés par Astro).
+ */
+import type { Locale } from '@i18n/config';
+import type { ModerationQueueItem } from '@/core/moderation/service';
+import { getModerationTranslations } from '@/core/moderation/i18n';
+import { MODERATION_REPORT_REASONS, MODERATION_REPORT_STATUSES, type ModerationReportStatus } from '@database/schemas/moderation.schema';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@atoms/card';
+import { Badge } from '@atoms/badge';
+import { Label } from '@atoms/label';
+import { NativeSelect, NativeSelectOption } from '@atoms/native-select';
+import Button from '@atoms/button/Button.astro';
+
+interface Props {
+  locale: Locale;
+  items: readonly ModerationQueueItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  status: ModerationReportStatus;
+}
+const { locale, items, total, page, pageSize, status } = Astro.props;
+const mt = getModerationTranslations(locale);
+const pages = Math.max(1, Math.ceil(total / pageSize));
+const fill = (tpl: string, v: Record<string, string | number>) => tpl.replace(/\{(\w+)\}/g, (_, k: string) => String(v[k] ?? ''));
+const fmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' });
+const url = (s: ModerationReportStatus, p = 1) => `?status=${s}${p > 1 ? `&page=${p}` : ''}`;
+const HIDDEN = new Set(['REJECTED', 'SPAM', 'TRASH']);
+---
+<div class="grid gap-6" data-moderation-queue data-error={mt.error} data-done={mt.done} data-no-change={mt.noChange} data-submitting={mt.submitting}>
+  <Card>
+    <CardHeader>
+      <CardTitle><h1 class="text-xl font-semibold">{mt.title}</h1></CardTitle>
+      <CardDescription><p>{mt.intro}</p></CardDescription>
+    </CardHeader>
+    <CardContent>
+      <nav aria-label={mt.tabsLabel}>
+        <ul class="flex flex-wrap gap-2">
+          {MODERATION_REPORT_STATUSES.map((s) => (
+            <li><a href={url(s)} aria-current={s === status ? 'page' : undefined} class:list={['inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium underline-offset-4 hover:underline', s === status && 'bg-primary text-primary-foreground']}>{mt.tabs[s]}</a></li>
+          ))}
+        </ul>
+      </nav>
+    </CardContent>
+  </Card>
+
+  <output class="sr-only" aria-live="polite" data-moderation-live></output>
+
+  {items.length === 0 ? (
+    <Card><CardContent class="pt-6"><p class="text-sm" data-testid="moderation-empty">{mt.empty}</p></CardContent></Card>
+  ) : (
+    <ul class="grid gap-4" data-testid="moderation-items">
+      {items.map((item, index) => {
+        const id = `moderation-${index}`;
+        const hidden = item.status !== null && HIDDEN.has(item.status);
+        return (
+          <li>
+            <article class="rounded-xl border p-4" aria-labelledby={`${id}-title`} data-moderation-item data-target={item.key} data-id={item.targetId}>
+              <header class="flex flex-wrap items-center justify-between gap-2">
+                <h2 id={`${id}-title`} class="text-base font-semibold">
+                  {mt.modules[item.module] ?? item.module} · {mt.targets[item.targetType] ?? item.targetType}{item.excerpt?.title ? ` — ${item.excerpt.title}` : ''}
+                </h2>
+                <Badge variant="warning" size="sm">{fill(mt.reports, { count: item.reports })}</Badge>
+              </header>
+              <ul class="mt-2 flex flex-wrap gap-2" aria-label={mt.reasonLabel}>
+                {item.reasons.map((r) => <li><Badge variant="outline" size="sm">{mt.reasons[r] ?? r}</Badge></li>)}
+              </ul>
+              {item.excerpt ? (
+                <>
+                  {item.excerpt.text && <blockquote class="mt-3 border-s-4 ps-3 text-sm whitespace-pre-wrap break-words">{item.excerpt.text}</blockquote>}
+                  {item.excerpt.url && <p class="mt-2 text-sm"><a class="underline underline-offset-4" href={item.excerpt.url}>{mt.openContent}</a></p>}
+                </>
+              ) : <p class="mt-3 text-sm">{mt.unavailable}</p>}
+              <dl class="mt-3 grid gap-1 text-sm sm:grid-cols-2">
+                <div><dt class="inline font-medium">{mt.currentStatus} : </dt><dd class="inline" data-status={item.status ?? ''}>{item.status ? (mt.statuses[item.status] ?? item.status) : '—'}</dd></div>
+                <div><dt class="inline font-medium">{mt.lastReported} : </dt><dd class="inline"><time datetime={item.lastReportedAt.toISOString()}>{fmt.format(item.lastReportedAt)}</time></dd></div>
+                {item.lastAction && <div class="sm:col-span-2"><dt class="inline font-medium">{mt.lastDecision} : </dt><dd class="inline">{mt.actions[item.lastAction.action] ?? item.lastAction.action}{item.lastAction.note ? ` — ${item.lastAction.note}` : ''}</dd></div>}
+              </dl>
+              <form class="mt-4 grid gap-3" data-moderation-form novalidate>
+                <div class="grid gap-2">
+                  <Label for={`${id}-note`}>{mt.noteLabel}</Label>
+                  <textarea id={`${id}-note`} name="note" required minlength={3} maxlength={1000} rows={2} aria-describedby={`${id}-note-hint`} class="min-h-11 w-full rounded-md border bg-background px-3 py-2 text-sm"></textarea>
+                  <p id={`${id}-note-hint`} class="text-sm">{mt.noteHint}</p>
+                </div>
+                {item.decidable && (
+                  <div class="grid gap-2 sm:max-w-xs">
+                    <Label for={`${id}-reason`}>{mt.reasonLabel}</Label>
+                    <NativeSelect id={`${id}-reason`} name="reasonCode">
+                      <NativeSelectOption value="">—</NativeSelectOption>
+                      {MODERATION_REPORT_REASONS.map((r) => <NativeSelectOption value={r}>{mt.reasons[r]}</NativeSelectOption>)}
+                    </NativeSelect>
+                  </div>
+                )}
+                <div class="flex flex-wrap gap-2">
+                  {item.decidable && !hidden && <Button type="submit" variant="error" size="sm" data-kind="decide" data-value="hide">{mt.actions.hide}</Button>}
+                  {item.decidable && item.status !== 'SPAM' && <Button type="submit" variant="outline" size="sm" data-kind="decide" data-value="spam">{mt.actions.spam}</Button>}
+                  {item.decidable && hidden && <Button type="submit" variant="outline" size="sm" data-kind="decide" data-value="restore">{mt.actions.restore}</Button>}
+                  {status === 'open' && <Button type="submit" size="sm" data-kind="resolve" data-value="resolved">{mt.actions.resolve}</Button>}
+                  {status === 'open' && <Button type="submit" variant="outline" size="sm" data-kind="resolve" data-value="dismissed">{mt.actions.dismiss}</Button>}
+                </div>
+                <p class="text-sm" role="alert" data-moderation-error hidden></p>
+              </form>
+            </article>
+          </li>
+        );
+      })}
+    </ul>
+  )}
+
+  {pages > 1 && (
+    <nav aria-label={mt.pagination} class="flex items-center justify-between gap-2">
+      {page > 1 ? <a class="inline-flex min-h-11 items-center rounded-md border px-4 text-sm" href={url(status, page - 1)}>{mt.previous}</a> : <span></span>}
+      <p class="text-sm">{fill(mt.page, { page, pages })}</p>
+      {page < pages ? <a class="inline-flex min-h-11 items-center rounded-md border px-4 text-sm" href={url(status, page + 1)}>{mt.next}</a> : <span></span>}
+    </nav>
+  )}
+</div>
+
+<script>
+  import { actions } from 'astro:actions';
+
+  function init() {
+    const root = document.querySelector<HTMLElement>('[data-moderation-queue]');
+    if (!root || root.dataset.bound) return;
+    root.dataset.bound = '1';
+    const live = root.querySelector<HTMLElement>('[data-moderation-live]');
+    root.querySelectorAll<HTMLFormElement>('[data-moderation-form]').forEach((form) => {
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const submitter = (event as SubmitEvent).submitter as HTMLButtonElement | null;
+        const item = form.closest<HTMLElement>('[data-moderation-item]');
+        const errorBox = form.querySelector<HTMLElement>('[data-moderation-error]');
+        const noteField = form.elements.namedItem('note') as HTMLTextAreaElement | null;
+        if (!submitter || !item || !noteField) return;
+        if (!noteField.checkValidity()) {
+          noteField.setAttribute('aria-invalid', 'true');
+          noteField.focus();
+          noteField.reportValidity();
+          return;
+        }
+        noteField.removeAttribute('aria-invalid');
+        const target = item.dataset.target ?? '';
+        const id = item.dataset.id ?? '';
+        const note = noteField.value;
+        const reasonCode = (form.elements.namedItem('reasonCode') as HTMLSelectElement | null)?.value || null;
+        form.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+        if (live) live.textContent = root.dataset.submitting ?? '';
+        const result = submitter.dataset.kind === 'decide'
+          ? await actions.moderation.decide({ target, id, decision: submitter.dataset.value as 'hide' | 'restore' | 'spam', reasonCode: reasonCode as 'spam' | null, note })
+          : await actions.moderation.resolve({ target, id, outcome: submitter.dataset.value as 'resolved' | 'dismissed', note });
+        if (result.error) {
+          form.querySelectorAll('button').forEach((b) => { b.disabled = false; });
+          if (errorBox) { errorBox.hidden = false; errorBox.textContent = root.dataset.error ?? ''; }
+          if (live) live.textContent = root.dataset.error ?? '';
+          return;
+        }
+        if (live) live.textContent = result.data.changed ? (root.dataset.done ?? '') : (root.dataset.noChange ?? '');
+        window.location.reload();
+      });
+    });
+  }
+
+  init();
+  document.addEventListener('astro:after-swap', init);
+</script>

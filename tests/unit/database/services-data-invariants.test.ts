@@ -82,10 +82,13 @@ describe("Services seed invariants", () => {
   });
 
   it("enforces single-target reports and notification target semantics", async () => {
-    const reports = await dataset("serviceReports");
-    for (const row of reports) {
-      expect([row.serviceId, row.commentId, row.reviewId].filter((value) => value != null)).toHaveLength(1);
-    }
+    const reports = ((await import("@database/data/36-moderation-reports.data.ts")).default as Row[]).filter((row) => row.module === "services");
+    const known: Record<string, Set<unknown>> = {
+      service: new Set((await dataset("services")).map((row) => row.id)),
+      comment: new Set((await dataset("serviceComments")).map((row) => row.id)),
+      review: new Set((await dataset("serviceReviews")).map((row) => row.id)),
+    };
+    for (const row of reports) expect(known[String(row.targetType)]?.has(row.targetId)).toBe(true);
 
     const notifications = (await import("@database/data/39-notifications.data.ts")).default.filter((row) => row.module === "services").map((row) => ({ type: row.type, commentId: (row.data as Record<string, unknown>).commentId ?? null, reviewId: (row.data as Record<string, unknown>).reviewId ?? null }));
     const commentTypes = new Set(["NEW_COMMENT", "REPLY_TO_COMMENT"]);

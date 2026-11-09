@@ -64,8 +64,8 @@ src/
 | :-- | :-- |
 | Articles | `blog_posts`, `blog_post_translations`, `blog_post_revisions`, `blog_post_locks` |
 | Taxonomies | `blog_categories`, `blog_category_translations`, `blog_tags`, `blog_tag_translations`, `blog_post_categories`, `blog_post_tags` |
-| Engagement | `blog_comments`, `blog_comment_moderations`, `blog_post_reviews`, `blog_post_review_helpful`, `blog_post_reactions`, `blog_post_favorites` |
-| Modération | `blog_reports` |
+| Engagement | `blog_comments`, `blog_post_reviews`, `blog_post_review_helpful`, `blog_post_reactions`, `blog_post_favorites` |
+| Modération | socle générique `moderation_reports` / `moderation_actions` (voir [`docs/moderation.md`](./moderation.md)) |
 | Médias | `blog_post_galleries`, `blog_post_gallery_media` |
 | SEO & analytics | `blog_post_seo`, `blog_post_view_stats` |
 | Autres | `blog_post_links` (notifications : table partagée `notifications`, module `blog`) |

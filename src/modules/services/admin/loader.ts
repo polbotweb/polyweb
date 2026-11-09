@@ -1,7 +1,7 @@
 import { and, asc, count, desc, eq, inArray, isNull, sql, sum } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { getDrizzle } from "@database/drizzle";
-import { mediaFileAlts, mediaFiles, serviceAvailability, serviceCategories, serviceCategoryLinks, serviceCategoryTranslations, serviceComments, serviceMedia, serviceReports, serviceRevisions, serviceReviews, serviceSeo, serviceTagLinks, serviceTagTranslations, serviceTags, serviceTranslations, services, serviceLocks, user } from "@database/schemas";
+import { mediaFileAlts, mediaFiles, serviceAvailability, serviceCategories, serviceCategoryLinks, serviceCategoryTranslations, serviceComments, serviceMedia, moderationReports, serviceRevisions, serviceReviews, serviceSeo, serviceTagLinks, serviceTagTranslations, serviceTags, serviceTranslations, services, serviceLocks, user } from "@database/schemas";
 import type { Locale } from "@i18n/config";
 import type { ServiceDetail, ServiceListItem } from "@/modules/services/domain";
 import { serviceAdminFiltersSchema, type ServiceAdminFilters } from "@/modules/services/validation";
@@ -71,7 +71,7 @@ export async function getServiceAdminById(id: string, locale: Locale, organizati
 
 export async function getServiceAdminStats(organizationId: string | null) {
   const db = getDrizzle(); const scope = tenantScope(services.organizationId, organizationId);
-  const [total, published, draft, archived, deleted, featured, views, reviews, comments, pendingReviews, pendingComments, pendingDirectReports, pendingCommentReports, pendingReviewReports] = await Promise.all([
+  const [total, published, draft, archived, deleted, featured, views, reviews, comments, pendingReviews, pendingComments, openReports] = await Promise.all([
     db.select({ count: count() }).from(services).where(scope),
     db.select({ count: count() }).from(services).where(and(scope, eq(services.status, "PUBLISHED"))),
     db.select({ count: count() }).from(services).where(and(scope, eq(services.status, "DRAFT"))),
@@ -83,12 +83,10 @@ export async function getServiceAdminStats(organizationId: string | null) {
     db.select({ count: count() }).from(serviceComments).innerJoin(services, eq(services.id, serviceComments.serviceId)).where(and(scope, eq(serviceComments.status, "APPROVED"))),
     db.select({ count: count() }).from(serviceReviews).innerJoin(services, eq(services.id, serviceReviews.serviceId)).where(and(scope, eq(serviceReviews.status, "PENDING"))),
     db.select({ count: count() }).from(serviceComments).innerJoin(services, eq(services.id, serviceComments.serviceId)).where(and(scope, eq(serviceComments.status, "PENDING"))),
-    db.select({ count: count() }).from(serviceReports).innerJoin(services, eq(services.id, serviceReports.serviceId)).where(and(scope, eq(serviceReports.status, "PENDING"))),
-    db.select({ count: count() }).from(serviceReports).innerJoin(serviceComments, eq(serviceComments.id, serviceReports.commentId)).innerJoin(services, eq(services.id, serviceComments.serviceId)).where(and(scope, eq(serviceReports.status, "PENDING"))),
-    db.select({ count: count() }).from(serviceReports).innerJoin(serviceReviews, eq(serviceReviews.id, serviceReports.reviewId)).innerJoin(services, eq(services.id, serviceReviews.serviceId)).where(and(scope, eq(serviceReports.status, "PENDING"))),
+    db.select({ count: count() }).from(moderationReports).where(and(eq(moderationReports.module, "services"), eq(moderationReports.status, "open"), organizationId === null ? isNull(moderationReports.organizationId) : eq(moderationReports.organizationId, organizationId))),
   ]);
   return {
-    total: Number(total[0]?.count ?? 0), published: Number(published[0]?.count ?? 0), draft: Number(draft[0]?.count ?? 0), archived: Number(archived[0]?.count ?? 0), deleted: Number(deleted[0]?.count ?? 0), featured: Number(featured[0]?.count ?? 0), views: Number(views[0]?.total ?? 0), reviews: Number(reviews[0]?.count ?? 0), comments: Number(comments[0]?.count ?? 0), moderation: Number(pendingReviews[0]?.count ?? 0) + Number(pendingComments[0]?.count ?? 0) + Number(pendingDirectReports[0]?.count ?? 0) + Number(pendingCommentReports[0]?.count ?? 0) + Number(pendingReviewReports[0]?.count ?? 0),
+    total: Number(total[0]?.count ?? 0), published: Number(published[0]?.count ?? 0), draft: Number(draft[0]?.count ?? 0), archived: Number(archived[0]?.count ?? 0), deleted: Number(deleted[0]?.count ?? 0), featured: Number(featured[0]?.count ?? 0), views: Number(views[0]?.total ?? 0), reviews: Number(reviews[0]?.count ?? 0), comments: Number(comments[0]?.count ?? 0), moderation: Number(pendingReviews[0]?.count ?? 0) + Number(pendingComments[0]?.count ?? 0) + Number(openReports[0]?.count ?? 0),
   };
 }
 
@@ -103,14 +101,12 @@ export async function getServiceAdminTaxonomy(organizationId: string | null, loc
 
 export async function getServiceModerationQueue(organizationId: string | null) {
   const db = getDrizzle(); const scope = tenantScope(services.organizationId, organizationId);
-  const [reviews, comments, directReports, commentReports, reviewReports] = await Promise.all([
+  const [reviews, comments, reports] = await Promise.all([
     db.select({ review: serviceReviews }).from(serviceReviews).innerJoin(services, eq(services.id, serviceReviews.serviceId)).where(and(scope, eq(serviceReviews.status, "PENDING"))).orderBy(asc(serviceReviews.createdAt)).limit(100),
     db.select({ comment: serviceComments }).from(serviceComments).innerJoin(services, eq(services.id, serviceComments.serviceId)).where(and(scope, eq(serviceComments.status, "PENDING"))).orderBy(asc(serviceComments.createdAt)).limit(100),
-    db.select({ report: serviceReports, serviceId: services.id }).from(serviceReports).innerJoin(services, eq(services.id, serviceReports.serviceId)).where(and(scope, eq(serviceReports.status, "PENDING"))).orderBy(asc(serviceReports.createdAt)).limit(100),
-    db.select({ report: serviceReports, serviceId: serviceComments.serviceId }).from(serviceReports).innerJoin(serviceComments, eq(serviceComments.id, serviceReports.commentId)).innerJoin(services, eq(services.id, serviceComments.serviceId)).where(and(scope, eq(serviceReports.status, "PENDING"))).orderBy(asc(serviceReports.createdAt)).limit(100),
-    db.select({ report: serviceReports, serviceId: serviceReviews.serviceId }).from(serviceReports).innerJoin(serviceReviews, eq(serviceReviews.id, serviceReports.reviewId)).innerJoin(services, eq(services.id, serviceReviews.serviceId)).where(and(scope, eq(serviceReviews.status, "PENDING"))).orderBy(asc(serviceReports.createdAt)).limit(100),
+    // Signalements : table commune (docs/moderation.md), traités dans la file de modération.
+    db.select({ report: { id: moderationReports.id, targetType: moderationReports.targetType, targetId: moderationReports.targetId, reason: moderationReports.reason, description: moderationReports.description, status: moderationReports.status, createdAt: moderationReports.createdAt } }).from(moderationReports).where(and(eq(moderationReports.module, "services"), eq(moderationReports.status, "open"), organizationId === null ? isNull(moderationReports.organizationId) : eq(moderationReports.organizationId, organizationId))).orderBy(asc(moderationReports.createdAt)).limit(100),
   ]);
-  const reports = [...directReports, ...commentReports, ...reviewReports].sort((a, b) => a.report.createdAt.getTime() - b.report.createdAt.getTime()).slice(0, 100);
   return { reviews, comments, reports };
 }
 

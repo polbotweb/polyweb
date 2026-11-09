@@ -22,7 +22,8 @@ const SERVICES = [
   ["34-service-reviews.data.ts", "serviceReviews"],
   ["34b-service-review-helpful.data.ts", "serviceReviewHelpful"],
   ["35-service-comments.data.ts", "serviceComments"],
-  ["36-service-reports.data.ts", "serviceReports"],
+  ["36-moderation-reports.data.ts", "moderationReports"],
+  ["36b-moderation-actions.data.ts", "moderationActions"],
   ["37-service-view-stats.data.ts", "serviceViewStats"],
   ["38-service-reactions.data.ts", "serviceReactions"],
   ["39-notifications.data.ts", "notifications"],
@@ -53,7 +54,8 @@ describe("seed manifest", () => {
     expect(index.get("services")).toBeLessThan(index.get("serviceTranslations")!);
     expect(index.get("serviceCategories")).toBeLessThan(index.get("serviceCategoryLinks")!);
     expect(index.get("serviceReviews")).toBeLessThan(index.get("serviceReviewHelpful")!);
-    expect(index.get("serviceComments")).toBeLessThan(index.get("serviceReports")!);
+    expect(index.get("serviceComments")).toBeLessThan(index.get("moderationReports")!);
+    expect(index.get("blogComments")).toBeLessThan(index.get("moderationActions")!);
     expect(index.get("serviceAttributeDefinitions")).toBeLessThan(index.get("serviceAttributeValues")!);
     expect(index.get("serviceComments")).toBeLessThan(index.get("notifications")!);
     expect(index.get("serviceReviews")).toBeLessThan(index.get("notifications")!);

@@ -52,6 +52,19 @@ describe('scripts/new-module.ts', () => {
     expect(index.match(/notifProbesNotifications,/g)).toHaveLength(1);
   });
 
+  it('scaffolds the module moderation adapters and registers them in modules/moderation.ts between the markers (idempotent)', () => {
+    mkdirSync(join(dir, 'modules'), { recursive: true });
+    writeFileSync(join(dir, 'modules/moderation.ts'), 'import { a } from "x";\n// @module-moderation:imports\nexport const MODULE_MODERATION = [\n  a,\n  // @module-moderation:list\n] as const;\n');
+    run(['mod-probes']);
+    run(['mod-probes-two']);
+    const adapters = readFileSync(join(dir, 'modules/mod-probes/moderation/adapters.ts'), 'utf8');
+    expect(adapters).toContain('export const modProbesModeration = defineModuleModeration("mod-probes", []);');
+    const index = readFileSync(join(dir, 'modules/moderation.ts'), 'utf8');
+    expect(index).toContain('import { modProbesModeration } from "@/modules/mod-probes/moderation/adapters";\nimport { modProbesTwoModeration } from "@/modules/mod-probes-two/moderation/adapters";\n// @module-moderation:imports');
+    expect(index).toContain('  modProbesModeration,\n  modProbesTwoModeration,\n  // @module-moderation:list');
+    expect(index.match(/modProbesModeration,/g)).toHaveLength(1);
+  });
+
   it('generates a read-only public API stub for the core/api registry (scope, tenant reader, empty events)', () => {
     const api = readFileSync(join(dir, 'modules/event-tickets/api/public-api.ts'), 'utf8');
     expect(api).toContain('export const eventTicketsApi: ModuleApiDeclaration');

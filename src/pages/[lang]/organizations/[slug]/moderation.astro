@@ -1,0 +1,40 @@
+---
+/** File de modération d'une organisation — docs/moderation.md. Accès : permission de modération d'au moins une cible. */
+import { Effect } from 'effect';
+import { requireAuth } from '@/lib/auth-guards';
+import { fetchOrgData, getUserOrgRole } from '@/lib/auth-data';
+import { moderatorTargets } from '@/lib/moderation/access';
+import { listModerationQueue } from '@/core/moderation/service';
+import { getModerationTranslations } from '@/core/moderation/i18n';
+import { MODERATION_REPORT_STATUSES, type ModerationReportStatus } from '@database/schemas/moderation.schema';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import AuthLayout from '@organisms/AuthLayout/AuthLayout.astro';
+import OrgSidebar from '@organisms/OrgSidebar/OrgSidebar.astro';
+import ModerationQueuePage from '@/components/moderation/ModerationQueuePage.astro';
+
+export const prerender = false;
+const PAGE_SIZE = 20;
+
+const result = await requireAuth(Astro);
+if ('redirect' in result) return result.redirect;
+const { user, locale, authT } = result;
+const orgSlug = Astro.params.slug;
+if (!orgSlug) return Astro.redirect(`/${locale}/auth/${authT.routes['dashboard']}`);
+const orgData = await fetchOrgData(Astro.request.headers, orgSlug);
+if (!orgData) return Astro.redirect(`/${locale}/auth/${authT.routes['dashboard']}`);
+const { org, members } = orgData;
+const activeOrgRole = getUserOrgRole(members, user.id);
+const targets = await Effect.runPromise(moderatorTargets(user, org.id));
+if (targets.length === 0) return Astro.redirect(`/${locale}/organizations/${orgSlug}/members`);
+const requested = Astro.url.searchParams.get('status') as ModerationReportStatus | null;
+const status: ModerationReportStatus = requested && MODERATION_REPORT_STATUSES.includes(requested) ? requested : 'open';
+const page = Math.max(1, Number(Astro.url.searchParams.get('page')) || 1);
+const { items, total } = await Effect.runPromise(listModerationQueue({ organizationId: org.id, keys: targets.map((t) => t.key), status, page, pageSize: PAGE_SIZE, locale }));
+const mt = getModerationTranslations(locale);
+---
+<BaseLayout title={`${mt.title} — ${org.name}`} description={mt.description}>
+  <AuthLayout title={org.name}>
+    <OrgSidebar slot="sidebar" t={authT} locale={locale} org={org} activeItem="moderation" orgRole={activeOrgRole} />
+    <ModerationQueuePage locale={locale} items={items} total={total} page={page} pageSize={PAGE_SIZE} status={status} />
+  </AuthLayout>
+</BaseLayout>

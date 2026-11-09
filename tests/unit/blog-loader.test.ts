@@ -21,13 +21,12 @@ vi.mock('@database/schemas', () => ({
   blogPostCategories: { postId: 'postId', categoryId: 'categoryId' },
   blogPostTags: { postId: 'postId', tagId: 'tagId' },
   blogComments: { id: 'id', postId: 'postId', parentId: 'parentId', status: 'status', createdAt: 'createdAt', authorId: 'authorId' },
-  blogCommentModerations: { id: 'id' },
   blogPostRevisions: { id: 'id', postId: 'postId', authorId: 'authorId', createdAt: 'createdAt' },
   blogPostGalleries: { id: 'id', postId: 'postId', sortOrder: 'sortOrder' },
   blogPostGalleryMedia: { galleryId: 'galleryId', mediaId: 'mediaId', sortOrder: 'sortOrder' },
   blogPostReviews: { id: 'id', postId: 'postId', authorId: 'authorId', status: 'status', rating: 'rating', createdAt: 'createdAt' },
   blogPostReviewHelpful: { reviewId: 'reviewId', userId: 'userId', isHelpful: 'isHelpful' },
-  blogReports: { id: 'id', postId: 'postId', commentId: 'commentId', reviewId: 'reviewId', status: 'status', reporterId: 'reporterId', createdAt: 'createdAt' },
+  moderationReports: { id: 'id', module: 'module', targetType: 'targetType', targetId: 'targetId', status: 'status', reporterId: 'reporterId', createdAt: 'createdAt' },
   blogPostFavorites: { postId: 'postId', userId: 'userId' },
   blogPostReactions: { postId: 'postId', userId: 'userId', reactionType: 'reactionType' },
   blogPostSeo: { id: 'id', postId: 'postId', locale: 'locale' },
@@ -258,7 +257,7 @@ describe('getUnreadBlogNotificationCount', () => {
 });
 
 describe('getBlogModerationQueue', () => {
-  it('left-joins report subjects so indirect comment and review reports are returned', async () => {
+  it('reads open generic blog reports scoped by their own organization column (no subject joins)', async () => {
     const commentsChain = makeChain([]);
     const reviewsChain = makeChain([]);
     const reportsChain = makeChain([]);
@@ -270,7 +269,8 @@ describe('getBlogModerationQueue', () => {
     const result = await getBlogModerationQueue(null);
 
     expect(result).toEqual({ comments: [], reviews: [], reports: [] });
-    expect(reportsChain.leftJoin).toHaveBeenCalledTimes(4);
+    expect(reportsChain.where).toHaveBeenCalledTimes(1);
+    expect(reportsChain.leftJoin).not.toHaveBeenCalled();
     expect(reportsChain.innerJoin).not.toHaveBeenCalled();
   });
 });

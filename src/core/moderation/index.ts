@@ -14,3 +14,5 @@ export function assertModerationItem(item: ModerationItem): void {
     throw new Error("Moderation moderatorId cannot be empty");
   }
 }
+
+export * from "./registry";

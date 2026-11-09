@@ -3,12 +3,14 @@
  * `pnpm module:new` ajoute automatiquement le module généré entre les marqueurs.
  */
 import { registerNotificationDefinitions } from "@/core/notifications/registry";
+import { moderationNotifications } from "@/core/moderation/notifications";
 import { blogNotifications } from "@/modules/blog/notifications/definitions";
 import { servicesNotifications } from "@/modules/services/notifications/definitions";
 import { salesNotifications } from "@/modules/sales/notifications/definitions";
 // @module-notifications:imports
 
 export const MODULE_NOTIFICATIONS = [
+  moderationNotifications,
   blogNotifications,
   servicesNotifications,
   salesNotifications,

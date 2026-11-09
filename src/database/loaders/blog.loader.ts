@@ -19,7 +19,7 @@ import {
   blogPostGalleryMedia,
   blogPostReviews,
   blogPostReviewHelpful,
-  blogReports,
+  moderationReports,
   blogPostReactions,
   blogPostSeo,
   blogPostViewStats,
@@ -1205,16 +1205,15 @@ const blogModerationQueueEffect = (organizationId: string | null, opts: { page?:
           .limit(limit)
           .offset(offset),
       ),
+      // Signalements : table commune (docs/moderation.md) ; jamais l'identité du signaleur.
       reports: dbTry("blog.moderation.reports", () =>
         db
-          .select({ report: blogReports, post: blogPosts, reporter: { id: user.id, name: user.name } })
-          .from(blogReports)
-          .leftJoin(blogComments, eq(blogReports.commentId, blogComments.id))
-          .leftJoin(blogPostReviews, eq(blogReports.reviewId, blogPostReviews.id))
-          .leftJoin(blogPosts, or(eq(blogReports.postId, blogPosts.id), eq(blogComments.postId, blogPosts.id), eq(blogPostReviews.postId, blogPosts.id)))
-          .leftJoin(user, eq(user.id, blogReports.reporterId))
-          .where(and(orgScope(blogPosts, organizationId), eq(blogReports.status, "PENDING")))
-          .orderBy(desc(blogReports.createdAt))
+          .select({
+            report: { id: moderationReports.id, targetType: moderationReports.targetType, targetId: moderationReports.targetId, reason: moderationReports.reason, description: moderationReports.description, status: moderationReports.status, createdAt: moderationReports.createdAt },
+          })
+          .from(moderationReports)
+          .where(and(eq(moderationReports.module, "blog"), eq(moderationReports.status, "open"), organizationId === null ? isNull(moderationReports.organizationId) : eq(moderationReports.organizationId, organizationId)))
+          .orderBy(desc(moderationReports.createdAt))
           .limit(limit)
           .offset(offset),
       ),

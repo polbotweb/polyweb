@@ -1,6 +1,6 @@
 ══════════════════════════════════════════════════════════════════════════════════
   POLYWEB — GLOBAL QA REPORT
-  Generated: 2026-11-08 15:52:21
+  Generated: 2026-11-08 20:54:11
 ══════════════════════════════════════════════════════════════════════════════════
 
   ✅ Type & Template Check (astro check)
@@ -10,38 +10,35 @@
      0 errors, 0 warnings
 
   ✅ Unit & Integration Tests (Vitest)
-     2215/2216 passed, 1 skipped
+     2237/2238 passed, 1 skipped
 
-  ❌ End-to-End Tests (Playwright)
-     304/387 passed, 82 skipped, 1 failed
-
-  • bulk-actions.spec.ts › blog admin: bulk publish then bulk delete with confirmation
-    [31mTest timeout of 30000ms exceeded.[39m
+  ✅ End-to-End Tests (Playwright)
+     306/390 passed, 84 skipped
 
   ✅ Accessibility Audit (Pa11y — WCAG 2.1 AAA)
-     188/188 URLs clean
+     196/196 URLs clean
 
   ✅ Performance & Quality Audit (Lighthouse CI)
-     188 page(s) audited, all ≥90
+     196 page(s) audited, all ≥90
 
 ══════════════════════════════════════════════════════════════════════════════════
   GLOBAL STATUS
 ══════════════════════════════════════════════════════════════════════════════════
 
   Reports in scope: 6/6 (check, lint, vitest, playwright, pa11y, lighthouse)
-  Overall:           ❌ ISSUES DETECTED
+  Overall:           ✅ ALL GREEN
 
   ┌─────────────────────────────────────────────┬──────────────┬─────────┐
   │ Report                                      │ Status       │ Result  │
   ├─────────────────────────────────────────────┼──────────────┼─────────┤
   │ Astro check                                 │ GREEN        │ 0 error │
   │ ESLint                                      │ GREEN        │ 0 error │
-  │ Vitest (unit/integration)                   │ GREEN        │ 2215/22 │
-  │ Playwright (e2e)                            │ RED          │ 304/387 │
-  │ Pa11y (a11y)                                │ GREEN        │ 188/188 │
-  │ Lighthouse (perf)                           │ GREEN        │ 188 pag │
+  │ Vitest (unit/integration)                   │ GREEN        │ 2237/22 │
+  │ Playwright (e2e)                            │ GREEN        │ 306/390 │
+  │ Pa11y (a11y)                                │ GREEN        │ 196/196 │
+  │ Lighthouse (perf)                           │ GREEN        │ 196 pag │
   └─────────────────────────────────────────────┴──────────────┴─────────┘
 
 ══════════════════════════════════════════════════════════════════════════════════
-  END OF GLOBAL REPORT — ACTION REQUIRED
+  END OF GLOBAL REPORT — ALL GREEN
 ══════════════════════════════════════════════════════════════════════════════════

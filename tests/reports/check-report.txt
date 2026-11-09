@@ -1,13 +1,12 @@
 
-> polyweb@0.0.1 check /workspace/b4-unsub
+> polyweb@0.0.1 check /workspace/b5-moderation
 > astro check
 
-14:46:50 [@astrojs/node] Enabling sessions with filesystem storage
-14:46:50 [vite] Re-optimizing dependencies because vite config has changed
-14:46:50 [content] Syncing content
-14:46:50 [content] Synced content
-14:46:50 [types] Generated 209ms
-14:46:50 [check] Getting diagnostics for Astro files in /workspace/b4-unsub...
+19:21:15 [@astrojs/node] Enabling sessions with filesystem storage
+19:21:15 [content] Syncing content
+19:21:15 [content] Synced content
+19:21:15 [types] Generated 155ms
+19:21:15 [check] Getting diagnostics for Astro files in /workspace/b5-moderation...
 [96msrc/actions/admin/pages.ts[0m:[93m4[0m:[93m38[0m - [93mwarning[0m[90m ts(6133): [0m'isNotNull' is declared but its value is never read.
 
 [7m4[0m import { eq, and, asc, desc, isNull, isNotNull, inArray, max } from "drizzle-orm";
@@ -64,9 +63,9 @@
 [7m14[0m import { toast } from "@atoms/toast";
 [7m  [0m [93m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
 
-[96msrc/components/services/ServicesAdminPage.astro[0m:[93m6[0m:[93m34[0m - [93mwarning[0m[90m ts(6133): [0m'getServiceErrorMessage' is declared but its value is never read.
+[96msrc/components/services/ServicesAdminPage.astro[0m:[93m7[0m:[93m34[0m - [93mwarning[0m[90m ts(6133): [0m'getServiceErrorMessage' is declared but its value is never read.
 
-[7m6[0m import { getServiceTranslations, getServiceErrorMessage } from "@/modules/services/i18n";
+[7m7[0m import { getServiceTranslations, getServiceErrorMessage } from "@/modules/services/i18n";
 [7m [0m [93m                                 ~~~~~~~~~~~~~~~~~~~~~~[0m
 
 [96msrc/components/wow/ScrollReveal.astro[0m:[93m110[0m:[93m13[0m - [93mwarning[0m[90m ts(6133): [0m'transforms' is declared but its value is never read.
@@ -292,7 +291,7 @@
 [7m23[0m import { bookings, bookingsResources } from '@/modules/bookings/schema';
 [7m  [0m [93m                   ~~~~~~~~~~~~~~~~~[0m
 
-Result (1831 files): 
+Result (1848 files): 
 - 0 errors
 - 0 warnings
 - 64 hints

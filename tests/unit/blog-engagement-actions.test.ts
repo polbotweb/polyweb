@@ -1,3 +1,4 @@
+import { Effect } from 'effect';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks ───────────────────────────────────────────────────────────
@@ -34,12 +35,13 @@ vi.mock('@database/drizzle', () => ({
 vi.mock('@database/schemas', () => ({
   blogPosts: { id: 'id', organizationId: 'organizationId', commentStatus: 'commentStatus', allowReviews: 'allowReviews', authorId: 'authorId', slug: 'slug', viewCount: 'viewCount', status: 'status', publishedAt: 'publishedAt' },
   blogComments: { id: 'id', postId: 'postId', parentId: 'parentId', authorId: 'authorId', status: 'status', content: 'content', createdAt: 'createdAt' },
-  blogCommentModerations: { id: 'id', commentId: 'commentId' },
+  moderationActions: { id: 'id', targetId: 'targetId' },
   blogPostReviews: { id: 'id', postId: 'postId', authorId: 'authorId', status: 'status', rating: 'rating', helpfulCount: 'helpfulCount', createdAt: 'createdAt' },
   blogPostReviewHelpful: { reviewId: 'reviewId', userId: 'userId', isHelpful: 'isHelpful' },
   blogPostReactions: { postId: 'postId', userId: 'userId', reactionType: 'reactionType' },
   blogPostFavorites: { postId: 'postId', userId: 'userId' },
-  blogReports: { id: 'id', postId: 'postId', commentId: 'commentId', reviewId: 'reviewId', status: 'status', reporterId: 'reporterId', createdAt: 'createdAt' },
+  moderationReports: { id: 'id', module: 'module', targetType: 'targetType', targetId: 'targetId', reason: 'reason', description: 'description', status: 'status', organizationId: 'organizationId', createdAt: 'createdAt' },
+  MODERATION_REPORT_REASONS: ['spam', 'abusive', 'off_topic', 'hate_speech', 'other'],
   notifications: { id: 'id', userId: 'userId', module: 'module', readAt: 'readAt', organizationId: 'organizationId', resourceType: 'resourceType', resourceId: 'resourceId', actorId: 'actorId', createdAt: 'createdAt' },
   blogPostViewStats: { id: 'id', postId: 'postId' },
 }));
@@ -57,6 +59,11 @@ const mockUserHasPermission = vi.fn(() => Promise.resolve({ success: true }));
 vi.mock('@/lib/auth', () => ({
   auth: { api: { getFullOrganization: vi.fn(), userHasPermission: mockUserHasPermission } },
 }));
+
+// Façade de signalement : le cœur générique est couvert par tests/integration/moderation-*.test.ts.
+const mockReportTarget = vi.fn((_input: unknown, _ctx: unknown) => Effect.succeed({ accepted: true as const }));
+vi.mock('@/actions/moderation', () => ({ reportModerationTarget: (input: unknown, ctx: unknown) => mockReportTarget(input, ctx) }));
+vi.mock('@/core/moderation/service', () => ({ resolveModerationReports: vi.fn() }));
 
 // ── Imports ─────────────────────────────────────────────────────────
 import { createBlogComment, moderateBlogComment } from '@/actions/blog/comment';
@@ -147,6 +154,7 @@ beforeEach(() => {
     (callback: (tx: any) => Promise<any>, db: any) => callback(db),
   );
   mockUserHasPermission.mockReset().mockResolvedValue({ success: true });
+  mockReportTarget.mockClear();
   vi.mocked(checkRateLimit).mockReset().mockReturnValue({ allowed: true, remaining: 10, resetAt: Date.now() + 60_000 });
 });
 
@@ -269,6 +277,8 @@ describe('moderateBlogComment', () => {
       expect.objectContaining({ module: 'blog', type: 'COMMENT_APPROVED', data: expect.objectContaining({ commentId: 'comment-1' }) }),
     );
     expect(notificationInsert.values.mock.calls[0][0]).not.toHaveProperty('postId');
+    // Historique commun (moderation_actions) : action du flux d'approbation + transition.
+    expect(moderationInsert.values).toHaveBeenCalledWith(expect.objectContaining({ module: 'blog', targetType: 'comment', targetId: 'comment-1', action: 'approve', fromStatus: 'PENDING', toStatus: 'APPROVED' }));
     expect(mockTransaction).toHaveBeenCalledOnce();
   });
 });
@@ -453,17 +463,22 @@ describe('toggleBlogFavorite', () => {
 });
 
 describe('createBlogReport', () => {
-  it('accepts an anonymous report and is rate-limited per IP', async () => {
-    mockSelect.mockReturnValueOnce(makeChain([{ id: 'post-1' }]));
-    mockInsert.mockReturnValue(makeMutationChain([{ id: 'report-1' }]));
-
+  it('delegates an anonymous report to the generic moderation report (lower-case reason, single target)', async () => {
     const result = await createReport.handler({ postId: 'post-1', reason: 'SPAM' }, guestCtx());
 
-    expect(result).toEqual({ id: 'report-1' });
+    expect(result).toEqual({ success: true });
+    expect(mockReportTarget).toHaveBeenCalledWith(expect.objectContaining({ target: 'blog.post', id: 'post-1', reason: 'spam' }), expect.anything());
+  });
+
+  it('maps comment and review targets to their moderation keys', async () => {
+    await createReport.handler({ commentId: 'comment-1', reason: 'OFF_TOPIC', description: 'x' }, guestCtx());
+    await createReport.handler({ reviewId: 'review-1', reason: 'HATE_SPEECH' }, guestCtx());
+    expect(mockReportTarget.mock.calls.map(([input]) => (input as { target: string; reason: string }).target)).toEqual(['blog.comment', 'blog.review']);
+    expect(mockReportTarget.mock.calls[0]?.[0]).toMatchObject({ reason: 'off_topic', description: 'x' });
   });
 
   describe('getBlogModerationQueue', () => {
-    it('left-joins report targets so comment and review reports remain visible', async () => {
+    it('reads open blog reports from the shared moderation table (no reporter identity)', async () => {
       const commentsChain = makeChain([]);
       const reviewsChain = makeChain([]);
       const reportsChain = makeChain([]);
@@ -478,27 +493,9 @@ describe('createBlogReport', () => {
       );
 
       expect(result).toEqual({ comments: [], reviews: [], reports: [] });
-      expect(reportsChain.leftJoin).toHaveBeenCalledTimes(3);
-      expect(reportsChain.innerJoin).not.toHaveBeenCalled();
+      expect(reportsChain.leftJoin).not.toHaveBeenCalled();
+      expect(JSON.stringify(mockSelect.mock.calls[2])).not.toContain('reporter');
     });
-  });
-
-  it('rejects reports for subjects that are not publicly visible', async () => {
-    mockSelect.mockReturnValueOnce(makeChain([]));
-
-    await expect(
-      createReport.handler({ commentId: 'comment-1', reason: 'SPAM' }, guestCtx()),
-    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
-
-    expect(mockInsert).not.toHaveBeenCalled();
-  });
-
-  it('rejects inconsistent report targets even when called without action parsing', async () => {
-    await expect(
-      createReport.handler({ postId: 'post-1', reviewId: 'review-1', reason: 'SPAM' }, guestCtx()),
-    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
-
-    expect(mockSelect).not.toHaveBeenCalled();
   });
 
   it('rejects when rate-limited', async () => {
@@ -508,7 +505,7 @@ describe('createBlogReport', () => {
       createReport.handler({ postId: 'post-1', reason: 'SPAM' }, guestCtx()),
     ).rejects.toMatchObject({ code: 'TOO_MANY_REQUESTS' });
 
-    expect(mockInsert).not.toHaveBeenCalled();
+    expect(mockReportTarget).not.toHaveBeenCalled();
   });
 });
 

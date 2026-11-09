@@ -1,6 +1,6 @@
 ════════════════════════════════════════════════════════════════════════════════
   VITEST UNIT & INTEGRATION TEST REPORT
-  Generated: 2026-11-08 14:48:31
+  Generated: 2026-11-08 19:23:19
 ════════════════════════════════════════════════════════════════════════════════
 
   ✅ tests/integration/audit-append-only.test.ts  (4/4 passed)
@@ -38,6 +38,8 @@
   ✅ tests/integration/logistics-inventory.test.ts  (9/9 passed)
   ✅ tests/integration/logistics-module.test.ts  (6/6 passed)
   ✅ tests/integration/middleware.test.ts  (4/4 passed)
+  ✅ tests/integration/moderation-core.test.ts  (13/13 passed)
+  ✅ tests/integration/moderation-migration.test.ts  (3/3 passed)
   ✅ tests/integration/navigation-cycle.test.ts  (6/6 passed)
   ✅ tests/integration/notifications-core.test.ts  (3/3 passed)
   ✅ tests/integration/notifications-email-outbox.test.ts  (4/4 passed)
@@ -92,7 +94,7 @@
   ✅ tests/unit/audit-retention.test.ts  (1/1 passed)
   ✅ tests/unit/auth-guards.test.ts  (5/5 passed)
   ✅ tests/unit/auth-providers.test.ts  (4/4 passed)
-  ✅ tests/unit/blog-engagement-actions.test.ts  (38/38 passed)
+  ✅ tests/unit/blog-engagement-actions.test.ts  (37/37 passed)
   ✅ tests/unit/blog-gallery.test.ts  (7/7 passed)
   ✅ tests/unit/blog-helpers.test.ts  (14/14 passed)
   ✅ tests/unit/blog-lifecycle.test.ts  (2/2 passed)
@@ -238,6 +240,7 @@
   ✅ tests/unit/logistics/admin-resource.test.ts  (3/3 passed)
   ✅ tests/unit/logistics/domain.test.ts  (9/9 passed)
   ✅ tests/unit/logistics/inventory-ledger.test.ts  (11/11 passed)
+  ✅ tests/unit/moderation/core.test.ts  (6/6 passed)
   ✅ tests/unit/modules/sales-fec.test.ts  (18/18 passed)
   ✅ tests/unit/modules/tax-domain.test.ts  (16/16 passed)
   ✅ tests/unit/payments/providers.test.ts  (4/4 passed)
@@ -252,7 +255,7 @@
   ✅ tests/unit/sales/einvoice.test.ts  (8/8 passed)
   ✅ tests/unit/sales/pay-link.test.ts  (4/4 passed)
   ✅ tests/unit/sales/pdf-template.test.ts  (7/7 passed)
-  ✅ tests/unit/scripts/new-module.test.ts  (9/9 passed)
+  ✅ tests/unit/scripts/new-module.test.ts  (10/10 passed)
   ✅ tests/unit/services/admin-actions.test.ts  (4/4 passed)
   ✅ tests/unit/services/admin-contract.test.ts  (2/2 passed)
   ✅ tests/unit/services/admin-resource.test.ts  (3/3 passed)
@@ -269,12 +272,12 @@
   SUMMARY
 ════════════════════════════════════════════════════════════════════════════════
 
-  Total tests:   2216
-  Passed:        2215  ✅
+  Total tests:   2238
+  Passed:        2237  ✅
   Failed:        0  
   Skipped:       1
-  Duration:      49s
+  Duration:      61s
 
 ════════════════════════════════════════════════════════════════════════════════
-  END OF REPORT — 2215/2216 passed
+  END OF REPORT — 2237/2238 passed
 ════════════════════════════════════════════════════════════════════════════════
