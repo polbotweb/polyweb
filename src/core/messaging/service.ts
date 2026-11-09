@@ -42,7 +42,7 @@ const shareOrg = (a: string, b: string) =>
       select m1.organization_id as id from member m1
       inner join member m2 on m2.organization_id = m1.organization_id and m2.user_id = ${b}
       where m1.user_id = ${a} limit 1`);
-    const rows = (result as { rows?: { id: string }[] }).rows ?? [];
+    const rows = (result as unknown as { rows?: { id: string }[] }).rows ?? [];
     return rows;
   }).pipe(Effect.map((rows) => rows[0]?.id ?? null));
 
