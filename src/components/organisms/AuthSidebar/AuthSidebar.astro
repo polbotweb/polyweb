@@ -12,6 +12,7 @@ import DashboardIcon from '@tabler/icons/outline/layout-dashboard.svg';
 import UserIcon from '@tabler/icons/outline/user.svg';
 import ReceiptIcon from '@tabler/icons/outline/receipt.svg';
 import BellIcon from '@tabler/icons/outline/bell.svg';
+import MessageIcon from '@tabler/icons/outline/message.svg';
 import ShieldIcon from '@tabler/icons/outline/shield.svg';
 import LogoutIcon from '@tabler/icons/outline/logout.svg';
 
@@ -41,7 +42,7 @@ interface Props {
   t: AuthTranslations;
   locale: Locale;
   user: AppUser;
-  activeItem?: 'dashboard' | 'profile' | 'account' | 'notifications' | 'organizations' | 'admin';
+  activeItem?: 'dashboard' | 'profile' | 'account' | 'notifications' | 'messages' | 'organizations' | 'admin';
 }
 
 const { t, locale, user, activeItem } = Astro.props;
@@ -58,6 +59,7 @@ const initials = user?.name
 const navItems = [
   { id: 'dashboard' as const, title: t.userMenu.dashboard, url: dashboardUrl, icon: DashboardIcon },
   { id: 'profile' as const, title: t.userMenu.profile, url: profileUrl, icon: UserIcon },
+  { id: 'messages' as const, title: locale.startsWith('en') ? 'Messages' : locale.startsWith('es') ? 'Mensajes' : locale.startsWith('ar') ? 'الرسائل' : 'Messages', url: `/${locale}/messages`, icon: MessageIcon },
   { id: 'account' as const, title: getPortalTranslations(locale).title, url: portalPaths.home(locale), icon: ReceiptIcon },
 ];
 

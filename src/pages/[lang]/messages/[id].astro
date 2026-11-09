@@ -1,0 +1,76 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AuthSidebar from "@organisms/AuthSidebar/AuthSidebar.astro";
+import { requireAuth } from "@/lib/auth-guards";
+import { Effect } from "effect";
+import { listMessages } from "@/core/messaging/service";
+import { getMessagingTranslations } from "@/core/messaging/i18n";
+
+export const prerender = false;
+const auth = await requireAuth(Astro);
+if ("redirect" in auth) return auth.redirect;
+const { user, locale, authT } = auth;
+const id = Astro.params.id ?? "";
+const mt = getMessagingTranslations(locale);
+const messages = await Effect.runPromise(listMessages(user.id, id).pipe(Effect.catchTag("MessagingUnavailableError", () => Effect.succeed(null))));
+if (messages === null) return Astro.redirect(`/${locale}/messages`);
+---
+<BaseLayout title={mt.title}>
+  <AuthLayout title={mt.title}>
+    <AuthSidebar slot="sidebar" t={authT} locale={locale} user={user} activeItem="messages" />
+    <div data-messaging-thread data-conversation={id} class="grid gap-4">
+      <p><a href={`/${locale}/messages`} class="underline">{mt.inbox}</a></p>
+      <ul class="grid gap-3" data-testid="messaging-thread">
+        {messages.map((m) => (
+          <li class="rounded-md border p-3" data-message={m.id}>
+            <p class="text-sm opacity-70">{m.senderId === user.id ? "→" : "←"} · {new Date(m.createdAt).toLocaleString(locale)}</p>
+            <p class="whitespace-pre-wrap">{m.body}</p>
+            {m.senderId !== user.id && (
+              <form class="mt-2" data-report-form data-message-id={m.id}>
+                <button type="submit" class="min-h-11 rounded-md border px-3 text-sm">{mt.report}</button>
+              </form>
+            )}
+          </li>
+        ))}
+      </ul>
+      <form class="grid max-w-xl gap-3" data-messaging-send>
+        <label class="grid gap-1 text-sm"><span>{mt.bodyLabel}</span>
+          <textarea name="body" required maxlength="4000" rows="3" class="rounded-md border px-3 py-2"></textarea>
+        </label>
+        <div class="flex flex-wrap gap-2">
+          <button type="submit" class="min-h-11 rounded-md border px-4">{mt.send}</button>
+          <button type="button" class="min-h-11 rounded-md border px-4" data-delete-for-me>{mt.deleteForMe}</button>
+        </div>
+        <p role="alert" data-msg-error hidden class="text-sm text-destructive"></p>
+      </form>
+    </div>
+  </AuthLayout>
+</BaseLayout>
+<script>
+  import { actions } from "astro:actions";
+  const root = document.querySelector<HTMLElement>("[data-messaging-thread]");
+  const conversationId = root?.dataset.conversation ?? "";
+  const err = (msg: string) => { const el = document.querySelector("[data-msg-error]"); if (!el) return; (el as HTMLElement).hidden = false; el.textContent = msg; };
+  document.querySelector("[data-messaging-send]")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target as HTMLFormElement);
+    const res = await actions.messaging.send({ conversationId, body: String(fd.get("body")) });
+    if (res.error) return err(res.error.message);
+    location.reload();
+  });
+  document.querySelector("[data-delete-for-me]")?.addEventListener("click", async () => {
+    const res = await actions.messaging.deleteForMe({ conversationId });
+    if (res.error) return err(res.error.message);
+    location.href = `/${document.documentElement.lang || "fr"}/messages`;
+  });
+  document.querySelectorAll("[data-report-form]").forEach((form) => {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const messageId = (form as HTMLElement).dataset.messageId ?? "";
+      const res = await actions.messaging.report({ messageId, reason: "abusive" });
+      if (res.error) return err(res.error.message);
+      location.reload();
+    });
+  });
+</script>

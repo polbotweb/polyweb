@@ -17,7 +17,7 @@ export function assertNotificationContext(context: NotificationContext): void {
 }
 
 /** Catégories de préférences (N5-A). Les modules en ajoutent via leurs définitions. */
-export type NotificationCategory = "comments" | "reviews" | "publishing" | "mentions" | "billing" | "system" | "moderation" | (string & {});
+export type NotificationCategory = "comments" | "reviews" | "publishing" | "mentions" | "billing" | "system" | "moderation" | "messaging" | (string & {});
 
 const TYPE_CATEGORIES: Record<string, NotificationCategory> = {
   NEW_REVIEW: "reviews",

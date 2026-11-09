@@ -117,7 +117,7 @@ for (const lang of locales) {
   // Portail client (factures, commandes, réservations du compte seedé).
   authedUrls.push(`${BASE}/${lang}/account`);
   // Notifications (liste seedée, préférences) et désinscription par lien signé.
-  authedUrls.push(`${BASE}/${lang}/notifications`, `${BASE}/${lang}/notifications/preferences`);
+  authedUrls.push(`${BASE}/${lang}/notifications`, `${BASE}/${lang}/notifications/preferences`, `${BASE}/${lang}/messages`);
   if (notificationsSeed) authedUrls.push(`${BASE}/${lang}/notifications/unsubscribe?token=${encodeURIComponent(notificationsSeed.unsubscribeToken)}`);
 }
 

@@ -379,6 +379,13 @@
       "when": 1794164150355,
       "tag": "0053_moderation_core",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1794250000000,
+      "tag": "0054_messaging_core",
+      "breakpoints": true
     }
   ]
 }
