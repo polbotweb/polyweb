@@ -1,2 +1,1 @@
-export * from "./forum.loader";
-export * from "./forum-admin.loader";
+export * from "./community.loader";

@@ -1,0 +1,16 @@
+---
+/** Pagination accessible (liens, page courante annoncée), conserve les autres paramètres de l'URL. */
+import { fillForums, type ForumsTranslations } from "@/modules/forums/i18n";
+
+interface Props { t: ForumsTranslations; url: URL; page: number; total: number; pageSize: number }
+const { t, url, page, total, pageSize } = Astro.props;
+const pages = Math.max(1, Math.ceil(total / pageSize));
+const href = (n: number) => { const next = new URL(url); next.searchParams.delete("notice"); next.searchParams.delete("error"); if (n <= 1) next.searchParams.delete("page"); else next.searchParams.set("page", String(n)); return next.pathname + next.search; };
+---
+{pages > 1 && (
+  <nav aria-label={t.pagination} class="flex flex-wrap items-center gap-3 text-sm">
+    {page > 1 ? <a class="inline-flex min-h-11 items-center rounded-md border px-4 underline-offset-4 hover:underline" href={href(page - 1)} rel="prev">{t.previous}</a> : null}
+    <span aria-current="page">{fillForums(t.pageOf, { page, pages })}</span>
+    {page < pages ? <a class="inline-flex min-h-11 items-center rounded-md border px-4 underline-offset-4 hover:underline" href={href(page + 1)} rel="next">{t.next}</a> : null}
+  </nav>
+)}

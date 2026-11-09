@@ -1,0 +1,130 @@
+---
+/**
+ * Un forum : sujets paginés (épinglés d'abord), filtres catégorie / étiquette, recherche plein
+ * texte, et formulaire « nouveau sujet » (catégorie, étiquettes, fil privé, sondage).
+ * Forum invisible pour ce lecteur → 404 indiscernable d'un forum inexistant.
+ */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import ForumNotice from "@/components/forums/ForumNotice.astro";
+import ForumPagination from "@/components/forums/ForumPagination.astro";
+import { getAuthTranslations, getAuthUrl, toLocale } from "@i18n/utils";
+import { runApp, runAppResult } from "@/lib/effect/http";
+import { ensureDefaultSite } from "@/modules/sites/domain/sites";
+import { forumBySlug } from "@/modules/forums/services/access";
+import { listForumCategories, listSiteTags } from "@/modules/forums/services/forum.service";
+import { listTopics } from "@/modules/forums/loaders";
+import { categoryLabel } from "@/modules/forums/domain/defaults";
+import { BODY_MAX, clampPage, MAX_PRIVATE_PARTICIPANTS, MAX_TAGS_PER_TOPIC, POLL_OPTIONS_MAX, TOPIC_TITLE_MAX } from "@/modules/forums/domain/rules";
+import { handleNewTopicForm } from "@/modules/forums/web/forms";
+import { fillForums, getForumsTranslations } from "@/modules/forums/i18n";
+
+export const prerender = false;
+const locale = toLocale(Astro.params.lang);
+const t = getForumsTranslations(locale);
+const site = Astro.locals.site ?? (await ensureDefaultSite());
+const viewer = Astro.locals.user ?? null;
+const access = await runAppResult(forumBySlug(site.id, Astro.params.forum ?? "", viewer));
+if (!access.ok) { Astro.response.status = 404; return Astro.rewrite("/404"); }
+const { forum } = access.value;
+const base = `/${locale}/forums/${forum.slug}`;
+Astro.response.headers.set("Cache-Control", "private, no-store");
+
+if (Astro.request.method === "POST") {
+  const result = await handleNewTopicForm(await Astro.request.formData(), { forumId: forum.id, viewer, topicUrl: (id) => `${base}/t/${id}` });
+  return Astro.redirect(result.ok ? `${result.location}?notice=${result.notice}` : `${base}?error=${result.error}#new-topic`, 303);
+}
+
+const categories = (await runApp(listForumCategories([forum.id]))).map((c) => ({ id: c.id, slug: c.slug, ...categoryLabel(c.translations, locale, c.slug) }));
+const tags = await runApp(listSiteTags(forum.siteId));
+const params = Astro.url.searchParams;
+const category = categories.find((c) => c.slug === params.get("category")) ?? null;
+const tagSlug = tags.find((tag) => tag.slug === params.get("tag"))?.slug ?? null;
+const q = (params.get("q") ?? "").trim().slice(0, 200);
+const page = clampPage(params.get("page"));
+const { items, total, pageSize } = await runApp(listTopics({ access: access.value, viewer, categoryId: category?.id ?? null, tagSlug, q: q || null, page }));
+const categoryName = new Map(categories.map((c) => [c.id, c.name]));
+const fmt = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
+const signedIn = Boolean(viewer && !viewer.banned);
+const signInUrl = getAuthUrl(locale, "sign-in", await getAuthTranslations(locale));
+const field = "min-h-11 rounded-md border bg-background px-3";
+---
+<BaseLayout title={`${forum.title} — ${t.title}`} description={forum.description ?? t.intro}>
+  <main class="mx-auto grid max-w-5xl gap-8 px-4 py-12 sm:px-6 lg:px-8" data-testid="forum-page">
+    <nav aria-label={t.backToForums}><a class="underline" href={`/${locale}/forums`}>{t.backToForums}</a></nav>
+    <header>
+      <h1 class="font-heading text-3xl font-bold">{forum.title}</h1>
+      {forum.description && <p class="mt-1 text-muted-foreground">{forum.description}</p>}
+    </header>
+    <ForumNotice t={t} url={Astro.url} />
+
+    <form method="get" role="search" class="grid gap-3 rounded-xl border p-4 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-end">
+      <label class="grid gap-1 text-sm"><span>{t.searchLabel}</span><input type="search" name="q" value={q} maxlength="200" class={field} /></label>
+      <label class="grid gap-1 text-sm"><span>{t.filterCategory}</span>
+        <select name="category" class={field}><option value="">{t.allCategories}</option>{categories.map((c) => <option value={c.slug} selected={c.id === category?.id}>{c.name}</option>)}</select></label>
+      <label class="grid gap-1 text-sm"><span>{t.filterTag}</span>
+        <select name="tag" class={field}><option value="">{t.allTags}</option>{tags.map((tag) => <option value={tag.slug} selected={tag.slug === tagSlug}>{tag.label}</option>)}</select></label>
+      <button type="submit" class="min-h-11 rounded-md border px-4">{t.filter}</button>
+    </form>
+
+    <section aria-labelledby="topics-title" class="grid gap-3">
+      <h2 id="topics-title" class="font-heading text-xl font-semibold">{category ? category.name : t.topics}</h2>
+      {category?.description && <p class="text-sm text-muted-foreground">{category.description}</p>}
+      {items.length === 0 ? <p data-testid="no-topics">{t.noTopics}</p> : (
+        <ul class="grid gap-2" data-testid="topic-list">
+          {items.map((topic) => (
+            <li class="rounded-md border p-4" data-topic={topic.id}>
+              <h3 class="font-medium"><a class="underline-offset-4 hover:underline" href={`${base}/t/${topic.id}`}>{topic.title}</a></h3>
+              <p class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                {topic.pinned && <span class="font-medium text-foreground">{t.pinned}</span>}
+                {topic.locked && <span>{t.locked}</span>}
+                {topic.solved && <span>{t.solved}</span>}
+                {topic.isPrivate && <span>{t.private}</span>}
+                {topic.hasPoll && <span>{t.poll}</span>}
+                <span>{categoryName.get(topic.categoryId)}</span>
+                {topic.authorName && <span>{fillForums(t.by, { name: topic.authorName })}</span>}
+                <span>{fillForums(t.replies, { count: topic.replyCount })}</span>
+                <span>{fillForums(t.score, { score: topic.score })}</span>
+                <span>{t.lastActivity} : <time datetime={topic.lastPostAt.toISOString()}>{fmt.format(topic.lastPostAt)}</time></span>
+              </p>
+              {topic.tags.length > 0 && <ul class="mt-2 flex flex-wrap gap-2" aria-label={t.tagsLabel}>{topic.tags.map((tag) => <li><a class="rounded border px-2 py-1 text-xs" href={`${base}?tag=${tag.slug}`}>#{tag.label}</a></li>)}</ul>}
+            </li>
+          ))}
+        </ul>
+      )}
+      <ForumPagination t={t} url={Astro.url} page={page} total={total} pageSize={pageSize} />
+    </section>
+
+    <section id="new-topic" aria-labelledby="new-topic-title" class="rounded-xl border p-5">
+      <h2 id="new-topic-title" class="mb-4 font-heading text-xl font-semibold">{t.newTopic}</h2>
+      {!signedIn ? <p><a class="underline" href={signInUrl}>{t.signInToPost}</a></p> : (
+        <form method="post" class="grid gap-4" data-testid="new-topic-form">
+          <label class="grid gap-1 text-sm"><span>{t.titleLabel}</span><input name="title" required minlength="3" maxlength={TOPIC_TITLE_MAX} class={field} /></label>
+          <label class="grid gap-1 text-sm"><span>{t.categoryLabel}</span>
+            <select name="categoryId" required class={field}>{categories.map((c) => <option value={c.id} selected={c.id === category?.id}>{c.name}</option>)}</select></label>
+          <label class="grid gap-1 text-sm"><span>{t.bodyLabel}</span>
+            <textarea name="body" required minlength="2" maxlength={BODY_MAX} rows="8" aria-describedby="md-help" class="rounded-md border bg-background px-3 py-2"></textarea></label>
+          <p id="md-help" class="text-sm text-muted-foreground">{t.markdownHelp}</p>
+          {tags.length > 0 && (
+            <fieldset class="grid gap-2"><legend class="text-sm font-medium">{t.tagsLabel} ({MAX_TAGS_PER_TOPIC} max)</legend>
+              <div class="flex flex-wrap gap-3">{tags.map((tag) => <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" name="tagIds" value={tag.id} class="size-5" />{tag.label}</label>)}</div>
+            </fieldset>
+          )}
+          <fieldset class="grid gap-2 rounded-md border p-3"><legend class="px-1 text-sm font-medium">{t.private}</legend>
+            <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" name="private" class="size-5" />{t.privateLabel}</label>
+            <label class="grid gap-1 text-sm"><span>{t.privateWithLabel} ({MAX_PRIVATE_PARTICIPANTS} max)</span><input name="privateWith" maxlength="2000" class={field} autocomplete="off" /></label>
+          </fieldset>
+          <fieldset class="grid gap-2 rounded-md border p-3"><legend class="px-1 text-sm font-medium">{t.poll}</legend>
+            <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" name="poll" class="size-5" />{t.pollLabel}</label>
+            <label class="grid gap-1 text-sm"><span>{t.pollQuestion}</span><input name="pollQuestion" maxlength="200" class={field} /></label>
+            <label class="grid gap-1 text-sm"><span>{t.pollOptions} ({POLL_OPTIONS_MAX} max)</span><textarea name="pollOptions" rows="4" maxlength="2000" class="rounded-md border bg-background px-3 py-2"></textarea></label>
+            <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" name="pollMultiple" class="size-5" />{t.pollMultiple}</label>
+            <label class="grid gap-1 text-sm"><span>{t.pollResults}</span>
+              <select name="pollResults" class={field}><option value="always">{t.resultsAlways}</option><option value="after_vote">{t.resultsAfterVote}</option><option value="after_close">{t.resultsAfterClose}</option></select></label>
+            <label class="grid gap-1 text-sm"><span>{t.pollClosesAt}</span><input type="datetime-local" name="pollClosesAt" class={field} /></label>
+          </fieldset>
+          <button type="submit" class="min-h-11 w-fit rounded-md border bg-primary px-5 text-primary-foreground" data-testid="new-topic-submit">{t.submitTopic}</button>
+        </form>
+      )}
+    </section>
+  </main>
+</BaseLayout>

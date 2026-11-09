@@ -54,7 +54,8 @@ function inline(escaped: string): string {
 
 /** Markdown (sous-ensemble) → HTML assaini. Entrée tronquée à `MARKDOWN_SOURCE_MAX`. */
 export function renderMarkdown(source: string): string {
-  const lines = escapeHtml(String(source ?? "").slice(0, MARKDOWN_SOURCE_MAX).replace(/\r\n?/g, "\n")).split("\n");
+  // Les caractères de contrôle U+0000/U+0001 servent de marqueurs internes : retirés de la source.
+  const lines = escapeHtml(String(source ?? "").slice(0, MARKDOWN_SOURCE_MAX).replace(/[\u0000\u0001]/g, "").replace(/\r\n?/g, "\n")).split("\n");
   const html: string[] = [];
   let paragraph: string[] = [];
   const flush = () => {

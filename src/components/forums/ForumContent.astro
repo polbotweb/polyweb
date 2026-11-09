@@ -1,0 +1,16 @@
+---
+/** Corps d'un message : HTML DÉJÀ assaini à l'écriture (`core/content/markdown` → sanitizeHtml). */
+interface Props { html: string }
+const { html } = Astro.props;
+---
+<div class="forum-content grid gap-3 break-words" set:html={html} />
+<style>
+  .forum-content :global(h3), .forum-content :global(h4), .forum-content :global(h5), .forum-content :global(h6) { font-weight: 600; }
+  .forum-content :global(ul) { list-style: disc; padding-inline-start: 1.5rem; }
+  .forum-content :global(ol) { list-style: decimal; padding-inline-start: 1.5rem; }
+  .forum-content :global(blockquote) { border-inline-start: 4px solid currentColor; opacity: 0.85; padding-inline-start: 1rem; }
+  .forum-content :global(pre) { overflow-x: auto; border: 1px solid; border-radius: 0.375rem; padding: 0.75rem; }
+  .forum-content :global(code) { font-family: ui-monospace, monospace; }
+  .forum-content :global(a) { text-decoration: underline; }
+  .forum-content :global(.mention) { font-weight: 600; }
+</style>

@@ -1,0 +1,57 @@
+---
+/**
+ * Votes, réactions et signalement d'un sujet ou d'une réponse : formulaires POST (sans JS).
+ * Boutons d'état exposés via `aria-pressed` ; pas de vote sur son propre contenu.
+ */
+import { FORUM_REACTIONS } from "@/modules/forums/schema";
+import { MODERATION_REPORT_REASONS } from "@database/schemas/moderation.schema";
+import { fillForums, type ForumsTranslations } from "@/modules/forums/i18n";
+import type { ReactionSummary } from "@/modules/forums/loaders";
+
+interface Props {
+  t: ForumsTranslations;
+  targetType: "topic" | "post";
+  targetId: string;
+  score: number;
+  myVote: number;
+  reactions: ReactionSummary[];
+  /** Lecteur connecté (sinon affichage seul). */
+  signedIn: boolean;
+  own: boolean;
+}
+const { t, targetType, targetId, score, myVote, reactions, signedIn, own } = Astro.props;
+const countOf = (r: string) => reactions.find((x) => x.reaction === r)?.count ?? 0;
+const mineOf = (r: string) => reactions.find((x) => x.reaction === r)?.mine ?? false;
+const btn = "inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-md border px-3 text-sm";
+---
+<div class="flex flex-wrap items-center gap-3" data-engagement={targetId}>
+  <div role="group" aria-label={t.voteGroup} class="flex items-center gap-2">
+    {signedIn && !own ? (
+      <>
+        <form method="post"><input type="hidden" name="intent" value="vote" /><input type="hidden" name="targetType" value={targetType} /><input type="hidden" name="targetId" value={targetId} /><input type="hidden" name="value" value={myVote === 1 ? "0" : "1"} />
+          <button type="submit" class={btn} aria-pressed={myVote === 1 ? "true" : "false"} aria-label={myVote === 1 ? t.removeVote : t.upvote} data-testid="vote-up">▲</button></form>
+        <span class="min-w-16 text-center text-sm" data-testid="score">{fillForums(t.score, { score })}</span>
+        <form method="post"><input type="hidden" name="intent" value="vote" /><input type="hidden" name="targetType" value={targetType} /><input type="hidden" name="targetId" value={targetId} /><input type="hidden" name="value" value={myVote === -1 ? "0" : "-1"} />
+          <button type="submit" class={btn} aria-pressed={myVote === -1 ? "true" : "false"} aria-label={myVote === -1 ? t.removeVote : t.downvote} data-testid="vote-down">▼</button></form>
+      </>
+    ) : <span class="text-sm" data-testid="score">{fillForums(t.score, { score })}</span>}
+  </div>
+  <div role="group" aria-label={t.reactionGroup} class="flex flex-wrap items-center gap-2">
+    {FORUM_REACTIONS.map((r) => signedIn ? (
+      <form method="post"><input type="hidden" name="intent" value="react" /><input type="hidden" name="targetType" value={targetType} /><input type="hidden" name="targetId" value={targetId} /><input type="hidden" name="reaction" value={r} />
+        <button type="submit" class={btn} aria-pressed={mineOf(r) ? "true" : "false"} data-testid={`react-${r}`}>{t.reactions[r]} <span>{countOf(r)}</span></button></form>
+    ) : countOf(r) > 0 ? <span class="rounded-md border px-3 py-2 text-sm">{t.reactions[r]} {countOf(r)}</span> : null)}
+  </div>
+  {signedIn && !own && (
+    <details class="text-sm">
+      <summary class="inline-flex min-h-11 cursor-pointer items-center rounded-md border px-3">{t.report}</summary>
+      <form method="post" class="mt-2 grid max-w-md gap-2 rounded-md border p-3">
+        <input type="hidden" name="intent" value="report" /><input type="hidden" name="targetType" value={targetType} /><input type="hidden" name="targetId" value={targetId} />
+        <label class="grid gap-1"><span>{t.reportReason}</span>
+          <select name="reason" required class="min-h-11 rounded-md border bg-background px-3">{MODERATION_REPORT_REASONS.map((reason) => <option value={reason}>{(t.reasons as Record<string, string>)[reason] ?? reason}</option>)}</select></label>
+        <label class="grid gap-1"><span>{t.reportDetails}</span><textarea name="description" maxlength="1000" rows="2" class="rounded-md border bg-background px-3 py-2"></textarea></label>
+        <button type="submit" class="min-h-11 w-fit rounded-md border px-4" data-testid="report-submit">{t.report}</button>
+      </form>
+    </details>
+  )}
+</div>

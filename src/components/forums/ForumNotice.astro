@@ -1,0 +1,13 @@
+---
+/** Retour d'un formulaire (paramètres `notice` / `error` de la redirection 303) : codes traduits uniquement. */
+import type { ForumsTranslations } from "@/modules/forums/i18n";
+
+interface Props { t: ForumsTranslations; url: URL }
+const { t, url } = Astro.props;
+const notice = url.searchParams.get("notice");
+const error = url.searchParams.get("error");
+const noticeText = notice ? t.notices[notice] : undefined;
+const errorText = error ? (t.errors[error] ?? t.errors.default) : undefined;
+---
+{noticeText && <p role="status" class="rounded-md border border-primary/40 bg-primary/5 px-4 py-3 text-sm" data-testid="forum-notice">{noticeText}</p>}
+{errorText && <p role="alert" class="rounded-md border border-destructive/60 bg-destructive/5 px-4 py-3 text-sm text-destructive" data-testid="forum-error">{errorText}</p>}

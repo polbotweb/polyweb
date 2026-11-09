@@ -2,7 +2,7 @@
  * Actions Astro d'ADMINISTRATION des forums (API + tests ; les pages d'administration appellent
  * les mêmes services). Garde tenant (organisation + site) AVANT toute écriture ; chaque écriture
  * est auditée dans sa transaction par le service.
- *   - forums : create / update / transition / lock / unlock / bulk  → permissions create/update/publish
+ *   - forums : create / update / transition / lock / unlock → permissions create / update / publish
  *   - catégories, étiquettes, politique de sanctions, levée de sanction → `configure` / `moderate`
  * Les actions de participation (sujets, réponses, votes…) sont dans `./community.ts`.
  */
@@ -21,7 +21,6 @@ import { setSanctionPolicy, revokeSanction } from "../services/sanctions";
 import { siteScope, notFound, type ForumsAction } from "../services/access";
 import { FORUMS_STATUSES } from "../domain/workflow";
 import { NOTE_MAX, NOTE_MIN } from "../domain/rules";
-import { bulkForumsLifecycle } from "./bulk";
 
 const id = z.string().min(1).max(64);
 const slug = z.string().max(80);
@@ -49,7 +48,6 @@ const requireForum = (context: ActionAPIContext, forumId: string, actions: reado
 const owner = (context: ActionAPIContext, userId: string) => lockOwnerFrom(userId, context.locals.session?.id);
 
 export const forumsActions = {
-  bulk: bulkForumsLifecycle,
   create: defineAction({
     input: z.object({ siteId: id, title: z.string().trim().min(2).max(160), slug: slug.default(""), description: z.string().max(500).nullable().optional(), visibility: z.enum(FORUM_VISIBILITIES).default("public") }),
     handler: effectHandler(({ siteId, ...input }, context) => Effect.gen(function* () {
