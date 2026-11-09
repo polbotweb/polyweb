@@ -19,6 +19,32 @@ type Tx = Parameters<Parameters<ReturnType<typeof getDrizzle>['transaction']>[0]
 const rows = async (tx: Tx, query: ReturnType<typeof sql>) => (await tx.execute(query)).rows as Record<string, unknown>[];
 const tables = (tx: Tx) => rows(tx, sql`select table_name from information_schema.tables where table_schema = 'public' and (table_name like 'forum%' or table_name = 'badge_awards') order by 1`);
 
+/**
+ * Le retour arrière (DDL) s'exécute pendant que d'autres fichiers d'intégration écrivent dans les
+ * tables parentes (`user`, `organization`, `sites`…) : sans précaution, DROP TABLE prend ses verrous
+ * au fil de l'eau et peut former un interblocage (40P01) avec une suppression en cascade concurrente.
+ * On prend donc TOUS les verrous d'emblée, parents d'abord (aucun verrou détenu avant), avec un délai
+ * borné, et on rejoue la transaction si elle est choisie comme victime (40P01) ou expire (55P03).
+ */
+const LOCKED = ['"user"', 'organization', 'sites', 'moderation_reports', 'moderation_actions', 'notifications', 'badge_awards', 'forums', 'forum_revisions', 'forum_locks', 'forum_categories', 'forum_tags', 'forum_topics', 'forum_posts', 'forum_topic_tags', 'forum_votes', 'forum_reactions', 'forum_user_stats', 'forum_polls', 'forum_poll_options', 'forum_poll_ballots', 'forum_poll_votes', 'forum_topic_participants', 'forum_topic_follows', 'forum_sanction_policies', 'forum_sanctions'];
+const pgCode = (e: unknown): string | undefined => { for (let c: unknown = e; c && typeof c === 'object'; c = (c as { cause?: unknown }).cause) { const code = (c as { code?: unknown }).code; if (typeof code === 'string') return code; } return undefined; };
+async function exclusive(body: (tx: Tx) => Promise<void>) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await getDrizzle().transaction(async (tx) => {
+        await tx.execute(sql.raw(`SET LOCAL lock_timeout = '10s'`));
+        await tx.execute(sql.raw(`LOCK TABLE ${LOCKED.join(', ')} IN ACCESS EXCLUSIVE MODE`));
+        await body(tx);
+        throw new Rollback();
+      });
+    } catch (error) {
+      if (error instanceof Rollback) return;
+      if (attempt < 5 && ['40P01', '55P03'].includes(pgCode(error) ?? '')) continue;
+      throw error;
+    }
+  }
+}
+
 const tag = `fm${Date.now()}`;
 const id = (n: number) => `${tag}-0000-0000-0000-${String(n).padStart(12, '0')}`;
 
@@ -31,15 +57,14 @@ describe('migration 0055 forums', () => {
   });
 
   it('down puis up : tables recréées à l’identique', async () => {
-    await expect(getDrizzle().transaction(async (tx) => {
+    await exclusive(async (tx) => {
       const before = await tables(tx);
       expect(before.length).toBeGreaterThanOrEqual(20);
       for (const s of down) await tx.execute(sql.raw(s));
       expect(await tables(tx)).toEqual([]);
       for (const s of up) await tx.execute(sql.raw(s));
       expect(await tables(tx)).toEqual(before);
-      throw new Rollback();
-    })).rejects.toBeInstanceOf(Rollback);
+    });
   });
 
   it('suppression d’une réponse : votes, réactions, signalements nettoyés, solution retirée', async () => {

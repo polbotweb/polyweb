@@ -38,6 +38,8 @@ let subscriptionsSeed = null;
 let rolesOrg = null;
 // Notifications : jeton de désinscription signé du compte seedé (page publique « noindex »).
 let notificationsSeed = null;
+// Forums : forum par défaut et sujet seedé (sondage, étiquette, réponse).
+let forumsSeed = null;
 // Logistique : inventaires seedés (un en cours, un validé).
 let logistics = null;
 if (fs.existsSync(COOKIES_PATH)) {
@@ -51,6 +53,7 @@ if (fs.existsSync(COOKIES_PATH)) {
   subscriptionsSeed = data.subscriptionsSeed ?? null;
   rolesOrg = data.rolesOrg ?? null;
   notificationsSeed = data.notificationsSeed ?? null;
+  forumsSeed = data.forumsSeed ?? null;
   logistics = data.logistics ?? null;
 }
 
@@ -94,6 +97,9 @@ for (const lang of locales) {
   }
   // Fiche du produit seedé par tests/a11y/setup.ts (indexable, seuils standard).
   if (shopSlugs) publicUrls.push(`${BASE}/${lang}/shop/${encodeURIComponent(shopSlugs[lang])}`);
+  // Forums : index, forum par défaut et sujet seedé (sondage, réponse, étiquette).
+  publicUrls.push(`${BASE}/${lang}/forums`);
+  if (forumsSeed) publicUrls.push(`${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}`, `${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}/t/${encodeURIComponent(forumsSeed.topicId)}`);
 }
 
 // Tunnel boutique (panier, commande, suivi) : pages privées « noindex » à dessein, auditées
@@ -119,6 +125,8 @@ for (const lang of locales) {
   // Notifications (liste seedée, préférences) et désinscription par lien signé.
   authedUrls.push(`${BASE}/${lang}/notifications`, `${BASE}/${lang}/notifications/preferences`, `${BASE}/${lang}/messages`);
   if (notificationsSeed) authedUrls.push(`${BASE}/${lang}/notifications/unsubscribe?token=${encodeURIComponent(notificationsSeed.unsubscribeToken)}`);
+  // Forum connecté : formulaire « nouveau sujet » (fil privé, sondage, étiquettes).
+  if (forumsSeed) authedUrls.push(`${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}`);
 }
 
 const adminUrls = [];
@@ -150,6 +158,8 @@ for (const lang of locales) {
   }
   // Organisation : rôles (grille des modules), accès par site et journal d'audit.
   if (rolesOrg) for (const sub of ['roles', 'sites', 'audit', 'moderation']) adminUrls.push(`${BASE}/${lang}/organizations/${encodeURIComponent(rolesOrg.slug)}/${sub}`);
+  // Forums : catégories / étiquettes et politique de sanctions.
+  adminUrls.push(`${BASE}/${lang}/admin/forums`, `${BASE}/${lang}/admin/forums/sanctions`);
 }
 
 module.exports = {

@@ -25,7 +25,7 @@ const mineOf = (r: string) => reactions.find((x) => x.reaction === r)?.mine ?? f
 const btn = "inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-md border px-3 text-sm";
 ---
 <div class="flex flex-wrap items-center gap-3" data-engagement={targetId}>
-  <div role="group" aria-label={t.voteGroup} class="flex items-center gap-2">
+  <fieldset class="m-0 flex min-w-0 items-center gap-2 border-0 p-0"><legend class="sr-only">{t.voteGroup}</legend>
     {signedIn && !own ? (
       <>
         <form method="post"><input type="hidden" name="intent" value="vote" /><input type="hidden" name="targetType" value={targetType} /><input type="hidden" name="targetId" value={targetId} /><input type="hidden" name="value" value={myVote === 1 ? "0" : "1"} />
@@ -35,13 +35,13 @@ const btn = "inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rou
           <button type="submit" class={btn} aria-pressed={myVote === -1 ? "true" : "false"} aria-label={myVote === -1 ? t.removeVote : t.downvote} data-testid="vote-down">▼</button></form>
       </>
     ) : <span class="text-sm" data-testid="score">{fillForums(t.score, { score })}</span>}
-  </div>
-  <div role="group" aria-label={t.reactionGroup} class="flex flex-wrap items-center gap-2">
+  </fieldset>
+  <fieldset class="m-0 flex min-w-0 flex-wrap items-center gap-2 border-0 p-0"><legend class="sr-only">{t.reactionGroup}</legend>
     {FORUM_REACTIONS.map((r) => signedIn ? (
       <form method="post"><input type="hidden" name="intent" value="react" /><input type="hidden" name="targetType" value={targetType} /><input type="hidden" name="targetId" value={targetId} /><input type="hidden" name="reaction" value={r} />
         <button type="submit" class={btn} aria-pressed={mineOf(r) ? "true" : "false"} data-testid={`react-${r}`}>{t.reactions[r]} <span>{countOf(r)}</span></button></form>
     ) : countOf(r) > 0 ? <span class="rounded-md border px-3 py-2 text-sm">{t.reactions[r]} {countOf(r)}</span> : null)}
-  </div>
+  </fieldset>
   {signedIn && !own && (
     <details class="text-sm">
       <summary class="inline-flex min-h-11 cursor-pointer items-center rounded-md border px-3">{t.report}</summary>

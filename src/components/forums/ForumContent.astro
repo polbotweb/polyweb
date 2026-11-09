@@ -1,9 +1,16 @@
 ---
-/** Corps d'un message : HTML DÉJÀ assaini à l'écriture (`core/content/markdown` → sanitizeHtml). */
+/**
+ * Corps d'un message : HTML assaini à l'écriture (`core/content/markdown` → sanitizeHtml) et
+ * ré-assaini ici au rendu (défense en profondeur, sortie idempotente).
+ */
+import { sanitizeHtml } from "@/lib/sanitize";
+
 interface Props { html: string }
 const { html } = Astro.props;
+const safe = sanitizeHtml(html);
 ---
-<div class="forum-content grid gap-3 break-words" set:html={html} />
+{/* eslint-disable-next-line astro/no-set-html-directive -- HTML ré-assaini juste au-dessus via sanitizeHtml()/DOMPurify (liste blanche, voir src/lib/sanitize.ts) */}
+<div class="forum-content grid gap-3 break-words" set:html={safe} />
 <style>
   .forum-content :global(h3), .forum-content :global(h4), .forum-content :global(h5), .forum-content :global(h6) { font-weight: 600; }
   .forum-content :global(ul) { list-style: disc; padding-inline-start: 1.5rem; }

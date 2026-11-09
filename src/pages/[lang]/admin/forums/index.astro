@@ -18,6 +18,7 @@ import { categoryLabel } from "@/modules/forums/domain/defaults";
 import { FORUM_VISIBILITIES } from "@/modules/forums/schema";
 import { FORUM_LOCALES, handleAdminForumsForm } from "@/modules/forums/web/admin-forms";
 import { fillForums, getForumsTranslations } from "@/modules/forums/i18n";
+import { moderationQueueUrl } from "@/modules/forums/web/moderation-link";
 
 export const prerender = false;
 const auth = await requireAuth(Astro);
