@@ -1,6 +1,6 @@
 ════════════════════════════════════════════════════════════════════════════════
   VITEST UNIT & INTEGRATION TEST REPORT
-  Generated: 2026-11-08 19:23:19
+  Generated: 2026-11-09 10:23:49
 ════════════════════════════════════════════════════════════════════════════════
 
   ✅ tests/integration/audit-append-only.test.ts  (4/4 passed)
@@ -37,6 +37,7 @@
   ✅ tests/integration/legal-cms.test.ts  (19/19 passed)
   ✅ tests/integration/logistics-inventory.test.ts  (9/9 passed)
   ✅ tests/integration/logistics-module.test.ts  (6/6 passed)
+  ✅ tests/integration/messaging-core.test.ts  (2/2 passed)
   ✅ tests/integration/middleware.test.ts  (4/4 passed)
   ✅ tests/integration/moderation-core.test.ts  (13/13 passed)
   ✅ tests/integration/moderation-migration.test.ts  (3/3 passed)
@@ -219,13 +220,6 @@
   ✅ tests/unit/cms/module-registry.test.ts  (2/2 passed)
   ✅ tests/unit/cms/resource-contract.test.ts  (6/6 passed)
   ✅ tests/unit/cms/workflow.test.ts  (4/4 passed)
-  ✅ tests/unit/core/category-taxonomy.test.ts  (5/5 passed)
-  ✅ tests/unit/core/documents.test.ts  (9/9 passed)
-  ✅ tests/unit/core/einvoice-pdfa.test.ts  (4/4 passed)
-  ✅ tests/unit/core/einvoice.test.ts  (16/16 passed)
-  ✅ tests/unit/core/money.test.ts  (29/29 passed)
-  ✅ tests/unit/core/numbering.test.ts  (3/3 passed)
-  ✅ tests/unit/core/payments.test.ts  (19/19 passed)
   ✅ tests/unit/crm/admin-resource.test.ts  (3/3 passed)
   ✅ tests/unit/crm/domain.test.ts  (9/9 passed)
   ✅ tests/unit/dashboard/metrics.test.ts  (3/3 passed)
@@ -235,11 +229,19 @@
   ✅ tests/unit/database/seed-manifest.test.ts  (3/3 passed)
   ✅ tests/unit/database/services-data-invariants.test.ts  (5/5 passed)
   ✅ tests/unit/database/services-data-shape.test.ts  (1/1 passed)
+  ✅ tests/unit/core/category-taxonomy.test.ts  (5/5 passed)
+  ✅ tests/unit/core/documents.test.ts  (9/9 passed)
+  ✅ tests/unit/core/einvoice-pdfa.test.ts  (4/4 passed)
+  ✅ tests/unit/core/einvoice.test.ts  (16/16 passed)
+  ✅ tests/unit/core/money.test.ts  (29/29 passed)
+  ✅ tests/unit/core/numbering.test.ts  (3/3 passed)
+  ✅ tests/unit/core/payments.test.ts  (19/19 passed)
   ✅ tests/unit/effect/foundation.test.ts  (4/4 passed)
   ✅ tests/unit/fx/fx.test.ts  (6/6 passed)
   ✅ tests/unit/logistics/admin-resource.test.ts  (3/3 passed)
   ✅ tests/unit/logistics/domain.test.ts  (9/9 passed)
   ✅ tests/unit/logistics/inventory-ledger.test.ts  (11/11 passed)
+  ✅ tests/unit/messaging/core.test.ts  (2/2 passed)
   ✅ tests/unit/moderation/core.test.ts  (6/6 passed)
   ✅ tests/unit/modules/sales-fec.test.ts  (18/18 passed)
   ✅ tests/unit/modules/tax-domain.test.ts  (16/16 passed)
@@ -272,12 +274,12 @@
   SUMMARY
 ════════════════════════════════════════════════════════════════════════════════
 
-  Total tests:   2238
-  Passed:        2237  ✅
+  Total tests:   2242
+  Passed:        2241  ✅
   Failed:        0  
   Skipped:       1
-  Duration:      61s
+  Duration:      40s
 
 ════════════════════════════════════════════════════════════════════════════════
-  END OF REPORT — 2237/2238 passed
+  END OF REPORT — 2241/2242 passed
 ════════════════════════════════════════════════════════════════════════════════

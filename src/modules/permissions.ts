@@ -2,6 +2,7 @@
  * Agrégat des permissions déclarées par les modules (registre core `permissions/registry`).
  * `pnpm module:new` ajoute automatiquement le module généré entre les marqueurs.
  */
+import { messagingPermissions } from "@/modules/messaging/permissions/statements";
 import { blogPermissions } from "@/modules/blog/permissions/statements";
 import { servicesPermissions } from "@/modules/services/permissions/statements";
 import { eventsPermissions } from "@/modules/events/permissions/statements";
@@ -18,6 +19,7 @@ import { bookingsPermissions } from "@/modules/bookings/permissions/statements";
 // @module-permissions:imports
 
 export const MODULE_PERMISSIONS = [
+  messagingPermissions,
   blogPermissions,
   servicesPermissions,
   eventsPermissions,

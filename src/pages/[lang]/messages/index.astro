@@ -1,0 +1,80 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AuthSidebar from "@organisms/AuthSidebar/AuthSidebar.astro";
+import { requireAuth } from "@/lib/auth-guards";
+import { Effect } from "effect";
+import { getMessagingPreference, listConversations } from "@/core/messaging/service";
+import { getMessagingTranslations } from "@/core/messaging/i18n";
+
+export const prerender = false;
+const auth = await requireAuth(Astro);
+if ("redirect" in auth) return auth.redirect;
+const { user, locale, authT } = auth;
+const mt = getMessagingTranslations(locale);
+const items = await Effect.runPromise(listConversations(user.id));
+const who = await Effect.runPromise(getMessagingPreference(user.id));
+---
+<BaseLayout title={mt.title}>
+  <AuthLayout title={mt.title}>
+    <AuthSidebar slot="sidebar" t={authT} locale={locale} user={user} activeItem="messages" />
+    <div data-messaging-inbox class="grid gap-6">
+      <section class="rounded-xl border p-4">
+        <h2 class="mb-3 font-medium">{mt.preferenceLabel}</h2>
+        <form class="flex flex-wrap items-end gap-3" data-messaging-pref>
+          <label class="grid gap-1 text-sm"><span>{mt.preferenceLabel}</span>
+            <select name="whoCanMessage" class="min-h-11 rounded-md border px-3" value={who}>
+              <option value="everyone" selected={who === "everyone"}>{mt.whoEveryone}</option>
+              <option value="shared_org" selected={who === "shared_org"}>{mt.whoSharedOrg}</option>
+              <option value="nobody" selected={who === "nobody"}>{mt.whoNobody}</option>
+            </select>
+          </label>
+          <button type="submit" class="min-h-11 rounded-md border px-4">{mt.saved}</button>
+        </form>
+      </section>
+      <section class="rounded-xl border p-4">
+        <h2 class="mb-3 font-medium">{mt.newConversation}</h2>
+        <form class="grid gap-3" data-messaging-start>
+          <label class="grid gap-1 text-sm"><span>{mt.peerLabel}</span>
+            <input name="userId" required maxlength="64" class="min-h-11 rounded-md border px-3" />
+          </label>
+          <label class="grid gap-1 text-sm"><span>{mt.bodyLabel}</span>
+            <textarea name="body" required maxlength="4000" rows="3" class="rounded-md border px-3 py-2"></textarea>
+          </label>
+          <button type="submit" class="min-h-11 w-fit rounded-md border px-4">{mt.send}</button>
+          <p role="alert" data-msg-error hidden class="text-sm text-destructive"></p>
+        </form>
+      </section>
+      <section>
+        <h2 class="mb-2 font-medium">{mt.inbox}</h2>
+        {items.length === 0 ? <p data-testid="messaging-empty">{mt.empty}</p> : (
+          <ul class="grid gap-2" data-testid="messaging-list">
+            {items.map((c) => {
+              const peer = c.userLo === user.id ? c.userHi : c.userLo;
+              return (
+                <li><a class="block rounded-md border p-3 underline-offset-4 hover:underline" href={`/${locale}/messages/${c.id}`}>{peer}{c.lastMessageAt && <span class="ms-2 text-sm opacity-70">{new Date(c.lastMessageAt).toLocaleString(locale)}</span>}</a></li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+    </div>
+  </AuthLayout>
+</BaseLayout>
+<script>
+  import { actions } from "astro:actions";
+  document.querySelector("[data-messaging-pref]")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target as HTMLFormElement);
+    await actions.messaging.preferenceSet({ whoCanMessage: String(fd.get("whoCanMessage")) as "shared_org" });
+  });
+  document.querySelector("[data-messaging-start]")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const fd = new FormData(form);
+    const box = form.querySelector("[data-msg-error]");
+    const res = await actions.messaging.start({ userId: String(fd.get("userId")), body: String(fd.get("body")) });
+    if (res.error) { if (box) { (box as HTMLElement).hidden = false; box.textContent = res.error.message; } return; }
+    location.href = `/${document.documentElement.lang || "fr"}/messages/${res.data.conversationId}`;
+  });
+</script>
