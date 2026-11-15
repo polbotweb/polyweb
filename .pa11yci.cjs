@@ -37,6 +37,8 @@ let subscriptionsSeed = null;
 let rolesOrg = null;
 // Notifications : jeton de désinscription signé du compte seedé (page publique « noindex »).
 let notificationsSeed = null;
+// Forums : forum par défaut et sujet seedé (sondage, étiquette, réponse).
+let forumsSeed = null;
 // Logistique : inventaires seedés (un en cours, un validé) — pages inventaires et grand livre.
 let logistics = null;
 if (fs.existsSync(COOKIES_PATH)) {
@@ -51,6 +53,7 @@ if (fs.existsSync(COOKIES_PATH)) {
   subscriptionsSeed = data.subscriptionsSeed ?? null;
   rolesOrg = data.rolesOrg ?? null;
   notificationsSeed = data.notificationsSeed ?? null;
+  forumsSeed = data.forumsSeed ?? null;
 }
 
 // ── Route definitions per locale ─────────────────────────────────────
@@ -109,6 +112,11 @@ for (const lang of locales) {
   }
   if (shopReturn) {
     publicUrls.push(`${BASE}/${lang}/shop/order/${encodeURIComponent(shopReturn.orderId)}?t=${encodeURIComponent(shopReturn.token)}`);
+  }  // Forums : index, forum par défaut et sujet seedé (sondage, réponse, étiquette).
+  publicUrls.push(`${BASE}/${lang}/forums`);
+  if (forumsSeed) {
+    publicUrls.push(`${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}`);
+    publicUrls.push(`${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}/t/${encodeURIComponent(forumsSeed.topicId)}`);
   }
 }
 
@@ -127,7 +135,13 @@ for (const lang of locales) {
   authedUrls.push({ url: `${BASE}/${lang}/messages`, headers: { Cookie: userCookie } });
   authedUrls.push({ url: `${BASE}/${lang}/notifications`, headers: { Cookie: userCookie } });
   authedUrls.push({ url: `${BASE}/${lang}/notifications/preferences`, headers: { Cookie: userCookie } });
-  if (notificationsSeed) authedUrls.push(`${BASE}/${lang}/notifications/unsubscribe?token=${encodeURIComponent(notificationsSeed.unsubscribeToken)}`);
+  if (notificationsSeed) authedUrls.push(`${BASE}/${lang}/notifications/unsubscribe?token=${encodeURIComponent(notificationsSeed.unsubscribeToken)}`);  // Forums connecté : formulaire « nouveau sujet », sujet avec votes / réactions / suivi.
+  if (forumsSeed) {
+    // URL distinctes des variantes publiques / admin (pa11y-ci indexe ses résultats par URL) :
+    // `?page=1` (identique à la page 1) et un avis de confirmation (rendu <output>).
+    authedUrls.push({ url: `${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}?page=1`, headers: { Cookie: userCookie } });
+    authedUrls.push({ url: `${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}/t/${encodeURIComponent(forumsSeed.topicId)}?notice=replied`, headers: { Cookie: userCookie } });
+  }
 }
 
 // Admin pages (admin cookie) — all admin routes
@@ -173,7 +187,10 @@ for (const lang of locales) {
   // Organisation : rôles (grille des modules), accès par site et journal d'audit.
   if (rolesOrg) {
     for (const sub of ['roles', 'sites', 'audit', 'moderation']) adminUrls.push({ url: `${BASE}/${lang}/organizations/${encodeURIComponent(rolesOrg.slug)}/${sub}`, headers: { Cookie: adminCookie } });
-  }
+  }  // Forums : administration (catégories, étiquettes, sanctions) et outils de modération d'un sujet.
+  adminUrls.push({ url: `${BASE}/${lang}/admin/forums`, headers: { Cookie: adminCookie } });
+  adminUrls.push({ url: `${BASE}/${lang}/admin/forums/sanctions`, headers: { Cookie: adminCookie } });
+  if (forumsSeed) adminUrls.push({ url: `${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}/t/${encodeURIComponent(forumsSeed.topicId)}?notice=moderated`, headers: { Cookie: adminCookie } });
 }
 
 module.exports = {

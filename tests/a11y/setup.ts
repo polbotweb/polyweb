@@ -413,6 +413,7 @@ async function seedRoles() {
   const { logAuditEvent } = await import('../../src/lib/audit');
   const { inArray } = await import('drizzle-orm');
   await deleteRolesSeed();
+  await deleteForumsSeed();
   const db = getDrizzle();
   const users = await db.select({ id: schema.user.id, email: schema.user.email }).from(schema.user).where(inArray(schema.user.email, [SEED_ADMIN.email, SEED_USER.email]));
   const owner = users.find((u) => u.email === SEED_ADMIN.email)!;
@@ -451,6 +452,45 @@ async function seedNotifications() {
   ]);
   const secret = await appRuntime.runPromise(Effect.gen(function* () { return (yield* AppConfig).signingSecret; }) as import('effect').Effect.Effect<string, never, never>);
   return { notificationsSeed: { unsubscribeToken: signUnsubscribeToken({ userId: account.id, category: 'comments', channel: 'email' }, secret) } };
+}
+
+/**
+ * Forums : forum par défaut du site (catégories pré-remplies) et un sujet public du compte seedé,
+ * avec sondage, étiquette et une réponse de l'admin — pages liste, sujet et administration.
+ */
+const A11Y_FORUM_TOPIC_TITLE = 'A11y — sujet de forum';
+async function seedForums() {
+  const { getDrizzle, schema } = await import('../../src/database/drizzle');
+  const { forums, forumCategories, forumTopics, forumPosts, forumPolls, forumPollOptions, forumTags, forumTopicTags } = await import('../../src/database/schemas');
+  const { and, eq } = await import('drizzle-orm');
+  const { ensureDefaultSite } = await import('../../src/modules/sites/domain/sites');
+  const { runApp } = await import('../../src/lib/effect/http');
+  const { ensureSiteForum } = await import('../../src/modules/forums/services/forum.service');
+  const { renderMarkdown } = await import('../../src/core/content/markdown');
+  const db = getDrizzle();
+  const site = await ensureDefaultSite();
+  await runApp(ensureSiteForum({ siteId: site.id, organizationId: site.organizationId ?? null }));
+  const [forum] = await db.select().from(forums).where(eq(forums.siteId, site.id)).orderBy(forums.position).limit(1);
+  const [category] = await db.select().from(forumCategories).where(eq(forumCategories.forumId, forum.id)).orderBy(forumCategories.position).limit(1);
+  const [account] = await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, SEED_USER.email)).limit(1);
+  const [admin] = await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, SEED_ADMIN.email)).limit(1);
+  await deleteForumsSeed();
+  const body = 'Bonjour **à tous** :\n\n- point un\n- point deux\n\n> Citation';
+  const [topic] = await db.insert(forumTopics).values({ forumId: forum.id, categoryId: category.id, siteId: site.id, organizationId: forum.organizationId, authorId: account.id, title: A11Y_FORUM_TOPIC_TITLE, body, bodyHtml: renderMarkdown(body), replyCount: 1 }).returning({ id: forumTopics.id });
+  await db.insert(forumPosts).values({ topicId: topic.id, siteId: site.id, organizationId: forum.organizationId, authorId: admin.id, body: 'Réponse `code`', bodyHtml: renderMarkdown('Réponse `code`') });
+  const [poll] = await db.insert(forumPolls).values({ topicId: topic.id, question: 'Préférence ?', multiple: false, resultsVisibility: 'always' }).returning({ id: forumPolls.id });
+  await db.insert(forumPollOptions).values([{ pollId: poll.id, label: 'Oui', position: 0 }, { pollId: poll.id, label: 'Non', position: 1 }]);
+  const [existingTag] = await db.select({ id: forumTags.id }).from(forumTags).where(and(eq(forumTags.siteId, site.id), eq(forumTags.slug, 'a11y'))).limit(1);
+  const tagId = existingTag?.id ?? (await db.insert(forumTags).values({ siteId: site.id, slug: 'a11y', label: 'A11y' }).returning({ id: forumTags.id }))[0].id;
+  await db.insert(forumTopicTags).values({ topicId: topic.id, tagId });
+  return { forumsSeed: { forumSlug: forum.slug, topicId: topic.id } };
+}
+
+async function deleteForumsSeed() {
+  const { getDrizzle } = await import('../../src/database/drizzle');
+  const { forumTopics } = await import('../../src/database/schemas');
+  const { eq } = await import('drizzle-orm');
+  await getDrizzle().delete(forumTopics).where(eq(forumTopics.title, A11Y_FORUM_TOPIC_TITLE)).catch(() => {});
 }
 
 async function setup() {
@@ -519,7 +559,10 @@ async function setup() {
   const notifs = await seedNotifications();
   console.log('[a11y] Notifications and an unsubscribe token seeded for the seed user');
 
-  const data = { userCookie, adminCookie: freshAdminCookie, ...shop, ...logistics, ...subs, ...roles, ...notifs };
+  const forumsData = await seedForums();
+  console.log('[a11y] Forum topic with poll, tag and reply seeded');
+
+  const data = { userCookie, adminCookie: freshAdminCookie, ...shop, ...logistics, ...subs, ...roles, ...notifs, ...forumsData };
   writeFileSync(COOKIES_PATH, JSON.stringify(data, null, 2));
   console.log(`[a11y] Cookies written to ${COOKIES_PATH}`);
 }

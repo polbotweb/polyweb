@@ -51,6 +51,12 @@ export interface ModerationTargetAdapter {
   readonly load: (executor: ModerationExecutor, id: string) => Effect.Effect<ModerationTargetInfo | null, DbError>;
   readonly excerpt: (executor: ModerationExecutor, id: string, locale: string) => Effect.Effect<ModerationExcerpt | null, DbError>;
   /**
+   * Contenu à visibilité restreinte (membres, organisation, participants) : vrai si CE signaleur
+   * peut voir la cible. Présent, il remplace `publiclyVisible` pour accepter un signalement ;
+   * un refus reste indiscernable d'une cible absente.
+   */
+  readonly canReport?: (executor: ModerationExecutor, id: string, reporterId: string | null) => Effect.Effect<boolean, DbError>;
+  /**
    * Applique une décision dans `tx` (et ses effets métier : ex. recalcul des notes). Retourne le
    * nouveau statut, ou `null` si la décision ne change rien (idempotence). Absent : cible
    * « signalement seulement » (ex. article, service), dont le statut éditorial n'est jamais modifié.

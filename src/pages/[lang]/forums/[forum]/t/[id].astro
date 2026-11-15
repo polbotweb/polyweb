@@ -1,0 +1,203 @@
+---
+/**
+ * Un sujet : message d'ouverture, réponses paginées, votes / réactions / signalements, solution
+ * acceptée, suivi, sondage, participants d'un fil privé, outils de modération (motif obligatoire).
+ * Tout refus de lecture (fil privé, forum restreint, contenu masqué, autre site) → 404 indiscernable.
+ * Écritures : formulaires POST (champ `intent`) → mêmes services que les actions → 303.
+ */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import ForumNotice from "@/components/forums/ForumNotice.astro";
+import ForumPagination from "@/components/forums/ForumPagination.astro";
+import ForumEngagement from "@/components/forums/ForumEngagement.astro";
+import ForumContent from "@/components/forums/ForumContent.astro";
+import { getAuthTranslations, getAuthUrl, toLocale } from "@i18n/utils";
+import { runApp, runAppResult } from "@/lib/effect/http";
+import { ensureDefaultSite } from "@/modules/sites/domain/sites";
+import { topicAccess } from "@/modules/forums/services/access";
+import { listForumCategories, listSiteForums } from "@/modules/forums/services/forum.service";
+import { topicDetail } from "@/modules/forums/loaders";
+import { categoryLabel } from "@/modules/forums/domain/defaults";
+import { BODY_MAX, clampPage, NOTE_MAX, NOTE_MIN } from "@/modules/forums/domain/rules";
+import { handleTopicForm } from "@/modules/forums/web/forms";
+import { fillForums, getForumsTranslations } from "@/modules/forums/i18n";
+
+export const prerender = false;
+const locale = toLocale(Astro.params.lang);
+const t = getForumsTranslations(locale);
+const site = Astro.locals.site ?? (await ensureDefaultSite());
+const viewer = Astro.locals.user ?? null;
+const topicId = (Astro.params.id ?? "").slice(0, 64);
+const access = await runAppResult(topicAccess(topicId, viewer));
+if (!access.ok || access.value.forum.siteId !== site.id) { Astro.response.status = 404; return Astro.rewrite("/404"); }
+const { forum, manager } = access.value;
+const self = `/${locale}/forums/${forum.slug}/t/${topicId}`;
+if (Astro.params.forum !== forum.slug) return Astro.redirect(self, 301);
+Astro.response.headers.set("Cache-Control", "private, no-store");
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  const intent = String(form.get("intent") ?? "");
+  const result = await handleTopicForm(form, { topicId, viewer, context: Astro });
+  const back = intent === "leave" && result.ok ? `/${locale}/forums/${forum.slug}` : self;
+  const anchor = intent === "reply" && !result.ok ? "#reply" : "";
+  return Astro.redirect(result.ok ? `${back}?notice=${result.notice}` : `${self}?error=${result.error}${anchor}`, 303);
+}
+
+const page = clampPage(Astro.url.searchParams.get("page"));
+const detail = await runApp(topicDetail({ access: access.value, viewer, page, locale }));
+const { topic, poll } = detail;
+const signedIn = Boolean(viewer && !viewer.banned);
+const isAuthor = Boolean(viewer && topic.authorId === viewer.id);
+const canAccept = signedIn && (isAuthor || manager);
+const canReply = signedIn && topic.status === "visible" && (!topic.locked || manager);
+const fmt = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
+const authorLine = (id: string | null, name: string | null) => {
+  const a = id ? detail.authors[id] : undefined;
+  return { name: name ?? "—", reputation: a?.reputation ?? 0, badges: (a?.badges ?? []).map((b) => (t.badges as Record<string, string>)[b] ?? b) };
+};
+const moveTargets = manager
+  ? await (async () => {
+      const forums = (await runApp(listSiteForums(site.id))).filter((f) => f.id === forum.id || f.organizationId === forum.organizationId);
+      const categories = await runApp(listForumCategories(forums.map((f) => f.id)));
+      return categories.map((c) => ({ id: c.id, label: `${forums.find((f) => f.id === c.forumId)?.title ?? ""} › ${categoryLabel(c.translations, locale, c.slug).name}` }));
+    })()
+  : [];
+const signInUrl = getAuthUrl(locale, "sign-in", await getAuthTranslations(locale));
+const opener = authorLine(topic.authorId, topic.authorName);
+const field = "min-h-11 rounded-md border bg-background px-3";
+const btn = "inline-flex min-h-11 items-center rounded-md border px-4 text-sm";
+---
+<BaseLayout title={`${topic.title} — ${forum.title}`} description={forum.description ?? t.intro}>
+  <main class="mx-auto grid max-w-4xl gap-6 px-4 py-12 sm:px-6 lg:px-8" data-testid="topic-page">
+    <nav aria-label={t.back} class="flex flex-wrap gap-2 text-sm">
+      <a class="underline" href={`/${locale}/forums`}>{t.backToForums}</a><span aria-hidden="true">›</span>
+      <a class="underline" href={`/${locale}/forums/${forum.slug}`}>{forum.title}</a>
+      {detail.category && (<><span aria-hidden="true">›</span><a class="underline" href={`/${locale}/forums/${forum.slug}?category=${detail.category.slug}`}>{detail.category.name}</a></>)}
+    </nav>
+    <ForumNotice t={t} url={Astro.url} />
+
+    <article aria-labelledby="topic-title" class="grid gap-4 rounded-xl border p-5" data-testid="topic">
+      <header class="grid gap-2">
+        <h1 id="topic-title" class="font-heading text-3xl font-bold">{topic.title}</h1>
+        <p class="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
+          {topic.pinned && <span class="font-medium text-foreground">{t.pinned}</span>}
+          {topic.locked && <span data-testid="topic-locked">{t.locked}</span>}
+          {topic.acceptedPostId && <span>{t.solved}</span>}
+          {topic.isPrivate && <span>{t.private}</span>}
+          <span>{fillForums(t.by, { name: opener.name })}</span>
+          <span>{fillForums(t.reputation, { points: opener.reputation })}</span>
+          {opener.badges.length > 0 && <span>{t.badgesLabel} : {opener.badges.join(", ")}</span>}
+          <time datetime={topic.createdAt.toISOString()}>{fmt.format(topic.createdAt)}</time>
+        </p>
+        {detail.tags.length > 0 && <ul class="flex flex-wrap gap-2" aria-label={t.tagsLabel}>{detail.tags.map((tag) => <li><a class="rounded border px-2 py-1 text-xs" href={`/${locale}/forums/${forum.slug}?tag=${tag.slug}`}>#{tag.label}</a></li>)}</ul>}
+      </header>
+      {topic.status !== "visible" && <p role="note" class="rounded-md border border-destructive/60 px-3 py-2 text-sm">{t.hiddenNotice}</p>}
+      <ForumContent html={topic.bodyHtml} />
+      <ForumEngagement t={t} targetType="topic" targetId={topic.id} score={topic.score} myVote={topic.myVote} reactions={topic.reactions} signedIn={signedIn && topic.status === "visible"} own={isAuthor} />
+      {signedIn && (
+        <form method="post"><input type="hidden" name="intent" value="follow" /><input type="hidden" name="follow" value={detail.following ? "0" : "1"} />
+          <button type="submit" class={btn} aria-pressed={detail.following ? "true" : "false"} data-testid="follow">{detail.following ? t.unfollow : t.follow}</button></form>
+      )}
+    </article>
+
+    {poll && (
+      <section aria-labelledby="poll-title" class="grid gap-3 rounded-xl border p-5" data-testid="poll">
+        <h2 id="poll-title" class="font-heading text-xl font-semibold">{t.poll} : {poll.question}</h2>
+        {poll.closed && <p class="text-sm">{t.pollClosed}</p>}
+        {poll.closesAt && !poll.closed && <p class="text-sm text-muted-foreground">{t.pollClosesAt} : <time datetime={poll.closesAt.toISOString()}>{fmt.format(poll.closesAt)}</time></p>}
+        {signedIn && !poll.voted && !poll.closed && topic.status === "visible" ? (
+          <form method="post" class="grid gap-2">
+            <input type="hidden" name="intent" value="poll" /><input type="hidden" name="pollId" value={poll.id} />
+            <fieldset class="grid gap-2"><legend class="sr-only">{poll.question}</legend>
+              {poll.options.map((o) => <label class="flex min-h-11 items-center gap-2"><input type={poll.multiple ? "checkbox" : "radio"} name="optionIds" value={o.id} class="size-5" required={!poll.multiple} />{o.label}</label>)}
+            </fieldset>
+            <button type="submit" class={btn + " w-fit"} data-testid="poll-submit">{t.vote}</button>
+          </form>
+        ) : poll.voted ? <p class="text-sm">{t.voted}</p> : null}
+        {poll.showResults ? (
+          <ul class="grid gap-1" data-testid="poll-results">
+            {poll.options.map((o) => <li class="flex justify-between gap-4 border-b py-1"><span>{o.label}</span><span>{fillForums(t.votes, { count: o.votes ?? 0 })}</span></li>)}
+            <li class="pt-1 text-sm text-muted-foreground">{fillForums(t.ballots, { count: poll.totalBallots })}</li>
+          </ul>
+        ) : <p class="text-sm text-muted-foreground">{t.resultsHidden}</p>}
+      </section>
+    )}
+
+    {topic.isPrivate && (
+      <section aria-labelledby="participants-title" class="grid gap-3 rounded-xl border p-5" data-testid="participants">
+        <h2 id="participants-title" class="font-heading text-xl font-semibold">{t.participants}</h2>
+        <ul class="flex flex-wrap gap-2">{detail.participants.map((p) => <li class="rounded border px-2 py-1 text-sm">{p.name}{p.username ? ` (@${p.username})` : ""}</li>)}</ul>
+        {access.value.participant && (
+          <div class="flex flex-wrap items-end gap-3">
+            <form method="post" class="flex flex-wrap items-end gap-2"><input type="hidden" name="intent" value="invite" />
+              <label class="grid gap-1 text-sm"><span>{t.inviteLabel}</span><input name="username" required maxlength="64" autocomplete="off" class={field} /></label>
+              <button type="submit" class={btn}>{t.invite}</button></form>
+            <form method="post"><input type="hidden" name="intent" value="leave" /><button type="submit" class={btn}>{t.leave}</button></form>
+          </div>
+        )}
+      </section>
+    )}
+
+    <section aria-labelledby="replies-title" class="grid gap-4">
+      <h2 id="replies-title" class="font-heading text-xl font-semibold">{fillForums(t.replies, { count: detail.totalPosts })}</h2>
+      <ol class="grid gap-4" data-testid="posts">
+        {detail.posts.map((post) => {
+          const author = authorLine(post.authorId, post.authorName);
+          const own = Boolean(viewer && post.authorId === viewer.id);
+          return (
+            <li id={`post-${post.id}`} class:list={["grid gap-3 rounded-xl border p-4", post.accepted && "border-primary"]} data-post={post.id}>
+              <p class="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                {post.accepted && <strong class="text-foreground" data-testid="accepted">{t.acceptedAnswer}</strong>}
+                <span>{fillForums(t.by, { name: author.name })}</span>
+                <span>{fillForums(t.reputation, { points: author.reputation })}</span>
+                {author.badges.length > 0 && <span>{t.badgesLabel} : {author.badges.join(", ")}</span>}
+                <time datetime={post.createdAt.toISOString()}>{fmt.format(post.createdAt)}</time>
+              </p>
+              <ForumContent html={post.bodyHtml} />
+              <div class="flex flex-wrap items-center gap-3">
+                <ForumEngagement t={t} targetType="post" targetId={post.id} score={post.score} myVote={post.myVote} reactions={post.reactions} signedIn={signedIn && topic.status === "visible"} own={own} />
+                {canAccept && topic.status === "visible" && (
+                  <form method="post"><input type="hidden" name="intent" value="accept" /><input type="hidden" name="postId" value={post.accepted ? "" : post.id} />
+                    <button type="submit" class={btn} data-testid="accept">{post.accepted ? t.unaccept : t.accept}</button></form>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+      <ForumPagination t={t} url={Astro.url} page={page} total={detail.totalPosts} pageSize={detail.pageSize} />
+    </section>
+
+    <section id="reply" aria-labelledby="reply-title" class="rounded-xl border p-5">
+      <h2 id="reply-title" class="mb-3 font-heading text-xl font-semibold">{t.reply}</h2>
+      {!signedIn ? <p><a class="underline" href={signInUrl}>{t.signInToPost}</a></p>
+        : topic.locked && !manager ? <p role="note" data-testid="locked-notice">{t.lockedNotice}</p>
+        : canReply ? (
+          <form method="post" class="grid gap-3" data-testid="reply-form"><input type="hidden" name="intent" value="reply" />
+            <label class="grid gap-1 text-sm"><span>{t.replyLabel}</span>
+              <textarea name="body" required minlength="2" maxlength={BODY_MAX} rows="6" aria-describedby="reply-md-help" class="rounded-md border bg-background px-3 py-2"></textarea></label>
+            <p id="reply-md-help" class="text-sm text-muted-foreground">{t.markdownHelp}</p>
+            <button type="submit" class="min-h-11 w-fit rounded-md border bg-primary px-5 text-primary-foreground" data-testid="reply-submit">{t.submitReply}</button>
+          </form>
+        ) : null}
+    </section>
+
+    {manager && (
+      <section aria-labelledby="mod-title" class="rounded-xl border border-dashed p-5" data-testid="moderator-tools">
+        <h2 id="mod-title" class="mb-3 font-heading text-xl font-semibold">{t.moderatorTools}</h2>
+        <form method="post" class="grid gap-3 sm:grid-cols-2"><input type="hidden" name="intent" value="moderate" />
+          <label class="grid gap-1 text-sm"><span>{t.toolLabel}</span>
+            <select name="tool" class={field}>
+              <option value={topic.locked ? "unlock" : "lock"}>{topic.locked ? t.unlock : t.lock}</option>
+              <option value={topic.pinned ? "unpin" : "pin"}>{topic.pinned ? t.unpin : t.pin}</option>
+              <option value="move">{t.move}</option>
+            </select></label>
+          <label class="grid gap-1 text-sm"><span>{t.moveTo}</span>
+            <select name="categoryId" class={field}>{moveTargets.map((c) => <option value={c.id} selected={c.id === detail.category?.id}>{c.label}</option>)}</select></label>
+          <label class="grid gap-1 text-sm sm:col-span-2"><span>{t.note}</span><input name="note" required minlength={NOTE_MIN} maxlength={NOTE_MAX} class={field} /></label>
+          <button type="submit" class={btn + " w-fit"} data-testid="moderate-submit">{t.apply}</button>
+        </form>
+      </section>
+    )}
+  </main>
+</BaseLayout>

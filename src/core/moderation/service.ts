@@ -60,7 +60,9 @@ export const submitReport = (input: SubmitReportInput) =>
     const target = yield* targetOf(input.key);
     const db = getDrizzle();
     const info = yield* target.load(db, input.targetId);
-    if (!info || !info.publiclyVisible) return yield* Effect.fail(unavailable());
+    if (!info) return yield* Effect.fail(unavailable());
+    const reportable = target.canReport ? yield* target.canReport(db, input.targetId, input.reporterId) : info.publiclyVisible;
+    if (!reportable) return yield* Effect.fail(unavailable());
     yield* dbTry("moderation.report.insert", () =>
       db
         .insert(moderationReports)

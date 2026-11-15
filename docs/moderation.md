@@ -34,11 +34,14 @@ export const blogModeration = defineModuleModeration("blog", [
 ```
 
 - `load(executor, id)` → organisation, site, auteur, statut, visibilité publique (ou `null`).
+- `canReport` (optionnel) : `(executor, id, reporterId)` → le signaleur peut-il signaler cette cible ?
+  Remplace le critère « visible publiquement » pour les contenus à visibilité restreinte (forums
+  membres / organisation, fils privés) ; refus = `NOT_FOUND` identique.
 - `excerpt` → titre, texte court nettoyé et lien public, montrés aux seuls modérateurs autorisés.
 - `apply` (optionnel) : mise à jour conditionnelle (`WHERE status = <courant>`) dans la transaction ;
   absent = cible « signalement seulement » (articles, services : statut éditorial inchangé).
 - Adaptateurs livrés : `blog.post`, `blog.comment`, `blog.review`, `services.service`,
-  `services.comment`, `services.review` (le masquage d'un avis recalcule la note du service dans la
+  `services.comment`, `services.review`, `forums.topic`, `forums.post` (le masquage d'un avis recalcule la note du service dans la
   même transaction).
 
 ## Actions (`actions.moderation.*`)

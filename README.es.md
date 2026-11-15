@@ -220,6 +220,11 @@ formations/
   admin/
 forms/
   PolywebForm.astro
+forums/
+  ForumContent.astro
+  ForumEngagement.astro
+  ForumNotice.astro
+  ForumPagination.astro
 logistics/
   admin/
 moderation/
@@ -516,10 +521,12 @@ migrations/
   0052_notifications_core.sql
   0053_moderation_core.sql
   0054_messaging_core.sql
+  0055_forums_core.sql
   down/
     0052_notifications_core.down.sql
     0053_moderation_core.down.sql
     0054_messaging_core.down.sql
+    0055_forums_core.down.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -572,11 +579,13 @@ migrations/
     0052_snapshot.json
     0053_snapshot.json
     0054_snapshot.json
+    0055_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
   audit-log.schema.ts
   auth.schema.ts
+  badges.schema.ts
   blog.schema.ts
   consent.schema.ts
   content.schema.ts
@@ -762,6 +771,9 @@ schemas.ts
 - `messaging_conversation_states`: `conversationId`, `userId`, `lastReadAt`, `deletedAt`
 - `messaging_messages`: `id`, `conversationId`, `senderId`, `body`, `status`, `organizationId`, `createdAt`
 
+**badges.schema.ts**
+- `badge_awards`: `id`, `module`, `scopeId`, `userId`, `badge`, `awardedAt`
+
 ### Migraciones
 
 - `0000_plain_old_lace.sql`
@@ -819,6 +831,7 @@ schemas.ts
 - `0052_notifications_core.sql`
 - `0053_moderation_core.sql`
 - `0054_messaging_core.sql`
+- `0055_forums_core.sql`
 
 ### Comandos
 
@@ -954,6 +967,8 @@ audit/
   index.ts
   query.ts
   retention.ts
+badges/
+  index.ts
 blocks/
   index.ts
   registry.ts
@@ -969,6 +984,7 @@ capabilities/
   index.ts
 content/
   index.ts
+  markdown.ts
   text.ts
 content-types/
   fields.ts
@@ -1341,6 +1357,45 @@ formations/
 forms/
   domain/
     forms.ts
+forums/
+  actions/
+    community.ts
+    index.ts
+  capabilities.ts
+  domain/
+    badges.ts
+    defaults.ts
+    events.ts
+    rules.ts
+    workflow.ts
+  i18n/
+    index.ts
+  loaders/
+    community.loader.ts
+    index.ts
+  locks.ts
+  moderation/
+    adapters.ts
+  module.ts
+  notifications/
+    definitions.ts
+  permissions/
+    index.ts
+    statements.ts
+  schema/
+    index.ts
+  services/
+    access.ts
+    audit.ts
+    community.service.ts
+    counters.ts
+    forum.service.ts
+    reputation.ts
+    sanctions.ts
+  web/
+    admin-forms.ts
+    forms.ts
+    moderation-link.ts
 logistics/
   actions/
     bulk.ts
@@ -1704,6 +1759,7 @@ src/pages/
     bookings/
     crm/
     dashboard.astro
+    forums/
     index.astro
     logistics/
     media.astro
@@ -1749,6 +1805,9 @@ src/pages/
     [slug].astro
   formations/
     [slug].astro
+    index.astro
+  forums/
+    [forum]/
     index.astro
   index.astro
   messages/
@@ -2047,6 +2106,7 @@ Todas las rutas llevan el prefijo de la locale: `/fr/`, `/en/`, `/es/`, `/ar/`. 
 ### Tests
 
 - `tests/unit/cms-i18n.test.ts`
+- `tests/unit/forums/i18n.test.ts`
 - `tests/unit/i18n-key-completeness.test.ts`
 - `tests/unit/i18n-translations.test.ts`
 - `tests/unit/i18n-urls.test.ts`

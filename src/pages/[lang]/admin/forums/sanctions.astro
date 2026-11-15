@@ -1,0 +1,109 @@
+---
+/**
+ * Sanctions automatiques des forums du site administré : politique (seuils, fenêtre, durées —
+ * `configure`) et liste des sanctions avec levée motivée (`moderate`). Aucune information sur
+ * les signalements ni les signaleurs n'est affichée : seul le nombre de contenus masqués.
+ */
+import { Effect } from "effect";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import ForumNotice from "@/components/forums/ForumNotice.astro";
+import { requireAuth } from "@/lib/auth-guards";
+import { getAdminSite } from "@/lib/platform/admin";
+import { runApp } from "@/lib/effect/http";
+import { getDrizzle } from "@database/drizzle";
+import { forumsCan } from "@/modules/forums/services/access";
+import { listSanctions, sanctionPolicy } from "@/modules/forums/services/sanctions";
+import { NOTE_MAX, NOTE_MIN } from "@/modules/forums/domain/rules";
+import { moderationQueueUrl } from "@/modules/forums/web/moderation-link";
+import { handleAdminForumsForm } from "@/modules/forums/web/admin-forms";
+import { getForumsTranslations } from "@/modules/forums/i18n";
+
+export const prerender = false;
+const auth = await requireAuth(Astro);
+if ("redirect" in auth) return auth.redirect;
+const { user, locale, authT } = auth;
+const site = await getAdminSite(Astro);
+const scope = { organizationId: site.organizationId ?? null, siteId: site.id };
+const [canConfigure, canModerate] = await Promise.all([
+  Effect.runPromise(forumsCan(user, scope, ["configure"])),
+  Effect.runPromise(forumsCan(user, scope, ["moderate"])),
+]);
+if (!canConfigure && !canModerate) return Astro.redirect(`/${locale}/auth/${authT.routes["dashboard"]}`);
+const self = `/${locale}/admin/forums/sanctions`;
+
+if (Astro.request.method === "POST") {
+  const result = await handleAdminForumsForm(await Astro.request.formData(), { viewer: user, sessionId: Astro.locals.session?.id ?? null, site: { id: site.id, organizationId: scope.organizationId } });
+  return Astro.redirect(result.ok ? `${self}?notice=${result.notice}` : `${self}?error=${result.error}`, 303);
+}
+
+const policy = await runApp(sanctionPolicy(getDrizzle(), site.id));
+const sanctions = canModerate ? await runApp(listSanctions(site.id)) : [];
+const queueUrl = canModerate ? await runApp(moderationQueueUrl(locale, scope.organizationId)) : null;
+const t = getForumsTranslations(locale);
+const a = t.admin;
+const fmt = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
+const field = "min-h-11 rounded-md border bg-background px-3";
+const btn = "inline-flex min-h-11 items-center rounded-md border px-4 text-sm";
+---
+<BaseLayout title={`${a.sanctionsTitle} — ${site.name}`} description={a.sanctionsIntro}>
+  <AuthLayout title={a.sanctionsTitle}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="forums" />
+    <div class="grid gap-8" data-testid="admin-forum-sanctions">
+      <nav aria-label={a.sections} class="flex flex-wrap gap-3">
+        <a class={btn} href={`/${locale}/admin/forums`}>{a.forums}</a>
+        {queueUrl && <a class={btn} href={queueUrl}>{a.openQueue}</a>}
+      </nav>
+      <p class="text-muted-foreground">{a.sanctionsIntro}</p>
+      <ForumNotice t={t} url={Astro.url} />
+
+      <section aria-labelledby="policy-title" class="rounded-xl border p-4">
+        <h2 id="policy-title" class="mb-3 font-heading text-xl font-semibold">{a.sanctionsTitle}</h2>
+        <form method="post" class="grid gap-3 sm:grid-cols-3" data-testid="policy-form"><input type="hidden" name="intent" value="policySet" />
+          <label class="flex min-h-11 items-center gap-2 text-sm sm:col-span-3"><input type="checkbox" name="enabled" checked={policy.enabled} disabled={!canConfigure} class="size-5" />{a.policyEnabled}</label>
+          <label class="grid gap-1 text-sm"><span>{a.windowDays}</span><input type="number" name="windowDays" min="1" max="365" value={policy.windowDays} required disabled={!canConfigure} class={field} /></label>
+          <label class="grid gap-1 text-sm"><span>{a.muteThreshold}</span><input type="number" name="muteThreshold" min="1" max="100" value={policy.muteThreshold} required disabled={!canConfigure} class={field} /></label>
+          <label class="grid gap-1 text-sm"><span>{a.muteHours}</span><input type="number" name="muteHours" min="1" max="720" value={policy.muteHours} required disabled={!canConfigure} class={field} /></label>
+          <label class="grid gap-1 text-sm"><span>{a.suspendThreshold}</span><input type="number" name="suspendThreshold" min="2" max="200" value={policy.suspendThreshold} required disabled={!canConfigure} class={field} /></label>
+          <label class="grid gap-1 text-sm"><span>{a.suspendDays}</span><input type="number" name="suspendDays" min="1" max="365" value={policy.suspendDays} required disabled={!canConfigure} class={field} /></label>
+          {canConfigure && <button type="submit" class={btn + " w-fit self-end"}>{a.save}</button>}
+        </form>
+      </section>
+
+      {canModerate && (
+        <section aria-labelledby="sanctions-title" class="grid gap-3">
+          <h2 id="sanctions-title" class="font-heading text-xl font-semibold">{a.sanctionsList}</h2>
+          {sanctions.length === 0 ? <p data-testid="no-sanctions">{a.noSanctions}</p> : (
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm" data-testid="sanctions">
+                <caption class="sr-only">{a.sanctionsList}</caption>
+                <thead><tr class="border-b text-start">
+                  <th scope="col" class="p-2 text-start">{a.user}</th><th scope="col" class="p-2 text-start">{a.kinds.mute} / {a.kinds.suspension}</th>
+                  <th scope="col" class="p-2 text-start">{a.triggerCount}</th><th scope="col" class="p-2 text-start">{a.until}</th><th scope="col" class="p-2 text-start">{a.status}</th><th scope="col" class="p-2 text-start">{a.revoke}</th>
+                </tr></thead>
+                <tbody>
+                  {sanctions.map((s) => (
+                    <tr class="border-b align-top" data-sanction={s.id}>
+                      <td class="p-2">{s.userName ?? s.userId}</td>
+                      <td class="p-2">{a.kinds[s.kind]} · {s.automatic ? a.automatic : a.manual}</td>
+                      <td class="p-2">{s.triggerCount}</td>
+                      <td class="p-2"><time datetime={s.endsAt.toISOString()}>{fmt.format(s.endsAt)}</time></td>
+                      <td class="p-2">{s.active ? a.active : a.inactive}{s.revokeNote ? ` — ${s.revokeNote}` : ""}</td>
+                      <td class="p-2">{s.active && (
+                        <form method="post" class="flex flex-wrap items-end gap-2"><input type="hidden" name="intent" value="sanctionRevoke" /><input type="hidden" name="sanctionId" value={s.id} />
+                          <label class="grid gap-1"><span>{a.revokeNote}</span><input name="note" required minlength={NOTE_MIN} maxlength={NOTE_MAX} class={field} /></label>
+                          <button type="submit" class={btn} data-testid="revoke">{a.revoke}</button>
+                        </form>
+                      )}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+    </div>
+  </AuthLayout>
+</BaseLayout>

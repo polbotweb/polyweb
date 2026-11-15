@@ -265,6 +265,15 @@
       "read",
       "update",
       "delete"
+    ],
+    "forums": [
+      "create",
+      "read",
+      "update",
+      "publish",
+      "delete",
+      "moderate",
+      "configure"
     ]
   },
   "adminRole": {
@@ -508,6 +517,15 @@
       "read",
       "update",
       "delete"
+    ],
+    "forums": [
+      "create",
+      "read",
+      "update",
+      "publish",
+      "delete",
+      "moderate",
+      "configure"
     ]
   },
   "editorRole": {
@@ -655,6 +673,10 @@
       "update",
       "delete",
       "publish"
+    ],
+    "forums": [
+      "read",
+      "moderate"
     ]
   },
   "userRole": {
@@ -731,6 +753,9 @@
       "read"
     ],
     "tax": [
+      "read"
+    ],
+    "forums": [
       "read"
     ]
   },
@@ -952,6 +977,15 @@
       "read",
       "update",
       "delete"
+    ],
+    "forums": [
+      "create",
+      "read",
+      "update",
+      "publish",
+      "delete",
+      "moderate",
+      "configure"
     ]
   },
   "orgAdminRole": {
@@ -1168,6 +1202,15 @@
       "read",
       "update",
       "delete"
+    ],
+    "forums": [
+      "create",
+      "read",
+      "update",
+      "publish",
+      "delete",
+      "moderate",
+      "configure"
     ]
   },
   "orgMemberRole": {
@@ -1265,6 +1308,9 @@
       "read"
     ],
     "bookings": [
+      "read"
+    ],
+    "forums": [
       "read"
     ]
   }
