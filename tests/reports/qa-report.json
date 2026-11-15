@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-09 18:02:45",
-  "overall": "green",
+  "generatedAt": "2026-11-15 08:08:05",
+  "overall": "red",
   "reportsAvailable": 6,
   "sections": [
     {
@@ -28,10 +28,10 @@
       "key": "vitest",
       "title": "Unit & Integration Tests (Vitest)",
       "ok": true,
-      "summary": "2276/2277 passed, 1 skipped",
+      "summary": "2281/2282 passed, 1 skipped",
       "metrics": {
-        "total": 2277,
-        "passed": 2276,
+        "total": 2282,
+        "passed": 2281,
         "failed": 0,
         "skipped": 1
       }
@@ -39,12 +39,12 @@
     {
       "key": "playwright",
       "title": "End-to-End Tests (Playwright)",
-      "ok": true,
-      "summary": "307/393 passed, 86 skipped",
+      "ok": false,
+      "summary": "306/393 passed, 86 skipped, 1 failed",
       "metrics": {
         "total": 393,
-        "passed": 307,
-        "failed": 0,
+        "passed": 306,
+        "failed": 1,
         "skipped": 86
       }
     },
@@ -64,11 +64,11 @@
     {
       "key": "lighthouse",
       "title": "Performance & Quality Audit (Lighthouse CI)",
-      "ok": true,
-      "summary": "220 page(s) audited, all ≥90",
+      "ok": false,
+      "summary": "220 page(s) audited, 1 below threshold (≥90)",
       "metrics": {
         "pages": 220,
-        "belowThreshold": 0
+        "belowThreshold": 1
       }
     }
   ]
