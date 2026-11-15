@@ -4,8 +4,9 @@
  * Sous-ensemble volontairement réduit : paragraphes, sauts de ligne, titres (décalés : `#` → h3
  * pour ne jamais concurrencer le plan de la page), citations, listes, règles, blocs et spans de
  * code, gras, italique, liens http(s)/mailto/relatifs et URL nues, mentions `@pseudo`. Aucune
- * image ni HTML brut : TOUT le texte source est échappé avant transformation, puis le résultat
- * repasse par `sanitizeHtml` (DOMPurify, liste blanche) — double barrière.
+ * image ni HTML brut : chaque fragment de texte source est échappé UNE seule fois (`escapeHtml`,
+ * `&` d'abord) à son émission, jamais « dés-échappé » ensuite ; le résultat repasse par
+ * `sanitizeHtml` (DOMPurify, liste blanche) — double barrière.
  * Liens : `rel="nofollow ugc noopener noreferrer"` (contenu tiers).
  */
 import { safeUrl, sanitizeHtml } from "@/lib/sanitize";
@@ -17,19 +18,25 @@ export function escapeHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-const unescapeAttr = (v: string) => v.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-
-function link(href: string, label: string): string {
-  const url = safeUrl(unescapeAttr(href));
-  if (!url) return label;
-  return `<a href="${escapeHtml(url)}" rel="nofollow ugc noopener noreferrer">${label}</a>`;
+/**
+ * Lien : l'URL est validée sur la valeur BRUTE (jamais « dés-échappée » après coup), puis échappée
+ * une seule fois à l'écriture de l'attribut ; le libellé est échappé une seule fois aussi.
+ */
+function link(rawHref: string, rawLabel: string): string {
+  const url = safeUrl(rawHref);
+  if (!url) return escapeHtml(rawLabel);
+  return `<a href="${escapeHtml(url)}" rel="nofollow ugc noopener noreferrer">${escapeHtml(rawLabel)}</a>`;
 }
 
-/** Transformations en ligne sur du texte DÉJÀ échappé. */
-function inline(escaped: string): string {
+/**
+ * Transformations en ligne sur du texte BRUT : codes et liens sont extraits (et échappés une seule
+ * fois) derrière des marqueurs, le reste est échappé en UN passage, puis l'emphase et les mentions
+ * s'appliquent au texte échappé. Aucune étape ne reconvertit des entités en caractères.
+ */
+function inline(raw: string): string {
   const codes: string[] = [];
-  let out = escaped.replace(/`([^`\n]+)`/g, (_, code: string) => {
-    codes.push(`<code>${code}</code>`);
+  let out = raw.replace(/`([^`\n]+)`/g, (_, code: string) => {
+    codes.push(`<code>${escapeHtml(code)}</code>`);
     return `\u0000${codes.length - 1}\u0000`;
   });
   const links: string[] = [];
@@ -41,7 +48,7 @@ function inline(escaped: string): string {
     links.push(link(url, url));
     return `${lead}\u0001${links.length - 1}\u0001`;
   });
-  out = out
+  out = escapeHtml(out)
     .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
     .replace(/__([^_\n]+)__/g, "<strong>$1</strong>")
     .replace(/(^|[^\w*])\*([^*\n]+)\*(?!\w)/g, "$1<em>$2</em>")
@@ -55,7 +62,7 @@ function inline(escaped: string): string {
 /** Markdown (sous-ensemble) → HTML assaini. Entrée tronquée à `MARKDOWN_SOURCE_MAX`. */
 export function renderMarkdown(source: string): string {
   // Les caractères de contrôle U+0000/U+0001 servent de marqueurs internes : retirés de la source.
-  const lines = escapeHtml(String(source ?? "").slice(0, MARKDOWN_SOURCE_MAX).replace(/[\u0000\u0001]/g, "").replace(/\r\n?/g, "\n")).split("\n");
+  const lines = String(source ?? "").slice(0, MARKDOWN_SOURCE_MAX).replace(/[\u0000\u0001]/g, "").replace(/\r\n?/g, "\n").split("\n");
   const html: string[] = [];
   let paragraph: string[] = [];
   const flush = () => {
@@ -68,17 +75,17 @@ export function renderMarkdown(source: string): string {
       flush();
       const code: string[] = [];
       while (++i < lines.length && !/^```/.test(lines[i])) code.push(lines[i]);
-      html.push(`<pre><code>${code.join("\n")}</code></pre>`);
+      html.push(`<pre><code>${escapeHtml(code.join("\n"))}</code></pre>`);
       continue;
     }
     if (!line.trim()) { flush(); continue; }
     const heading = /^(#{1,6})\s+(.+)$/.exec(line);
     if (heading) { flush(); const level = Math.min(6, heading[1].length + 2); html.push(`<h${level}>${inline(heading[2].trim())}</h${level}>`); continue; }
     if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) { flush(); html.push("<hr>"); continue; }
-    if (/^&gt;\s?/.test(line)) {
+    if (/^>\s?/.test(line)) {
       flush();
       const quote: string[] = [];
-      for (; i < lines.length && /^&gt;\s?/.test(lines[i]); i++) quote.push(lines[i].replace(/^&gt;\s?/, ""));
+      for (; i < lines.length && /^>\s?/.test(lines[i]); i++) quote.push(lines[i].replace(/^>\s?/, ""));
       i--;
       html.push(`<blockquote><p>${quote.map(inline).join("<br>")}</p></blockquote>`);
       continue;

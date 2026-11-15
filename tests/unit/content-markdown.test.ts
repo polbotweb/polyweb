@@ -41,4 +41,34 @@ describe('core/content/markdown — rendu sûr', () => {
     expect(renderMarkdown('x'.repeat(MARKDOWN_SOURCE_MAX + 500)).length).toBeLessThan(MARKDOWN_SOURCE_MAX + 20);
     expect(escapeHtml(`<"'&>`)).toBe('&lt;&quot;&#39;&amp;&gt;');
   });
+
+  it('échappement unique : les entités saisies restent du texte littéral (jamais décodées)', () => {
+    expect(renderMarkdown('&amp;lt;')).toBe('<p>&amp;amp;lt;</p>');
+    expect(renderMarkdown('&lt;script&gt;alert(1)&lt;/script&gt;')).toBe('<p>&amp;lt;script&amp;gt;alert(1)&amp;lt;/script&amp;gt;</p>');
+    expect(renderMarkdown('a & b < c > d "e" \'f\'')).toBe('<p>a &amp; b &lt; c &gt; d "e" \'f\'</p>'); // guillemets de texte : sans danger hors attribut
+    expect(renderMarkdown('&#60;b&#62; &#x3c;i&#x3e;')).not.toMatch(/<b>|<i>/);
+    expect(renderMarkdown('&#60;b&#62;')).toBe('<p>&amp;#60;b&amp;#62;</p>');
+  });
+
+  it('liens et entités : URL validée sur la valeur brute, échappée une seule fois', () => {
+    expect(renderMarkdown('[x](https://e.com/?a=1&amp;b=2)')).toContain('href="https://e.com/?a=1&amp;amp;b=2"');
+    expect(renderMarkdown('[x](https://e.com/?a=1&b=2)')).toContain('href="https://e.com/?a=1&amp;b=2"');
+    // Guillemets dans l'URL : restent DANS la valeur de href (pas d'attribut injecté).
+    expect(renderMarkdown('[x](https://e.com/"onmouseover="alert(1))')).toBe('<p><a href="https://e.com/&quot;onmouseover=&quot;alert(1" rel="nofollow ugc noopener noreferrer">x</a>)</p>');
+    expect(renderMarkdown('[a&amp;b <i>](https://e.com)')).toContain('>a&amp;amp;b &lt;i&gt;</a>');
+    expect(renderMarkdown('https://e.com/p?x=1&amp;y=2 fin')).toContain('href="https://e.com/p?x=1&amp;amp;y=2"');
+    // Schéma masqué par une entité : non reconnu comme sûr → pas de lien.
+    expect(renderMarkdown('[x](jav&#97;script:alert(1))')).not.toContain('href=');
+    expect(renderMarkdown('[x](&#106;avascript:alert(1))')).not.toContain('href=');
+  });
+
+  it('code : contenu échappé une seule fois, entités littérales', () => {
+    expect(renderMarkdown('`&amp; <b>`')).toBe('<p><code>&amp;amp; &lt;b&gt;</code></p>');
+    expect(renderMarkdown('```\n&lt;x&gt; & <y>\n```')).toBe('<pre><code>&amp;lt;x&amp;gt; &amp; &lt;y&gt;</code></pre>');
+  });
+
+  it('citations et listes : texte brut échappé', () => {
+    expect(renderMarkdown('> a & <b>')).toBe('<blockquote><p>a &amp; &lt;b&gt;</p></blockquote>');
+    expect(renderMarkdown('- x &amp; y')).toBe('<ul><li>x &amp;amp; y</li></ul>');
+  });
 });
