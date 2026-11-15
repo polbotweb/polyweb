@@ -1,0 +1,52 @@
+---
+/** Liste compacte des sujets : titre, badges d'état, métadonnées en une ligne. */
+import Badge from "@atoms/badge/Badge.astro";
+import { fillForums, type ForumsTranslations } from "@/modules/forums/i18n";
+import type { TopicListItem } from "@/modules/forums/loaders";
+
+interface Props {
+  t: ForumsTranslations;
+  items: TopicListItem[];
+  base: string;
+  categoryName: Map<string, string>;
+  fmt: Intl.DateTimeFormat;
+  empty: string;
+}
+const { t, items, base, categoryName, fmt, empty } = Astro.props;
+---
+{items.length === 0 ? <p data-testid="no-topics" class="text-muted-foreground">{empty}</p> : (
+  <ul class="divide-y rounded-xl border bg-card" data-testid="topic-list">
+    {items.map((topic) => (
+      <li class="px-4 py-3" data-topic={topic.id}>
+        <div class="flex flex-wrap items-start gap-2">
+          <h3 class="min-w-0 flex-1 font-medium leading-snug">
+            <a class="underline-offset-4 hover:underline" href={`${base}/t/${topic.id}`}>{topic.title}</a>
+          </h3>
+          <span class="flex flex-wrap gap-1">
+            {topic.pinned && <Badge variant="primary" size="sm">{t.pinned}</Badge>}
+            {topic.locked && <Badge variant="outline" size="sm">{t.locked}</Badge>}
+            {topic.solved && <Badge variant="success" size="sm">{t.solved}</Badge>}
+            {topic.isPrivate && <Badge variant="secondary" size="sm">{t.private}</Badge>}
+            {topic.hasPoll && <Badge variant="outline" size="sm">{t.poll}</Badge>}
+          </span>
+        </div>
+        <p class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+          <span>{categoryName.get(topic.categoryId)}</span>
+          {topic.authorName && <span>{fillForums(t.by, { name: topic.authorName })}</span>}
+          <span>{fillForums(t.replies, { count: topic.replyCount })}</span>
+          <span>{fillForums(t.score, { score: topic.score })}</span>
+          <span>{t.lastActivity} : <time datetime={topic.lastPostAt.toISOString()}>{fmt.format(topic.lastPostAt)}</time></span>
+        </p>
+        {topic.tags.length > 0 && (
+          <ul class="mt-2 flex flex-wrap gap-1" aria-label={t.tagsLabel}>
+            {topic.tags.map((tag) => (
+              <li>
+                <Badge href={`${base}?tag=${tag.slug}`} variant="outline" size="sm">#{tag.label}</Badge>
+              </li>
+            ))}
+          </ul>
+        )}
+      </li>
+    ))}
+  </ul>
+)}

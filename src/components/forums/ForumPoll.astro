@@ -1,0 +1,53 @@
+---
+/** Sondage d'un sujet : vote (POST, sans JS) et résultats en barres de progression. */
+import Button from "@atoms/button/Button.astro";
+import { Progress } from "@atoms/progress";
+import { fillForums, type ForumsTranslations } from "@/modules/forums/i18n";
+import type { PollDTO } from "@/modules/forums/loaders";
+
+interface Props {
+  t: ForumsTranslations;
+  poll: PollDTO;
+  fmt: Intl.DateTimeFormat;
+  canVote: boolean;
+}
+const { t, poll, fmt, canVote } = Astro.props;
+const maxBallots = Math.max(poll.totalBallots, 1);
+---
+<section aria-labelledby="poll-title" class="grid gap-3 rounded-xl border bg-card p-5" data-testid="poll">
+  <h2 id="poll-title" class="font-heading text-xl font-semibold">{t.poll} : {poll.question}</h2>
+  {poll.closed && <p class="text-sm">{t.pollClosed}</p>}
+  {poll.closesAt && !poll.closed && <p class="text-sm text-muted-foreground">{t.pollClosesAt} : <time datetime={poll.closesAt.toISOString()}>{fmt.format(poll.closesAt)}</time></p>}
+  {canVote ? (
+    <form method="post" class="grid gap-2">
+      <input type="hidden" name="intent" value="poll" /><input type="hidden" name="pollId" value={poll.id} />
+      <fieldset class="grid gap-2"><legend class="sr-only">{poll.question}</legend>
+        {poll.options.map((o) => (
+          <label class="flex min-h-11 items-center gap-2">
+            <input type={poll.multiple ? "checkbox" : "radio"} name="optionIds" value={o.id} class="size-5" required={!poll.multiple} />
+            {o.label}
+          </label>
+        ))}
+      </fieldset>
+      <Button type="submit" variant="primary" size="sm" class="w-fit" data-testid="poll-submit">{t.vote}</Button>
+    </form>
+  ) : poll.voted ? <p class="text-sm">{t.voted}</p> : null}
+  {poll.showResults ? (
+    <ul class="grid gap-3" data-testid="poll-results">
+      {poll.options.map((o) => {
+        const votes = o.votes ?? 0;
+        const percent = Math.round((votes / maxBallots) * 100);
+        return (
+          <li class="grid gap-1">
+            <div class="flex justify-between gap-4 text-sm">
+              <span>{o.label}</span>
+              <span>{fillForums(t.votes, { count: votes })}</span>
+            </div>
+            <Progress value={percent} max={100} variant="primary" aria-hidden="true" />
+          </li>
+        );
+      })}
+      <li class="text-sm text-muted-foreground">{fillForums(t.ballots, { count: poll.totalBallots })}</li>
+    </ul>
+  ) : <p class="text-sm text-muted-foreground">{t.resultsHidden}</p>}
+</section>

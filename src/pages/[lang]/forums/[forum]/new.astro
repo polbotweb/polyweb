@@ -1,0 +1,62 @@
+---
+/**
+ * Création d'un sujet dans un forum : page dédiée (POST → 303 vers le sujet ou retour avec erreur).
+ * Forum invisible pour ce lecteur → 404 indiscernable. Lecteur non connecté : invitation à se connecter.
+ */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import ForumBreadcrumbs from "@/components/forums/ForumBreadcrumbs.astro";
+import ForumNewTopicForm from "@/components/forums/ForumNewTopicForm.astro";
+import ForumNotice from "@/components/forums/ForumNotice.astro";
+import { getAuthTranslations, getAuthUrl, toLocale } from "@i18n/utils";
+import { runApp, runAppResult } from "@/lib/effect/http";
+import { ensureDefaultSite } from "@/modules/sites/domain/sites";
+import { forumBySlug } from "@/modules/forums/services/access";
+import { listForumCategories, listSiteTags } from "@/modules/forums/services/forum.service";
+import { categoryLabel } from "@/modules/forums/domain/defaults";
+import { handleNewTopicForm } from "@/modules/forums/web/forms";
+import { getForumsTranslations } from "@/modules/forums/i18n";
+
+export const prerender = false;
+const locale = toLocale(Astro.params.lang);
+const t = getForumsTranslations(locale);
+const site = Astro.locals.site ?? (await ensureDefaultSite());
+const viewer = Astro.locals.user ?? null;
+const access = await runAppResult(forumBySlug(site.id, Astro.params.forum ?? "", viewer));
+if (!access.ok) { Astro.response.status = 404; return Astro.rewrite("/404"); }
+const { forum } = access.value;
+const base = `/${locale}/forums/${forum.slug}`;
+const self = `${base}/new`;
+Astro.response.headers.set("Cache-Control", "private, no-store");
+
+if (Astro.request.method === "POST") {
+  const result = await handleNewTopicForm(await Astro.request.formData(), { forumId: forum.id, viewer, topicUrl: (id) => `${base}/t/${id}` });
+  const back = new URL(self, Astro.url);
+  const category = Astro.url.searchParams.get("category");
+  if (category) back.searchParams.set("category", category);
+  return Astro.redirect(result.ok ? `${result.location}?notice=${result.notice}` : `${back.pathname}${back.search}${back.search ? "&" : "?"}error=${result.error}`, 303);
+}
+
+const categories = (await runApp(listForumCategories([forum.id]))).map((c) => ({ id: c.id, slug: c.slug, ...categoryLabel(c.translations, locale, c.slug) }));
+const tags = await runApp(listSiteTags(forum.siteId));
+const selected = categories.find((c) => c.slug === Astro.url.searchParams.get("category")) ?? null;
+const signedIn = Boolean(viewer && !viewer.banned);
+const signInUrl = getAuthUrl(locale, "sign-in", await getAuthTranslations(locale));
+const cancelHref = selected ? `${base}?category=${selected.slug}` : base;
+---
+<BaseLayout title={`${t.newTopic} — ${forum.title}`} description={t.newTopicIntro}>
+  <main class="mx-auto grid max-w-3xl gap-6 px-4 py-12 sm:px-6 lg:px-8" data-testid="new-topic-page">
+    <ForumBreadcrumbs label={t.breadcrumb} items={[
+      { href: `/${locale}/forums`, label: t.backToForums },
+      { href: base, label: forum.title },
+      { label: t.newTopic },
+    ]} />
+    <header>
+      <h1 class="font-heading text-3xl font-bold">{t.newTopic}</h1>
+      <p class="mt-2 text-muted-foreground">{t.newTopicIntro}</p>
+    </header>
+    <ForumNotice t={t} url={Astro.url} />
+    {!signedIn ? <p><a class="underline underline-offset-4" href={signInUrl}>{t.signInToPost}</a></p> : (
+      <ForumNewTopicForm t={t} categories={categories} tags={tags} selectedCategoryId={selected?.id} cancelHref={cancelHref} />
+    )}
+  </main>
+</BaseLayout>

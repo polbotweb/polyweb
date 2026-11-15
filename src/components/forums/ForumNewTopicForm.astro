@@ -1,0 +1,83 @@
+---
+/** Formulaire de création d'un sujet (POST, sans JavaScript) — page dédiée `/forums/[forum]/new`. */
+import Button from "@atoms/button/Button.astro";
+import { Checkbox } from "@atoms/checkbox";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import { Textarea } from "@atoms/textarea";
+import { BODY_MAX, MAX_PRIVATE_PARTICIPANTS, MAX_TAGS_PER_TOPIC, POLL_OPTIONS_MAX, TOPIC_TITLE_MAX } from "@/modules/forums/domain/rules";
+import type { ForumsTranslations } from "@/modules/forums/i18n";
+
+interface Option { id: string; name?: string; label?: string }
+interface Props {
+  t: ForumsTranslations;
+  categories: Option[];
+  tags: Option[];
+  selectedCategoryId?: string | null;
+  cancelHref: string;
+}
+const { t, categories, tags, selectedCategoryId, cancelHref } = Astro.props;
+---
+<form method="post" class="grid gap-5" data-testid="new-topic-form">
+  <div class="grid gap-1">
+    <Label for="topic-title">{t.titleLabel}</Label>
+    <Input id="topic-title" name="title" required minlength="3" maxlength={TOPIC_TITLE_MAX} />
+  </div>
+  <div class="grid gap-1">
+    <Label for="topic-category">{t.categoryLabel}</Label>
+    <NativeSelect id="topic-category" name="categoryId" required class="w-full">
+      {categories.map((c) => <NativeSelectOption value={c.id} selected={c.id === selectedCategoryId}>{c.name ?? c.label}</NativeSelectOption>)}
+    </NativeSelect>
+  </div>
+  <div class="grid gap-1">
+    <Label for="topic-body">{t.bodyLabel}</Label>
+    <Textarea id="topic-body" name="body" required minlength="2" maxlength={BODY_MAX} rows={8} aria-describedby="md-help" />
+    <p id="md-help" class="text-sm text-muted-foreground">{t.markdownHelp}</p>
+  </div>
+  {tags.length > 0 && (
+    <fieldset class="grid gap-2">
+      <legend class="text-sm font-medium">{t.tagsLabel} ({MAX_TAGS_PER_TOPIC} max)</legend>
+      <div class="flex flex-wrap gap-3">
+        {tags.map((tag) => <Checkbox id={`tag-${tag.id}`} name="tagIds" value={tag.id} label={tag.label ?? tag.name} />)}
+      </div>
+    </fieldset>
+  )}
+  <fieldset class="grid gap-3 rounded-xl border p-4">
+    <legend class="px-1 text-sm font-medium">{t.private}</legend>
+    <Checkbox id="topic-private" name="private" label={t.privateLabel} />
+    <div class="grid gap-1">
+      <Label for="topic-private-with">{t.privateWithLabel} ({MAX_PRIVATE_PARTICIPANTS} max)</Label>
+      <Input id="topic-private-with" name="privateWith" maxlength="2000" autocomplete="off" />
+    </div>
+  </fieldset>
+  <fieldset class="grid gap-3 rounded-xl border p-4">
+    <legend class="px-1 text-sm font-medium">{t.poll}</legend>
+    <Checkbox id="topic-poll" name="poll" label={t.pollLabel} />
+    <div class="grid gap-1">
+      <Label for="topic-poll-question">{t.pollQuestion}</Label>
+      <Input id="topic-poll-question" name="pollQuestion" maxlength="200" />
+    </div>
+    <div class="grid gap-1">
+      <Label for="topic-poll-options">{t.pollOptions} ({POLL_OPTIONS_MAX} max)</Label>
+      <Textarea id="topic-poll-options" name="pollOptions" rows={4} maxlength="2000" />
+    </div>
+    <Checkbox id="topic-poll-multiple" name="pollMultiple" label={t.pollMultiple} />
+    <div class="grid gap-1">
+      <Label for="topic-poll-results">{t.pollResults}</Label>
+      <NativeSelect id="topic-poll-results" name="pollResults" class="w-full">
+        <NativeSelectOption value="always">{t.resultsAlways}</NativeSelectOption>
+        <NativeSelectOption value="after_vote">{t.resultsAfterVote}</NativeSelectOption>
+        <NativeSelectOption value="after_close">{t.resultsAfterClose}</NativeSelectOption>
+      </NativeSelect>
+    </div>
+    <div class="grid gap-1">
+      <Label for="topic-poll-closes">{t.pollClosesAt}</Label>
+      <Input type="datetime-local" id="topic-poll-closes" name="pollClosesAt" />
+    </div>
+  </fieldset>
+  <div class="flex flex-wrap gap-3">
+    <Button type="submit" variant="primary" data-testid="new-topic-submit">{t.submitTopic}</Button>
+    <Button href={cancelHref} variant="outline">{t.cancel}</Button>
+  </div>
+</form>

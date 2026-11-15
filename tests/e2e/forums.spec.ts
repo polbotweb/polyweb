@@ -28,15 +28,16 @@ test("forums : catégories → sujet + sondage → réponse → recherche → ve
     const add = forumCard.getByTestId(`add-category-${forumSlug}`);
     await add.getByLabel("Identifiant d'URL").fill(categorySlug);
     await add.getByLabel("Nom (Français)").fill(`Catégorie ${stamp}`);
+    await add.getByRole("tab", { name: "English" }).click();
     await add.getByLabel("Nom (English)").fill(`Category ${stamp}`);
     await add.getByRole("button", { name: "Ajouter une catégorie" }).click();
     await expect(page.getByTestId("forum-notice")).toHaveText("Modifications enregistrées.");
     await expect(page.locator(`[data-category="${categorySlug}"]`)).toBeVisible();
-    await page.getByLabel("Libellé").fill(tagLabel);
+    await page.getByRole("textbox", { name: "Libellé", exact: true }).fill(tagLabel);
     await page.getByRole("button", { name: "Ajouter une étiquette" }).click();
     await expect(page.getByTestId("tags")).toContainText(tagLabel);
 
-    await page.goto(`/fr/forums/${forumSlug}`, { waitUntil: "networkidle" });
+    await page.goto(`/fr/forums/${forumSlug}/new`, { waitUntil: "networkidle" });
     const form = page.getByTestId("new-topic-form");
     await form.getByLabel("Titre", { exact: true }).fill(title);
     await form.locator("select[name=categoryId]").selectOption({ label: `Catégorie ${stamp}` });

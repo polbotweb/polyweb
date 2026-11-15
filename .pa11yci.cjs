@@ -140,6 +140,7 @@ for (const lang of locales) {
     // URL distinctes des variantes publiques / admin (pa11y-ci indexe ses résultats par URL) :
     // `?page=1` (identique à la page 1) et un avis de confirmation (rendu <output>).
     authedUrls.push({ url: `${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}?page=1`, headers: { Cookie: userCookie } });
+    authedUrls.push({ url: `${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}/new`, headers: { Cookie: userCookie } });
     authedUrls.push({ url: `${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}/t/${encodeURIComponent(forumsSeed.topicId)}?notice=replied`, headers: { Cookie: userCookie } });
   }
 }

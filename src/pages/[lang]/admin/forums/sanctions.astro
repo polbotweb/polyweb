@@ -8,6 +8,13 @@ import { Effect } from "effect";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
 import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import AdminResourceShell from "@organisms/AdminResourceShell.astro";
+import Badge from "@atoms/badge/Badge.astro";
+import Button from "@atoms/button/Button.astro";
+import { Checkbox } from "@atoms/checkbox";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@atoms/table";
 import ForumNotice from "@/components/forums/ForumNotice.astro";
 import { requireAuth } from "@/lib/auth-guards";
 import { getAdminSite } from "@/lib/platform/admin";
@@ -44,66 +51,103 @@ const queueUrl = canModerate ? await runApp(moderationQueueUrl(locale, scope.org
 const t = getForumsTranslations(locale);
 const a = t.admin;
 const fmt = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
-const field = "min-h-11 rounded-md border bg-background px-3";
-const btn = "inline-flex min-h-11 items-center rounded-md border px-4 text-sm";
 ---
 <BaseLayout title={`${a.sanctionsTitle} — ${site.name}`} description={a.sanctionsIntro}>
   <AuthLayout title={a.sanctionsTitle}>
     <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="forums" />
-    <div class="grid gap-8" data-testid="admin-forum-sanctions">
-      <nav aria-label={a.sections} class="flex flex-wrap gap-3">
-        <a class={btn} href={`/${locale}/admin/forums`}>{a.forums}</a>
-        {queueUrl && <a class={btn} href={queueUrl}>{a.openQueue}</a>}
-      </nav>
-      <p class="text-muted-foreground">{a.sanctionsIntro}</p>
-      <ForumNotice t={t} url={Astro.url} />
+    <AdminResourceShell title={a.sanctionsTitle} description={a.sanctionsIntro}>
+      <Fragment slot="actions">
+        <Button href={`/${locale}/admin/forums`} variant="outline" size="sm">{a.forums}</Button>
+        {queueUrl && <Button href={queueUrl} variant="outline" size="sm">{a.openQueue}</Button>}
+      </Fragment>
+      <div class="grid gap-8 p-4 sm:p-6" data-testid="admin-forum-sanctions">
+        <ForumNotice t={t} url={Astro.url} />
 
-      <section aria-labelledby="policy-title" class="rounded-xl border p-4">
-        <h2 id="policy-title" class="mb-3 font-heading text-xl font-semibold">{a.sanctionsTitle}</h2>
-        <form method="post" class="grid gap-3 sm:grid-cols-3" data-testid="policy-form"><input type="hidden" name="intent" value="policySet" />
-          <label class="flex min-h-11 items-center gap-2 text-sm sm:col-span-3"><input type="checkbox" name="enabled" checked={policy.enabled} disabled={!canConfigure} class="size-5" />{a.policyEnabled}</label>
-          <label class="grid gap-1 text-sm"><span>{a.windowDays}</span><input type="number" name="windowDays" min="1" max="365" value={policy.windowDays} required disabled={!canConfigure} class={field} /></label>
-          <label class="grid gap-1 text-sm"><span>{a.muteThreshold}</span><input type="number" name="muteThreshold" min="1" max="100" value={policy.muteThreshold} required disabled={!canConfigure} class={field} /></label>
-          <label class="grid gap-1 text-sm"><span>{a.muteHours}</span><input type="number" name="muteHours" min="1" max="720" value={policy.muteHours} required disabled={!canConfigure} class={field} /></label>
-          <label class="grid gap-1 text-sm"><span>{a.suspendThreshold}</span><input type="number" name="suspendThreshold" min="2" max="200" value={policy.suspendThreshold} required disabled={!canConfigure} class={field} /></label>
-          <label class="grid gap-1 text-sm"><span>{a.suspendDays}</span><input type="number" name="suspendDays" min="1" max="365" value={policy.suspendDays} required disabled={!canConfigure} class={field} /></label>
-          {canConfigure && <button type="submit" class={btn + " w-fit self-end"}>{a.save}</button>}
-        </form>
-      </section>
-
-      {canModerate && (
-        <section aria-labelledby="sanctions-title" class="grid gap-3">
-          <h2 id="sanctions-title" class="font-heading text-xl font-semibold">{a.sanctionsList}</h2>
-          {sanctions.length === 0 ? <p data-testid="no-sanctions">{a.noSanctions}</p> : (
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm" data-testid="sanctions">
-                <caption class="sr-only">{a.sanctionsList}</caption>
-                <thead><tr class="border-b text-start">
-                  <th scope="col" class="p-2 text-start">{a.user}</th><th scope="col" class="p-2 text-start">{a.kinds.mute} / {a.kinds.suspension}</th>
-                  <th scope="col" class="p-2 text-start">{a.triggerCount}</th><th scope="col" class="p-2 text-start">{a.until}</th><th scope="col" class="p-2 text-start">{a.status}</th><th scope="col" class="p-2 text-start">{a.revoke}</th>
-                </tr></thead>
-                <tbody>
-                  {sanctions.map((s) => (
-                    <tr class="border-b align-top" data-sanction={s.id}>
-                      <td class="p-2">{s.userName ?? s.userId}</td>
-                      <td class="p-2">{a.kinds[s.kind]} · {s.automatic ? a.automatic : a.manual}</td>
-                      <td class="p-2">{s.triggerCount}</td>
-                      <td class="p-2"><time datetime={s.endsAt.toISOString()}>{fmt.format(s.endsAt)}</time></td>
-                      <td class="p-2">{s.active ? a.active : a.inactive}{s.revokeNote ? ` — ${s.revokeNote}` : ""}</td>
-                      <td class="p-2">{s.active && (
-                        <form method="post" class="flex flex-wrap items-end gap-2"><input type="hidden" name="intent" value="sanctionRevoke" /><input type="hidden" name="sanctionId" value={s.id} />
-                          <label class="grid gap-1"><span>{a.revokeNote}</span><input name="note" required minlength={NOTE_MIN} maxlength={NOTE_MAX} class={field} /></label>
-                          <button type="submit" class={btn} data-testid="revoke">{a.revoke}</button>
-                        </form>
-                      )}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <section aria-labelledby="policy-title" class="grid gap-3">
+          <h2 id="policy-title" class="font-heading text-xl font-semibold">{a.sanctionsTitle}</h2>
+          <form method="post" class="grid gap-3 sm:grid-cols-3" data-testid="policy-form">
+            <input type="hidden" name="intent" value="policySet" />
+            <div class="sm:col-span-3">
+              <Checkbox id="policy-enabled" name="enabled" label={a.policyEnabled} checked={policy.enabled} disabled={!canConfigure} />
             </div>
-          )}
+            <div class="grid gap-1">
+              <Label for="window-days">{a.windowDays}</Label>
+              <Input type="number" id="window-days" name="windowDays" min="1" max="365" value={policy.windowDays} required disabled={!canConfigure} />
+            </div>
+            <div class="grid gap-1">
+              <Label for="mute-threshold">{a.muteThreshold}</Label>
+              <Input type="number" id="mute-threshold" name="muteThreshold" min="1" max="100" value={policy.muteThreshold} required disabled={!canConfigure} />
+            </div>
+            <div class="grid gap-1">
+              <Label for="mute-hours">{a.muteHours}</Label>
+              <Input type="number" id="mute-hours" name="muteHours" min="1" max="720" value={policy.muteHours} required disabled={!canConfigure} />
+            </div>
+            <div class="grid gap-1">
+              <Label for="suspend-threshold">{a.suspendThreshold}</Label>
+              <Input type="number" id="suspend-threshold" name="suspendThreshold" min="2" max="200" value={policy.suspendThreshold} required disabled={!canConfigure} />
+            </div>
+            <div class="grid gap-1">
+              <Label for="suspend-days">{a.suspendDays}</Label>
+              <Input type="number" id="suspend-days" name="suspendDays" min="1" max="365" value={policy.suspendDays} required disabled={!canConfigure} />
+            </div>
+            {canConfigure && <Button type="submit" variant="primary" size="sm" class="w-fit self-end">{a.save}</Button>}
+          </form>
         </section>
-      )}
-    </div>
+
+        {canModerate && (
+          <section aria-labelledby="sanctions-title" class="grid gap-3">
+            <h2 id="sanctions-title" class="font-heading text-xl font-semibold">{a.sanctionsList}</h2>
+            {sanctions.length === 0 ? <p data-testid="no-sanctions">{a.noSanctions}</p> : (
+              <div class="overflow-x-auto">
+                <Table data-testid="sanctions">
+                  <TableCaption class="sr-only">{a.sanctionsList}</TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{a.user}</TableHead>
+                      <TableHead>{a.kinds.mute} / {a.kinds.suspension}</TableHead>
+                      <TableHead>{a.triggerCount}</TableHead>
+                      <TableHead>{a.until}</TableHead>
+                      <TableHead>{a.status}</TableHead>
+                      <TableHead>{a.revoke}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sanctions.map((s) => (
+                      <TableRow data-sanction={s.id}>
+                        <TableCell>{s.userName ?? s.userId}</TableCell>
+                        <TableCell>
+                          <span class="inline-flex flex-wrap items-center gap-1">
+                            <Badge variant="outline" size="sm">{a.kinds[s.kind]}</Badge>
+                            <Badge variant={s.automatic ? "secondary" : "outline"} size="sm">{s.automatic ? a.automatic : a.manual}</Badge>
+                          </span>
+                        </TableCell>
+                        <TableCell>{s.triggerCount}</TableCell>
+                        <TableCell><time datetime={s.endsAt.toISOString()}>{fmt.format(s.endsAt)}</time></TableCell>
+                        <TableCell>
+                          <Badge variant={s.active ? "warning" : "secondary"} size="sm">{s.active ? a.active : a.inactive}</Badge>
+                          {s.revokeNote ? <p class="mt-1 text-muted-foreground">{s.revokeNote}</p> : null}
+                        </TableCell>
+                        <TableCell>
+                          {s.active && (
+                            <form method="post" class="flex flex-wrap items-end gap-2">
+                              <input type="hidden" name="intent" value="sanctionRevoke" /><input type="hidden" name="sanctionId" value={s.id} />
+                              <div class="grid gap-1">
+                                <Label for={`revoke-note-${s.id}`}>{a.revokeNote}</Label>
+                                <Input id={`revoke-note-${s.id}`} name="note" required minlength={NOTE_MIN} maxlength={NOTE_MAX} />
+                              </div>
+                              <Button type="submit" variant="outline" size="sm" data-testid="revoke">{a.revoke}</Button>
+                            </form>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </section>
+        )}
+      </div>
+    </AdminResourceShell>
   </AuthLayout>
 </BaseLayout>

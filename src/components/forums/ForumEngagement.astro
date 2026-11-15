@@ -3,6 +3,10 @@
  * Votes, réactions et signalement d'un sujet ou d'une réponse : formulaires POST (sans JS).
  * Boutons d'état exposés via `aria-pressed` ; pas de vote sur son propre contenu.
  */
+import Button from "@atoms/button/Button.astro";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import { Textarea } from "@atoms/textarea";
 import { FORUM_REACTIONS } from "@/modules/forums/schema";
 import { MODERATION_REPORT_REASONS } from "@database/schemas/moderation.schema";
 import { fillForums, type ForumsTranslations } from "@/modules/forums/i18n";
@@ -22,35 +26,41 @@ interface Props {
 const { t, targetType, targetId, score, myVote, reactions, signedIn, own } = Astro.props;
 const countOf = (r: string) => reactions.find((x) => x.reaction === r)?.count ?? 0;
 const mineOf = (r: string) => reactions.find((x) => x.reaction === r)?.mine ?? false;
-const btn = "inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-md border px-3 text-sm";
 ---
-<div class="flex flex-wrap items-center gap-3" data-engagement={targetId}>
-  <fieldset class="m-0 flex min-w-0 items-center gap-2 border-0 p-0"><legend class="sr-only">{t.voteGroup}</legend>
+<div class="flex flex-wrap items-center gap-2" data-engagement={targetId}>
+  <fieldset class="m-0 flex min-w-0 items-center gap-1 border-0 p-0"><legend class="sr-only">{t.voteGroup}</legend>
     {signedIn && !own ? (
       <>
         <form method="post"><input type="hidden" name="intent" value="vote" /><input type="hidden" name="targetType" value={targetType} /><input type="hidden" name="targetId" value={targetId} /><input type="hidden" name="value" value={myVote === 1 ? "0" : "1"} />
-          <button type="submit" class={btn} aria-pressed={myVote === 1 ? "true" : "false"} aria-label={myVote === 1 ? t.removeVote : t.upvote} data-testid="vote-up">▲</button></form>
-        <span class="min-w-16 text-center text-sm" data-testid="score">{fillForums(t.score, { score })}</span>
+          <Button type="submit" variant={myVote === 1 ? "primary" : "outline"} size="sm" aria-pressed={myVote === 1 ? "true" : "false"} aria-label={myVote === 1 ? t.removeVote : t.upvote} data-testid="vote-up">▲</Button></form>
+        <span class="min-w-12 text-center text-sm tabular-nums" data-testid="score">{fillForums(t.score, { score })}</span>
         <form method="post"><input type="hidden" name="intent" value="vote" /><input type="hidden" name="targetType" value={targetType} /><input type="hidden" name="targetId" value={targetId} /><input type="hidden" name="value" value={myVote === -1 ? "0" : "-1"} />
-          <button type="submit" class={btn} aria-pressed={myVote === -1 ? "true" : "false"} aria-label={myVote === -1 ? t.removeVote : t.downvote} data-testid="vote-down">▼</button></form>
+          <Button type="submit" variant={myVote === -1 ? "primary" : "outline"} size="sm" aria-pressed={myVote === -1 ? "true" : "false"} aria-label={myVote === -1 ? t.removeVote : t.downvote} data-testid="vote-down">▼</Button></form>
       </>
-    ) : <span class="text-sm" data-testid="score">{fillForums(t.score, { score })}</span>}
+    ) : <span class="text-sm tabular-nums" data-testid="score">{fillForums(t.score, { score })}</span>}
   </fieldset>
-  <fieldset class="m-0 flex min-w-0 flex-wrap items-center gap-2 border-0 p-0"><legend class="sr-only">{t.reactionGroup}</legend>
+  <fieldset class="m-0 flex min-w-0 flex-wrap items-center gap-1 border-0 p-0"><legend class="sr-only">{t.reactionGroup}</legend>
     {FORUM_REACTIONS.map((r) => signedIn ? (
       <form method="post"><input type="hidden" name="intent" value="react" /><input type="hidden" name="targetType" value={targetType} /><input type="hidden" name="targetId" value={targetId} /><input type="hidden" name="reaction" value={r} />
-        <button type="submit" class={btn} aria-pressed={mineOf(r) ? "true" : "false"} data-testid={`react-${r}`}>{t.reactions[r]} <span>{countOf(r)}</span></button></form>
-    ) : countOf(r) > 0 ? <span class="rounded-md border px-3 py-2 text-sm">{t.reactions[r]} {countOf(r)}</span> : null)}
+        <Button type="submit" variant={mineOf(r) ? "secondary" : "ghost"} size="sm" aria-pressed={mineOf(r) ? "true" : "false"} data-testid={`react-${r}`}>{t.reactions[r]}{countOf(r) > 0 ? ` ${countOf(r)}` : ""}</Button></form>
+    ) : countOf(r) > 0 ? <span class="rounded-md px-2 py-1 text-sm text-muted-foreground">{t.reactions[r]} {countOf(r)}</span> : null)}
   </fieldset>
   {signedIn && !own && (
     <details class="text-sm">
-      <summary class="inline-flex min-h-11 cursor-pointer items-center rounded-md border px-3">{t.report}</summary>
-      <form method="post" class="mt-2 grid max-w-md gap-2 rounded-md border p-3">
+      <summary class="inline-flex h-9 cursor-pointer items-center rounded-md border bg-background px-4">{t.report}</summary>
+      <form method="post" class="mt-2 grid max-w-md gap-2 rounded-md border bg-card p-3">
         <input type="hidden" name="intent" value="report" /><input type="hidden" name="targetType" value={targetType} /><input type="hidden" name="targetId" value={targetId} />
-        <label class="grid gap-1"><span>{t.reportReason}</span>
-          <select name="reason" required class="min-h-11 rounded-md border bg-background px-3">{MODERATION_REPORT_REASONS.map((reason) => <option value={reason}>{(t.reasons as Record<string, string>)[reason] ?? reason}</option>)}</select></label>
-        <label class="grid gap-1"><span>{t.reportDetails}</span><textarea name="description" maxlength="1000" rows="2" class="rounded-md border bg-background px-3 py-2"></textarea></label>
-        <button type="submit" class="min-h-11 w-fit rounded-md border px-4" data-testid="report-submit">{t.report}</button>
+        <div class="grid gap-1">
+          <Label for={`report-reason-${targetId}`}>{t.reportReason}</Label>
+          <NativeSelect id={`report-reason-${targetId}`} name="reason" required class="w-full">
+            {MODERATION_REPORT_REASONS.map((reason) => <NativeSelectOption value={reason}>{(t.reasons as Record<string, string>)[reason] ?? reason}</NativeSelectOption>)}
+          </NativeSelect>
+        </div>
+        <div class="grid gap-1">
+          <Label for={`report-details-${targetId}`}>{t.reportDetails}</Label>
+          <Textarea id={`report-details-${targetId}`} name="description" maxlength="1000" rows={2} />
+        </div>
+        <Button type="submit" variant="outline" size="sm" class="w-fit" data-testid="report-submit">{t.report}</Button>
       </form>
     </details>
   )}
