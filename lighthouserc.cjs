@@ -127,7 +127,7 @@ for (const lang of locales) {
   if (notificationsSeed) authedUrls.push(`${BASE}/${lang}/notifications/unsubscribe?token=${encodeURIComponent(notificationsSeed.unsubscribeToken)}`);
   // Forum connecté : formulaire « nouveau sujet » (fil privé, sondage, étiquettes).
   // `?page=1` : URL distincte de la variante publique (rapports nommés par URL).
-  if (forumsSeed) authedUrls.push(`${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}?page=1`);
+  if (forumsSeed) authedUrls.push(`${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}?page=1`, `${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}/new`);
 }
 
 const adminUrls = [];
