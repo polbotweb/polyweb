@@ -3,7 +3,7 @@ const fr = {
   /** Forum créé par défaut pour un site (voir `ensureSiteForum`) : titre et description dans la langue du site. */
   defaultForum: { title: "Communauté", description: "Échanges, questions et annonces de la communauté." },
   title: "Forums", intro: "Échangez avec la communauté : questions, idées et annonces.", noForums: "Aucun forum n'est disponible pour le moment.",
-  categories: "Catégories", topics: "Sujets", topicCount: "{count} sujet(s)", newTopic: "Nouveau sujet", titleLabel: "Titre", bodyLabel: "Message",
+  categories: "Catégories", topics: "Sujets", topicCount: "{count} sujet(s)", newTopic: "Nouveau sujet", newTopicIntro: "Choisissez une catégorie, rédigez votre message, et ajoutez au besoin des étiquettes, un fil privé ou un sondage.", cancel: "Annuler", breadcrumb: "Fil d'Ariane", clearFilters: "Réinitialiser les filtres", resultsFor: "Résultats pour « {query} »", noResults: "Aucun sujet ne correspond à cette recherche.", titleLabel: "Titre", bodyLabel: "Message",
   markdownHelp: "Markdown : **gras**, *italique*, `code`, listes, citations (>), liens ; mentionnez avec @pseudo.",
   categoryLabel: "Catégorie", tagsLabel: "Étiquettes", privateLabel: "Fil privé (visible uniquement des participants)",
   privateWithLabel: "Participants (pseudos séparés par des virgules)", pollLabel: "Ajouter un sondage", pollQuestion: "Question", pollOptions: "Options (une par ligne)",
@@ -34,7 +34,7 @@ const fr = {
     visibilities: { public: "Public", members: "Membres connectés", org: "Membres de l'organisation" } as Record<string, string>,
     status: "Statut", statuses: { DRAFT: "Brouillon", PUBLISHED: "Publié", ARCHIVED: "Archivé" } as Record<string, string>,
     publish: "Publier", unpublish: "Repasser en brouillon", archive: "Archiver", save: "Enregistrer", create: "Créer",
-    categoriesTitle: "Catégories", categoryName: "Nom ({locale})", categoryDescription: "Description ({locale})", categorySlug: "Identifiant d'URL",
+    categoriesTitle: "Catégories", localeFields: "Langues des libellés", categoryName: "Nom", categoryDescription: "Description", categorySlug: "Identifiant d'URL",
     addCategory: "Ajouter une catégorie", editCategory: "Modifier les noms et descriptions", moveUp: "Monter", moveDown: "Descendre", delete: "Supprimer", moveTopicsTo: "Déplacer ses sujets vers",
     tagsTitle: "Étiquettes", tagLabel: "Libellé", addTag: "Ajouter une étiquette", noTags: "Aucune étiquette.",
     sanctionsTitle: "Sanctions automatiques", sanctionsIntro: "Contenus masqués (signalements retenus) sur la fenêtre glissante : sourdine temporaire, puis suspension en cas de récidive ou au-delà du second seuil.",
@@ -51,7 +51,7 @@ const en: ForumsTranslations = {
   /** Forum créé par défaut pour un site (voir `ensureSiteForum`) : titre et description dans la langue du site. */
   defaultForum: { title: "Community", description: "Discussions, questions and announcements from the community." },
   title: "Forums", intro: "Talk with the community: questions, ideas and announcements.", noForums: "No forum is available yet.",
-  categories: "Categories", topics: "Topics", topicCount: "{count} topic(s)", newTopic: "New topic", titleLabel: "Title", bodyLabel: "Message",
+  categories: "Categories", topics: "Topics", topicCount: "{count} topic(s)", newTopic: "New topic", newTopicIntro: "Choose a category, write your message, and optionally add tags, a private thread or a poll.", cancel: "Cancel", breadcrumb: "Breadcrumb", clearFilters: "Clear filters", resultsFor: "Results for “{query}”", noResults: "No topics match this search.", titleLabel: "Title", bodyLabel: "Message",
   markdownHelp: "Markdown: **bold**, *italic*, `code`, lists, quotes (>), links; mention with @username.",
   categoryLabel: "Category", tagsLabel: "Tags", privateLabel: "Private thread (visible to participants only)",
   privateWithLabel: "Participants (usernames separated by commas)", pollLabel: "Add a poll", pollQuestion: "Question", pollOptions: "Options (one per line)",
@@ -82,7 +82,7 @@ const en: ForumsTranslations = {
     visibilities: { public: "Public", members: "Signed-in members", org: "Organization members" },
     status: "Status", statuses: { DRAFT: "Draft", PUBLISHED: "Published", ARCHIVED: "Archived" },
     publish: "Publish", unpublish: "Back to draft", archive: "Archive", save: "Save", create: "Create",
-    categoriesTitle: "Categories", categoryName: "Name ({locale})", categoryDescription: "Description ({locale})", categorySlug: "URL identifier",
+    categoriesTitle: "Categories", localeFields: "Label languages", categoryName: "Name", categoryDescription: "Description", categorySlug: "URL identifier",
     addCategory: "Add a category", editCategory: "Edit names and descriptions", moveUp: "Move up", moveDown: "Move down", delete: "Delete", moveTopicsTo: "Move its topics to",
     tagsTitle: "Tags", tagLabel: "Label", addTag: "Add a tag", noTags: "No tags.",
     sanctionsTitle: "Automatic sanctions", sanctionsIntro: "Hidden content (upheld reports) over the rolling window: temporary mute, then suspension on repeat or above the second threshold.",
@@ -98,7 +98,7 @@ const es: ForumsTranslations = {
   /** Forum créé par défaut pour un site (voir `ensureSiteForum`) : titre et description dans la langue du site. */
   defaultForum: { title: "Comunidad", description: "Conversaciones, preguntas y anuncios de la comunidad." },
   title: "Foros", intro: "Converse con la comunidad: preguntas, ideas y anuncios.", noForums: "Todavía no hay ningún foro disponible.",
-  categories: "Categorías", topics: "Temas", topicCount: "{count} tema(s)", newTopic: "Nuevo tema", titleLabel: "Título", bodyLabel: "Mensaje",
+  categories: "Categorías", topics: "Temas", topicCount: "{count} tema(s)", newTopic: "Nuevo tema", newTopicIntro: "Elija una categoría, redacte su mensaje y, si lo desea, añada etiquetas, un hilo privado o una encuesta.", cancel: "Cancelar", breadcrumb: "Ruta de navegación", clearFilters: "Restablecer los filtros", resultsFor: "Resultados para « {query} »", noResults: "Ningún tema coincide con esta búsqueda.", titleLabel: "Título", bodyLabel: "Mensaje",
   markdownHelp: "Markdown: **negrita**, *cursiva*, `código`, listas, citas (>), enlaces; mencione con @usuario.",
   categoryLabel: "Categoría", tagsLabel: "Etiquetas", privateLabel: "Hilo privado (visible solo para los participantes)",
   privateWithLabel: "Participantes (usuarios separados por comas)", pollLabel: "Añadir una encuesta", pollQuestion: "Pregunta", pollOptions: "Opciones (una por línea)",
@@ -129,7 +129,7 @@ const es: ForumsTranslations = {
     visibilities: { public: "Público", members: "Miembros conectados", org: "Miembros de la organización" },
     status: "Estado", statuses: { DRAFT: "Borrador", PUBLISHED: "Publicado", ARCHIVED: "Archivado" },
     publish: "Publicar", unpublish: "Volver a borrador", archive: "Archivar", save: "Guardar", create: "Crear",
-    categoriesTitle: "Categorías", categoryName: "Nombre ({locale})", categoryDescription: "Descripción ({locale})", categorySlug: "Identificador de URL",
+    categoriesTitle: "Categorías", localeFields: "Idiomas de las etiquetas", categoryName: "Nombre", categoryDescription: "Descripción", categorySlug: "Identificador de URL",
     addCategory: "Añadir una categoría", editCategory: "Editar nombres y descripciones", moveUp: "Subir", moveDown: "Bajar", delete: "Eliminar", moveTopicsTo: "Mover sus temas a",
     tagsTitle: "Etiquetas", tagLabel: "Nombre", addTag: "Añadir una etiqueta", noTags: "Ninguna etiqueta.",
     sanctionsTitle: "Sanciones automáticas", sanctionsIntro: "Contenidos ocultados (denuncias confirmadas) en la ventana móvil: silencio temporal y luego suspensión en caso de reincidencia o por encima del segundo umbral.",
@@ -145,7 +145,7 @@ const ar: ForumsTranslations = {
   /** Forum créé par défaut pour un site (voir `ensureSiteForum`) : titre et description dans la langue du site. */
   defaultForum: { title: "المجتمع", description: "نقاشات وأسئلة وإعلانات من المجتمع." },
   title: "المنتديات", intro: "تحاور مع المجتمع: أسئلة وأفكار وإعلانات.", noForums: "لا يوجد أي منتدى متاح حاليًا.",
-  categories: "الفئات", topics: "المواضيع", topicCount: "{count} موضوع", newTopic: "موضوع جديد", titleLabel: "العنوان", bodyLabel: "الرسالة",
+  categories: "الفئات", topics: "المواضيع", topicCount: "{count} موضوع", newTopic: "موضوع جديد", newTopicIntro: "اختر فئة واكتب رسالتك، ويمكنك إضافة وسوم أو نقاش خاص أو استطلاع.", cancel: "إلغاء", breadcrumb: "مسار التنقل", clearFilters: "إعادة ضبط التصفية", resultsFor: "نتائج « {query} »", noResults: "لا توجد مواضيع مطابقة لهذا البحث.", titleLabel: "العنوان", bodyLabel: "الرسالة",
   markdownHelp: "ماركداون: **عريض**، *مائل*، `رمز`، قوائم، اقتباسات (>)، روابط؛ أشر إلى شخص بـ @اسم_المستخدم.",
   categoryLabel: "الفئة", tagsLabel: "الوسوم", privateLabel: "نقاش خاص (مرئي للمشاركين فقط)",
   privateWithLabel: "المشاركون (أسماء مستخدمين مفصولة بفواصل)", pollLabel: "إضافة استطلاع", pollQuestion: "السؤال", pollOptions: "الخيارات (خيار في كل سطر)",
@@ -176,7 +176,7 @@ const ar: ForumsTranslations = {
     visibilities: { public: "عام", members: "الأعضاء المسجلون", org: "أعضاء المنظمة" },
     status: "الحالة", statuses: { DRAFT: "مسودة", PUBLISHED: "منشور", ARCHIVED: "مؤرشف" },
     publish: "نشر", unpublish: "إعادة إلى المسودة", archive: "أرشفة", save: "حفظ", create: "إنشاء",
-    categoriesTitle: "الفئات", categoryName: "الاسم ({locale})", categoryDescription: "الوصف ({locale})", categorySlug: "معرّف الرابط",
+    categoriesTitle: "الفئات", localeFields: "لغات التسميات", categoryName: "الاسم", categoryDescription: "الوصف", categorySlug: "معرّف الرابط",
     addCategory: "إضافة فئة", editCategory: "تعديل الأسماء والأوصاف", moveUp: "تحريك لأعلى", moveDown: "تحريك لأسفل", delete: "حذف", moveTopicsTo: "نقل مواضيعها إلى",
     tagsTitle: "الوسوم", tagLabel: "التسمية", addTag: "إضافة وسم", noTags: "لا توجد وسوم.",
     sanctionsTitle: "العقوبات التلقائية", sanctionsIntro: "المحتويات المخفية (بلاغات مؤكدة) خلال النافذة المتحركة: كتم مؤقت، ثم إيقاف عند التكرار أو بعد العتبة الثانية.",
@@ -196,3 +196,7 @@ export function getForumsTranslations(locale: string): ForumsTranslations {
 
 export const fillForums = (template: string, values: Record<string, string | number>) =>
   template.replace(/\{(\w+)\}/g, (match, name: string) => (name in values ? String(values[name]) : match));
+
+/** Nom d'une langue (`fr`, `en`…) affiché dans la locale de l'interface. */
+export const forumLanguageName = (code: string, displayLocale: string) =>
+  new Intl.DisplayNames([displayLocale], { type: "language" }).of(code) ?? code;

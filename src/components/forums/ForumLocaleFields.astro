@@ -1,0 +1,43 @@
+---
+/** Champs traduisibles d'une catégorie : un onglet visible à la fois, tous les champs restent dans le formulaire (sans JS). */
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@atoms/tabs";
+import type { ForumCategoryTranslations } from "@/modules/forums/schema";
+import { LOCALE_LABELS, type Locale } from "@i18n/config";
+import { FORUM_LOCALES } from "@/modules/forums/web/admin-forms";
+import type { ForumsTranslations } from "@/modules/forums/i18n";
+
+interface Props {
+  t: ForumsTranslations;
+  uiLocale: string;
+  idPrefix: string;
+  translations?: ForumCategoryTranslations;
+  requiredLocale?: string;
+}
+const { t, uiLocale, idPrefix, translations, requiredLocale } = Astro.props;
+const active = (FORUM_LOCALES as readonly string[]).includes(uiLocale) ? uiLocale : "fr";
+---
+<Tabs defaultValue={active} class="grid gap-3">
+  <TabsList aria-label={t.admin.localeFields}>
+    {FORUM_LOCALES.map((l) => (
+      <TabsTrigger value={l} defaultActive={l === active} lang={l} dir={l === "ar" ? "rtl" : "ltr"}>
+        {LOCALE_LABELS[l as Locale]}
+      </TabsTrigger>
+    ))}
+  </TabsList>
+  {FORUM_LOCALES.map((l) => (
+    <TabsContent value={l} defaultActive={l === active} lang={l} dir={l === "ar" ? "rtl" : "ltr"}>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div class="grid gap-1">
+          <Label for={`${idPrefix}-name-${l}`}>{t.admin.categoryName}<span class="sr-only"> ({LOCALE_LABELS[l as Locale]})</span></Label>
+          <Input id={`${idPrefix}-name-${l}`} name={`name_${l}`} value={translations?.[l]?.name ?? ""} maxlength="80" lang={l} dir={l === "ar" ? "rtl" : "ltr"} required={Boolean(requiredLocale) && l === requiredLocale} />
+        </div>
+        <div class="grid gap-1">
+          <Label for={`${idPrefix}-description-${l}`}>{t.admin.categoryDescription}<span class="sr-only"> ({LOCALE_LABELS[l as Locale]})</span></Label>
+          <Input id={`${idPrefix}-description-${l}`} name={`description_${l}`} value={translations?.[l]?.description ?? ""} maxlength="300" lang={l} dir={l === "ar" ? "rtl" : "ltr"} />
+        </div>
+      </div>
+    </TabsContent>
+  ))}
+</Tabs>

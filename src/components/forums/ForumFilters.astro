@@ -1,0 +1,40 @@
+---
+/** Barre de recherche et de filtres d'un forum (GET, sans JavaScript). */
+import Button from "@atoms/button/Button.astro";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import type { ForumsTranslations } from "@/modules/forums/i18n";
+
+interface Option { id?: string; slug: string; name?: string; label?: string }
+interface Props {
+  t: ForumsTranslations;
+  q: string;
+  categories: Option[];
+  tags: Option[];
+  categorySlug?: string | null;
+  tagSlug?: string | null;
+}
+const { t, q, categories, tags, categorySlug, tagSlug } = Astro.props;
+---
+<form method="get" role="search" class="grid gap-3 rounded-xl border bg-card p-4 sm:grid-cols-[minmax(0,2fr)_1fr_1fr_auto] sm:items-end">
+  <div class="grid gap-1">
+    <Label for="forum-search">{t.searchLabel}</Label>
+    <Input type="search" id="forum-search" name="q" value={q} maxlength="200" />
+  </div>
+  <div class="grid gap-1 [&_[data-slot=native-select-wrapper]]:w-full">
+    <Label for="forum-filter-category">{t.filterCategory}</Label>
+    <NativeSelect id="forum-filter-category" name="category">
+      <NativeSelectOption value="">{t.allCategories}</NativeSelectOption>
+      {categories.map((c) => <NativeSelectOption value={c.slug} selected={c.slug === categorySlug}>{c.name ?? c.label}</NativeSelectOption>)}
+    </NativeSelect>
+  </div>
+  <div class="grid gap-1 [&_[data-slot=native-select-wrapper]]:w-full">
+    <Label for="forum-filter-tag">{t.filterTag}</Label>
+    <NativeSelect id="forum-filter-tag" name="tag">
+      <NativeSelectOption value="">{t.allTags}</NativeSelectOption>
+      {tags.map((tag) => <NativeSelectOption value={tag.slug} selected={tag.slug === tagSlug}>{tag.label ?? tag.name}</NativeSelectOption>)}
+    </NativeSelect>
+  </div>
+  <Button type="submit" variant="outline" size="sm">{t.filter}</Button>
+</form>

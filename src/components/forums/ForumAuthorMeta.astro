@@ -1,0 +1,26 @@
+---
+/** Ligne d'auteur : nom, réputation et badges, sur le motif Badge. */
+import Badge from "@atoms/badge/Badge.astro";
+import { fillForums, type ForumsTranslations } from "@/modules/forums/i18n";
+
+interface Props {
+  t: ForumsTranslations;
+  name: string;
+  reputation: number;
+  badges: string[];
+  datetime?: Date;
+  fmt?: Intl.DateTimeFormat;
+}
+const { t, name, reputation, badges, datetime, fmt } = Astro.props;
+---
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+  <span>{fillForums(t.by, { name })}</span>
+  <span>{fillForums(t.reputation, { points: reputation })}</span>
+  {badges.length > 0 && (
+    <span class="inline-flex flex-wrap items-center gap-1">
+      <span class="sr-only">{t.badgesLabel} :</span>
+      {badges.map((badge) => <Badge variant="secondary" size="sm">{badge}</Badge>)}
+    </span>
+  )}
+  {datetime && fmt && <time datetime={datetime.toISOString()}>{fmt.format(datetime)}</time>}
+</p>

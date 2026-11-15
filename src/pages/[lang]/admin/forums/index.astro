@@ -8,6 +8,13 @@ import { Effect } from "effect";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
 import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import AdminResourceShell from "@organisms/AdminResourceShell.astro";
+import Badge from "@atoms/badge/Badge.astro";
+import Button from "@atoms/button/Button.astro";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import ForumLocaleFields from "@/components/forums/ForumLocaleFields.astro";
 import ForumNotice from "@/components/forums/ForumNotice.astro";
 import { requireAuth } from "@/lib/auth-guards";
 import { getAdminSite } from "@/lib/platform/admin";
@@ -16,8 +23,8 @@ import { forumsCan } from "@/modules/forums/services/access";
 import { ensureSiteForum, listForumCategories, listSiteForums, listSiteTags } from "@/modules/forums/services/forum.service";
 import { categoryLabel } from "@/modules/forums/domain/defaults";
 import { FORUM_VISIBILITIES } from "@/modules/forums/schema";
-import { FORUM_LOCALES, handleAdminForumsForm } from "@/modules/forums/web/admin-forms";
-import { fillForums, getForumsTranslations } from "@/modules/forums/i18n";
+import { handleAdminForumsForm } from "@/modules/forums/web/admin-forms";
+import { getForumsTranslations } from "@/modules/forums/i18n";
 import { moderationQueueUrl } from "@/modules/forums/web/moderation-link";
 
 export const prerender = false;
@@ -46,125 +53,162 @@ const tags = await runApp(listSiteTags(site.id));
 const queueUrl = canModerate ? await runApp(moderationQueueUrl(locale, scope.organizationId)) : null;
 const t = getForumsTranslations(locale);
 const a = t.admin;
-const field = "min-h-11 rounded-md border bg-background px-3";
-const btn = "inline-flex min-h-11 items-center rounded-md border px-4 text-sm";
-const localeNames: Record<string, string> = { fr: "Français", en: "English", es: "Español", ar: "العربية" };
 ---
 <BaseLayout title={`${a.title} — ${site.name}`} description={a.intro}>
   <AuthLayout title={a.title}>
     <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="forums" />
-    <div class="grid gap-8" data-testid="admin-forums">
-      <p class="text-muted-foreground">{a.intro} ({site.name})</p>
-      <nav aria-label={a.sections} class="flex flex-wrap gap-3">
-        <a class={btn} href={`/${locale}/admin/forums/sanctions`}>{a.sanctionsPage}</a>
-        {queueUrl && <a class={btn} href={queueUrl}>{a.openQueue}</a>}
-        <a class={btn} href={`/${locale}/forums`}>{t.title}</a>
-      </nav>
-      <ForumNotice t={t} url={Astro.url} />
+    <AdminResourceShell title={a.title} description={`${a.intro} (${site.name})`}>
+      <Fragment slot="actions">
+        <Button href={`/${locale}/admin/forums/sanctions`} variant="outline" size="sm">{a.sanctionsPage}</Button>
+        {queueUrl && <Button href={queueUrl} variant="outline" size="sm">{a.openQueue}</Button>}
+        <Button href={`/${locale}/forums`} variant="outline" size="sm">{t.title}</Button>
+      </Fragment>
+      <div class="grid gap-8 p-4 sm:p-6" data-testid="admin-forums">
+        <ForumNotice t={t} url={Astro.url} />
 
-      <section aria-labelledby="forums-title" class="grid gap-4">
-        <h2 id="forums-title" class="font-heading text-xl font-semibold">{a.forums}</h2>
-        {forums.map((forum) => {
-          const own = categories.filter((c) => c.forumId === forum.id);
-          return (
-            <article class="grid gap-4 rounded-xl border p-4" data-forum={forum.slug} aria-labelledby={`f-${forum.id}`}>
-              <h3 id={`f-${forum.id}`} class="font-medium">{forum.title} <span class="text-sm text-muted-foreground">({a.statuses[forum.status] ?? forum.status} · {a.visibilities[forum.visibility]})</span></h3>
-              {canConfigure && (
-                <>
-                  <form method="post" class="grid gap-3 sm:grid-cols-2"><input type="hidden" name="intent" value="forumUpdate" /><input type="hidden" name="forumId" value={forum.id} />
-                    <label class="grid gap-1 text-sm"><span>{a.forumTitle}</span><input name="title" value={forum.title} required minlength="2" maxlength="160" class={field} /></label>
-                    <label class="grid gap-1 text-sm"><span>{a.forumSlug}</span><input name="slug" value={forum.slug} maxlength="80" class={field} /></label>
-                    <label class="grid gap-1 text-sm sm:col-span-2"><span>{a.forumDescription}</span><input name="description" value={forum.description ?? ""} maxlength="500" class={field} /></label>
-                    <label class="grid gap-1 text-sm"><span>{a.visibility}</span>
-                      <select name="visibility" class={field}>{FORUM_VISIBILITIES.map((v) => <option value={v} selected={v === forum.visibility}>{a.visibilities[v]}</option>)}</select></label>
-                    <button type="submit" class={btn + " w-fit self-end"}>{a.save}</button>
-                  </form>
-                  <div class="flex flex-wrap gap-2">
-                    {forum.status !== "PUBLISHED" && <form method="post"><input type="hidden" name="intent" value="forumTransition" /><input type="hidden" name="forumId" value={forum.id} /><input type="hidden" name="to" value="PUBLISHED" /><button type="submit" class={btn}>{a.publish}</button></form>}
-                    {forum.status === "PUBLISHED" && <form method="post"><input type="hidden" name="intent" value="forumTransition" /><input type="hidden" name="forumId" value={forum.id} /><input type="hidden" name="to" value="DRAFT" /><button type="submit" class={btn}>{a.unpublish}</button></form>}
-                    {forum.status !== "ARCHIVED" && <form method="post"><input type="hidden" name="intent" value="forumTransition" /><input type="hidden" name="forumId" value={forum.id} /><input type="hidden" name="to" value="ARCHIVED" /><button type="submit" class={btn}>{a.archive}</button></form>}
-                  </div>
-
-                  <h4 class="font-medium">{a.categoriesTitle}</h4>
-                  <ol class="grid gap-3" data-testid={`categories-${forum.slug}`}>
-                    {own.map((c, i) => (
-                      <li class="grid gap-2 rounded-md border p-3" data-category={c.slug}>
-                        <p class="font-medium">{categoryLabel(c.translations, locale, c.slug).name} <span class="text-sm text-muted-foreground">({c.slug})</span></p>
-                        <details><summary class="inline-flex min-h-11 cursor-pointer items-center text-sm underline">{a.editCategory}</summary>
-                          <form method="post" class="mt-2 grid gap-2 sm:grid-cols-2"><input type="hidden" name="intent" value="categoryUpdate" /><input type="hidden" name="categoryId" value={c.id} />
-                            {FORUM_LOCALES.map((l) => (
-                              <>
-                                <label class="grid gap-1 text-sm"><span>{fillForums(a.categoryName, { locale: localeNames[l] })}</span><input name={`name_${l}`} value={c.translations[l]?.name ?? ""} maxlength="80" lang={l} dir={l === "ar" ? "rtl" : "ltr"} class={field} /></label>
-                                <label class="grid gap-1 text-sm"><span>{fillForums(a.categoryDescription, { locale: localeNames[l] })}</span><input name={`description_${l}`} value={c.translations[l]?.description ?? ""} maxlength="300" lang={l} dir={l === "ar" ? "rtl" : "ltr"} class={field} /></label>
-                              </>
-                            ))}
-                            <button type="submit" class={btn + " w-fit"}>{a.save}</button>
-                          </form>
-                        </details>
-                        <div class="flex flex-wrap items-end gap-2">
-                          {i > 0 && <form method="post"><input type="hidden" name="intent" value="categoryMove" /><input type="hidden" name="categoryId" value={c.id} /><input type="hidden" name="direction" value="up" /><button type="submit" class={btn} aria-label={`${a.moveUp} : ${categoryLabel(c.translations, locale, c.slug).name}`}>↑ {a.moveUp}</button></form>}
-                          {i < own.length - 1 && <form method="post"><input type="hidden" name="intent" value="categoryMove" /><input type="hidden" name="categoryId" value={c.id} /><input type="hidden" name="direction" value="down" /><button type="submit" class={btn} aria-label={`${a.moveDown} : ${categoryLabel(c.translations, locale, c.slug).name}`}>↓ {a.moveDown}</button></form>}
-                          {own.length > 1 && (
-                            <form method="post" class="flex flex-wrap items-end gap-2"><input type="hidden" name="intent" value="categoryDelete" /><input type="hidden" name="categoryId" value={c.id} />
-                              <label class="grid gap-1 text-sm"><span>{a.moveTopicsTo}</span>
-                                <select name="moveTo" class={field}>{own.filter((o) => o.id !== c.id).map((o) => <option value={o.id}>{categoryLabel(o.translations, locale, o.slug).name}</option>)}</select></label>
-                              <button type="submit" class={btn} aria-label={`${a.delete} : ${categoryLabel(c.translations, locale, c.slug).name}`}>{a.delete}</button>
-                            </form>
-                          )}
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-                  <details><summary class="inline-flex min-h-11 cursor-pointer items-center text-sm underline">{a.addCategory}</summary>
-                    <form method="post" class="mt-2 grid gap-2 sm:grid-cols-2" data-testid={`add-category-${forum.slug}`}><input type="hidden" name="intent" value="categoryCreate" /><input type="hidden" name="forumId" value={forum.id} />
-                      <label class="grid gap-1 text-sm sm:col-span-2"><span>{a.categorySlug}</span><input name="slug" maxlength="80" class={field} /></label>
-                      {FORUM_LOCALES.map((l) => (
-                        <>
-                          <label class="grid gap-1 text-sm"><span>{fillForums(a.categoryName, { locale: localeNames[l] })}</span><input name={`name_${l}`} maxlength="80" lang={l} dir={l === "ar" ? "rtl" : "ltr"} required={l === "fr"} class={field} /></label>
-                          <label class="grid gap-1 text-sm"><span>{fillForums(a.categoryDescription, { locale: localeNames[l] })}</span><input name={`description_${l}`} maxlength="300" lang={l} dir={l === "ar" ? "rtl" : "ltr"} class={field} /></label>
-                        </>
-                      ))}
-                      <button type="submit" class={btn + " w-fit"}>{a.addCategory}</button>
+        <section aria-labelledby="forums-title" class="grid gap-4">
+          <h2 id="forums-title" class="font-heading text-xl font-semibold">{a.forums}</h2>
+          {forums.map((forum) => {
+            const own = categories.filter((c) => c.forumId === forum.id);
+            return (
+              <article class="grid gap-4 rounded-xl border p-4" data-forum={forum.slug} aria-labelledby={`f-${forum.id}`}>
+                <div class="flex flex-wrap items-center gap-2">
+                  <h3 id={`f-${forum.id}`} class="font-medium">{forum.title}</h3>
+                  <Badge variant="outline" size="sm">{a.statuses[forum.status] ?? forum.status}</Badge>
+                  <Badge variant="secondary" size="sm">{a.visibilities[forum.visibility]}</Badge>
+                </div>
+                {canConfigure && (
+                  <>
+                    <form method="post" class="grid gap-3 sm:grid-cols-2">
+                      <input type="hidden" name="intent" value="forumUpdate" /><input type="hidden" name="forumId" value={forum.id} />
+                      <div class="grid gap-1">
+                        <Label for={`forum-title-${forum.id}`}>{a.forumTitle}</Label>
+                        <Input id={`forum-title-${forum.id}`} name="title" value={forum.title} required minlength="2" maxlength="160" />
+                      </div>
+                      <div class="grid gap-1">
+                        <Label for={`forum-slug-${forum.id}`}>{a.forumSlug}</Label>
+                        <Input id={`forum-slug-${forum.id}`} name="slug" value={forum.slug} maxlength="80" />
+                      </div>
+                      <div class="grid gap-1 sm:col-span-2">
+                        <Label for={`forum-description-${forum.id}`}>{a.forumDescription}</Label>
+                        <Input id={`forum-description-${forum.id}`} name="description" value={forum.description ?? ""} maxlength="500" />
+                      </div>
+                      <div class="grid gap-1">
+                        <Label for={`forum-visibility-${forum.id}`}>{a.visibility}</Label>
+                        <NativeSelect id={`forum-visibility-${forum.id}`} name="visibility" class="w-full">
+                          {FORUM_VISIBILITIES.map((v) => <NativeSelectOption value={v} selected={v === forum.visibility}>{a.visibilities[v]}</NativeSelectOption>)}
+                        </NativeSelect>
+                      </div>
+                      <Button type="submit" variant="outline" size="sm" class="w-fit self-end">{a.save}</Button>
                     </form>
-                  </details>
-                </>
-              )}
-            </article>
-          );
-        })}
-        {canCreate && (
-          <details class="rounded-xl border p-4"><summary class="inline-flex min-h-11 cursor-pointer items-center font-medium">{a.createForum}</summary>
-            <form method="post" class="mt-3 grid gap-3 sm:grid-cols-2" data-testid="create-forum"><input type="hidden" name="intent" value="forumCreate" />
-              <label class="grid gap-1 text-sm"><span>{a.forumTitle}</span><input name="title" required minlength="2" maxlength="160" class={field} /></label>
-              <label class="grid gap-1 text-sm"><span>{a.forumSlug}</span><input name="slug" maxlength="80" class={field} /></label>
-              <label class="grid gap-1 text-sm sm:col-span-2"><span>{a.forumDescription}</span><input name="description" maxlength="500" class={field} /></label>
-              <label class="grid gap-1 text-sm"><span>{a.visibility}</span>
-                <select name="visibility" class={field}>{FORUM_VISIBILITIES.map((v) => <option value={v}>{a.visibilities[v]}</option>)}</select></label>
-              <button type="submit" class={btn + " w-fit self-end"}>{a.create}</button>
-            </form>
-          </details>
-        )}
-      </section>
+                    <div class="flex flex-wrap gap-2">
+                      {forum.status !== "PUBLISHED" && <form method="post"><input type="hidden" name="intent" value="forumTransition" /><input type="hidden" name="forumId" value={forum.id} /><input type="hidden" name="to" value="PUBLISHED" /><Button type="submit" variant="primary" size="sm">{a.publish}</Button></form>}
+                      {forum.status === "PUBLISHED" && <form method="post"><input type="hidden" name="intent" value="forumTransition" /><input type="hidden" name="forumId" value={forum.id} /><input type="hidden" name="to" value="DRAFT" /><Button type="submit" variant="outline" size="sm">{a.unpublish}</Button></form>}
+                      {forum.status !== "ARCHIVED" && <form method="post"><input type="hidden" name="intent" value="forumTransition" /><input type="hidden" name="forumId" value={forum.id} /><input type="hidden" name="to" value="ARCHIVED" /><Button type="submit" variant="outline" size="sm">{a.archive}</Button></form>}
+                    </div>
 
-      {canConfigure && (
-        <section aria-labelledby="tags-title" class="grid gap-3">
-          <h2 id="tags-title" class="font-heading text-xl font-semibold">{a.tagsTitle}</h2>
-          {tags.length === 0 ? <p>{a.noTags}</p> : (
-            <ul class="flex flex-wrap gap-2" data-testid="tags">
-              {tags.map((tag) => (
-                <li class="flex items-center gap-2 rounded-md border px-3 py-1">
-                  <span>#{tag.label}</span>
-                  <form method="post"><input type="hidden" name="intent" value="tagDelete" /><input type="hidden" name="tagId" value={tag.id} /><button type="submit" class="min-h-11 px-2 text-sm underline" aria-label={`${a.delete} : ${tag.label}`}>{a.delete}</button></form>
-                </li>
-              ))}
-            </ul>
+                    <h4 class="font-medium">{a.categoriesTitle}</h4>
+                    <ol class="grid gap-3" data-testid={`categories-${forum.slug}`}>
+                      {own.map((c, i) => (
+                        <li class="grid gap-3 rounded-md border p-3" data-category={c.slug}>
+                          <p class="font-medium">{categoryLabel(c.translations, locale, c.slug).name} <span class="text-sm text-muted-foreground">({c.slug})</span></p>
+                          <details>
+                            <summary class="inline-flex h-9 cursor-pointer items-center text-sm underline underline-offset-4">{a.editCategory}</summary>
+                            <form method="post" class="mt-3 grid gap-3">
+                              <input type="hidden" name="intent" value="categoryUpdate" /><input type="hidden" name="categoryId" value={c.id} />
+                              <ForumLocaleFields t={t} uiLocale={locale} idPrefix={`cat-${c.id}`} translations={c.translations} />
+                              <Button type="submit" variant="outline" size="sm" class="w-fit">{a.save}</Button>
+                            </form>
+                          </details>
+                          <div class="flex flex-wrap items-end gap-2">
+                            {i > 0 && <form method="post"><input type="hidden" name="intent" value="categoryMove" /><input type="hidden" name="categoryId" value={c.id} /><input type="hidden" name="direction" value="up" /><Button type="submit" variant="outline" size="sm" aria-label={`${a.moveUp} : ${categoryLabel(c.translations, locale, c.slug).name}`}>↑ {a.moveUp}</Button></form>}
+                            {i < own.length - 1 && <form method="post"><input type="hidden" name="intent" value="categoryMove" /><input type="hidden" name="categoryId" value={c.id} /><input type="hidden" name="direction" value="down" /><Button type="submit" variant="outline" size="sm" aria-label={`${a.moveDown} : ${categoryLabel(c.translations, locale, c.slug).name}`}>↓ {a.moveDown}</Button></form>}
+                            {own.length > 1 && (
+                              <form method="post" class="flex flex-wrap items-end gap-2">
+                                <input type="hidden" name="intent" value="categoryDelete" /><input type="hidden" name="categoryId" value={c.id} />
+                                <div class="grid gap-1">
+                                  <Label for={`move-to-${c.id}`}>{a.moveTopicsTo}</Label>
+                                  <NativeSelect id={`move-to-${c.id}`} name="moveTo" class="w-full">
+                                    {own.filter((o) => o.id !== c.id).map((o) => <NativeSelectOption value={o.id}>{categoryLabel(o.translations, locale, o.slug).name}</NativeSelectOption>)}
+                                  </NativeSelect>
+                                </div>
+                                <Button type="submit" variant="error" size="sm" aria-label={`${a.delete} : ${categoryLabel(c.translations, locale, c.slug).name}`}>{a.delete}</Button>
+                              </form>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                    <details>
+                      <summary class="inline-flex h-9 cursor-pointer items-center text-sm underline underline-offset-4">{a.addCategory}</summary>
+                      <form method="post" class="mt-3 grid gap-3" data-testid={`add-category-${forum.slug}`}>
+                        <input type="hidden" name="intent" value="categoryCreate" /><input type="hidden" name="forumId" value={forum.id} />
+                        <div class="grid gap-1">
+                          <Label for={`new-cat-slug-${forum.id}`}>{a.categorySlug}</Label>
+                          <Input id={`new-cat-slug-${forum.id}`} name="slug" maxlength="80" />
+                        </div>
+                        <ForumLocaleFields t={t} uiLocale={locale} idPrefix={`new-cat-${forum.id}`} requiredLocale="fr" />
+                        <Button type="submit" variant="primary" size="sm" class="w-fit">{a.addCategory}</Button>
+                      </form>
+                    </details>
+                  </>
+                )}
+              </article>
+            );
+          })}
+          {canCreate && (
+            <details class="rounded-xl border p-4">
+              <summary class="inline-flex h-11 cursor-pointer items-center font-medium">{a.createForum}</summary>
+              <form method="post" class="mt-3 grid gap-3 sm:grid-cols-2" data-testid="create-forum">
+                <input type="hidden" name="intent" value="forumCreate" />
+                <div class="grid gap-1">
+                  <Label for="create-forum-title">{a.forumTitle}</Label>
+                  <Input id="create-forum-title" name="title" required minlength="2" maxlength="160" />
+                </div>
+                <div class="grid gap-1">
+                  <Label for="create-forum-slug">{a.forumSlug}</Label>
+                  <Input id="create-forum-slug" name="slug" maxlength="80" />
+                </div>
+                <div class="grid gap-1 sm:col-span-2">
+                  <Label for="create-forum-description">{a.forumDescription}</Label>
+                  <Input id="create-forum-description" name="description" maxlength="500" />
+                </div>
+                <div class="grid gap-1">
+                  <Label for="create-forum-visibility">{a.visibility}</Label>
+                  <NativeSelect id="create-forum-visibility" name="visibility" class="w-full">
+                    {FORUM_VISIBILITIES.map((v) => <NativeSelectOption value={v}>{a.visibilities[v]}</NativeSelectOption>)}
+                  </NativeSelect>
+                </div>
+                <Button type="submit" variant="primary" size="sm" class="w-fit self-end">{a.create}</Button>
+              </form>
+            </details>
           )}
-          <form method="post" class="flex flex-wrap items-end gap-2"><input type="hidden" name="intent" value="tagCreate" />
-            <label class="grid gap-1 text-sm"><span>{a.tagLabel}</span><input name="label" required minlength="2" maxlength="40" class={field} /></label>
-            <button type="submit" class={btn}>{a.addTag}</button>
-          </form>
         </section>
-      )}
-    </div>
+
+        {canConfigure && (
+          <section aria-labelledby="tags-title" class="grid gap-3">
+            <h2 id="tags-title" class="font-heading text-xl font-semibold">{a.tagsTitle}</h2>
+            {tags.length === 0 ? <p>{a.noTags}</p> : (
+              <ul class="flex flex-wrap gap-2" data-testid="tags">
+                {tags.map((tag) => (
+                  <li class="flex items-center gap-2 rounded-md border px-3 py-1">
+                    <span>#{tag.label}</span>
+                    <form method="post"><input type="hidden" name="intent" value="tagDelete" /><input type="hidden" name="tagId" value={tag.id} /><Button type="submit" variant="ghost" size="sm" aria-label={`${a.delete} : ${tag.label}`}>{a.delete}</Button></form>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <form method="post" class="flex flex-wrap items-end gap-2">
+              <input type="hidden" name="intent" value="tagCreate" />
+              <div class="grid gap-1">
+                <Label for="new-tag-label">{a.tagLabel}</Label>
+                <Input id="new-tag-label" name="label" required minlength="2" maxlength="40" />
+              </div>
+              <Button type="submit" variant="outline" size="sm">{a.addTag}</Button>
+            </form>
+          </section>
+        )}
+      </div>
+    </AdminResourceShell>
   </AuthLayout>
 </BaseLayout>

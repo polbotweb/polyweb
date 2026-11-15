@@ -1,0 +1,22 @@
+---
+/** Fil d'Ariane des pages forums, sur le motif Breadcrumb du design system. */
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@atoms/breadcrumb";
+
+export interface ForumCrumb { href?: string; label: string }
+interface Props { label: string; items: ForumCrumb[] }
+const { label, items } = Astro.props;
+---
+<Breadcrumb aria-label={label}>
+  <BreadcrumbList>
+    {items.map((item, index) => (
+      <>
+        {index > 0 && <BreadcrumbSeparator />}
+        <BreadcrumbItem>
+          {item.href && index < items.length - 1
+            ? <BreadcrumbLink href={item.href}>{item.label}</BreadcrumbLink>
+            : <BreadcrumbPage>{item.label}</BreadcrumbPage>}
+        </BreadcrumbItem>
+      </>
+    ))}
+  </BreadcrumbList>
+</Breadcrumb>
