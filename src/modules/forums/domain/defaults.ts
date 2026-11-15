@@ -5,11 +5,11 @@
  */
 import type { ForumCategoryTranslations } from "../schema";
 
-export const DEFAULT_FORUM = {
-  slug: "communaute",
-  title: "Communauté",
-  description: "Échanges, questions et annonces de la communauté.",
-} as const;
+/**
+ * Forum par défaut : le slug (URL stable) est fixe ; titre et description viennent des chaînes
+ * i18n (`defaultForum`) dans la langue par défaut du site (repli `DEFAULT_LOCALE`).
+ */
+export const DEFAULT_FORUM = { slug: "communaute" } as const;
 
 export const DEFAULT_FORUM_CATEGORIES: readonly { slug: string; translations: ForumCategoryTranslations }[] = [
   { slug: "annonces", translations: { fr: { name: "Annonces", description: "Nouvelles et informations officielles." }, en: { name: "Announcements", description: "News and official information." }, es: { name: "Anuncios", description: "Novedades e información oficial." }, ar: { name: "الإعلانات", description: "الأخبار والمعلومات الرسمية." } } },

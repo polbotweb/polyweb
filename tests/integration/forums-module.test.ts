@@ -34,7 +34,7 @@ const A = forumsActions as any, C = forumsCommunityActions as any;
 const tag = `fo${Date.now()}`;
 const id = (n: number) => `${tag}-0000-0000-0000-${String(n).padStart(12, '0')}`;
 const ADMIN = id(1), OWNER = id(2), M1 = id(3), M2 = id(4), OUT = id(5), M3 = id(6);
-const ORG = id(10), SITE = id(11), SITE2 = id(12);
+const ORG = id(10), SITE = id(11), SITE2 = id(12), SITE_EN = id(13), SITE_ES = id(14), SITE_BAD = id(15);
 const db = () => getDrizzle();
 const users: Record<string, { role: string }> = { [ADMIN]: { role: 'admin' } };
 const ctx = (uid: string | null) => ({
@@ -70,11 +70,14 @@ beforeAll(async () => {
   await db().insert(sites).values([
     { id: SITE, slug: `${tag}-s`, name: 'Site', organizationId: ORG },
     { id: SITE2, slug: `${tag}-s2`, name: 'Site 2', organizationId: null },
+    { id: SITE_EN, slug: `${tag}-en`, name: 'Site EN', organizationId: null, defaultLocale: 'en' },
+    { id: SITE_ES, slug: `${tag}-es`, name: 'Site ES', organizationId: null, defaultLocale: 'es' },
+    { id: SITE_BAD, slug: `${tag}-bad`, name: 'Site ??', organizationId: null, defaultLocale: 'zz' },
   ] as any);
 });
 beforeEach(() => resetRateLimiter());
 afterAll(async () => {
-  await db().delete(sites).where(inArray(sites.id, [SITE, SITE2]));
+  await db().delete(sites).where(inArray(sites.id, [SITE, SITE2, SITE_EN, SITE_ES, SITE_BAD]));
   await db().delete(moderationReports).where(eq(moderationReports.module, 'forums'));
   await db().delete(badgeAwards).where(eq(badgeAwards.scopeId, SITE));
   await db().delete(notifications).where(like(notifications.userId, `${tag}%`));
@@ -96,6 +99,18 @@ describe('forums — socle et administration', () => {
     categoryIds = cats.map((c) => c.id);
     const audits = await db().select().from(auditLog).where(and(eq(auditLog.action, 'forums.forum.seed'), eq(auditLog.resourceId, forumId)));
     expect(audits).toHaveLength(1);
+  });
+
+  it('forum par défaut : titre et description dans la langue du site (repli fr si invalide)', async () => {
+    const titleOf = async (siteId: string) => {
+      await run(ensureSiteForum({ siteId, organizationId: null }));
+      const [f] = await db().select({ title: forums.title, description: forums.description, slug: forums.slug }).from(forums).where(eq(forums.siteId, siteId));
+      return f;
+    };
+    expect(await titleOf(SITE_EN)).toEqual({ slug: DEFAULT_FORUM.slug, title: 'Community', description: expect.stringContaining('community') });
+    expect((await titleOf(SITE_ES)).title).toBe('Comunidad');
+    expect((await titleOf(SITE_BAD)).title).toBe('Communauté');
+    expect((await titleOf(SITE2)).title).toBe('Communauté');
   });
 
   it('catégories : création 4 langues, ordre, suppression avec déplacement ; refus hors permission', async () => {

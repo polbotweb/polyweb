@@ -1,5 +1,7 @@
 /** Libellés des forums (public + administration), 4 locales — complétude garantie par le type. */
 const fr = {
+  /** Forum créé par défaut pour un site (voir `ensureSiteForum`) : titre et description dans la langue du site. */
+  defaultForum: { title: "Communauté", description: "Échanges, questions et annonces de la communauté." },
   title: "Forums", intro: "Échangez avec la communauté : questions, idées et annonces.", noForums: "Aucun forum n'est disponible pour le moment.",
   categories: "Catégories", topics: "Sujets", topicCount: "{count} sujet(s)", newTopic: "Nouveau sujet", titleLabel: "Titre", bodyLabel: "Message",
   markdownHelp: "Markdown : **gras**, *italique*, `code`, listes, citations (>), liens ; mentionnez avec @pseudo.",
@@ -46,6 +48,8 @@ const fr = {
 export type ForumsTranslations = typeof fr;
 
 const en: ForumsTranslations = {
+  /** Forum créé par défaut pour un site (voir `ensureSiteForum`) : titre et description dans la langue du site. */
+  defaultForum: { title: "Community", description: "Discussions, questions and announcements from the community." },
   title: "Forums", intro: "Talk with the community: questions, ideas and announcements.", noForums: "No forum is available yet.",
   categories: "Categories", topics: "Topics", topicCount: "{count} topic(s)", newTopic: "New topic", titleLabel: "Title", bodyLabel: "Message",
   markdownHelp: "Markdown: **bold**, *italic*, `code`, lists, quotes (>), links; mention with @username.",
@@ -91,6 +95,8 @@ const en: ForumsTranslations = {
 };
 
 const es: ForumsTranslations = {
+  /** Forum créé par défaut pour un site (voir `ensureSiteForum`) : titre et description dans la langue du site. */
+  defaultForum: { title: "Comunidad", description: "Conversaciones, preguntas y anuncios de la comunidad." },
   title: "Foros", intro: "Converse con la comunidad: preguntas, ideas y anuncios.", noForums: "Todavía no hay ningún foro disponible.",
   categories: "Categorías", topics: "Temas", topicCount: "{count} tema(s)", newTopic: "Nuevo tema", titleLabel: "Título", bodyLabel: "Mensaje",
   markdownHelp: "Markdown: **negrita**, *cursiva*, `código`, listas, citas (>), enlaces; mencione con @usuario.",
@@ -136,6 +142,8 @@ const es: ForumsTranslations = {
 };
 
 const ar: ForumsTranslations = {
+  /** Forum créé par défaut pour un site (voir `ensureSiteForum`) : titre et description dans la langue du site. */
+  defaultForum: { title: "المجتمع", description: "نقاشات وأسئلة وإعلانات من المجتمع." },
   title: "المنتديات", intro: "تحاور مع المجتمع: أسئلة وأفكار وإعلانات.", noForums: "لا يوجد أي منتدى متاح حاليًا.",
   categories: "الفئات", topics: "المواضيع", topicCount: "{count} موضوع", newTopic: "موضوع جديد", titleLabel: "العنوان", bodyLabel: "الرسالة",
   markdownHelp: "ماركداون: **عريض**، *مائل*، `رمز`، قوائم، اقتباسات (>)، روابط؛ أشر إلى شخص بـ @اسم_المستخدم.",

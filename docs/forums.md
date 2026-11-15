@@ -24,6 +24,13 @@ votes et réactions dédupliqués, réputation et badges, sondages, fils privés
 Le retour arrière supprime les tables du module et les déclencheurs de nettoyage des signalements ;
 le journal et l'instantané Drizzle sont cohérents (`pnpm drizzle-kit generate` ne produit rien).
 
+## Forum par défaut
+
+Créé une seule fois par site (`ensureSiteForum`, idempotent, audité). Le slug `communaute` est fixe ;
+**titre et description** viennent des chaînes i18n (`defaultForum`) dans la langue par défaut du site
+(`sites.default_locale`, validée parmi fr/en/es/ar, repli `DEFAULT_LOCALE`) — même règle que les relances
+de factures. Les catégories seedées portent leurs 4 traductions. L'administration peut ensuite tout renommer.
+
 ## Accès
 
 - `forumsCan(viewer, { organizationId, siteId }, actions)` : permissions `forums`

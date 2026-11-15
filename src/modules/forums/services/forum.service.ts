@@ -7,6 +7,7 @@
 import { Effect } from "effect";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
+import { sites } from "@database/schemas/content.schema";
 import { dbTry } from "@/lib/effect/run";
 import { ActionFailure, fail } from "@/lib/effect/failure";
 import type { DbError } from "@/lib/effect/errors";
@@ -17,6 +18,8 @@ import { forumCategories, forumRevisions, forums, forumTags, forumTopics, type F
 import { forumsLock } from "../locks";
 import { forumsWorkflow, type ForumsStatus } from "../domain/workflow";
 import { DEFAULT_FORUM, DEFAULT_FORUM_CATEGORIES } from "../domain/defaults";
+import { getForumsTranslations } from "../i18n";
+import { asLocale } from "@/core/notifications/email-templates";
 import { NOT_FOUND_MESSAGE, slugifyForum } from "../domain/rules";
 import { forumsAudit } from "./audit";
 
@@ -129,10 +132,14 @@ export const ensureSiteForum = (scope: Scope) =>
   Effect.gen(function* () {
     const existing = yield* dbTry("forums.ensure.count", () => getDrizzle().select({ id: forums.id }).from(forums).where(eq(forums.siteId, scope.siteId)).limit(1));
     if (existing.length > 0) return false;
+    // Langue du site (`sites.default_locale`, validée parmi les 4 langues, repli DEFAULT_LOCALE) — même
+    // règle que les relances de factures.
+    const [siteRow] = yield* dbTry("forums.ensure.locale", () => getDrizzle().select({ locale: sites.defaultLocale }).from(sites).where(eq(sites.id, scope.siteId)).limit(1));
+    const { title, description } = getForumsTranslations(asLocale(siteRow?.locale)).defaultForum;
     return yield* dbTransaction("forums.ensure", (tx) =>
       Effect.gen(function* () {
         const [row] = yield* dbTry("forums.ensure.insert", () =>
-          tx.insert(forums).values({ siteId: scope.siteId, organizationId: scope.organizationId, slug: DEFAULT_FORUM.slug, title: DEFAULT_FORUM.title, description: DEFAULT_FORUM.description, visibility: "public", status: "PUBLISHED" })
+          tx.insert(forums).values({ siteId: scope.siteId, organizationId: scope.organizationId, slug: DEFAULT_FORUM.slug, title, description, visibility: "public", status: "PUBLISHED" })
             .onConflictDoNothing().returning({ id: forums.id }),
         );
         if (!row) return false;
