@@ -256,6 +256,27 @@ describe('forums — participation', () => {
   });
 });
 
+
+describe('forums — compteurs d’aperçu', () => {
+  it('le nombre de sujets par catégorie est exact et ignore les fils privés des non-participants', async () => {
+    const slug = DEFAULT_FORUM_CATEGORIES[0].slug;
+    const categoryId = categoryIds[0];
+    const access = await run<any>(forumBySlug(SITE, DEFAULT_FORUM.slug, viewer(M1)));
+    const before = await run<any>(listTopics({ access, viewer: viewer(M1), categoryId, page: 1 }));
+    await call(C.topicCreate)({ forumId, categoryId, title: 'Compte public aperçu', body: 'Visible de tous', tagIds: [], privateWith: null, poll: null }, ctx(M1));
+    await call(C.topicCreate)({ forumId, categoryId, title: 'Compte privé aperçu', body: 'Réservé aux invités', tagIds: [], privateWith: [`${tag}bob`], poll: null }, ctx(M1));
+    const countOf = async (who: string | null) => {
+      const overview = await run<any[]>(forumsOverview(SITE, who ? viewer(who) : null, 'fr'));
+      const forum = overview.find((f) => f.slug === DEFAULT_FORUM.slug);
+      return forum.categories.find((c: any) => c.slug === slug)?.topics;
+    };
+    expect(await countOf(M1)).toBe(before.total + 2);
+    expect(await countOf(M2)).toBe(before.total + 2);
+    expect(await countOf(M3)).toBe(before.total + 1);
+    expect(await countOf(null)).toBe(before.total + 1);
+  });
+});
+
 describe('forums — visibilité indiscernable', () => {
   it('forum d’organisation : non-membre et forum absent → même NOT_FOUND', async () => {
     const orgForum = await call(A.create)({ siteId: SITE, title: 'Interne', slug: 'interne', visibility: 'org' }, ctx(OWNER));

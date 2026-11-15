@@ -36,15 +36,23 @@ export const forumsOverview = (siteId: string, viewer: ForumViewer, locale: stri
     const rows = yield* dbTry("forums.overview.forums", () => getDrizzle().select({ id: forums.id }).from(forums).where(eq(forums.siteId, siteId)).orderBy(asc(forums.position), asc(forums.title)));
     const accessible = (yield* Effect.forEach(rows, (r) => forumById(r.id, viewer).pipe(Effect.map((a) => a as ForumAccess | null), Effect.catchTag("ActionFailure", () => Effect.succeed(null))))).filter((a): a is ForumAccess => a !== null);
     const ids = accessible.map((a) => a.forum.id);
+    const db = getDrizzle();
     const categories = ids.length === 0 ? [] : yield* dbTry("forums.overview.categories", () =>
-      getDrizzle().select({
+      db.select({
         id: forumCategories.id, forumId: forumCategories.forumId, slug: forumCategories.slug, translations: forumCategories.translations,
-        topics: sql<number>`(select count(*)::int from ${forumTopics} where ${forumTopics.categoryId} = ${forumCategories.id} and ${listable(viewer)})`,
       }).from(forumCategories).where(inArray(forumCategories.forumId, ids)).orderBy(asc(forumCategories.position), asc(forumCategories.slug)),
     );
+    // Compteur groupé (même filtre `listable` que la liste des sujets). Une sous-requête
+    // corrélée interpolant `listable` produisait 0 pour toutes les catégories.
+    const counts = ids.length === 0 ? [] : yield* dbTry("forums.overview.counts", () =>
+      db.select({ categoryId: forumTopics.categoryId, n: sql<number>`count(*)::int` }).from(forumTopics)
+        .where(and(inArray(forumTopics.forumId, ids), listable(viewer)))
+        .groupBy(forumTopics.categoryId),
+    );
+    const byCategory = new Map(counts.map((row) => [row.categoryId, Number(row.n)]));
     return accessible.map(({ forum }): ForumOverviewDTO => ({
       id: forum.id, slug: forum.slug, title: forum.title, description: forum.description, visibility: forum.visibility, status: forum.status,
-      categories: categories.filter((c) => c.forumId === forum.id).map((c) => ({ id: c.id, slug: c.slug, ...categoryLabel(c.translations, locale, c.slug), topics: Number(c.topics) })),
+      categories: categories.filter((c) => c.forumId === forum.id).map((c) => ({ id: c.id, slug: c.slug, ...categoryLabel(c.translations, locale, c.slug), topics: byCategory.get(c.id) ?? 0 })),
     }));
   });
 
