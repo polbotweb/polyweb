@@ -274,6 +274,14 @@
       "delete",
       "moderate",
       "configure"
+    ],
+    "classifieds": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "moderate",
+      "configure"
     ]
   },
   "adminRole": {
@@ -526,9 +534,19 @@
       "delete",
       "moderate",
       "configure"
+    ],
+    "classifieds": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "moderate",
+      "configure"
     ]
   },
   "editorRole": {
+    "user": [],
+    "session": [],
     "page": [
       "create",
       "read",
@@ -569,6 +587,8 @@
       "delete",
       "publish"
     ],
+    "apiToken": [],
+    "webhook": [],
     "form": [
       "create",
       "read",
@@ -578,6 +598,9 @@
       "read",
       "export"
     ],
+    "plugin": [],
+    "tenant": [],
+    "payment": [],
     "messaging": [
       "read"
     ],
@@ -677,9 +700,15 @@
     "forums": [
       "read",
       "moderate"
+    ],
+    "classifieds": [
+      "read",
+      "moderate"
     ]
   },
   "userRole": {
+    "user": [],
+    "session": [],
     "page": [
       "read"
     ],
@@ -704,9 +733,15 @@
     "contentEntry": [
       "read"
     ],
+    "apiToken": [],
+    "webhook": [],
     "form": [
       "read"
     ],
+    "formSubmission": [],
+    "plugin": [],
+    "tenant": [],
+    "payment": [],
     "messaging": [
       "read"
     ],
@@ -756,6 +791,9 @@
       "read"
     ],
     "forums": [
+      "read"
+    ],
+    "classifieds": [
       "read"
     ]
   },
@@ -828,6 +866,8 @@
       "delete",
       "publish"
     ],
+    "apiToken": [],
+    "webhook": [],
     "form": [
       "create",
       "read",
@@ -837,6 +877,9 @@
       "read",
       "export"
     ],
+    "plugin": [],
+    "tenant": [],
+    "payment": [],
     "messaging": [
       "read",
       "moderate"
@@ -983,6 +1026,14 @@
       "read",
       "update",
       "publish",
+      "delete",
+      "moderate",
+      "configure"
+    ],
+    "classifieds": [
+      "create",
+      "read",
+      "update",
       "delete",
       "moderate",
       "configure"
@@ -1053,6 +1104,8 @@
       "delete",
       "publish"
     ],
+    "apiToken": [],
+    "webhook": [],
     "form": [
       "create",
       "read",
@@ -1062,6 +1115,9 @@
       "read",
       "export"
     ],
+    "plugin": [],
+    "tenant": [],
+    "payment": [],
     "messaging": [
       "read",
       "moderate"
@@ -1211,9 +1267,21 @@
       "delete",
       "moderate",
       "configure"
+    ],
+    "classifieds": [
+      "create",
+      "read",
+      "update",
+      "delete",
+      "moderate",
+      "configure"
     ]
   },
   "orgMemberRole": {
+    "organization": [],
+    "member": [],
+    "invitation": [],
+    "team": [],
     "ac": [
       "read"
     ],
@@ -1241,9 +1309,15 @@
     "contentEntry": [
       "read"
     ],
+    "apiToken": [],
+    "webhook": [],
     "form": [
       "read"
     ],
+    "formSubmission": [],
+    "plugin": [],
+    "tenant": [],
+    "payment": [],
     "messaging": [
       "read"
     ],
@@ -1311,6 +1385,9 @@
       "read"
     ],
     "forums": [
+      "read"
+    ],
+    "classifieds": [
       "read"
     ]
   }

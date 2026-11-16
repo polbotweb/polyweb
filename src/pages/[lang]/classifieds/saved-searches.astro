@@ -1,0 +1,69 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AuthSidebar from "@organisms/AuthSidebar/AuthSidebar.astro";
+import Button from "@atoms/button/Button.astro";
+import ClassifiedsNotice from "@/components/classifieds/ClassifiedsNotice.astro";
+import { requireAuth } from "@/lib/auth-guards";
+import { runApp } from "@/lib/effect/http";
+import { ensureDefaultSite } from "@/modules/sites/domain/sites";
+import { ensureSiteClassifieds } from "@/modules/classifieds/services/seed";
+import { listSavedSearches } from "@/modules/classifieds/services/list";
+import { handleSavedSearchForm } from "@/modules/classifieds/web/forms";
+import { getClassifiedsTranslations } from "@/modules/classifieds/i18n";
+
+export const prerender = false;
+const auth = await requireAuth(Astro);
+if ("redirect" in auth) return auth.redirect;
+const { user, locale, authT } = auth;
+const t = getClassifiedsTranslations(locale);
+const site = Astro.locals.site ?? (await ensureDefaultSite());
+await runApp(ensureSiteClassifieds({ siteId: site.id, organizationId: site.organizationId ?? null }));
+const self = `/${locale}/classifieds/saved-searches`;
+
+if (Astro.request.method === "POST") {
+  const result = await handleSavedSearchForm(await Astro.request.formData(), user);
+  return Astro.redirect(result.ok ? `${self}?notice=${result.notice}` : `${self}?error=${result.error}`, 303);
+}
+
+const items = await runApp(listSavedSearches(site.id, user));
+---
+<BaseLayout title={t.savedSearches}>
+  <AuthLayout title={t.savedSearches}>
+    <AuthSidebar slot="sidebar" t={authT} locale={locale} user={user} activeItem="classifieds-saved-searches" />
+    <div data-testid="classifieds-saved-searches" class="grid gap-6">
+      <h1 class="font-heading text-2xl font-semibold">{t.savedSearches}</h1>
+      <ClassifiedsNotice t={t} url={Astro.url} />
+      {items.length === 0 ? <p>{t.noSavedSearches}</p> : (
+        <ul class="grid gap-3">
+          {items.map((s) => {
+            const params = new URLSearchParams();
+            if (s.query) params.set("q", s.query);
+            if (s.categoryId) params.set("category", s.categoryId);
+            if (s.kind) params.set("kind", s.kind);
+            if (s.city) params.set("city", s.city);
+            const href = `/${locale}/classifieds?${params}`;
+            return (
+              <li class="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
+                <a class="underline-offset-4 hover:underline" href={href}>{s.name || s.query || t.savedSearches}</a>
+                <div class="flex flex-wrap gap-2">
+                  <form method="post">
+                    <input type="hidden" name="intent" value="notify" />
+                    <input type="hidden" name="id" value={s.id} />
+                    <input type="hidden" name="notify" value={s.notify ? "0" : "1"} />
+                    <Button type="submit" variant="outline" size="sm">{s.notify ? t.notifyOff : t.notifyOn}</Button>
+                  </form>
+                  <form method="post">
+                    <input type="hidden" name="intent" value="delete" />
+                    <input type="hidden" name="id" value={s.id} />
+                    <Button type="submit" variant="outline" size="sm">{t.delete}</Button>
+                  </form>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  </AuthLayout>
+</BaseLayout>

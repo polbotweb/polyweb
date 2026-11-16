@@ -39,6 +39,7 @@ let rolesOrg = null;
 let notificationsSeed = null;
 // Forums : forum par défaut et sujet seedé (sondage, étiquette, réponse).
 let forumsSeed = null;
+let classifiedsSeed = null;
 // Logistique : inventaires seedés (un en cours, un validé) — pages inventaires et grand livre.
 let logistics = null;
 if (fs.existsSync(COOKIES_PATH)) {
@@ -54,6 +55,7 @@ if (fs.existsSync(COOKIES_PATH)) {
   rolesOrg = data.rolesOrg ?? null;
   notificationsSeed = data.notificationsSeed ?? null;
   forumsSeed = data.forumsSeed ?? null;
+  classifiedsSeed = data.classifiedsSeed ?? null;
 }
 
 // ── Route definitions per locale ─────────────────────────────────────
@@ -118,6 +120,12 @@ for (const lang of locales) {
     publicUrls.push(`${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}`);
     publicUrls.push(`${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}/t/${encodeURIComponent(forumsSeed.topicId)}`);
   }
+  // Petites annonces : tableau, catégorie et fiche seedés.
+  publicUrls.push(`${BASE}/${lang}/classifieds`);
+  if (classifiedsSeed) {
+    publicUrls.push(`${BASE}/${lang}/classifieds/c/${encodeURIComponent(classifiedsSeed.categorySlug)}`);
+    publicUrls.push(`${BASE}/${lang}/classifieds/a/${encodeURIComponent(classifiedsSeed.adSlug)}`);
+  }
 }
 
 // Authenticated pages (user cookie)
@@ -142,6 +150,13 @@ for (const lang of locales) {
     authedUrls.push({ url: `${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}?page=1`, headers: { Cookie: userCookie } });
     authedUrls.push({ url: `${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}/new`, headers: { Cookie: userCookie } });
     authedUrls.push({ url: `${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}/t/${encodeURIComponent(forumsSeed.topicId)}?notice=replied`, headers: { Cookie: userCookie } });
+  }
+  if (classifiedsSeed) {
+    authedUrls.push({ url: `${BASE}/${lang}/classifieds/new?categoryId=${encodeURIComponent(classifiedsSeed.categoryId)}`, headers: { Cookie: userCookie } });
+    authedUrls.push({ url: `${BASE}/${lang}/classifieds/mine`, headers: { Cookie: userCookie } });
+    authedUrls.push({ url: `${BASE}/${lang}/classifieds/favorites`, headers: { Cookie: userCookie } });
+    authedUrls.push({ url: `${BASE}/${lang}/classifieds/saved-searches`, headers: { Cookie: userCookie } });
+    authedUrls.push({ url: `${BASE}/${lang}/classifieds/a/${encodeURIComponent(classifiedsSeed.adSlug)}?notice=inquired`, headers: { Cookie: userCookie } });
   }
 }
 
@@ -192,6 +207,10 @@ for (const lang of locales) {
   adminUrls.push({ url: `${BASE}/${lang}/admin/forums`, headers: { Cookie: adminCookie } });
   adminUrls.push({ url: `${BASE}/${lang}/admin/forums/sanctions`, headers: { Cookie: adminCookie } });
   if (forumsSeed) adminUrls.push({ url: `${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}/t/${encodeURIComponent(forumsSeed.topicId)}?notice=moderated`, headers: { Cookie: adminCookie } });
+  adminUrls.push({ url: `${BASE}/${lang}/admin/classifieds`, headers: { Cookie: adminCookie } });
+  adminUrls.push({ url: `${BASE}/${lang}/admin/classifieds/categories`, headers: { Cookie: adminCookie } });
+  adminUrls.push({ url: `${BASE}/${lang}/admin/classifieds/attributes`, headers: { Cookie: adminCookie } });
+  adminUrls.push({ url: `${BASE}/${lang}/admin/classifieds/ads`, headers: { Cookie: adminCookie } });
 }
 
 module.exports = {

@@ -43,3 +43,5 @@ export * from "../modules/bookings/schema";
 export * from "./schemas/messaging.schema";
 export * from "./schemas/badges.schema";
 export * from "../modules/forums/schema";
+export * from "../core/attributes/schema";
+export * from "../modules/classifieds/schema";

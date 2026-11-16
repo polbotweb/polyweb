@@ -1,0 +1,94 @@
+---
+import { Effect } from "effect";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import AdminResourceShell from "@organisms/AdminResourceShell.astro";
+import Button from "@atoms/button/Button.astro";
+import Badge from "@atoms/badge/Badge.astro";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import ClassifiedsNotice from "@/components/classifieds/ClassifiedsNotice.astro";
+import ClassifiedsAdminNav from "@/components/classifieds/ClassifiedsAdminNav.astro";
+import ClassifiedsPagination from "@/components/classifieds/ClassifiedsPagination.astro";
+import { requireAuth } from "@/lib/auth-guards";
+import { getAdminSite } from "@/lib/platform/admin";
+import { runApp } from "@/lib/effect/http";
+import { classifiedsCan } from "@/modules/classifieds/services/access";
+import { ensureSiteClassifieds } from "@/modules/classifieds/services/seed";
+import { listAdminAds } from "@/modules/classifieds/services/list";
+import { handleAdminClassifiedsForm } from "@/modules/classifieds/web/admin-forms";
+import { CLASSIFIED_LIFECYCLES, type ClassifiedLifecycle } from "@/modules/classifieds/domain/workflow";
+import { getClassifiedsTranslations } from "@/modules/classifieds/i18n";
+
+export const prerender = false;
+const auth = await requireAuth(Astro);
+if ("redirect" in auth) return auth.redirect;
+const { user, locale, authT } = auth;
+const site = await getAdminSite(Astro);
+const scope = { organizationId: site.organizationId ?? null, siteId: site.id };
+const canConfigure = await Effect.runPromise(classifiedsCan(user, scope, ["configure"]));
+const canModerate = await Effect.runPromise(classifiedsCan(user, scope, ["moderate"]));
+if (!canConfigure && !canModerate) return Astro.redirect(`/${locale}/auth/${authT.routes["dashboard"]}`);
+const self = `/${locale}/admin/classifieds/ads`;
+const t = getClassifiedsTranslations(locale);
+const a = t.admin;
+
+if (Astro.request.method === "POST") {
+  const result = await handleAdminClassifiedsForm(await Astro.request.formData(), { viewer: user, scope });
+  return Astro.redirect(result.ok ? `${self}?${Astro.url.searchParams}&notice=${result.notice}` : `${self}?error=${result.error}`, 303);
+}
+
+if (canConfigure) await runApp(ensureSiteClassifieds(scope));
+const rawLife = Astro.url.searchParams.get("lifecycle");
+const lifecycle = CLASSIFIED_LIFECYCLES.includes(rawLife as ClassifiedLifecycle) ? rawLife as ClassifiedLifecycle : (rawLife === "pending" ? "pending" : null);
+const list = await runApp(listAdminAds(site.id, user, { lifecycle, q: Astro.url.searchParams.get("q"), page: Number(Astro.url.searchParams.get("page") ?? 1) }));
+---
+<BaseLayout title={`${a.ads} — ${a.title}`}>
+  <AuthLayout title={a.ads}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="classifieds" />
+    <AdminResourceShell title={a.ads} description={a.intro}>
+      <div class="grid gap-8 p-4 sm:p-6" data-testid="admin-classifieds-ads">
+        <ClassifiedsAdminNav t={t} locale={locale} active="ads" />
+        <ClassifiedsNotice t={t} url={Astro.url} />
+        <form method="get" class="flex flex-wrap items-end gap-2">
+          <div class="grid gap-1">
+            <Label for="admin-ads-lifecycle">{a.allLifecycles}</Label>
+            <NativeSelect id="admin-ads-lifecycle" name="lifecycle" class="min-w-40">
+              <NativeSelectOption value="" selected={!lifecycle}>{a.allLifecycles}</NativeSelectOption>
+              {CLASSIFIED_LIFECYCLES.map((s) => <NativeSelectOption value={s} selected={lifecycle === s}>{t.lifecycles[s]}</NativeSelectOption>)}
+            </NativeSelect>
+          </div>
+          <div class="grid gap-1">
+            <Label for="admin-ads-q">{t.searchLabel}</Label>
+            <Input id="admin-ads-q" name="q" value={Astro.url.searchParams.get("q") ?? ""} />
+          </div>
+          <Button type="submit" size="sm">{t.filter}</Button>
+        </form>
+        {list.items.length === 0 ? <p>{t.noAds}</p> : (
+          <ul class="grid gap-3">
+            {list.items.map((ad) => (
+              <li class="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
+                <div class="grid gap-1">
+                  <a class="font-medium underline-offset-4 hover:underline" href={`/${locale}/classifieds/a/${ad.slug}`}>{ad.title}</a>
+                  <div class="flex flex-wrap gap-2">
+                    <Badge variant="outline" size="sm">{t.lifecycles[ad.lifecycle]}</Badge>
+                    <span class="text-sm text-muted-foreground">{ad.city}</span>
+                  </div>
+                </div>
+                {canModerate && ad.lifecycle === "pending" && (
+                  <div class="flex gap-2">
+                    <form method="post"><input type="hidden" name="intent" value="approve" /><input type="hidden" name="adId" value={ad.id} /><Button type="submit" size="sm">{a.approve}</Button></form>
+                    <form method="post"><input type="hidden" name="intent" value="reject" /><input type="hidden" name="adId" value={ad.id} /><Button type="submit" variant="outline" size="sm">{a.reject}</Button></form>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        <ClassifiedsPagination t={t} page={list.page} pages={list.pages} hrefFor={(p) => { const q = new URLSearchParams(Astro.url.searchParams); q.set("page", String(p)); return `${self}?${q}`; }} />
+      </div>
+    </AdminResourceShell>
+  </AuthLayout>
+</BaseLayout>

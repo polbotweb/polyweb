@@ -1,0 +1,32 @@
+---
+import { Card, CardContent, CardHeader } from "@atoms/card";
+import Badge from "@atoms/badge/Badge.astro";
+import type { ClassifiedsTranslations } from "@/modules/classifieds/i18n";
+interface Props {
+  href: string;
+  title: string;
+  city: string;
+  price: string;
+  kind: string;
+  coverUrl?: string | null;
+  t: ClassifiedsTranslations;
+}
+const { href, title, city, price, kind, coverUrl, t } = Astro.props;
+---
+<li>
+  <Card>
+    <a class="block overflow-hidden rounded-xl focus-visible:outline-none focus-visible:ring-2" href={href} data-testid="classifieds-card">
+      {coverUrl && <img src={coverUrl} alt="" class="h-40 w-full object-cover" />}
+      <CardHeader>
+        <h2 class="font-heading text-lg font-medium leading-snug">
+          <span class="underline-offset-4 hover:underline">{title}</span>
+        </h2>
+      </CardHeader>
+      <CardContent class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+        <Badge variant="secondary" size="sm">{t.kinds[kind] ?? kind}</Badge>
+        <span>{price}</span>
+        <span>{city}</span>
+      </CardContent>
+    </a>
+  </Card>
+</li>

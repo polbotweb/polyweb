@@ -413,6 +413,7 @@ async function seedRoles() {
   const { logAuditEvent } = await import('../../src/lib/audit');
   const { inArray } = await import('drizzle-orm');
   await deleteRolesSeed();
+  await deleteClassifiedsSeed();
   await deleteForumsSeed();
   const db = getDrizzle();
   const users = await db.select({ id: schema.user.id, email: schema.user.email }).from(schema.user).where(inArray(schema.user.email, [SEED_ADMIN.email, SEED_USER.email]));
@@ -493,6 +494,42 @@ async function deleteForumsSeed() {
   await getDrizzle().delete(forumTopics).where(eq(forumTopics.title, A11Y_FORUM_TOPIC_TITLE)).catch(() => {});
 }
 
+
+const A11Y_AD_TITLE = 'A11y — annonce de test';
+async function seedClassifieds() {
+  const { getDrizzle } = await import('../../src/database/drizzle');
+  const { classifiedAds, classifiedCategories } = await import('../../src/database/schemas');
+  const { eq, and } = await import('drizzle-orm');
+  const { ensureDefaultSite } = await import('../../src/modules/sites/domain/sites');
+  const { runApp } = await import('../../src/lib/effect/http');
+  const { ensureSiteClassifieds } = await import('../../src/modules/classifieds/services/seed');
+  const { renderMarkdown } = await import('../../src/core/content/markdown');
+  const { schema } = await import('../../src/database/drizzle');
+  const db = getDrizzle();
+  const site = await ensureDefaultSite();
+  await runApp(ensureSiteClassifieds({ siteId: site.id, organizationId: site.organizationId ?? null }));
+  const [category] = await db.select().from(classifiedCategories).where(and(eq(classifiedCategories.siteId, site.id), eq(classifiedCategories.slug, 'dons'))).limit(1);
+  const [account] = await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, SEED_USER.email)).limit(1);
+  await deleteClassifiedsSeed();
+  const body = 'Annonce **accessibilité** :\n\n- don\n- test a11y';
+  const now = new Date();
+  const expires = new Date(now.getTime() + 30 * 86_400_000);
+  const [ad] = await db.insert(classifiedAds).values({
+    siteId: site.id, organizationId: site.organizationId ?? null, authorId: account.id, categoryId: category.id,
+    slug: 'a11y-annonce-de-test', title: A11Y_AD_TITLE, body, bodyHtml: renderMarkdown(body),
+    kind: 'wanted', condition: 'n_a', priceKind: 'free', city: 'Paris', postalCode: '75001', country: 'FR',
+    lifecycle: 'published', moderationStatus: 'visible', publishedAt: now, expiresAt: expires,
+  }).returning({ id: classifiedAds.id, slug: classifiedAds.slug });
+  return { classifiedsSeed: { categorySlug: category.slug, categoryId: category.id, adSlug: ad.slug, adId: ad.id } };
+}
+
+async function deleteClassifiedsSeed() {
+  const { getDrizzle } = await import('../../src/database/drizzle');
+  const { classifiedAds } = await import('../../src/database/schemas');
+  const { eq } = await import('drizzle-orm');
+  await getDrizzle().delete(classifiedAds).where(eq(classifiedAds.title, A11Y_AD_TITLE)).catch(() => {});
+}
+
 async function setup() {
   process.env.NODE_ENV = 'test';
 
@@ -562,7 +599,10 @@ async function setup() {
   const forumsData = await seedForums();
   console.log('[a11y] Forum topic with poll, tag and reply seeded');
 
-  const data = { userCookie, adminCookie: freshAdminCookie, ...shop, ...logistics, ...subs, ...roles, ...notifs, ...forumsData };
+  const classifiedsData = await seedClassifieds();
+  console.log('[a11y] Classified ad seeded in category dons');
+
+  const data = { userCookie, adminCookie: freshAdminCookie, ...shop, ...logistics, ...subs, ...roles, ...notifs, ...forumsData, ...classifiedsData };
   writeFileSync(COOKIES_PATH, JSON.stringify(data, null, 2));
   console.log(`[a11y] Cookies written to ${COOKIES_PATH}`);
 }
@@ -581,6 +621,7 @@ async function teardown() {
   await deletePortalSeed();
   await deleteSubscriptionsSeed();
   await deleteRolesSeed();
+  await deleteClassifiedsSeed();
 
   if (existsSync(COOKIES_PATH)) {
     unlinkSync(COOKIES_PATH);

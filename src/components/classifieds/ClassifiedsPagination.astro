@@ -1,0 +1,12 @@
+---
+import { fillClassifieds, type ClassifiedsTranslations } from "@/modules/classifieds/i18n";
+interface Props { t: ClassifiedsTranslations; page: number; pages: number; hrefFor: (page: number) => string }
+const { t, page, pages, hrefFor } = Astro.props;
+---
+{pages > 1 && (
+  <nav class="mt-8 flex flex-wrap items-center justify-between gap-3" aria-label={t.pagination}>
+    {page > 1 ? <a class="min-h-11 underline-offset-4 hover:underline" href={hrefFor(page - 1)}>{t.previous}</a> : <span />}
+    <p>{fillClassifieds(t.pageOf, { page, pages })}</p>
+    {page < pages ? <a class="min-h-11 underline-offset-4 hover:underline" href={hrefFor(page + 1)}>{t.next}</a> : <span />}
+  </nav>
+)}

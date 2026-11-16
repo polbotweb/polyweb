@@ -1,0 +1,74 @@
+---
+/**
+ * Tableau public des petites annonces du site courant.
+ * Le premier affichage crée, une seule fois, les catégories et attributs par défaut (`ensureSiteClassifieds`).
+ */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Button from "@atoms/button/Button.astro";
+import ClassifiedsCard from "@/components/classifieds/ClassifiedsCard.astro";
+import ClassifiedsFilters from "@/components/classifieds/ClassifiedsFilters.astro";
+import ClassifiedsNotice from "@/components/classifieds/ClassifiedsNotice.astro";
+import ClassifiedsPagination from "@/components/classifieds/ClassifiedsPagination.astro";
+import { toLocale } from "@i18n/utils";
+import { runApp } from "@/lib/effect/http";
+import { ensureDefaultSite } from "@/modules/sites/domain/sites";
+import { ensureSiteClassifieds } from "@/modules/classifieds/services/seed";
+import { categoryTree, flattenTree } from "@/modules/classifieds/services/categories";
+import { listPublicAds, parseListQuery } from "@/modules/classifieds/services/list";
+import { listDefinitions } from "@/core/attributes";
+import { ATTRIBUTE_OWNER } from "@/modules/classifieds/domain/rules";
+import { handleAdActionForm } from "@/modules/classifieds/web/forms";
+import { formatClassifiedPrice } from "@/modules/classifieds/web/price";
+import { fillClassifieds, getClassifiedsTranslations } from "@/modules/classifieds/i18n";
+
+export const prerender = false;
+const locale = toLocale(Astro.params.lang);
+const t = getClassifiedsTranslations(locale);
+const site = Astro.locals.site ?? (await ensureDefaultSite());
+const viewer = Astro.locals.user ?? null;
+await runApp(ensureSiteClassifieds({ siteId: site.id, organizationId: site.organizationId ?? null }));
+const self = `/${locale}/classifieds`;
+
+if (Astro.request.method === "POST") {
+  const result = await handleAdActionForm(await Astro.request.formData(), { adId: "", viewer, siteId: site.id });
+  return Astro.redirect(result.ok ? `${self}?${Astro.url.searchParams}&notice=${result.notice}` : `${self}?${Astro.url.searchParams}&error=${result.error}`, 303);
+}
+
+const tree = await runApp(categoryTree(site.id, locale));
+const query = parseListQuery(Astro.url.searchParams);
+const list = await runApp(listPublicAds(site.id, viewer, tree, query));
+const category = query.categoryId ? flattenTree(tree).find((c) => c.slug === query.categoryId || c.id === query.categoryId) : null;
+const filterDefs = category ? await runApp(listDefinitions("classifieds", ATTRIBUTE_OWNER, await runApp((await import("@/modules/classifieds/services/categories")).ancestryIds(site.id, category.id)))) : [];
+const hrefFor = (page: number) => {
+  const params = new URLSearchParams(Astro.url.searchParams);
+  params.set("page", String(page));
+  return `${self}?${params}`;
+};
+Astro.response.headers.set("Cache-Control", "private, no-store");
+---
+<BaseLayout title={t.title} description={t.intro}>
+  <main class="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8" data-testid="classifieds-index">
+    <header class="mb-8 flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h1 class="font-heading text-3xl font-bold">{t.title}</h1>
+        <p class="mt-2 text-muted-foreground">{t.intro}</p>
+      </div>
+      {viewer ? <Button href={`/${locale}/classifieds/new`}>{t.newAd}</Button> : <p class="text-sm text-muted-foreground">{t.signInToPost}</p>}
+    </header>
+    <ClassifiedsNotice t={t} url={Astro.url} />
+    <div class="grid gap-8 lg:grid-cols-[16rem_1fr]">
+      <ClassifiedsFilters t={t} action={self} locale={locale} tree={tree} definitions={filterDefs} values={Astro.url.searchParams} signedIn={Boolean(viewer)} />
+      <section>
+        {query.query && <p class="mb-4">{fillClassifieds(t.resultsFor, { query: query.query })}</p>}
+        {list.items.length === 0 ? <p>{query.query || query.categoryId ? t.noResults : t.noAds}</p> : (
+          <ul class="grid gap-4 sm:grid-cols-2">
+            {list.items.map((ad) => (
+              <ClassifiedsCard href={`/${locale}/classifieds/a/${ad.slug}`} title={ad.title} city={ad.city} kind={ad.kind} coverUrl={ad.coverUrl} t={t} price={formatClassifiedPrice(ad.priceKind, ad.priceMinor, ad.currency, locale, t)} />
+            ))}
+          </ul>
+        )}
+        <ClassifiedsPagination t={t} page={list.page} pages={list.pages} hrefFor={hrefFor} />
+      </section>
+    </div>
+  </main>
+</BaseLayout>

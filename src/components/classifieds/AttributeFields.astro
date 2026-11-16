@@ -1,0 +1,49 @@
+---
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import { definitionLabel, optionLabel, type LoadedDefinition, type ValidatedAttributeValue } from "@/core/attributes";
+import type { Locale } from "@i18n/config";
+interface Props { definitions: readonly LoadedDefinition[]; values?: readonly ValidatedAttributeValue[]; locale: Locale }
+const { definitions, values = [], locale } = Astro.props;
+const byId = new Map(values.map((v) => [v.definitionId, v]));
+---
+{definitions.map((def) => {
+  const label = `${definitionLabel(def, locale)}${def.unit ? ` (${def.unit})` : ""}${def.required ? " *" : ""}`;
+  const val = byId.get(def.id);
+  const id = `attr-${def.id}`;
+  return (
+    <div class="grid gap-1">
+      <input type="hidden" name={`attrkind_${def.id}`} value={def.kind} />
+      <Label for={id}>{label}</Label>
+      {def.kind === "boolean" ? (
+        <NativeSelect id={id} name={`attr_${def.id}`} class="w-full">
+          <NativeSelectOption value="" selected={val?.booleanValue == null}>—</NativeSelectOption>
+          <NativeSelectOption value="true" selected={val?.booleanValue === true}>✓</NativeSelectOption>
+          <NativeSelectOption value="false" selected={val?.booleanValue === false}>—</NativeSelectOption>
+        </NativeSelect>
+      ) : def.kind === "select" ? (
+        <NativeSelect id={id} name={`attr_${def.id}`} class="w-full">
+          <NativeSelectOption value="" selected={!val?.optionId}>—</NativeSelectOption>
+          {def.options.map((o) => <NativeSelectOption value={o.id} selected={val?.optionId === o.id}>{optionLabel(o, locale)}</NativeSelectOption>)}
+        </NativeSelect>
+      ) : def.kind === "multiselect" ? (
+        <fieldset class="grid gap-1">
+          <legend class="sr-only">{label}</legend>
+          {def.options.map((o) => (
+            <label class="flex items-center gap-2">
+              <input type="checkbox" name={`attr_${def.id}[]`} value={o.id} checked={val?.optionIds.includes(o.id)} class="size-4" />
+              <span>{optionLabel(o, locale)}</span>
+            </label>
+          ))}
+        </fieldset>
+      ) : def.kind === "date" ? (
+        <Input id={id} name={`attr_${def.id}`} type="date" value={val?.dateValue ?? ""} />
+      ) : def.kind === "number" || def.kind === "integer" ? (
+        <Input id={id} name={`attr_${def.id}`} type="number" step={def.kind === "integer" ? "1" : "any"} value={val?.numberValue ?? ""} min={def.minValue ?? undefined} max={def.maxValue ?? undefined} />
+      ) : (
+        <Input id={id} name={`attr_${def.id}`} value={val?.textValue ?? ""} maxlength="500" />
+      )}
+    </div>
+  );
+})}

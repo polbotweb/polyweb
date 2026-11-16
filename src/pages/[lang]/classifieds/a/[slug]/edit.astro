@@ -1,0 +1,61 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Button from "@atoms/button/Button.astro";
+import ClassifiedsForm from "@/components/classifieds/ClassifiedsForm.astro";
+import ClassifiedsNotice from "@/components/classifieds/ClassifiedsNotice.astro";
+import { requireAuth } from "@/lib/auth-guards";
+import { runApp, runAppResult } from "@/lib/effect/http";
+import { ensureDefaultSite } from "@/modules/sites/domain/sites";
+import { ensureSiteClassifieds } from "@/modules/classifieds/services/seed";
+import { categoryTree } from "@/modules/classifieds/services/categories";
+import { loadPublicAd } from "@/modules/classifieds/services/list";
+import { handleEditAdForm } from "@/modules/classifieds/web/forms";
+import { getClassifiedsTranslations } from "@/modules/classifieds/i18n";
+
+export const prerender = false;
+const auth = await requireAuth(Astro);
+if ("redirect" in auth) return auth.redirect;
+const { user, locale } = auth;
+const t = getClassifiedsTranslations(locale);
+const site = Astro.locals.site ?? (await ensureDefaultSite());
+await runApp(ensureSiteClassifieds({ siteId: site.id, organizationId: site.organizationId ?? null }));
+const slug = String(Astro.params.slug ?? "");
+const loaded = await runAppResult(loadPublicAd(site.id, slug, user, locale));
+if (!loaded.ok || (!loaded.value.isAuthor && !loaded.value.manager)) return new Response(null, { status: 404 });
+const data = loaded.value;
+const self = `/${locale}/classifieds/a/${data.ad.slug}/edit`;
+
+if (Astro.request.method === "POST") {
+  const result = await handleEditAdForm(await Astro.request.formData(), {
+    adId: data.ad.id, viewer: user, adUrl: (s) => `/${locale}/classifieds/a/${s}`,
+  });
+  return Astro.redirect(result.ok ? `${result.location ?? self}?notice=${result.notice}` : `${self}?error=${result.error}`, 303);
+}
+
+const tree = await runApp(categoryTree(site.id, locale));
+let price = "";
+if (data.ad.priceMinor != null && data.ad.currency) {
+  try {
+    // Affichage décimal simple (centimes / 100) si l'API money n'expose pas fromMinorUnits.
+    price = (data.ad.priceMinor / 100).toString();
+  } catch { price = String(data.ad.priceMinor); }
+}
+---
+<BaseLayout title={`${t.edit} — ${data.ad.title}`}>
+  <main class="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8" data-testid="classifieds-edit">
+    <h1 class="mb-6 font-heading text-3xl font-bold">{t.edit}</h1>
+    <ClassifiedsNotice t={t} url={Astro.url} />
+    <form method="post" class="grid gap-6">
+      <ClassifiedsForm t={t} locale={locale} tree={tree} definitions={data.definitions} organizationId={site.organizationId ?? null} values={{
+        categoryId: data.ad.categoryId, title: data.ad.title, body: data.ad.body, kind: data.ad.kind, condition: data.ad.condition,
+        priceKind: data.ad.priceKind, price, currency: data.ad.currency ?? undefined, city: data.ad.city, postalCode: data.ad.postalCode, country: data.ad.country,
+        media: data.media, attributes: data.values,
+      }} />
+      <div class="flex flex-wrap gap-2">
+        <Button type="submit" name="intent" value="save">{t.save}</Button>
+        {data.ad.lifecycle === "draft" && <Button type="submit" name="intent" value="publish">{t.submit}</Button>}
+        <Button href={`/${locale}/classifieds/a/${data.ad.slug}`} variant="outline">{t.cancel}</Button>
+      </div>
+    </form>
+  </main>
+</BaseLayout>

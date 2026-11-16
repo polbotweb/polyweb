@@ -165,6 +165,7 @@ atoms/
   toggle/
   tooltip/
   video/
+attributes/
 auth/
   SecuritySettings.astro
   SignInAlternatives.astro
@@ -199,6 +200,15 @@ blog/
 bookings/
   admin/
   public/
+classifieds/
+  AttributeFields.astro
+  ClassifiedsAdminNav.astro
+  ClassifiedsCard.astro
+  ClassifiedsFilters.astro
+  ClassifiedsForm.astro
+  ClassifiedsNotice.astro
+  ClassifiedsPagination.astro
+  admin/
 content/
   ContentEditor.astro
   RichContent.astro
@@ -221,10 +231,17 @@ formations/
 forms/
   PolywebForm.astro
 forums/
+  ForumAuthorMeta.astro
+  ForumBreadcrumbs.astro
   ForumContent.astro
   ForumEngagement.astro
+  ForumFilters.astro
+  ForumLocaleFields.astro
+  ForumNewTopicForm.astro
   ForumNotice.astro
   ForumPagination.astro
+  ForumPoll.astro
+  ForumTopicList.astro
 logistics/
   admin/
 moderation/
@@ -522,11 +539,13 @@ migrations/
   0053_moderation_core.sql
   0054_messaging_core.sql
   0055_forums_core.sql
+  0056_classifieds_core.sql
   down/
     0052_notifications_core.down.sql
     0053_moderation_core.down.sql
     0054_messaging_core.down.sql
     0055_forums_core.down.sql
+    0056_classifieds_core.down.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -580,6 +599,7 @@ migrations/
     0053_snapshot.json
     0054_snapshot.json
     0055_snapshot.json
+    0056_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -832,6 +852,7 @@ schemas.ts
 - `0053_moderation_core.sql`
 - `0054_messaging_core.sql`
 - `0055_forums_core.sql`
+- `0056_classifieds_core.sql`
 
 ### الأوامر
 
@@ -963,6 +984,10 @@ api/
   table.ts
 attributes/
   index.ts
+  kinds.ts
+  schema.ts
+  service.ts
+  validation.ts
 audit/
   index.ts
   query.ts
@@ -1221,6 +1246,54 @@ bookings/
     index.ts
   services/
     bookings.service.ts
+classifieds/
+  actions/
+    index.ts
+  admin/
+  api/
+    public-api.ts
+  capabilities.ts
+  client/
+    init.ts
+  domain/
+    defaults.ts
+    events.ts
+    rules.ts
+    workflow.ts
+  i18n/
+    index.ts
+  loaders/
+    index.ts
+  moderation/
+    adapters.ts
+  module.ts
+  notifications/
+    definitions.ts
+  permissions/
+    index.ts
+    statements.ts
+  schema/
+    index.ts
+  search/
+    index.ts
+  seo/
+    index.ts
+  services/
+    access.ts
+    ad.service.ts
+    audit.ts
+    categories.ts
+    engagement.ts
+    expire.ts
+    inquiry.ts
+    list.ts
+    match.ts
+    seed.ts
+    settings.ts
+  web/
+    admin-forms.ts
+    forms.ts
+    price.ts
 content/
   domain/
     content-types.ts
@@ -1757,6 +1830,7 @@ src/pages/
     audit.astro
     blog/
     bookings/
+    classifieds/
     crm/
     dashboard.astro
     forums/
@@ -1794,6 +1868,14 @@ src/pages/
     manage/
   c/
     [type]/
+  classifieds/
+    a/
+    c/
+    favorites.astro
+    index.astro
+    mine.astro
+    new.astro
+    saved-searches.astro
   contact.astro
   courses/
     [slug].astro
@@ -1850,6 +1932,7 @@ api/
   content-import.ts
   cron/
     audit-retention.ts
+    classifieds.ts
     fx-rates.ts
     notifications.ts
     payments-expire.ts
@@ -1969,7 +2052,6 @@ public/
 favicon.ico
 favicon.svg
 uploads/
-  images/
 ```
 
 ### الرفع والمعالجة
@@ -2105,6 +2187,7 @@ utils.ts
 
 ### الاختبارات
 
+- `tests/unit/classifieds/i18n.test.ts`
 - `tests/unit/cms-i18n.test.ts`
 - `tests/unit/forums/i18n.test.ts`
 - `tests/unit/i18n-key-completeness.test.ts`

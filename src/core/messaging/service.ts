@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { Effect, Data } from "effect";
 import {
+  classifiedInquiries,
   messagingBlocks, messagingConversationStates, messagingConversations, messagingMessages, messagingPreferences, user,
   type MessagingWhoCan,
 } from "@database/schemas";
@@ -46,12 +47,27 @@ const shareOrg = (a: string, b: string) =>
     return rows;
   }).pipe(Effect.map((rows) => rows[0]?.id ?? null));
 
-export const assertCanMessage = (fromUserId: string, toUserId: string) =>
+
+/** Conversation née d'une annonce publiée : la préférence destinataire ne s'applique plus (les blocages restent). */
+const isInquiryConversation = (conversationId: string, a: string, b: string) =>
+  dbTry("messaging.inquiry", () =>
+    getDrizzle().select({ id: classifiedInquiries.id }).from(classifiedInquiries).where(
+      and(eq(classifiedInquiries.conversationId, conversationId), or(
+        and(eq(classifiedInquiries.buyerId, a), eq(classifiedInquiries.sellerId, b)),
+        and(eq(classifiedInquiries.buyerId, b), eq(classifiedInquiries.sellerId, a)),
+      )),
+    ).limit(1),
+  ).pipe(Effect.map((rows) => rows.length > 0));
+
+export type MessagePolicy = { readonly ignorePreference?: boolean };
+
+export const assertCanMessage = (fromUserId: string, toUserId: string, policy: MessagePolicy = {}) =>
   Effect.gen(function* () {
     if (fromUserId === toUserId) return yield* Effect.fail(unavailable());
     const [exists] = yield* dbTry("messaging.user", () => getDrizzle().select({ id: user.id }).from(user).where(eq(user.id, toUserId)).limit(1));
     if (!exists) return yield* Effect.fail(unavailable());
     if (yield* isBlocked(fromUserId, toUserId)) return yield* Effect.fail(unavailable());
+    if (policy.ignorePreference) return { organizationId: yield* shareOrg(fromUserId, toUserId) };
     const pref = yield* whoCan(toUserId);
     if (pref === "nobody") return yield* Effect.fail(unavailable());
     if (pref === "everyone") return { organizationId: yield* shareOrg(fromUserId, toUserId) };
@@ -60,9 +76,9 @@ export const assertCanMessage = (fromUserId: string, toUserId: string) =>
     return { organizationId };
   });
 
-export const getOrCreateConversation = (actorId: string, otherUserId: string) =>
+export const getOrCreateConversation = (actorId: string, otherUserId: string, policy: MessagePolicy = {}) =>
   Effect.gen(function* () {
-    const scope = yield* assertCanMessage(actorId, otherUserId);
+    const scope = yield* assertCanMessage(actorId, otherUserId, policy);
     const { userLo, userHi } = pair(actorId, otherUserId);
     return yield* dbTransaction("messaging.conversation.open", (tx) =>
       Effect.gen(function* () {
@@ -90,7 +106,7 @@ export const getOrCreateConversation = (actorId: string, otherUserId: string) =>
     );
   });
 
-export const sendMessage = (input: { actorId: string; conversationId: string; body: string }) =>
+export const sendMessage = (input: { actorId: string; conversationId: string; body: string; ignorePreference?: boolean }) =>
   Effect.gen(function* () {
     const body = cleanMessagingBody(input.body);
     if (!body) return yield* Effect.fail(new MessagingUnavailableError({ message: "Message vide." }));
@@ -100,7 +116,8 @@ export const sendMessage = (input: { actorId: string; conversationId: string; bo
         if (!conv) return yield* Effect.fail(unavailable());
         const other = conv.userLo === input.actorId ? conv.userHi : conv.userHi === input.actorId ? conv.userLo : null;
         if (!other) return yield* Effect.fail(unavailable());
-        const scope = yield* assertCanMessage(input.actorId, other);
+        const inquiry = input.ignorePreference || (yield* isInquiryConversation(conv.id, input.actorId, other));
+        const scope = yield* assertCanMessage(input.actorId, other, { ignorePreference: inquiry });
         const [msg] = yield* dbTry("messaging.send.insert", () =>
           tx.insert(messagingMessages).values({ conversationId: conv.id, senderId: input.actorId, body, organizationId: scope.organizationId }).returning({ id: messagingMessages.id, createdAt: messagingMessages.createdAt }),
         );

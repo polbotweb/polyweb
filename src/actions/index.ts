@@ -45,6 +45,7 @@ import { coursesActions } from "@/modules/courses/actions";
 import { formationsActions } from "@/modules/formations/actions";
 import { forumsActions } from "@/modules/forums/actions";
 import { forumsCommunityActions } from "@/modules/forums/actions/community";
+import { classifiedsActions } from "@/modules/classifieds/actions";
 
 export const server = {
   updateSiteSettings, upsertSiteSettings, createSocialLink, updateSocialLink, deleteSocialLink, reorderSocialLinks, updateContactInfo, updateOpeningHours,
@@ -71,6 +72,7 @@ export const server = {
   subscriptions: subscriptionsActions,
   bookings: bookingsActions,
   forums: { ...forumsActions, ...forumsCommunityActions },
+  classifieds: classifiedsActions,
   courses: coursesActions,
   formations: formationsActions,
 };

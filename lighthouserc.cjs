@@ -40,6 +40,7 @@ let rolesOrg = null;
 let notificationsSeed = null;
 // Forums : forum par défaut et sujet seedé (sondage, étiquette, réponse).
 let forumsSeed = null;
+let classifiedsSeed = null;
 // Logistique : inventaires seedés (un en cours, un validé).
 let logistics = null;
 if (fs.existsSync(COOKIES_PATH)) {
@@ -54,6 +55,7 @@ if (fs.existsSync(COOKIES_PATH)) {
   rolesOrg = data.rolesOrg ?? null;
   notificationsSeed = data.notificationsSeed ?? null;
   forumsSeed = data.forumsSeed ?? null;
+  classifiedsSeed = data.classifiedsSeed ?? null;
   logistics = data.logistics ?? null;
 }
 
@@ -100,6 +102,8 @@ for (const lang of locales) {
   // Forums : index, forum par défaut et sujet seedé (sondage, réponse, étiquette).
   publicUrls.push(`${BASE}/${lang}/forums`);
   if (forumsSeed) publicUrls.push(`${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}`, `${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}/t/${encodeURIComponent(forumsSeed.topicId)}`);
+  publicUrls.push(`${BASE}/${lang}/classifieds`);
+  if (classifiedsSeed) publicUrls.push(`${BASE}/${lang}/classifieds/c/${encodeURIComponent(classifiedsSeed.categorySlug)}`, `${BASE}/${lang}/classifieds/a/${encodeURIComponent(classifiedsSeed.adSlug)}`);
 }
 
 // Tunnel boutique (panier, commande, suivi) : pages privées « noindex » à dessein, auditées
@@ -128,6 +132,7 @@ for (const lang of locales) {
   // Forum connecté : formulaire « nouveau sujet » (fil privé, sondage, étiquettes).
   // `?page=1` : URL distincte de la variante publique (rapports nommés par URL).
   if (forumsSeed) authedUrls.push(`${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}?page=1`, `${BASE}/${lang}/forums/${encodeURIComponent(forumsSeed.forumSlug)}/new`);
+  if (classifiedsSeed) authedUrls.push(`${BASE}/${lang}/classifieds/new`, `${BASE}/${lang}/classifieds/mine`, `${BASE}/${lang}/classifieds/favorites`, `${BASE}/${lang}/classifieds/saved-searches`);
 }
 
 const adminUrls = [];
@@ -161,6 +166,7 @@ for (const lang of locales) {
   if (rolesOrg) for (const sub of ['roles', 'sites', 'audit', 'moderation']) adminUrls.push(`${BASE}/${lang}/organizations/${encodeURIComponent(rolesOrg.slug)}/${sub}`);
   // Forums : catégories / étiquettes et politique de sanctions.
   adminUrls.push(`${BASE}/${lang}/admin/forums`, `${BASE}/${lang}/admin/forums/sanctions`);
+  adminUrls.push(`${BASE}/${lang}/admin/classifieds`, `${BASE}/${lang}/admin/classifieds/categories`, `${BASE}/${lang}/admin/classifieds/attributes`, `${BASE}/${lang}/admin/classifieds/ads`);
 }
 
 module.exports = {

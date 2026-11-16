@@ -1,0 +1,128 @@
+---
+/** Fiche publique d'une annonce (ou vue auteur / gestionnaire d'une annonce non listée). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Button from "@atoms/button/Button.astro";
+import Badge from "@atoms/badge/Badge.astro";
+import RichContent from "@/components/content/RichContent.astro";
+import { Label } from "@atoms/label";
+import ClassifiedsNotice from "@/components/classifieds/ClassifiedsNotice.astro";
+import { toLocale } from "@i18n/utils";
+import { runApp, runAppResult } from "@/lib/effect/http";
+import { ensureDefaultSite } from "@/modules/sites/domain/sites";
+import { ensureSiteClassifieds } from "@/modules/classifieds/services/seed";
+import { categoryTree, flattenTree } from "@/modules/classifieds/services/categories";
+import { loadPublicAd } from "@/modules/classifieds/services/list";
+import { handleAdActionForm } from "@/modules/classifieds/web/forms";
+import { formatClassifiedPrice } from "@/modules/classifieds/web/price";
+import { fillClassifieds, getClassifiedsTranslations } from "@/modules/classifieds/i18n";
+import { definitionLabel, optionLabel } from "@/core/attributes";
+import { canRenew } from "@/modules/classifieds/domain/rules";
+
+export const prerender = false;
+const locale = toLocale(Astro.params.lang);
+const t = getClassifiedsTranslations(locale);
+const site = Astro.locals.site ?? (await ensureDefaultSite());
+const viewer = Astro.locals.user ?? null;
+await runApp(ensureSiteClassifieds({ siteId: site.id, organizationId: site.organizationId ?? null }));
+const slug = String(Astro.params.slug ?? "");
+const self = `/${locale}/classifieds/a/${slug}`;
+
+if (Astro.request.method === "POST") {
+  const loaded = await runAppResult(loadPublicAd(site.id, slug, viewer, locale));
+  if (!loaded.ok) return new Response(null, { status: 404 });
+  const result = await handleAdActionForm(await Astro.request.formData(), { adId: loaded.value.ad.id, viewer, siteId: site.id });
+  const dest = result.ok && result.location ? result.location : `${self}?${result.ok ? `notice=${result.notice}` : `error=${result.error}`}`;
+  return Astro.redirect(dest, 303);
+}
+
+const loaded = await runAppResult(loadPublicAd(site.id, slug, viewer, locale));
+if (!loaded.ok) return new Response(null, { status: 404, statusText: "Not Found" });
+const data = loaded.value;
+const tree = await runApp(categoryTree(site.id, locale));
+const crumbs = flattenTree(tree).filter((c) => data.ancestorIds.includes(c.id));
+const price = formatClassifiedPrice(data.ad.priceKind, data.ad.priceMinor, data.ad.currency, locale, t);
+const dateFmt = (d: Date | null) => d ? d.toLocaleDateString(locale) : "";
+const valueLabel = (defId: string) => {
+  const def = data.definitions.find((d) => d.id === defId);
+  const val = data.values.find((v) => v.definitionId === defId);
+  if (!def || !val) return "";
+  if (def.kind === "boolean") return val.booleanValue ? "✓" : "—";
+  if (def.kind === "select") return optionLabel(def.options.find((o) => o.id === val.optionId) ?? { id: "", key: "", labels: { fr: "", en: "", es: "", ar: "" }, position: 0 }, locale);
+  if (def.kind === "multiselect") return def.options.filter((o) => val.optionIds.includes(o.id)).map((o) => optionLabel(o, locale)).join(", ");
+  if (def.kind === "number" || def.kind === "integer") return val.numberValue != null ? String(val.numberValue) : "";
+  return val.textValue ?? val.dateValue ?? "";
+};
+Astro.response.headers.set("Cache-Control", "private, no-store");
+---
+<BaseLayout title={`${data.ad.title} — ${t.title}`} description={data.ad.body.slice(0, 160)}>
+  <main class="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8" data-testid="classifieds-ad">
+    <nav class="mb-4 text-sm" aria-label={t.breadcrumb}>
+      <ol class="flex flex-wrap gap-2">
+        <li><a class="underline-offset-4 hover:underline" href={`/${locale}/classifieds`}>{t.title}</a></li>
+        {crumbs.map((c) => (
+          <li class="flex gap-2"><span aria-hidden="true">/</span><a class="underline-offset-4 hover:underline" href={`/${locale}/classifieds/c/${c.slug}`}>{c.name}</a></li>
+        ))}
+      </ol>
+    </nav>
+    <ClassifiedsNotice t={t} url={Astro.url} />
+    <article>
+      <header class="mb-6 grid gap-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <h1 class="font-heading text-3xl font-bold">{data.ad.title}</h1>
+          <Badge variant="secondary">{t.kinds[data.ad.kind]}</Badge>
+          <Badge variant="outline">{t.lifecycles[data.ad.lifecycle]}</Badge>
+        </div>
+        <p class="text-xl font-medium">{price}</p>
+        <p class="text-muted-foreground">{data.ad.city}{data.ad.postalCode ? ` (${data.ad.postalCode})` : ""}</p>
+        {data.author?.name && <p class="text-sm text-muted-foreground">{fillClassifieds(t.by, { name: data.author.name })}</p>}
+        {data.ad.publishedAt && <p class="text-sm text-muted-foreground">{fillClassifieds(t.published, { date: dateFmt(data.ad.publishedAt) })}</p>}
+        {data.ad.expiresAt && <p class="text-sm text-muted-foreground">{fillClassifieds(t.expires, { date: dateFmt(data.ad.expiresAt) })}</p>}
+      </header>
+      {data.media.length > 0 && (
+        <ul class="mb-6 grid gap-3 sm:grid-cols-2">
+          {data.media.map((m) => (
+            <li><img src={m.url} alt={m.altText} class="w-full rounded-lg object-cover" /></li>
+          ))}
+        </ul>
+      )}
+      <RichContent html={data.ad.bodyHtml} class="prose mb-8 max-w-none" />
+      {data.values.length > 0 && (
+        <section class="mb-8" aria-labelledby="ad-attrs">
+          <h2 id="ad-attrs" class="mb-3 font-heading text-xl font-semibold">{t.attributes}</h2>
+          <dl class="grid gap-2 sm:grid-cols-2">
+            {data.definitions.map((def) => {
+              const label = valueLabel(def.id);
+              return label ? <div><dt class="text-sm text-muted-foreground">{definitionLabel(def, locale)}</dt><dd>{label}{def.unit ? ` ${def.unit}` : ""}</dd></div> : null;
+            })}
+          </dl>
+        </section>
+      )}
+      <div class="grid gap-4">
+        {viewer && data.listed && !data.isAuthor && (
+          <>
+            <form method="post">
+              <input type="hidden" name="intent" value="favorite" />
+              <Button type="submit" variant="outline" size="sm">{data.favorite ? t.unfavorite : t.favorite}</Button>
+            </form>
+            <form method="post" class="grid gap-2 rounded-xl border p-4">
+              <input type="hidden" name="intent" value="inquire" />
+              <Label for="inquire-body">{t.contactLabel}</Label>
+              <textarea id="inquire-body" name="body" required maxlength="4000" rows="4" class="rounded-md border px-3 py-2"></textarea>
+              <Button type="submit" size="sm">{t.contact}</Button>
+            </form>
+          </>
+        )}
+        {!viewer && data.listed && <p>{t.signInToContact}</p>}
+        {(data.isAuthor || data.manager) && (
+          <div class="flex flex-wrap gap-2">
+            <Button href={`/${locale}/classifieds/a/${data.ad.slug}/edit`} variant="outline" size="sm">{t.edit}</Button>
+            {data.ad.lifecycle === "draft" && <form method="post"><input type="hidden" name="intent" value="submit" /><Button type="submit" size="sm">{t.submit}</Button></form>}
+            {data.ad.lifecycle === "published" && <form method="post"><input type="hidden" name="intent" value="sold" /><Button type="submit" variant="outline" size="sm">{t.sold}</Button></form>}
+            {canRenew(data.ad.lifecycle, data.ad.renewCount, data.settings.maxRenewals) && <form method="post"><input type="hidden" name="intent" value="renew" /><Button type="submit" variant="outline" size="sm">{t.renew}</Button></form>}
+            {data.ad.lifecycle !== "archived" && <form method="post"><input type="hidden" name="intent" value="archive" /><Button type="submit" variant="outline" size="sm">{t.archive}</Button></form>}
+          </div>
+        )}
+      </div>
+    </article>
+  </main>
+</BaseLayout>
