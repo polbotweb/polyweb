@@ -17,7 +17,7 @@ import { createHash } from "node:crypto";
 import { Data, Effect } from "effect";
 import { computeTaxTotals, type CurrencyCode, type Money, type TaxTotals } from "@/core/money";
 import { convertAt, parseRate } from "@/core/fx";
-import { assertBalanced, buildSaleEntry, type AccountingExportError, type JournalEntry, type UnbalancedEntryError } from "@/modules/tax/domain/accounting";
+import { assertBalanced, buildPurchaseEntry, buildSaleEntry, type AccountingExportError, type JournalEntry, type UnbalancedEntryError } from "@/modules/tax/domain/accounting";
 import { isValidSiren } from "./seller-profile";
 
 export class FecExportError extends Data.TaggedError("FecExportError")<{
@@ -121,8 +121,8 @@ export interface FecPayment {
   readonly fx?: FecFrozen | null;
 }
 
-export const FEC_ACCOUNTS = { receivable: "411000", revenue: "706000", vat: "445710", bank: "512000" } as const;
-export const FEC_JOURNALS = { sales: { code: "VE", label: "Ventes" }, bank: { code: "BQ", label: "Banque" } } as const;
+export const FEC_ACCOUNTS = { receivable: "411000", revenue: "706000", vat: "445710", bank: "512000", payable: "401000", expense: "607000", vatDeductible: "445660" } as const;
+export const FEC_JOURNALS = { sales: { code: "VE", label: "Ventes" }, purchases: { code: "HA", label: "Achats" }, bank: { code: "BQ", label: "Banque" } } as const;
 
 /** Taux normalisé pour les libellés (`20.0000` → `20`, `5.5000` → `5.5`). */
 export const normalizeRate = (rate: string) => {
@@ -132,6 +132,9 @@ export const normalizeRate = (rate: string) => {
 };
 
 /** Compte client auxiliaire stable (FEC : `CompAuxNum`) : `C` + 10 hex de SHA-256(nom normalisé | n° TVA). */
+export const supplierAuxAccount = (name: string, vatNumber: string | null) =>
+  `F${createHash("sha256").update(`${name.trim().toLowerCase().replace(/\s+/g, " ")}|${(vatNumber ?? "").replace(/\s+/g, "").toUpperCase()}`).digest("hex").slice(0, 10).toUpperCase()}`;
+
 export const customerAuxAccount = (name: string, vatNumber: string | null) =>
   `C${createHash("sha256").update(`${name.trim().toLowerCase().replace(/\s+/g, " ")}|${(vatNumber ?? "").replace(/\s+/g, "").toUpperCase()}`).digest("hex").slice(0, 10).toUpperCase()}`;
 
@@ -177,14 +180,14 @@ const withForeign = (entry: JournalEntry, original: TaxTotals): JournalEntry => 
 };
 
 interface Draft {
-  readonly journal: "VE" | "BQ";
+  readonly journal: "VE" | "HA" | "BQ";
   readonly date: string;
   readonly pieceRef: string;
   readonly sortId: string;
   readonly entry: (entryNumber: string) => Effect.Effect<JournalEntry, UnbalancedEntryError | AccountingExportError>;
 }
 
-const JOURNAL_ORDER = { VE: 0, BQ: 1 } as const;
+const JOURNAL_ORDER = { VE: 0, HA: 1, BQ: 2 } as const;
 
 /** Ordre total déterministe des écritures (date, journal, pièce, identifiant). */
 export const compareFecEntries = (a: Pick<Draft, "journal" | "date" | "pieceRef" | "sortId">, b: Pick<Draft, "journal" | "date" | "pieceRef" | "sortId">) =>
@@ -197,8 +200,24 @@ export interface FecSummary {
   readonly creditMinor: number;
 }
 
-/** Écritures VE + BQ de la période, triées, numérotées et toutes vérifiées équilibrées. */
-export const buildFecEntries = (input: { readonly period: FecPeriod; readonly documents: readonly FecDocument[]; readonly payments: readonly FecPayment[] }) =>
+export interface FecPurchaseDocument extends FecDocument {
+  readonly supplierName: string;
+  readonly supplierVatNumber: string | null;
+}
+
+export interface FecPurchasePayment extends Omit<FecPayment, "customerName" | "customerVatNumber"> {
+  readonly supplierName: string;
+  readonly supplierVatNumber: string | null;
+}
+
+/** Écritures VE + HA + BQ de la période, triées, numérotées et toutes vérifiées équilibrées. */
+export const buildFecEntries = (input: {
+  readonly period: FecPeriod;
+  readonly documents: readonly FecDocument[];
+  readonly payments: readonly FecPayment[];
+  readonly purchaseDocuments?: readonly FecPurchaseDocument[];
+  readonly purchasePayments?: readonly FecPurchasePayment[];
+}) =>
   Effect.gen(function* () {
     const inPeriod = (date: string) => date >= input.period.start && date < input.period.endExclusive;
     const drafts: Draft[] = [];
@@ -220,7 +239,50 @@ export const buildFecEntries = (input: { readonly period: FecPeriod; readonly do
         }).pipe(Effect.map((entry) => (foreign ? withForeign(entry, totals) : entry))),
       });
     }
+    for (const doc of input.purchaseDocuments ?? []) {
+      if (!inPeriod(doc.issueDate)) continue;
+      const currency = doc.currency as CurrencyCode;
+      const totals = yield* computeTaxTotals(doc.lines.map((line) => ({ net: money(line.netMinor, currency), ratePercent: normalizeRate(line.ratePercent) })), { currency });
+      if (totals.net.amountMinor !== doc.netMinor || totals.tax.amountMinor !== doc.taxMinor || totals.gross.amountMinor !== doc.grossMinor) {
+        return yield* Effect.fail(new FecExportError({ reason: "totals", detail: `${doc.number} : lignes ${totals.net.amountMinor}/${totals.tax.amountMinor}/${totals.gross.amountMinor} ≠ document ${doc.netMinor}/${doc.taxMinor}/${doc.grossMinor}` }));
+      }
+      const foreign = currency !== "EUR";
+      const booked = foreign ? yield* toBaseTotals(totals, doc.fx, `${doc.number} en ${currency}`) : totals;
+      drafts.push({
+        journal: "HA", date: doc.issueDate, pieceRef: doc.number, sortId: doc.id,
+        entry: (entryNumber) => buildPurchaseEntry({
+          entryNumber, date: doc.issueDate, pieceRef: doc.number, supplierAccount: supplierAuxAccount(doc.supplierName, doc.supplierVatNumber), supplierName: doc.supplierName,
+          totals: booked, creditNote: doc.kind === "credit_note", journalCode: FEC_JOURNALS.purchases.code, journalLabel: FEC_JOURNALS.purchases.label,
+          accounts: { payable: FEC_ACCOUNTS.payable, expense: FEC_ACCOUNTS.expense, vat: FEC_ACCOUNTS.vatDeductible },
+        }).pipe(Effect.map((entry) => (foreign ? withForeign(entry, totals) : entry))),
+      });
+    }
+    for (const payment of input.purchasePayments ?? []) {
+      if (!inPeriod(payment.paidAt) || payment.amountMinor === 0) continue;
+      const refund = payment.amountMinor < 0;
+      const original = money(Math.abs(payment.amountMinor), payment.currency as CurrencyCode);
+      const amount = payment.currency === "EUR" ? original
+        : yield* frozenOf(payment.fx, `règlement fournisseur ${payment.documentNumber} en ${payment.currency}`).pipe(
+          Effect.flatMap((rate) => convertAt(original, "EUR", rate, "half-up").pipe(Effect.mapError(() => new FecExportError({ reason: "currency", detail: `règlement fournisseur ${payment.documentNumber} : conversion impossible` })))),
+        );
+      const foreign = payment.currency === "EUR" ? {} : { foreign: original };
+      const none = money(0);
+      const label = `${refund ? "Remboursement fournisseur" : "Règlement fournisseur"} ${payment.documentNumber} ${payment.supplierName}`;
+      const aux = supplierAuxAccount(payment.supplierName, payment.supplierVatNumber);
+      drafts.push({
+        journal: "BQ", date: payment.paidAt, pieceRef: payment.reference?.trim() || payment.documentNumber, sortId: payment.id,
+        entry: (entryNumber) => assertBalanced({
+          journalCode: FEC_JOURNALS.bank.code, journalLabel: FEC_JOURNALS.bank.label, entryNumber, entryDate: payment.paidAt,
+          pieceRef: payment.reference?.trim() || payment.documentNumber, pieceDate: payment.paidAt,
+          lines: [
+            { account: FEC_ACCOUNTS.payable, accountLabel: "Fournisseurs", auxAccount: aux, auxLabel: payment.supplierName, label, debit: refund ? none : amount, credit: refund ? amount : none, ...foreign },
+            { account: FEC_ACCOUNTS.bank, accountLabel: "Banque", label, debit: refund ? amount : none, credit: refund ? none : amount, ...foreign },
+          ],
+        }),
+      });
+    }
     for (const payment of input.payments) {
+
       if (!inPeriod(payment.paidAt) || payment.amountMinor === 0) continue;
       const refund = payment.amountMinor < 0;
       const original = money(Math.abs(payment.amountMinor), payment.currency as CurrencyCode);
@@ -245,7 +307,7 @@ export const buildFecEntries = (input: { readonly period: FecPeriod; readonly do
       });
     }
     drafts.sort(compareFecEntries);
-    const sequence = { VE: 0, BQ: 0 };
+    const sequence = { VE: 0, HA: 0, BQ: 0 };
     const compact = input.period.period.replace("-", "");
     const entries: JournalEntry[] = [];
     for (const draft of drafts) {

@@ -26,9 +26,9 @@ const t = getPurchasingTranslations(locale);
 const baseAdminUrl = `/${locale}/admin/purchasing`;
 const o = await loadPurchaseOrder(Astro.params.id ?? "", null);
 if (!o) return new Response(null, { status: 404 });
-const [canUpdate, canDelete] = await Promise.all([hasPurchasingPermission(Astro, ["update"]), hasPurchasingPermission(Astro, ["delete"])]);
+const [canUpdate, canDelete, canApprove] = await Promise.all([hasPurchasingPermission(Astro, ["update"]), hasPurchasingPermission(Astro, ["delete"]), hasPurchasingPermission(Astro, ["approve"])]);
 const label = purchaseOrderLabel(o);
-const targets = canUpdate ? nextStatuses(o.status).filter((to) => !RECEIPT_DRIVEN_STATUSES.includes(to)) : [];
+const targets = canUpdate ? nextStatuses(o.status).filter((to) => !RECEIPT_DRIVEN_STATUSES.includes(to) && !(o.status === "PENDING_APPROVAL" && to === "SENT")) : [];
 const deletable = canDelete && (o.status === "DRAFT" || o.status === "CANCELLED") && o.receipts.length === 0;
 const receivable = canUpdate && isReceivable(o.status) && o.lines.some((line) => line.receivedQuantity < line.quantity);
 const amount = (minor: number) => (isCurrencyCode(o.currency) ? formatMoney({ amountMinor: minor, currency: o.currency }, locale) : `${minor} ${o.currency}`);
@@ -47,6 +47,7 @@ const skuOf = new Map(o.lines.map((line) => [line.id, line.sku]));
         <div class="flex flex-wrap gap-2">
           {canUpdate && isEditable(o.status) && <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`${baseAdminUrl}/${o.id}/edit`}>{t.admin.edit}</a>}
           {deletable && <Button type="button" variant="outline" data-purchasing-op="delete" data-confirm={`${t.admin.delete} — ${label} ?`}>{t.admin.delete}</Button>}
+          {o.number && <a class="inline-flex min-h-11 items-center px-3 underline" href={`${baseAdminUrl}/${o.id}/pdf`}>{t.fields.number} PDF</a>}
           <a class="inline-flex min-h-11 items-center px-3 underline" href={baseAdminUrl}>{t.admin.back}</a>
         </div>
       </div>
@@ -73,6 +74,21 @@ const skuOf = new Map(o.lines.map((line) => [line.id, line.sku]));
         </ScrollRegion>
       </section>
 
+
+      {canApprove && o.status === "PENDING_APPROVAL" && (
+        <section class="flex flex-col gap-3" aria-labelledby="po-approval-heading">
+          <h2 id="po-approval-heading" class="text-lg font-semibold">{t.admin.approval}</h2>
+          <form class="flex flex-wrap gap-3" data-purchasing-form="approve" data-id={o.id} data-done={t.admin.saved}>
+            <input type="hidden" name="decision" value="APPROVED" />
+            <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+            <Button type="submit">{t.admin.approve}</Button>
+          </form>
+          <form class="flex flex-wrap gap-3" data-purchasing-form="approve" data-id={o.id} data-done={t.admin.saved}>
+            <input type="hidden" name="decision" value="REJECTED" />
+            <Button type="submit" variant="outline">{t.admin.reject}</Button>
+          </form>
+        </section>
+      )}
       {targets.length > 0 && (
         <section class="flex flex-col gap-3" aria-labelledby="po-status-heading">
           <h2 id="po-status-heading" class="text-lg font-semibold">{t.fields.status}</h2>

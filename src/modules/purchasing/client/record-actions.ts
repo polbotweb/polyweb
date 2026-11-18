@@ -4,7 +4,7 @@
  */
 import { actions } from "astro:actions";
 
-type Status = "DRAFT" | "SENT" | "PARTIALLY_RECEIVED" | "RECEIVED" | "CLOSED" | "CANCELLED";
+type Status = "DRAFT" | "PENDING_APPROVAL" | "SENT" | "PARTIALLY_RECEIVED" | "RECEIVED" | "CLOSED" | "CANCELLED";
 
 const showError = (root: HTMLElement, message: string) => {
   const box = root.querySelector<HTMLElement>("[data-purchasing-error]");

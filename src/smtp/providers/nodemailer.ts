@@ -30,6 +30,9 @@ export async function send(payload: EmailPayload, from: EmailFrom): Promise<void
     html: payload.html,
     text: payload.text,
     ...(payload.headers ? { headers: payload.headers } : {}),
+    ...(payload.attachments?.length
+      ? { attachments: payload.attachments.map((item) => ({ filename: item.filename, contentType: item.contentType, content: Buffer.from(item.content) })) }
+      : {}),
   });
 }
 

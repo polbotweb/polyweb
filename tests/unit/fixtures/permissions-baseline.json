@@ -252,7 +252,11 @@
       "create",
       "read",
       "update",
-      "delete"
+      "delete",
+      "send",
+      "approve",
+      "invoice",
+      "payment"
     ],
     "subscriptions": [
       "create",
@@ -512,7 +516,11 @@
       "create",
       "read",
       "update",
-      "delete"
+      "delete",
+      "send",
+      "approve",
+      "invoice",
+      "payment"
     ],
     "subscriptions": [
       "create",
@@ -1007,7 +1015,11 @@
       "create",
       "read",
       "update",
-      "delete"
+      "delete",
+      "send",
+      "approve",
+      "invoice",
+      "payment"
     ],
     "subscriptions": [
       "create",
@@ -1245,7 +1257,11 @@
       "create",
       "read",
       "update",
-      "delete"
+      "delete",
+      "send",
+      "approve",
+      "invoice",
+      "payment"
     ],
     "subscriptions": [
       "create",

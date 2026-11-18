@@ -1,0 +1,41 @@
+---
+/** Retours fournisseur. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Effect } from "effect";
+import { requirePermission } from "@lib/auth-guards";
+import PurchasingAdminNav from "@/components/purchasing/admin/PurchasingAdminNav.astro";
+import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
+import { listReturns } from "@/modules/purchasing/loaders";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { purchasing: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getPurchasingTranslations(locale);
+const rows = await Effect.runPromise(listReturns(null));
+---
+<BaseLayout title={t.admin.returns} description={t.meta.description}>
+  <AuthLayout title={t.admin.returns}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="purchasing" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <h1 class="text-2xl font-semibold">{t.admin.returns}</h1>
+      <PurchasingAdminNav locale={locale} active="returns" />
+      {rows.length === 0 ? <p>{t.admin.emptyReturns}</p> : (
+        <table class="w-full text-left">
+          <thead><tr><th scope="col">{t.fields.number}</th><th scope="col">{t.fields.supplier}</th><th scope="col">{t.fields.status}</th></tr></thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr>
+                <td>{row.ret.number ?? t.statuses.DRAFT}</td>
+                <td>{row.supplierName}</td>
+                <td>{row.ret.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </main>
+  </AuthLayout>
+</BaseLayout>

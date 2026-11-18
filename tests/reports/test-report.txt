@@ -1,543 +1,581 @@
 
-> polyweb@0.0.1 test /workspace/b5-classifieds
+> polyweb@0.0.1 test /workspace/b5-purchasing
 > vitest run -- --coverage
 
 
- RUN  v5.0.5 /workspace/b5-classifieds
+ RUN  v5.0.5 /workspace/b5-purchasing
 
-stdout | tests/integration/sales-fec.test.ts
-[07:18:40.246] WARN (#3): [events] undeclared event invoice.issued
-
-stdout | tests/integration/sales-fec.test.ts
-[07:18:40.272] WARN (#7): [events] undeclared event invoice.issued
-
-stdout | tests/integration/sales-fec.test.ts
-[07:18:40.302] WARN (#11): [events] undeclared event invoice.issued
-
-stdout | tests/integration/sales-fec.test.ts
-[07:18:40.359] WARN (#19): [events] undeclared event credit_note.issued
-
-stdout | tests/integration/sales-fec.test.ts
-[07:18:40.410] WARN (#23): [events] undeclared event invoice.issued
-
-stdout | tests/integration/sales-fec.test.ts > FEC — génération (tenant, période) > sans SIREN : échec motivé ; relance manuelle forcée immédiate, cron seulement après le délai
-[07:18:40.449] WARN (#30): sales.fec: export en échec {
-  exportId: 'd0a2c245-5501-434c-8f69-a38fdcbe559f',
-  organizationId: 'fec-mwixmnfd-nosiren',
-  period: '2031-03',
-  error: 'Export FEC impossible (siren) : profil vendeur absent'
-}
-
-stdout | tests/integration/sales-fec.test.ts > FEC — génération (tenant, période) > sans SIREN : échec motivé ; relance manuelle forcée immédiate, cron seulement après le délai
-[07:18:40.457] WARN (#32): sales.fec: export en échec {
-  exportId: 'd0a2c245-5501-434c-8f69-a38fdcbe559f',
-  organizationId: 'fec-mwixmnfd-nosiren',
-  period: '2031-03',
-  error: 'Export FEC impossible (siren) : profil vendeur absent'
-}
-
-stdout | tests/integration/sales-fec.test.ts > FEC — téléchargement > fichier altéré en stockage : 500, rien n’est servi
-[07:18:40.546] ERROR (#46): sales.fec: empreinte du fichier stocké différente {
-  exportId: 'c5355298-2867-447f-995e-902fc35b0466',
-  storageKey: 'fec/fec-mwixmnfd-org/2031-03/732829320FEC20310331.txt'
-}
-
- ✓ tests/integration/sales-fec.test.ts (11 tests) 500ms
- ✓ tests/integration/create-polyweb.test.ts (5 tests) 4331ms
-   ✓ create-polyweb end to end (built CLI, local template) (2)
-     ✓ creates a project with renamed package, fresh secrets and a git commit 2083ms
- ✓ tests/unit/media-variants.test.ts (15 tests) 4171ms
-   ✓ variantes responsive (11)
-     ✓ produit des variantes strictement plus étroites que la source 342ms
-     ✓ n'émet jamais de largeur au-delà du plafond, l'original restant le choix au-dessus 313ms
-     ✓ préserve le ratio de la source 333ms
-     ✓ assainit les noms de fichier : aucune espace dans les URLs de variante 343ms
-     ✓ assainit les accents et caractères exotiques 356ms
-     ✓ écrit réellement les fichiers sur disque 304ms
-     ✓ réduit fortement le poids servi : une carte de blog ne doit pas coûter 3 Mo 318ms
-   ✓ decodeAndValidate (4)
-     ✓ rejette une bombe de pixels (décompression vers une image gigantesque) 1676ms
- ✓ tests/integration/create-admin.test.ts (2 tests) 5576ms
-   ✓ admin:create (repris de les-rochers-blancs) (2)
-     ✓ crée un admin vérifié dont le mot de passe fonctionne avec Better Auth 2574ms
-     ✓ réinitialise le mot de passe si le compte existe déjà 2927ms
- ✓ tests/integration/sales-pdf.test.ts (9 tests) 2787ms
-   ✓ PDF des documents de vente (Puppeteer) (7)
-     ✓ fr : PDF valide, libellés et données extraits 753ms
-     ✓ Chromium ne survit pas au processus Node tué (SIGKILL, ex. arrêt du webServer Playwright) 552ms
-   ✓ Factur-X : PDF Chromium réel → PDF/A-3B (1)
-     ✓ XML joint extractible et valide XSD, polices embarquées, page conservée 567ms
- ✓ tests/integration/backup/backup.test.ts (6 tests) 2141ms
-   ✓ backup → verify (brick m) (3)
-     ✓ restores into a scratch database (RESTORE_TEST_DATABASE_URL) with media 1813ms
- ✓ tests/integration/forums-module.test.ts (17 tests) 1011ms
- ✓ tests/integration/audit.test.ts (8 tests) 3262ms
-   ✓ Audit — Hooks integration (6)
-     ✓ logs SIGN_UP when a user signs up 647ms
-     ✓ logs USER_ROLE_CHANGE when admin changes role 526ms
-     ✓ does not log passwords in metadata 638ms
-     ✓ logs SIGN_IN_FAILED for bad credentials 591ms
-     ✓ filters metadata to SAFE_FIELDS only (no password in metadata) 602ms
- ✓ tests/integration/seed-idempotent.test.ts (1 test) 11381ms
-   ✓ db:seed idempotent (1)
-     ✓ un second seed ne crée aucune ligne 6157ms
- ✓ tests/integration/moderation-core.test.ts (13 tests) 355ms
+ ✓ tests/unit/admin-pages.test.ts (30 tests) 41ms
+ ✓ tests/unit/admin-media.test.ts (26 tests) 27ms
+ ✓ tests/unit/core/payments.test.ts (19 tests) 35ms
+ ✓ tests/unit/blog-engagement-actions.test.ts (37 tests) 47ms
 stdout | tests/integration/shop-returns.test.ts > boutique : demande de retour > commande livrée uniquement, quantités plafonnées, ligne d’une autre commande refusée, numéro RMA
-[07:18:51.413] WARN (#20): [events] undeclared event order.paid
+[13:35:39.629] WARN (#20): [events] undeclared event order.paid
 
 stdout | tests/integration/shop-returns.test.ts > boutique : demande de retour > commande livrée uniquement, quantités plafonnées, ligne d’une autre commande refusée, numéro RMA
-[07:18:51.457] WARN (#28): [events] undeclared event order.paid
+[13:35:39.719] WARN (#28): [events] undeclared event order.paid
 
 stdout | tests/integration/shop-returns.test.ts > boutique : demande de retour > commande livrée uniquement, quantités plafonnées, ligne d’une autre commande refusée, numéro RMA
-[07:18:51.468] WARN (#30): [events] undeclared event order.shipped
+[13:35:39.732] WARN (#30): [events] undeclared event order.shipped
 
 stdout | tests/integration/shop-returns.test.ts > boutique : demande de retour > commande livrée uniquement, quantités plafonnées, ligne d’une autre commande refusée, numéro RMA
-[07:18:51.530] WARN (#40): [events] undeclared event order.paid
+[13:35:39.799] WARN (#40): [events] undeclared event order.paid
 
 stdout | tests/integration/shop-returns.test.ts > boutique : demande de retour > commande livrée uniquement, quantités plafonnées, ligne d’une autre commande refusée, numéro RMA
-[07:18:51.541] WARN (#42): [events] undeclared event order.shipped
+[13:35:39.808] WARN (#42): [events] undeclared event order.shipped
 
 stdout | tests/integration/shop-returns.test.ts > boutique : traitement du retour > workflow ordonné, inspection validée, remise en stock au grand livre puis remboursement idempotent
-[07:18:51.667] WARN (#81): [events] undeclared event order.paid
+[13:35:39.968] WARN (#81): [events] undeclared event order.paid
 
 stdout | tests/integration/shop-returns.test.ts > boutique : traitement du retour > workflow ordonné, inspection validée, remise en stock au grand livre puis remboursement idempotent
-[07:18:51.673] WARN (#83): [events] undeclared event order.shipped
+[13:35:39.981] WARN (#83): [events] undeclared event order.shipped
 
 stdout | tests/integration/shop-returns.test.ts > boutique : traitement du retour > rien d’accepté : retour clos sans remboursement ni stock
-[07:18:51.776] WARN (#122): [events] undeclared event order.paid
+[13:35:40.143] WARN (#122): [events] undeclared event order.paid
 
 stdout | tests/integration/shop-returns.test.ts > boutique : traitement du retour > rien d’accepté : retour clos sans remboursement ni stock
-[07:18:51.784] WARN (#124): [events] undeclared event order.shipped
+[13:35:40.152] WARN (#124): [events] undeclared event order.shipped
 
 stdout | tests/integration/shop-returns.test.ts > boutique : traitement du retour > remboursement en attente confirmé par webhook → retour remboursé
-[07:18:51.841] WARN (#144): [events] undeclared event order.paid
+[13:35:40.243] WARN (#144): [events] undeclared event order.paid
 
 stdout | tests/integration/shop-returns.test.ts > boutique : traitement du retour > remboursement en attente confirmé par webhook → retour remboursé
-[07:18:51.847] WARN (#146): [events] undeclared event order.shipped
+[13:35:40.254] WARN (#146): [events] undeclared event order.shipped
+
+stdout | tests/integration/refunds.test.ts > réactions des modules > Sales : avoir émis au TTC exact + encaissement négatif ; montant inatteignable refusé avant le fournisseur
+[13:35:40.341] WARN (#102): [events] undeclared event invoice.issued
+
+stdout | tests/integration/refunds.test.ts > réactions des modules > Sales : avoir émis au TTC exact + encaissement négatif ; montant inatteignable refusé avant le fournisseur
+[13:35:40.368] WARN (#105): [events] undeclared event invoice.paid
 
 stdout | tests/integration/shop-returns.test.ts > boutique : traitement du retour > refus du fournisseur : le retour reste inspecté, nouvelle tentative avec une nouvelle clé
-[07:18:51.920] WARN (#171): [events] undeclared event order.paid
+[13:35:40.385] WARN (#171): [events] undeclared event order.paid
 
 stdout | tests/integration/shop-returns.test.ts > boutique : traitement du retour > refus du fournisseur : le retour reste inspecté, nouvelle tentative avec une nouvelle clé
-[07:18:51.926] WARN (#173): [events] undeclared event order.shipped
-
- ✓ tests/integration/shop-returns.test.ts (6 tests) 722ms
-stdout | tests/integration/bookings-public.test.ts > parcours public bookings > crée la réservation visiteur, envoie l’e-mail avec le lien signé
-[07:18:52.493] WARN (#31): [events] undeclared event booking.created
-
-stdout | tests/integration/bookings-public.test.ts > parcours public bookings > sérialise les envois concurrents sur le même créneau
-[07:18:52.567] WARN (#46): [events] undeclared event booking.created
-
-stdout | tests/integration/bookings-public.test.ts > parcours public bookings > réservation conservée si l’e-mail échoue
-[07:18:52.681] WARN (#75): [events] undeclared event booking.created
-
-stdout | tests/integration/bookings-public.test.ts > parcours public bookings > réservation conservée si l’e-mail échoue
-[07:18:52.685] WARN (#75): booking confirmation email failed { _tag: 'MailError', message: 'smtp down' }
-
- ✓ tests/integration/logistics-inventory.test.ts (9 tests) 915ms
-   ✓ cohérence stock ⇔ grand livre (1)
-     ✓ niveaux = somme du grand livre = modèle attendu, jamais négatifs, après 120 opérations aléatoires 674ms
-stdout | tests/integration/bookings-public.test.ts > parcours public bookings > annule par lien signé, de façon idempotente, et libère le créneau
-[07:18:52.704] WARN (#83): [events] undeclared event booking.canceled
-
-stdout | tests/integration/bookings-public.test.ts > parcours public bookings > refuse l’annulation d’une réservation commencée
-[07:18:52.723] WARN (#90): [events] undeclared event booking.created
-
- ✓ tests/integration/bookings-public.test.ts (12 tests) 2444ms
- ✓ tests/integration/auth-plugins.test.ts (6 tests) 1941ms
-   ✓ Better Auth — admin plugin (4)
-     ✓ admin can set a role and find it via listUsers 334ms
-     ✓ admin can ban and unban a user to control access 422ms
-   ✓ Better Auth — organization plugin (2)
-     ✓ owner can invite a member, and a non-member cannot read the organization 570ms
- ✓ tests/integration/moderation-migration.test.ts (3 tests) 354ms
-stdout | tests/integration/refunds.test.ts > réactions des modules > Sales : avoir émis au TTC exact + encaissement négatif ; montant inatteignable refusé avant le fournisseur
-[07:18:54.573] WARN (#102): [events] undeclared event invoice.issued
+[13:35:40.397] WARN (#173): [events] undeclared event order.shipped
 
 stdout | tests/integration/refunds.test.ts > réactions des modules > Sales : avoir émis au TTC exact + encaissement négatif ; montant inatteignable refusé avant le fournisseur
-[07:18:54.593] WARN (#105): [events] undeclared event invoice.paid
+[13:35:40.436] WARN (#110): [events] undeclared event credit_note.issued
+
+stdout | tests/integration/shop-checkout.test.ts > boutique : commande et paiement > crée la commande (prix TTC serveur, TVA, numéro sans trou), réserve le stock et vide le panier
+[13:35:40.475] WARN (#60): [events] undeclared event order.paid
+
+stdout | tests/integration/shop-checkout.test.ts > boutique : commande et paiement > crée la commande (prix TTC serveur, TVA, numéro sans trou), réserve le stock et vide le panier
+[13:35:40.501] WARN (#69): [events] undeclared event order.shipped
 
 stdout | tests/integration/refunds.test.ts > réactions des modules > Sales : avoir émis au TTC exact + encaissement négatif ; montant inatteignable refusé avant le fournisseur
-[07:18:54.671] WARN (#110): [events] undeclared event credit_note.issued
+[13:35:40.504] WARN (#113): [events] undeclared event credit_note.issued
 
-stdout | tests/integration/refunds.test.ts > réactions des modules > Sales : avoir émis au TTC exact + encaissement négatif ; montant inatteignable refusé avant le fournisseur
-[07:18:54.724] WARN (#113): [events] undeclared event credit_note.issued
+stdout | tests/integration/shop-checkout.test.ts > boutique : commande et paiement > crée la commande (prix TTC serveur, TVA, numéro sans trou), réserve le stock et vide le panier
+[13:35:40.532] WARN (#75): [events] undeclared event order.refunded
 
 stdout | tests/integration/refunds.test.ts > réactions des modules > Bookings : acompte remboursé en totalité → réservation annulée ; partiel sans effet
-[07:18:54.755] WARN (#120): [events] undeclared event booking.created
-
- ✓ tests/integration/auth-extensions.test.ts (5 tests) 1457ms
-   ✓ 2FA TOTP (2)
-     ✓ active la 2FA, impose l’étape TOTP à la connexion et accepte un code valide 562ms
-     ✓ un code de secours permet de terminer la connexion 609ms
- ✓ tests/integration/refunds.test.ts (12 tests) 1203ms
- ✓ tests/integration/auth-advanced.test.ts (10 tests) 1318ms
-   ✓ Auth — Change Password (2)
-     ✓ changePassword updates credentials 343ms
-stdout | tests/integration/sales-module.test.ts > module sales > émissions concurrentes : numéros consécutifs sans doublon ni trou
-[07:18:56.023] WARN (#20): [events] undeclared event invoice.issued
-
-stdout | tests/integration/sales-module.test.ts > module sales > émissions concurrentes : numéros consécutifs sans doublon ni trou
-[07:18:56.030] WARN (#18): [events] undeclared event invoice.issued
-
-stdout | tests/integration/sales-module.test.ts > module sales > émissions concurrentes : numéros consécutifs sans doublon ni trou
-[07:18:56.037] WARN (#19): [events] undeclared event invoice.issued
-
-stdout | tests/integration/sales-module.test.ts > module sales > émissions concurrentes : numéros consécutifs sans doublon ni trou
-[07:18:56.052] WARN (#17): [events] undeclared event invoice.issued
-
-stdout | tests/integration/sales-module.test.ts > module sales > émissions concurrentes : numéros consécutifs sans doublon ni trou
-[07:18:56.059] WARN (#15): [events] undeclared event invoice.issued
-
-stdout | tests/integration/sales-module.test.ts > module sales > émissions concurrentes : numéros consécutifs sans doublon ni trou
-[07:18:56.065] WARN (#16): [events] undeclared event invoice.issued
-
-stdout | tests/integration/sales-module.test.ts > module sales > document émis : modification et transitions dérivées refusées
-[07:18:56.085] WARN (#29): [events] undeclared event invoice.issued
-
-stdout | tests/integration/sales-module.test.ts > module sales > encaissements : partiel puis soldé, dépassement refusé
-[07:18:56.113] WARN (#37): [events] undeclared event invoice.issued
-
-stdout | tests/integration/sales-module.test.ts > module sales > encaissements : partiel puis soldé, dépassement refusé
-[07:18:56.129] WARN (#43): [events] undeclared event invoice.paid
-
-stdout | tests/integration/sales-module.test.ts > module sales > avoir total : facture CREDITED, second avoir plafonné
-[07:18:56.160] WARN (#47): [events] undeclared event invoice.issued
-
-stdout | tests/integration/sales-module.test.ts > module sales > avoir total : facture CREDITED, second avoir plafonné
-[07:18:56.182] WARN (#51): [events] undeclared event credit_note.issued
-
-stdout | tests/integration/platform/webhooks.test.ts > webhooks > schedules retries with backoff, then succeeds via the cron processor
-[07:18:56.202] WARN (#21): webhook delivery failed {
-  deliveryId: '663d5ef7-989f-4ab3-a6a8-2292b44e6a32',
-  status: 500,
-  error: null
-}
-
-stdout | tests/integration/platform/webhooks.test.ts > webhooks > schedules retries with backoff, then succeeds via the cron processor
-[07:18:56.203] WARN (#22): webhook delivery failed {
-  deliveryId: '7cffa93b-7bc3-4571-b4d8-5e36972cb242',
-  status: 500,
-  error: null
-}
-
-stdout | tests/integration/sales-module.test.ts > module sales > relances : un niveau à la fois, idempotent le même jour
-[07:18:56.225] WARN (#57): [events] undeclared event invoice.issued
-
-stdout | tests/integration/platform/webhooks.test.ts > webhooks > marks 410 Gone as dead and disables the webhook; manual redelivery works
-[07:18:56.233] WARN (#37): webhook delivery failed {
-  deliveryId: 'deb8db7e-865f-433e-9204-88815b87df36',
-  status: 410,
-  error: null
-}
-
- ✓ tests/unit/database/seed-data-contract.test.ts (2 tests) 1024ms
-   ✓ seed data contract (2)
-     ✓ maps every manifest entry to an existing non-empty dataset and schema table 1022ms
- ✓ tests/integration/sales-module.test.ts (8 tests) 457ms
-stdout | tests/integration/shop-checkout.test.ts > boutique : commande et paiement > crée la commande (prix TTC serveur, TVA, numéro sans trou), réserve le stock et vide le panier
-[07:18:56.772] WARN (#60): [events] undeclared event order.paid
-
-stdout | tests/integration/shop-checkout.test.ts > boutique : commande et paiement > crée la commande (prix TTC serveur, TVA, numéro sans trou), réserve le stock et vide le panier
-[07:18:56.786] WARN (#69): [events] undeclared event order.shipped
-
-stdout | tests/integration/shop-checkout.test.ts > boutique : commande et paiement > crée la commande (prix TTC serveur, TVA, numéro sans trou), réserve le stock et vide le panier
-[07:18:56.806] WARN (#75): [events] undeclared event order.refunded
+[13:35:40.547] WARN (#120): [events] undeclared event booking.created
 
 stdout | tests/integration/shop-checkout.test.ts > boutique : commande et paiement > expiration du paiement → EXPIRED et stock libéré ; paiement tardif acquis avec manque consigné
-[07:18:56.855] ERROR (#88): [shop] commande payée avec stock insuffisant {
-  orderId: '65f1645a-0c00-437e-a563-a9ead690e031',
-  skus: 'SHOP-MWIXN01Y-TEE'
-}
-
-stdout | tests/integration/platform/webhooks.test.ts > webhooks > records network failures (connection refused) without throwing
-[07:18:56.857] WARN (#46): webhook delivery failed {
-  deliveryId: '5e8b084c-6725-4fa1-85ce-b699b0864543',
-  status: 0,
-  error: 'bad port'
+[13:35:40.582] ERROR (#88): [shop] commande payée avec stock insuffisant {
+  orderId: 'd4ac3eee-91c4-498a-944e-8c29f1931487',
+  skus: 'SHOP-MWM5Z6G7-TEE'
 }
 
 stdout | tests/integration/shop-checkout.test.ts > boutique : commande et paiement > expiration du paiement → EXPIRED et stock libéré ; paiement tardif acquis avec manque consigné
-[07:18:56.863] WARN (#87): [events] undeclared event order.paid
+[13:35:40.591] WARN (#87): [events] undeclared event order.paid
 
- ✓ tests/integration/platform/webhooks.test.ts (6 tests) 849ms
-   ✓ webhooks (6)
-     ✓ records network failures (connection refused) without throwing 613ms
- ✓ tests/integration/shop-checkout.test.ts (10 tests) 471ms
- ✓ tests/unit/export-data.test.ts (4 tests) 583ms
-   ✓ /api/export-data (4)
-     ✓ returns 401 when not authenticated 573ms
- ✓ tests/integration/services-bulk-core.test.ts (5 tests) 686ms
-   ✓ bulkServiceLifecycle (core/bulk) (5)
-     ✓ publie tout et audite avec un batchId commun 610ms
-stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > queues the customer email and notifies the author once per level
-[07:18:57.919] WARN (#3): [events] undeclared event invoice.issued
+ ✓ tests/integration/shop-returns.test.ts (6 tests) 1223ms
+   ✓ boutique : demande de retour (1)
+     ✓ commande livrée uniquement, quantités plafonnées, ligne d’une autre commande refusée, numéro RMA 389ms
+ ✓ tests/integration/logistics-inventory.test.ts (9 tests) 1481ms
+   ✓ cohérence stock ⇔ grand livre (1)
+     ✓ niveaux = somme du grand livre = modèle attendu, jamais négatifs, après 120 opérations aléatoires 1058ms
+ ✓ tests/integration/moderation-core.test.ts (13 tests) 630ms
+stdout | tests/integration/sales-fec.test.ts
+[13:35:40.677] WARN (#3): [events] undeclared event invoice.issued
 
-stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > queues the customer email and notifies the author once per level
-[07:18:57.922] INFO (#5): reminders.sales.invoices { candidates: 0, sent: 0 }
+stdout | tests/integration/sales-fec.test.ts
+[13:35:40.701] WARN (#7): [events] undeclared event invoice.issued
 
-stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > queues the customer email and notifies the author once per level
-[07:18:57.971] INFO (#6): reminders.sales.invoices { candidates: 1, sent: 1 }
+stdout | tests/integration/sales-fec.test.ts
+[13:35:40.720] WARN (#11): [events] undeclared event invoice.issued
 
-stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > queues the customer email and notifies the author once per level
-[07:18:57.975] INFO (#8): reminders.sales.invoices { candidates: 1, sent: 0 }
+ ✓ tests/integration/shop-checkout.test.ts (10 tests) 606ms
+stdout | tests/integration/sales-fec.test.ts
+[13:35:40.765] WARN (#19): [events] undeclared event credit_note.issued
 
-stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > queues the customer email and notifies the author once per level
-[07:18:57.986] INFO (#10): reminders.sales.invoices { candidates: 1, sent: 1 }
+ ✓ tests/integration/refunds.test.ts (12 tests) 989ms
+stdout | tests/integration/sales-fec.test.ts
+[13:35:40.794] WARN (#23): [events] undeclared event invoice.issued
 
-stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > skips the email without a customer address but still notifies, and ignores paid invoices
-[07:18:58.035] WARN (#15): [events] undeclared event invoice.issued
+stdout | tests/integration/sales-fec.test.ts > FEC — génération (tenant, période) > sans SIREN : échec motivé ; relance manuelle forcée immédiate, cron seulement après le délai
+[13:35:40.840] WARN (#30): sales.fec: export en échec {
+  exportId: '6b7ce29c-93ee-4706-8f70-a426c70ad988',
+  organizationId: 'fec-mwm5z6sj-nosiren',
+  period: '2031-03',
+  error: 'Export FEC impossible (siren) : profil vendeur absent'
+}
 
-stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > skips the email without a customer address but still notifies, and ignores paid invoices
-[07:18:58.084] WARN (#19): [events] undeclared event invoice.issued
+stdout | tests/integration/sales-fec.test.ts > FEC — génération (tenant, période) > sans SIREN : échec motivé ; relance manuelle forcée immédiate, cron seulement après le délai
+[13:35:40.844] WARN (#32): sales.fec: export en échec {
+  exportId: '6b7ce29c-93ee-4706-8f70-a426c70ad988',
+  organizationId: 'fec-mwm5z6sj-nosiren',
+  period: '2031-03',
+  error: 'Export FEC impossible (siren) : profil vendeur absent'
+}
 
-stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > skips the email without a customer address but still notifies, and ignores paid invoices
-[07:18:58.095] WARN (#21): [events] undeclared event invoice.paid
+ ✓ tests/unit/section-schemas.test.ts (48 tests) 9ms
+stdout | tests/integration/sales-fec.test.ts > FEC — téléchargement > fichier altéré en stockage : 500, rien n’est servi
+[13:35:40.920] ERROR (#46): sales.fec: empreinte du fichier stocké différente {
+  exportId: '3506523d-6e79-45cb-b5ff-b3883c4b753d',
+  storageKey: 'fec/fec-mwm5z6sj-org/2031-03/732829320FEC20310331.txt'
+}
 
-stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > skips the email without a customer address but still notifies, and ignores paid invoices
-[07:18:58.103] INFO (#23): reminders.sales.invoices { candidates: 1, sent: 1 }
-
-stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > sends the customer reminder as transactional: author preferences ignored, no unsubscribe headers
-[07:18:58.132] WARN (#28): [events] undeclared event invoice.issued
-
-stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > sends the customer reminder as transactional: author preferences ignored, no unsubscribe headers
-[07:18:58.140] INFO (#30): reminders.sales.invoices { candidates: 1, sent: 1 }
-
-stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > localizes the reminder from the organization site defaultLocale, with a validated fallback
-[07:18:58.182] WARN (#40): [events] undeclared event invoice.issued
-
-stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > localizes the reminder from the organization site defaultLocale, with a validated fallback
-[07:18:58.204] INFO (#42): reminders.sales.invoices { candidates: 1, sent: 1 }
-
- ✓ tests/integration/notifications-reminders.test.ts (4 tests) 401ms
- ✓ tests/integration/blog-bulk-core.test.ts (3 tests) 716ms
-   ✓ bulkBlogPostLifecycle (core/bulk) (3)
-     ✓ publie tout, crée une révision par article et audite avec un batchId commun 650ms
- ✓ tests/integration/pages-bulk-core.test.ts (4 tests) 773ms
-   ✓ pages bulk (core/bulk) (4)
-     ✓ publie tout, un instantané de version par page, audit batchId commun 702ms
- ✓ tests/unit/scripts/new-module.test.ts (10 tests) 19673ms
-   ✓ scripts/new-module.ts (9)
-     ✓ declares the module notifications and registers them in modules/notifications.ts between the markers (idempotent) 321ms
-     ✓ scaffolds the module moderation adapters and registers them in modules/moderation.ts between the markers (idempotent) 394ms
-     ✓ names the main SQL table after the pluralized entity (not the domain) and auxiliary tables after the singular entity, with --table override and collision guard 909ms
-     ✓ --taxonomy opts the module into the generic core category taxonomy (tables, store, actions, capability, facet) 348ms
-     ✓ refuses invalid names and existing modules 312ms
-   ✓ scripts/new-module.ts — module généré compilable (1)
-     ✓ type-checks against core abstractions (incl. --taxonomy) and passes the capability contract 17080ms
- ✓ tests/unit/i18n-translations.test.ts (12 tests) 547ms
-   ✓ getHomeTranslations (4)
-     ✓ loads fr and has required keys 525ms
- ✓ tests/integration/platform/api-v1.test.ts (8 tests) 463ms
+ ✓ tests/integration/sales-fec.test.ts (11 tests) 433ms
+ ✓ tests/unit/modules/sales-fec.test.ts (18 tests) 32ms
+ ✓ tests/integration/forums-module.test.ts (17 tests) 1348ms
+ ✓ tests/integration/moderation-migration.test.ts (3 tests) 443ms
+ ✓ tests/integration/erp-dashboard.test.ts (6 tests) 375ms
+ ✓ tests/integration/loaders/blog-loader-effect.test.ts (8 tests) 305ms
+ ✓ tests/integration/category-taxonomy.test.ts (10 tests) 328ms
+ ✓ tests/unit/upload.test.ts (24 tests) 352ms
 stdout | tests/integration/portal.test.ts > portail client : rattachement > e-mail non vérifié : rien n'est rattaché ; après vérification : rattachement idempotent
-[07:18:59.627] WARN (#23): [events] undeclared event invoice.issued
+[13:35:42.943] WARN (#23): [events] undeclared event invoice.issued
 
 stdout | tests/integration/portal.test.ts > portail client : IDOR > listes limitées au compte (factures émises seulement, remboursements des paiements possédés)
-[07:18:59.702] WARN (#34): [events] undeclared event invoice.issued
+[13:35:43.025] WARN (#34): [events] undeclared event invoice.issued
 
 stdout | tests/integration/portal.test.ts > portail client : IDOR > listes limitées au compte (factures émises seulement, remboursements des paiements possédés)
-[07:18:59.738] WARN (#40): [events] undeclared event invoice.issued
+[13:35:43.110] WARN (#40): [events] undeclared event invoice.issued
 
 stdout | tests/integration/portal.test.ts > portail client : IDOR > l'identifiant d'autrui ≡ inexistant : aucun accès, aucun lien signé
-[07:18:59.811] WARN (#46): [events] undeclared event invoice.issued
+[13:35:43.159] WARN (#46): [events] undeclared event invoice.issued
 
 stdout | tests/integration/portal.test.ts > portail client : IDOR > réservation publique par un client connecté : rattachée à son compte
-[07:18:59.855] WARN (#64): [events] undeclared event booking.created
+[13:35:43.195] WARN (#64): [events] undeclared event booking.created
 
- ✓ tests/integration/auth.test.ts (13 tests) 393ms
- ✓ tests/integration/portal.test.ts (8 tests) 416ms
- ✓ tests/integration/logistics-module.test.ts (6 tests) 286ms
- ✓ tests/integration/blog-actions.test.ts (8 tests) 632ms
+ ✓ tests/integration/portal.test.ts (8 tests) 444ms
+ ✓ tests/unit/blog-loader.test.ts (14 tests) 27ms
+ ✓ tests/unit/blog-newsletter-service.test.ts (9 tests) 23ms
+ ✓ tests/unit/admin-versions.test.ts (11 tests) 21ms
+ ✓ tests/integration/contact-api.test.ts (13 tests) 90ms
+ ✓ tests/unit/admin-sections.test.ts (16 tests) 26ms
+ ✓ tests/unit/seo.test.ts (32 tests) 13ms
+ ✓ tests/integration/locks/core-locks-pg.test.ts (8 tests) 230ms
+ ✓ tests/unit/sanitize.test.ts (44 tests) 75ms
+ ✓ tests/integration/blog-actions.test.ts (8 tests) 999ms
    ✓ blog actions — integration (real DB) (8)
-     ✓ listBlogPostRevisions returns revisions for a seeded post 507ms
- ✓ tests/integration/platform/api-resources.test.ts (7 tests) 378ms
- ✓ tests/integration/saved-views.test.ts (7 tests) 565ms
-   ✓ vues enregistrées (7)
-     ✓ crée une vue avec une requête canonique (valeurs invalides retirées) 472ms
- ✓ tests/integration/tenant-guards.test.ts (20 tests) 409ms
- ✓ tests/integration/auth-flow.test.ts (5 tests) 528ms
- ✓ tests/integration/classifieds-module.test.ts (1 test) 587ms
-   ✓ classifieds — module (1)
-     ✓ seed, héritage, cycle de vie, FTS, contact malgré préférence, blocage, expiration 493ms
- ✓ tests/integration/platform/sites.test.ts (5 tests) 329ms
- ✓ tests/integration/category-taxonomy.test.ts (10 tests) 353ms
- ✓ tests/integration/search/search.test.ts (5 tests | 1 skipped) 247ms
- ✓ tests/integration/erp-dashboard.test.ts (6 tests) 341ms
- ✓ tests/integration/storage/s3.test.ts (5 tests) 22857ms
-stdout | tests/integration/sales-fx.test.ts > ventes multi-devise > fige la contre-valeur EUR d’une facture USD et verrouille la devise de tenue
-[07:19:03.635] WARN (#5): [events] undeclared event invoice.issued
-
-stdout | tests/integration/sales-fx.test.ts > ventes multi-devise > fige la contre-valeur EUR d’une facture USD et verrouille la devise de tenue
-[07:19:03.679] WARN (#11): [events] undeclared event credit_note.issued
-
-stdout | tests/integration/sales-fx.test.ts > ventes multi-devise > applique le taux 1 dans la devise de tenue
-[07:19:03.744] WARN (#15): [events] undeclared event invoice.issued
-
- ✓ tests/integration/sales-fx.test.ts (3 tests) 255ms
-stdout | tests/integration/sales-payments.test.ts > sales : paiement en ligne d’une facture > lien signé : seul le bon jeton ouvre la facture
-[07:19:03.859] WARN (#12): [events] undeclared event invoice.issued
-
-stdout | tests/integration/sales-payments.test.ts > sales : paiement en ligne d’une facture > webhook payé → encaissement carte, facture PAID ; doublon ignoré
-[07:19:03.913] WARN (#21): [events] undeclared event invoice.issued
-
-stdout | tests/integration/sales-payments.test.ts > sales : paiement en ligne d’une facture > webhook payé → encaissement carte, facture PAID ; doublon ignoré
-[07:19:03.960] WARN (#24): [events] undeclared event invoice.paid
-
-stdout | tests/integration/sales-payments.test.ts > sales : paiement en ligne d’une facture > paiement partiel préalable : le lien demande le restant dû, statut PARTIALLY_PAID → PAID
-[07:19:04.047] WARN (#32): [events] undeclared event invoice.issued
-
-stdout | tests/integration/sales-payments.test.ts > sales : paiement en ligne d’une facture > paiement partiel préalable : le lien demande le restant dû, statut PARTIALLY_PAID → PAID
-[07:19:04.120] WARN (#37): [events] undeclared event invoice.paid
-
- ✓ tests/integration/sales-payments.test.ts (3 tests) 456ms
+     ✓ listBlogPostRevisions returns revisions for a seeded post 853ms
 stdout | tests/integration/payments.test.ts > acompte de réservation > retient l’acompte de la ressource et confirme la demande au paiement
-[07:19:04.254] WARN (#33): [events] undeclared event booking.created
+[13:35:45.665] WARN (#33): [events] undeclared event booking.created
+
+stdout | tests/integration/bookings-public.test.ts > parcours public bookings > crée la réservation visiteur, envoie l’e-mail avec le lien signé
+[13:35:45.674] WARN (#31): [events] undeclared event booking.created
 
 stdout | tests/integration/payments.test.ts > acompte de réservation > expire la demande quand le paiement expire
-[07:19:04.297] WARN (#38): [events] undeclared event booking.created
-
-stdout | tests/integration/crm-module.test.ts > module crm > dédoublonne les contacts par tenant et refuse une société d’un autre tenant
-[07:19:04.335] WARN (#5): [events] undeclared event contact.created
+[13:35:45.694] WARN (#38): [events] undeclared event booking.created
 
 stdout | tests/integration/payments.test.ts > acompte de réservation > balaie les demandes échues sans paiement (cron)
-[07:19:04.338] WARN (#43): [events] undeclared event booking.created
+[13:35:45.723] WARN (#43): [events] undeclared event booking.created
 
- ✓ tests/integration/auth-org.test.ts (5 tests) 399ms
+stdout | tests/integration/bookings-public.test.ts > parcours public bookings > sérialise les envois concurrents sur le même créneau
+[13:35:45.733] WARN (#46): [events] undeclared event booking.created
+
+ ✓ tests/integration/payments.test.ts (7 tests) 243ms
+stdout | tests/integration/bookings-public.test.ts > parcours public bookings > réservation conservée si l’e-mail échoue
+[13:35:45.798] WARN (#75): [events] undeclared event booking.created
+
+stdout | tests/integration/bookings-public.test.ts > parcours public bookings > réservation conservée si l’e-mail échoue
+[13:35:45.805] WARN (#75): booking confirmation email failed { _tag: 'MailError', message: 'smtp down' }
+
+stdout | tests/integration/bookings-public.test.ts > parcours public bookings > annule par lien signé, de façon idempotente, et libère le créneau
+[13:35:45.844] WARN (#83): [events] undeclared event booking.canceled
+
+stdout | tests/integration/bookings-public.test.ts > parcours public bookings > refuse l’annulation d’une réservation commencée
+[13:35:45.861] WARN (#90): [events] undeclared event booking.created
+
+ ✓ tests/integration/bookings-public.test.ts (12 tests) 2433ms
+ ✓ tests/integration/platform/api-resources.test.ts (7 tests) 460ms
+ ✓ tests/integration/auth.test.ts (13 tests) 455ms
+ ✓ tests/unit/core-locks.test.ts (8 tests) 14ms
+ ✓ tests/integration/platform/api-v1.test.ts (8 tests) 589ms
+   ✓ API v1 (6)
+     ✓ refuses revoked tokens and rate-limits anonymous callers (429 + Retry-After) 301ms
+ ✓ tests/integration/logistics-module.test.ts (6 tests) 308ms
+ ✓ tests/unit/i18n-urls.test.ts (32 tests) 154ms
+ ✓ tests/unit/services-contract.test.ts (16 tests) 56ms
+ ✓ tests/unit/admin-roles.test.ts (21 tests) 24ms
+ ✓ tests/unit/modules/tax-domain.test.ts (16 tests) 16ms
+ ✓ tests/integration/site-access-audit.test.ts (9 tests) 206ms
+ ✓ tests/unit/permissions.test.ts (37 tests) 11ms
+ ✓ tests/unit/blog-taxonomy-actions.test.ts (9 tests) 51ms
+ ✓ tests/unit/admin-navigation-items.test.ts (11 tests) 25ms
 stdout | tests/integration/crm-module.test.ts > module crm > dédoublonne les contacts par tenant et refuse une société d’un autre tenant
-[07:19:04.357] WARN (#9): [events] undeclared event contact.created
+[13:35:49.716] WARN (#5): [events] undeclared event contact.created
 
 stdout | tests/integration/crm-module.test.ts > module crm > dédoublonne les contacts par tenant et refuse une société d’un autre tenant
-[07:19:04.388] WARN (#13): [events] undeclared event contact.updated
+[13:35:49.727] WARN (#9): [events] undeclared event contact.created
 
- ✓ tests/integration/payments.test.ts (7 tests) 342ms
- ✓ tests/integration/crm-module.test.ts (6 tests) 349ms
- ✓ tests/unit/upload.test.ts (24 tests) 346ms
- ✓ tests/integration/messaging-core.test.ts (2 tests) 266ms
- ✓ tests/integration/locks/core-locks-pg.test.ts (8 tests) 264ms
+stdout | tests/integration/crm-module.test.ts > module crm > dédoublonne les contacts par tenant et refuse une société d’un autre tenant
+[13:35:49.738] WARN (#13): [events] undeclared event contact.updated
+
+stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > queues the customer email and notifies the author once per level
+[13:35:49.777] WARN (#3): [events] undeclared event invoice.issued
+
+stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > queues the customer email and notifies the author once per level
+[13:35:49.789] INFO (#5): reminders.sales.invoices { candidates: 0, sent: 0 }
+
+stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > queues the customer email and notifies the author once per level
+[13:35:49.813] INFO (#6): reminders.sales.invoices { candidates: 1, sent: 1 }
+
+stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > queues the customer email and notifies the author once per level
+[13:35:49.817] INFO (#8): reminders.sales.invoices { candidates: 1, sent: 0 }
+
+stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > queues the customer email and notifies the author once per level
+[13:35:49.829] INFO (#10): reminders.sales.invoices { candidates: 1, sent: 1 }
+
+stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > skips the email without a customer address but still notifies, and ignores paid invoices
+[13:35:49.875] WARN (#15): [events] undeclared event invoice.issued
+
+stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > skips the email without a customer address but still notifies, and ignores paid invoices
+[13:35:49.900] WARN (#19): [events] undeclared event invoice.issued
+
+stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > skips the email without a customer address but still notifies, and ignores paid invoices
+[13:35:49.909] WARN (#21): [events] undeclared event invoice.paid
+
+stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > skips the email without a customer address but still notifies, and ignores paid invoices
+[13:35:49.918] INFO (#23): reminders.sales.invoices { candidates: 1, sent: 1 }
+
+stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > sends the customer reminder as transactional: author preferences ignored, no unsubscribe headers
+[13:35:49.950] WARN (#28): [events] undeclared event invoice.issued
+
+stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > sends the customer reminder as transactional: author preferences ignored, no unsubscribe headers
+[13:35:49.959] INFO (#30): reminders.sales.invoices { candidates: 1, sent: 1 }
+
+ ✓ tests/integration/crm-module.test.ts (6 tests) 322ms
+stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > localizes the reminder from the organization site defaultLocale, with a validated fallback
+[13:35:50.036] WARN (#40): [events] undeclared event invoice.issued
+
+stdout | tests/integration/notifications-reminders.test.ts > invoice reminders > localizes the reminder from the organization site defaultLocale, with a validated fallback
+[13:35:50.052] INFO (#42): reminders.sales.invoices { candidates: 1, sent: 1 }
+
+ ✓ tests/integration/notifications-reminders.test.ts (4 tests) 446ms
+ ✓ tests/integration/sales-pdf.test.ts (9 tests) 3205ms
+   ✓ PDF des documents de vente (Puppeteer) (7)
+     ✓ fr : PDF valide, libellés et données extraits 746ms
+     ✓ Chromium ne survit pas au processus Node tué (SIGKILL, ex. arrêt du webServer Playwright) 832ms
+   ✓ Factur-X : PDF Chromium réel → PDF/A-3B (1)
+     ✓ XML joint extractible et valide XSD, polices embarquées, page conservée 707ms
+ ✓ tests/integration/purchasing-module.test.ts (5 tests) 410ms
 stdout | tests/integration/bookings-module.test.ts > module bookings > réserve en heure locale et refuse hors plage, chevauchement, capacité, autre tenant
-[07:19:05.419] WARN (#9): [events] undeclared event booking.created
+[13:35:51.350] WARN (#9): [events] undeclared event booking.created
 
 stdout | tests/integration/bookings-module.test.ts > module bookings > réserve en heure locale et refuse hors plage, chevauchement, capacité, autre tenant
-[07:19:05.475] WARN (#19): [events] undeclared event booking.created
+[13:35:51.378] WARN (#19): [events] undeclared event booking.created
 
 stdout | tests/integration/bookings-module.test.ts > module bookings > sérialise deux réservations concurrentes sur le même créneau
-[07:19:05.506] WARN (#21): [events] undeclared event booking.created
-
- ✓ tests/integration/loaders/blog-loader-effect.test.ts (8 tests) 322ms
-stdout | tests/integration/bookings-module.test.ts > module bookings > confirme (numéro RES), refuse les transitions invalides, libère le créneau à l'annulation
-[07:19:05.548] WARN (#37): [events] undeclared event booking.canceled
+[13:35:51.417] WARN (#21): [events] undeclared event booking.created
 
 stdout | tests/integration/bookings-module.test.ts > module bookings > confirme (numéro RES), refuse les transitions invalides, libère le créneau à l'annulation
-[07:19:05.564] WARN (#39): [events] undeclared event booking.created
+[13:35:51.506] WARN (#37): [events] undeclared event booking.canceled
+
+stdout | tests/integration/bookings-module.test.ts > module bookings > confirme (numéro RES), refuse les transitions invalides, libère le créneau à l'annulation
+[13:35:51.520] WARN (#39): [events] undeclared event booking.created
 
 stdout | tests/integration/bookings-module.test.ts > module bookings > modifie le créneau (hors soi-même) et protège la ressource
-[07:19:05.583] WARN (#44): [events] undeclared event booking.created
+[13:35:51.543] WARN (#44): [events] undeclared event booking.created
 
- ✓ tests/integration/bookings-module.test.ts (6 tests) 345ms
+ ✓ tests/integration/bookings-module.test.ts (6 tests) 415ms
+ ✓ tests/unit/services/admin-actions.test.ts (4 tests) 32ms
+stdout | tests/unit/send-email.test.ts > sendEmail > retries on transient network error and eventually throws
+[13:35:52.130] WARN (#6): [SMTP] Attempt 1 failed, retrying Error: connect failed
+
+stdout | tests/unit/send-email.test.ts > sendEmail > retries on transient network error and eventually throws
+[13:35:53.130] WARN (#6): [SMTP] Attempt 2 failed, retrying Error: connect failed
+
+stdout | tests/unit/send-email.test.ts > sendEmail > retries on HTTP 429 (rate limit)
+[13:35:52.144] WARN (#7): [SMTP] Attempt 1 failed, retrying Error: HTTP 429 Too Many Requests
+
+stdout | tests/unit/send-email.test.ts > sendEmail > retries on HTTP 500/502/503/504 server errors
+[13:35:52.146] WARN (#8): [SMTP] Attempt 1 failed, retrying Error: HTTP 502 Bad Gateway
+
+stdout | tests/unit/send-email.test.ts > sendEmail > retries on HTTP 500/502/503/504 server errors
+[13:35:53.146] WARN (#8): [SMTP] Attempt 2 failed, retrying Error: HTTP 503 Service Unavailable
+
+stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
+[13:35:52.149] WARN (#9): [SMTP] Attempt 1 failed, retrying Error: network
+
+stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
+[13:35:53.149] WARN (#10): [SMTP] Attempt 1 failed, retrying Error: network
+
+stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
+[13:35:54.149] WARN (#11): [SMTP] Attempt 1 failed, retrying Error: network
+
+stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
+[13:35:55.149] WARN (#12): [SMTP] Attempt 1 failed, retrying Error: network
+
+stdout | tests/unit/send-email.test.ts > sendEmail > verifies exponential backoff delay formula: 1000 * 2^(attempt-1)
+[13:35:52.155] WARN (#13): [SMTP] Attempt 1 failed, retrying Error: fail
+
+stdout | tests/unit/send-email.test.ts > sendEmail > verifies exponential backoff delay formula: 1000 * 2^(attempt-1)
+[13:35:53.155] WARN (#13): [SMTP] Attempt 2 failed, retrying Error: fail
+
+ ✓ tests/unit/send-email.test.ts (17 tests) 49ms
+ ✓ tests/integration/cms-admin.test.ts (14 tests) 107ms
+ ✓ tests/unit/admin-site-social-contact-hours.test.ts (10 tests) 30ms
+ ✓ tests/integration/classifieds-module.test.ts (1 test) 932ms
+   ✓ classifieds — module (1)
+     ✓ seed, héritage, cycle de vie, FTS, contact malgré préférence, blocage, expiration 782ms
+ ✓ tests/unit/admin-menus.test.ts (13 tests) 31ms
+ ✓ tests/unit/media-loader.test.ts (12 tests) 25ms
+ ✓ tests/integration/auth-advanced.test.ts (10 tests) 1569ms
+   ✓ Auth — Change Password (2)
+     ✓ changePassword updates credentials 451ms
+ ✓ tests/unit/admin-pages-theme.test.ts (9 tests) 21ms
+ ✓ tests/unit/forums/rules.test.ts (11 tests) 9ms
+ ✓ tests/unit/admin-theme.test.ts (10 tests) 19ms
+ ✓ tests/unit/navigation-menus.test.ts (10 tests) 23ms
 stdout | tests/integration/subscriptions.test.ts > récepteur d'événements > abonnement inconnu : unmatched
-[07:19:05.796] WARN (#17): [subscriptions] abonnement fournisseur inconnu {
-  providerSubscriptionId: 'sb-mwixn751-nope',
+[13:35:55.935] WARN (#17): [subscriptions] abonnement fournisseur inconnu {
+  providerSubscriptionId: 'sb-mwm5zild-nope',
   type: 'customer.subscription.updated'
 }
 
 stdout | tests/integration/subscriptions.test.ts > récepteur d'événements > création : rattachement par métadonnée, puis doublon ignoré
-[07:19:05.806] WARN (#18): [events] undeclared event subscription.created
+[13:35:55.946] WARN (#18): [events] undeclared event subscription.created
 
 stdout | tests/integration/subscriptions.test.ts > récepteur d'événements > métadonnée incohérente (autre abonnement fournisseur) : non rattachée
-[07:19:05.820] WARN (#23): [subscriptions] abonnement fournisseur inconnu {
-  providerSubscriptionId: 'sb-mwixn751-psub-2',
+[13:35:55.957] WARN (#23): [subscriptions] abonnement fournisseur inconnu {
+  providerSubscriptionId: 'sb-mwm5zild-psub-2',
   type: 'customer.subscription.updated'
 }
 
 stdout | tests/integration/subscriptions.test.ts > récepteur d'événements > facture payée : facture Sales émise et soldée, référence fournisseur
-[07:19:05.894] WARN (#24): [events] undeclared event invoice.issued
+[13:35:56.012] WARN (#24): [events] undeclared event invoice.issued
 
 stdout | tests/integration/subscriptions.test.ts > récepteur d'événements > facture payée : facture Sales émise et soldée, référence fournisseur
-[07:19:05.896] WARN (#24): [events] undeclared event invoice.paid
+[13:35:56.015] WARN (#24): [events] undeclared event invoice.paid
+
+ ✓ tests/integration/search/search.test.ts (5 tests | 1 skipped) 223ms
+stdout | tests/integration/subscriptions.test.ts > récepteur d'événements > échec de prélèvement : facture Sales émise impayée, abonnement past_due
+[13:35:56.055] WARN (#28): [events] undeclared event invoice.issued
 
 stdout | tests/integration/subscriptions.test.ts > récepteur d'événements > échec de prélèvement : facture Sales émise impayée, abonnement past_due
-[07:19:05.936] WARN (#28): [events] undeclared event invoice.issued
-
-stdout | tests/integration/subscriptions.test.ts > récepteur d'événements > échec de prélèvement : facture Sales émise impayée, abonnement past_due
-[07:19:05.938] WARN (#28): [events] undeclared event subscription.updated
+[13:35:56.072] WARN (#28): [events] undeclared event subscription.updated
 
 stdout | tests/integration/subscriptions.test.ts > récepteur d'événements > résiliation programmée puis suppression
-[07:19:05.949] WARN (#30): [events] undeclared event subscription.updated
+[13:35:56.081] WARN (#30): [events] undeclared event subscription.updated
 
 stdout | tests/integration/subscriptions.test.ts > récepteur d'événements > résiliation programmée puis suppression
-[07:19:05.956] WARN (#32): [events] undeclared event subscription.canceled
+[13:35:56.093] WARN (#32): [events] undeclared event subscription.canceled
 
  ✓ tests/integration/subscriptions.test.ts (8 tests) 251ms
- ✓ tests/unit/port-guard.test.ts (2 tests) 302ms
- ✓ tests/integration/platform/content.test.ts (5 tests) 218ms
- ✓ tests/integration/notifications-migration.test.ts (2 tests) 192ms
- ✓ tests/integration/numbering.test.ts (2 tests) 96ms
- ✓ tests/integration/shop-returns-public.test.ts (6 tests) 368ms
+ ✓ tests/unit/core/money.test.ts (29 tests) 34ms
+ ✓ tests/unit/admin-social.test.ts (9 tests) 26ms
+ ✓ tests/unit/blog-post-actions.test.ts (7 tests) 31ms
+ ✓ tests/integration/shop-returns-public.test.ts (6 tests) 448ms
+ ✓ tests/unit/blog-helpers.test.ts (14 tests) 18ms
+ ✓ tests/integration/audit.test.ts (8 tests) 3449ms
+   ✓ Audit — Hooks integration (6)
+     ✓ logs SIGN_UP when a user signs up 690ms
+     ✓ logs USER_ROLE_CHANGE when admin changes role 524ms
+     ✓ does not log passwords in metadata 662ms
+     ✓ logs SIGN_IN_FAILED for bad credentials 607ms
+     ✓ filters metadata to SAFE_FIELDS only (no password in metadata) 705ms
+ ✓ tests/integration/consent-cms.test.ts (25 tests) 59ms
+ ✓ tests/unit/site-loader.test.ts (13 tests) 18ms
 stdout | tests/integration/notifications-email-outbox.test.ts > email outbox > retries transient failures with backoff, then gives up
-[07:19:06.887] WARN (#8): [notifications] email delivery failed { template: 'demo.hello', attempts: 1, error: 'SmtpProviderError' }
+[13:35:58.815] WARN (#8): [notifications] email delivery failed { template: 'demo.hello', attempts: 1, error: 'SmtpProviderError' }
 
 stdout | tests/integration/notifications-email-outbox.test.ts > email outbox > retries transient failures with backoff, then gives up
-[07:19:06.895] WARN (#11): [notifications] email delivery failed { template: 'demo.hello', attempts: 2, error: 'SmtpProviderError' }
+[13:35:58.823] WARN (#11): [notifications] email delivery failed { template: 'demo.hello', attempts: 2, error: 'SmtpProviderError' }
 
 stdout | tests/integration/notifications-email-outbox.test.ts > email outbox > retries transient failures with backoff, then gives up
-[07:19:06.905] WARN (#14): [notifications] email delivery failed { template: 'demo.hello', attempts: 3, error: 'SmtpProviderError' }
+[13:35:58.831] WARN (#14): [notifications] email delivery failed { template: 'demo.hello', attempts: 3, error: 'SmtpProviderError' }
 
 stdout | tests/integration/notifications-email-outbox.test.ts > email outbox > retries transient failures with backoff, then gives up
-[07:19:06.912] WARN (#17): [notifications] email delivery failed { template: 'demo.hello', attempts: 4, error: 'SmtpProviderError' }
+[13:35:58.838] WARN (#17): [notifications] email delivery failed { template: 'demo.hello', attempts: 4, error: 'SmtpProviderError' }
 
 stdout | tests/integration/notifications-email-outbox.test.ts > email outbox > retries transient failures with backoff, then gives up
-[07:19:06.919] WARN (#20): [notifications] email delivery failed { template: 'demo.hello', attempts: 5, error: 'SmtpProviderError' }
+[13:35:58.844] WARN (#20): [notifications] email delivery failed { template: 'demo.hello', attempts: 5, error: 'SmtpProviderError' }
 
 stdout | tests/integration/notifications-email-outbox.test.ts > email outbox > retries transient failures with backoff, then gives up
-[07:19:06.930] WARN (#23): [notifications] email delivery failed { template: 'demo.hello', attempts: 6, error: 'SmtpProviderError' }
+[13:35:58.850] WARN (#23): [notifications] email delivery failed { template: 'demo.hello', attempts: 6, error: 'SmtpProviderError' }
 
 stdout | tests/integration/notifications-email-outbox.test.ts > email outbox > fails permanently on invalid data, skips muted categories, cancels by key
-[07:19:06.950] WARN (#26): [notifications] email delivery failed {
+[13:35:58.857] WARN (#26): [notifications] email delivery failed {
   template: 'demo.hello',
   attempts: 1,
   error: 'InvalidEmailTemplateData'
 }
 
- ✓ tests/integration/notifications-email-outbox.test.ts (4 tests) 207ms
- ✓ tests/integration/loaders/site-media-admin-effect.test.ts (3 tests) 204ms
- ✓ tests/integration/purchasing-module.test.ts (5 tests) 283ms
- ✓ tests/integration/sales-seller-profile.test.ts (3 tests) 93ms
- ✓ tests/integration/platform/forms.test.ts (6 tests) 166ms
- ✓ tests/integration/audit-append-only.test.ts (4 tests) 124ms
- ✓ tests/integration/middleware.test.ts (4 tests) 167ms
- ✓ tests/integration/forums-migration.test.ts (3 tests) 157ms
- ✓ tests/integration/events-module.test.ts (4 tests) 75ms
- ✓ tests/integration/notifications-core.test.ts (3 tests) 143ms
- ✓ tests/integration/courses-module.test.ts (5 tests) 163ms
- ✓ tests/integration/site-access-audit.test.ts (9 tests) 190ms
- ✓ tests/unit/core/einvoice.test.ts (16 tests) 288ms
- ✓ tests/unit/content-markdown.test.ts (9 tests) 57ms
+ ✓ tests/integration/notifications-email-outbox.test.ts (4 tests) 154ms
+ ✓ tests/unit/sales/einvoice.test.ts (8 tests) 214ms
+ ✓ tests/unit/theme-tokens.test.ts (34 tests) 18ms
+stdout | tests/integration/sales-module.test.ts > module sales > émissions concurrentes : numéros consécutifs sans doublon ni trou
+[13:35:59.422] WARN (#16): [events] undeclared event invoice.issued
+
+stdout | tests/integration/sales-module.test.ts > module sales > émissions concurrentes : numéros consécutifs sans doublon ni trou
+[13:35:59.436] WARN (#18): [events] undeclared event invoice.issued
+
+ ✓ tests/unit/production-hardening.test.ts (9 tests) 63ms
+stdout | tests/integration/sales-module.test.ts > module sales > émissions concurrentes : numéros consécutifs sans doublon ni trou
+[13:35:59.448] WARN (#20): [events] undeclared event invoice.issued
+
+stdout | tests/integration/sales-module.test.ts > module sales > émissions concurrentes : numéros consécutifs sans doublon ni trou
+[13:35:59.459] WARN (#19): [events] undeclared event invoice.issued
+
+stdout | tests/integration/sales-module.test.ts > module sales > émissions concurrentes : numéros consécutifs sans doublon ni trou
+[13:35:59.465] WARN (#17): [events] undeclared event invoice.issued
+
+stdout | tests/integration/sales-module.test.ts > module sales > émissions concurrentes : numéros consécutifs sans doublon ni trou
+[13:35:59.472] WARN (#15): [events] undeclared event invoice.issued
+
+stdout | tests/integration/sales-module.test.ts > module sales > document émis : modification et transitions dérivées refusées
+[13:35:59.499] WARN (#29): [events] undeclared event invoice.issued
+
+stdout | tests/integration/sales-module.test.ts > module sales > encaissements : partiel puis soldé, dépassement refusé
+[13:35:59.529] WARN (#37): [events] undeclared event invoice.issued
+
+stdout | tests/integration/sales-module.test.ts > module sales > encaissements : partiel puis soldé, dépassement refusé
+[13:35:59.541] WARN (#43): [events] undeclared event invoice.paid
+
+stdout | tests/integration/sales-module.test.ts > module sales > avoir total : facture CREDITED, second avoir plafonné
+[13:35:59.565] WARN (#47): [events] undeclared event invoice.issued
+
+stdout | tests/integration/sales-module.test.ts > module sales > avoir total : facture CREDITED, second avoir plafonné
+[13:35:59.599] WARN (#51): [events] undeclared event credit_note.issued
+
+stdout | tests/integration/sales-module.test.ts > module sales > relances : un niveau à la fois, idempotent le même jour
+[13:35:59.622] WARN (#57): [events] undeclared event invoice.issued
+
+ ✓ tests/integration/sales-module.test.ts (8 tests) 511ms
+ ✓ tests/unit/sales/domain.test.ts (12 tests) 13ms
+ ✓ tests/integration/platform/content.test.ts (5 tests) 332ms
+stdout | tests/integration/sales-payments.test.ts > sales : paiement en ligne d’une facture > lien signé : seul le bon jeton ouvre la facture
+[13:36:01.110] WARN (#12): [events] undeclared event invoice.issued
+
+stdout | tests/integration/sales-payments.test.ts > sales : paiement en ligne d’une facture > webhook payé → encaissement carte, facture PAID ; doublon ignoré
+[13:36:01.137] WARN (#21): [events] undeclared event invoice.issued
+
+stdout | tests/integration/sales-payments.test.ts > sales : paiement en ligne d’une facture > webhook payé → encaissement carte, facture PAID ; doublon ignoré
+[13:36:01.163] WARN (#24): [events] undeclared event invoice.paid
+
+stdout | tests/integration/sales-payments.test.ts > sales : paiement en ligne d’une facture > paiement partiel préalable : le lien demande le restant dû, statut PARTIALLY_PAID → PAID
+[13:36:01.206] WARN (#32): [events] undeclared event invoice.issued
+
+stdout | tests/integration/sales-payments.test.ts > sales : paiement en ligne d’une facture > paiement partiel préalable : le lien demande le restant dû, statut PARTIALLY_PAID → PAID
+[13:36:01.234] WARN (#37): [events] undeclared event invoice.paid
+
+ ✓ tests/integration/sales-payments.test.ts (3 tests) 276ms
+ ✓ tests/unit/crm/domain.test.ts (9 tests) 10ms
+ ✓ tests/unit/notifications-registry.test.ts (9 tests) 10ms
+ ✓ tests/unit/shop/checkout-domain.test.ts (12 tests) 13ms
+stdout | tests/integration/platform/webhooks.test.ts > webhooks > schedules retries with backoff, then succeeds via the cron processor
+[13:36:03.171] WARN (#21): webhook delivery failed {
+  deliveryId: '6e9dd20b-6f3e-4b88-9fcd-adc2d8ab0e27',
+  status: 500,
+  error: null
+}
+
+stdout | tests/integration/platform/webhooks.test.ts > webhooks > schedules retries with backoff, then succeeds via the cron processor
+[13:36:03.187] WARN (#22): webhook delivery failed {
+  deliveryId: 'e684f9e4-96b5-4c8b-a2d0-714f9f87a7e1',
+  status: 500,
+  error: null
+}
+
+stdout | tests/integration/platform/webhooks.test.ts > webhooks > marks 410 Gone as dead and disables the webhook; manual redelivery works
+[13:36:03.224] WARN (#37): webhook delivery failed {
+  deliveryId: 'b64614f8-73ff-4027-a505-10c6d5adf7a9',
+  status: 410,
+  error: null
+}
+
+ ✓ tests/integration/platform/forms.test.ts (6 tests) 161ms
+stdout | tests/integration/platform/webhooks.test.ts > webhooks > records network failures (connection refused) without throwing
+[13:36:03.887] WARN (#46): webhook delivery failed {
+  deliveryId: 'ad97baf4-fc79-4b54-9c0e-4d8f1bf6be3b',
+  status: 0,
+  error: 'bad port'
+}
+
+ ✓ tests/integration/platform/webhooks.test.ts (6 tests) 962ms
+   ✓ webhooks (6)
+     ✓ records network failures (connection refused) without throwing 642ms
+ ✓ tests/unit/media-variants.test.ts (15 tests) 4845ms
+   ✓ variantes responsive (11)
+     ✓ produit des variantes strictement plus étroites que la source 432ms
+     ✓ n'émet jamais de largeur au-delà du plafond, l'original restant le choix au-dessus 494ms
+     ✓ préserve le ratio de la source 474ms
+     ✓ assainit les noms de fichier : aucune espace dans les URLs de variante 371ms
+     ✓ assainit les accents et caractères exotiques 365ms
+     ✓ écrit réellement les fichiers sur disque 369ms
+     ✓ réduit fortement le poids servi : une carte de blog ne doit pas coûter 3 Mo 396ms
+   ✓ decodeAndValidate (4)
+     ✓ rejette une bombe de pixels (décompression vers une image gigantesque) 1687ms
+ ✓ tests/unit/core-bulk.test.ts (10 tests) 13ms
+ ✓ tests/integration/backup/backup.test.ts (6 tests) 3330ms
+   ✓ backup → verify (brick m) (3)
+     ✓ creates an archive with manifest, checksum, migrations and media 403ms
+     ✓ restores into a scratch database (RESTORE_TEST_DATABASE_URL) with media 2809ms
+ ✓ tests/unit/admin-hours.test.ts (13 tests) 21ms
+ ✓ tests/unit/cache.test.ts (12 tests) 20ms
+ ✓ tests/unit/smtp-env.test.ts (20 tests) 48ms
+ ✓ tests/unit/blog-link.test.ts (6 tests) 26ms
+ ✓ tests/unit/blog-gallery.test.ts (7 tests) 17ms
+ ✓ tests/unit/core/einvoice.test.ts (16 tests) 303ms
+ ✓ tests/integration/forums-migration.test.ts (3 tests) 183ms
+ ✓ tests/unit/cms-seeds.test.ts (12 tests) 67ms
+ ✓ tests/unit/content-locking.test.ts (7 tests) 25ms
+ ✓ tests/integration/tenant-guards.test.ts (20 tests) 351ms
 stdout | tests/integration/platform/plugins.test.ts > plugin system (brick i) > a failing setup is recorded, rolled back and isolated
-[07:19:09.468] WARN (#14): [plugins] test-broken non activé : Plugin test-broken: boom
+[13:36:06.922] WARN (#14): [plugins] test-broken non activé : Plugin test-broken: boom
 
- ✓ tests/integration/platform/plugins.test.ts (5 tests) 139ms
- ✓ tests/unit/sales/einvoice.test.ts (8 tests) 193ms
- ✓ tests/unit/i18n-urls.test.ts (32 tests) 78ms
- ✓ tests/integration/platform/blocks-media.test.ts (2 tests) 136ms
- ✓ tests/integration/shop-module.test.ts (3 tests) 143ms
- ✓ tests/integration/exchange-rates.test.ts (5 tests) 155ms
- ✓ tests/integration/seed-demo-login.test.ts (1 test) 163ms
- ✓ tests/integration/platform/preview.test.ts (3 tests) 93ms
- ✓ tests/integration/blog-facets.test.ts (3 tests) 115ms
- ✓ tests/integration/cms-admin.test.ts (14 tests) 82ms
- ✓ tests/integration/export.test.ts (3 tests) 120ms
- ✓ tests/integration/formations-module.test.ts (4 tests) 117ms
- ✓ tests/integration/services-facets.test.ts (2 tests) 114ms
- ✓ tests/integration/navigation-cycle.test.ts (6 tests) 72ms
+ ✓ tests/unit/database/services-data-invariants.test.ts (5 tests) 73ms
+ ✓ tests/integration/platform/plugins.test.ts (5 tests) 94ms
+ ✓ tests/unit/scripts/new-module.test.ts (10 tests) 26259ms
+   ✓ scripts/new-module.ts (9)
+     ✓ generates a module with valid camelCase identifiers for kebab names 319ms
+     ✓ declares the module notifications and registers them in modules/notifications.ts between the markers (idempotent) 409ms
+     ✓ scaffolds the module moderation adapters and registers them in modules/moderation.ts between the markers (idempotent) 391ms
+     ✓ names the main SQL table after the pluralized entity (not the domain) and auxiliary tables after the singular entity, with --table override and collision guard 843ms
+     ✓ --taxonomy opts the module into the generic core category taxonomy (tables, store, actions, capability, facet) 379ms
+     ✓ refuses invalid names and existing modules 330ms
+   ✓ scripts/new-module.ts — module généré compilable (1)
+     ✓ type-checks against core abstractions (incl. --taxonomy) and passes the capability contract 23324ms
+ ✓ tests/unit/purchasing/domain.test.ts (6 tests) 11ms
+ ✓ tests/unit/purchasing/einvoice-import.test.ts (3 tests) 58ms
+ ✓ tests/integration/notifications-migration.test.ts (2 tests) 612ms
+   ✓ migration 0052 notifications (N1-A) (2)
+     ✓ reprend les lignes sans perte puis revient exactement à l’état initial 490ms
+stdout | tests/integration/notifications-one-click.test.ts > RFC 8058 one-click unsubscribe endpoint > disables the email channel of the token category, idempotently on replay, without cookies
+[13:36:08.827] INFO (#21): notifications.unsubscribe.one_click { category: 'comments' }
+
+stdout | tests/integration/notifications-one-click.test.ts > RFC 8058 one-click unsubscribe endpoint > disables the email channel of the token category, idempotently on replay, without cookies
+[13:36:08.842] INFO (#22): notifications.unsubscribe.one_click { category: 'comments' }
+
+stdout | tests/integration/notifications-one-click.test.ts > RFC 8058 one-click unsubscribe endpoint > only the exact path, method and form content type bypass the Origin check
+[13:36:08.857] INFO (#25): notifications.unsubscribe.one_click { category: 'comments' }
+
+stdout | tests/integration/notifications-one-click.test.ts > RFC 8058 one-click unsubscribe endpoint > only the exact path, method and form content type bypass the Origin check
+[13:36:08.867] INFO (#26): notifications.unsubscribe.one_click { category: 'comments' }
+
+ ✓ tests/integration/notifications-one-click.test.ts (5 tests) 430ms
+ ✓ tests/integration/auth-extensions.test.ts (5 tests) 2224ms
+   ✓ 2FA TOTP (2)
+     ✓ active la 2FA, impose l’étape TOTP à la connexion et accepte un code valide 702ms
+     ✓ un code de secours permet de terminer la connexion 1002ms
+ ✓ tests/unit/admin-site.test.ts (7 tests) 17ms
+ ✓ tests/unit/database/migration-sql.test.ts (12 tests) 46ms
+ ✓ tests/integration/loaders/site-media-admin-effect.test.ts (3 tests) 189ms
+ ✓ tests/unit/bookings/domain.test.ts (5 tests) 24ms
 stdout | tests/integration/observability/observability.test.ts > Sentry reporter (brick l) > sends to the envelope endpoint, respects sampling, and never fails the caller
-[07:19:11.984] WARN (#3): [sentry] envoi impossible Error: Sentry HTTP 500
-    at /workspace/b5-classifieds/src/lib/observability/errors.ts:112:52
+[13:36:10.098] WARN (#3): [sentry] envoi impossible Error: Sentry HTTP 500
+    at /workspace/b5-purchasing/src/lib/observability/errors.ts:112:52
     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
-    at sentry.capture (/workspace/b5-classifieds/src/lib/observability/errors.ts:118:16)
+    at sentry.capture (/workspace/b5-purchasing/src/lib/observability/errors.ts:118:16)
 
 stdout | tests/integration/observability/observability.test.ts > Sentry reporter (brick l) > sends to the envelope endpoint, respects sampling, and never fails the caller
-[07:19:11.990] WARN (#4): [sentry] envoi impossible TypeError: fetch failed
-    at sentry.capture (/workspace/b5-classifieds/src/lib/observability/errors.ts:118:16) {
+[13:36:10.103] WARN (#4): [sentry] envoi impossible TypeError: fetch failed
+    at sentry.capture (/workspace/b5-purchasing/src/lib/observability/errors.ts:118:16) {
   [cause]: Error: bad port
       at makeNetworkError (node:internal/deps/undici/undici:11898:35)
       at mainFetch (node:internal/deps/undici/undici:13280:22)
@@ -545,323 +583,304 @@ stdout | tests/integration/observability/observability.test.ts > Sentry reporter
       at fetch (node:internal/deps/undici/undici:13131:20)
       at fetch (node:internal/deps/undici/undici:17998:10)
       at fetch (node:internal/bootstrap/web/exposed-window-or-worker:83:12)
-      at try (/workspace/b5-classifieds/src/lib/observability/errors.ts:103:13)
-      at MixedScheduler.<anonymous> (file:///workspace/b5-classifieds/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:785:7)
+      at try (/workspace/b5-purchasing/src/lib/observability/errors.ts:103:13)
+      at MixedScheduler.<anonymous> (file:///workspace/b5-purchasing/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:785:7)
 }
 
-stdout | tests/integration/notifications-one-click.test.ts > RFC 8058 one-click unsubscribe endpoint > disables the email channel of the token category, idempotently on replay, without cookies
-[07:19:12.010] INFO (#21): notifications.unsubscribe.one_click { category: 'comments' }
+ ✓ tests/integration/observability/observability.test.ts (5 tests) 83ms
+ ✓ tests/unit/db-env.test.ts (16 tests) 50ms
+ ✓ tests/unit/smtp-providers.test.ts (11 tests) 38ms
+ ✓ tests/unit/contact-api.test.ts (12 tests) 58ms
+ ✓ tests/unit/bookings/guest.test.ts (7 tests) 11ms
+ ✓ tests/unit/logistics/inventory-ledger.test.ts (11 tests) 9ms
+ ✓ tests/integration/purchasing-invoices.test.ts (4 tests) 172ms
+ ✓ tests/integration/purchasing-migration.test.ts (3 tests) 4166ms
+ ✓ tests/integration/messaging-core.test.ts (2 tests) 171ms
+ ✓ tests/unit/content-markdown.test.ts (9 tests) 52ms
+ ✓ tests/unit/purchasing/matching-reorder.test.ts (8 tests) 8ms
+ ✓ tests/unit/core/einvoice-pdfa.test.ts (4 tests) 52ms
+ ✓ tests/unit/content-import-schema.test.ts (10 tests) 12ms
+ ✓ tests/integration/platform/blocks-media.test.ts (2 tests) 138ms
+ ✓ tests/unit/logistics/domain.test.ts (9 tests) 9ms
+ ✓ tests/unit/navigation-loader.test.ts (7 tests) 22ms
+ ✓ tests/integration/auth-org.test.ts (5 tests) 296ms
+ ✓ tests/integration/exchange-rates.test.ts (5 tests) 121ms
+ ✓ tests/unit/export-data.test.ts (4 tests) 644ms
+   ✓ /api/export-data (4)
+     ✓ returns 401 when not authenticated 636ms
+ ✓ tests/unit/search-fts.test.ts (20 tests) 31ms
+ ✓ tests/integration/create-polyweb.test.ts (5 tests) 5407ms
+   ✓ create-polyweb end to end (built CLI, local template) (2)
+     ✓ creates a project with renamed package, fresh secrets and a git commit 2956ms
+ ✓ tests/unit/lock-admin-release.test.ts (6 tests) 9ms
+ ✓ tests/unit/blog-subscription.test.ts (5 tests) 14ms
+ ✓ tests/unit/admin-contact.test.ts (10 tests) 27ms
+ ✓ tests/unit/admin-consent.test.ts (5 tests) 12ms
+ ✓ tests/integration/storage/s3.test.ts (5 tests) 24657ms
+ ✓ tests/integration/shop-module.test.ts (3 tests) 124ms
+ ✓ tests/unit/approvals/policy.test.ts (8 tests) 10ms
+ ✓ tests/unit/i18n-key-completeness.test.ts (7 tests) 54ms
+ ✓ tests/integration/courses-module.test.ts (5 tests) 114ms
+ ✓ tests/unit/origin-check.test.ts (6 tests) 10ms
+ ✓ tests/unit/rate-limit.test.ts (9 tests) 50ms
+ ✓ tests/integration/draft-preview.test.ts (4 tests) 49ms
+ ✓ tests/integration/auth-plugins.test.ts (6 tests) 1967ms
+   ✓ Better Auth — admin plugin (4)
+     ✓ admin can set a role and find it via listUsers 361ms
+     ✓ admin can ban and unban a user to control access 503ms
+   ✓ Better Auth — organization plugin (2)
+     ✓ owner can invite a member, and a non-member cannot read the organization 422ms
+ ✓ tests/integration/saved-views.test.ts (7 tests) 632ms
+   ✓ vues enregistrées (7)
+     ✓ crée une vue avec une requête canonique (valeurs invalides retirées) 541ms
+ ✓ tests/unit/platform/blocks.test.ts (5 tests) 13ms
+ ✓ tests/unit/shop/returns-domain.test.ts (7 tests) 11ms
+ ✓ tests/unit/cms-schemas.test.ts (85 tests) 11ms
+ ✓ tests/unit/classifieds/rules.test.ts (7 tests) 8ms
+stdout | tests/integration/sales-fx.test.ts > ventes multi-devise > fige la contre-valeur EUR d’une facture USD et verrouille la devise de tenue
+[13:36:17.890] WARN (#5): [events] undeclared event invoice.issued
 
-stdout | tests/integration/notifications-one-click.test.ts > RFC 8058 one-click unsubscribe endpoint > disables the email channel of the token category, idempotently on replay, without cookies
-[07:19:12.019] INFO (#22): notifications.unsubscribe.one_click { category: 'comments' }
+stdout | tests/integration/sales-fx.test.ts > ventes multi-devise > fige la contre-valeur EUR d’une facture USD et verrouille la devise de tenue
+[13:36:17.932] WARN (#11): [events] undeclared event credit_note.issued
 
- ✓ tests/integration/observability/observability.test.ts (5 tests) 76ms
-stdout | tests/integration/notifications-one-click.test.ts > RFC 8058 one-click unsubscribe endpoint > only the exact path, method and form content type bypass the Origin check
-[07:19:12.032] INFO (#25): notifications.unsubscribe.one_click { category: 'comments' }
+ ✓ tests/unit/extract-ip.test.ts (19 tests) 15ms
+stdout | tests/integration/sales-fx.test.ts > ventes multi-devise > applique le taux 1 dans la devise de tenue
+[13:36:17.970] WARN (#15): [events] undeclared event invoice.issued
 
-stdout | tests/integration/notifications-one-click.test.ts > RFC 8058 one-click unsubscribe endpoint > only the exact path, method and form content type bypass the Origin check
-[07:19:12.033] INFO (#26): notifications.unsubscribe.one_click { category: 'comments' }
+ ✓ tests/integration/services-bulk-core.test.ts (5 tests) 836ms
+   ✓ bulkServiceLifecycle (core/bulk) (5)
+     ✓ publie tout et audite avec un batchId commun 736ms
+ ✓ tests/integration/sales-fx.test.ts (3 tests) 283ms
+ ✓ tests/integration/legal-cms.test.ts (19 tests) 71ms
+ ✓ tests/unit/section-content-xss.test.ts (18 tests) 5ms
+ ✓ tests/integration/blog-bulk-core.test.ts (3 tests) 1041ms
+   ✓ bulkBlogPostLifecycle (core/bulk) (3)
+     ✓ publie tout, crée une révision par article et audite avec un batchId commun 940ms
+ ✓ tests/unit/webhooks/signing-ssrf.test.ts (7 tests) 44ms
+ ✓ tests/unit/content-editor-helpers.test.ts (14 tests) 20ms
+ ✓ tests/integration/classifieds-migration.test.ts (2 tests) 311ms
+ ✓ tests/unit/moderation/core.test.ts (6 tests) 10ms
+ ✓ tests/unit/subscriptions/lifecycle.test.ts (8 tests) 33ms
+ ✓ tests/integration/platform/preview.test.ts (3 tests) 205ms
+ ✓ tests/integration/pages-bulk-core.test.ts (4 tests) 1410ms
+   ✓ pages bulk (core/bulk) (4)
+     ✓ publie tout, un instantané de version par page, audit batchId commun 1162ms
+ ✓ tests/unit/pdf-chromium.test.ts (9 tests) 15ms
+ ✓ tests/integration/pages-facets.test.ts (5 tests) 72ms
+ ✓ tests/unit/navigation-tree.test.ts (10 tests) 15ms
+ ✓ tests/unit/core-filters-url-state.test.ts (6 tests) 8ms
+ ✓ tests/unit/crud-engine.test.ts (8 tests) 16ms
+ ✓ tests/unit/cms/resource-contract.test.ts (6 tests) 5ms
+ ✓ tests/integration/platform/sites.test.ts (5 tests) 500ms
+   ✓ multi-site — façade Effect (brique j) (1)
+     ✓ mappe les erreurs en erreurs typées 383ms
+ ✓ tests/unit/database/seed-manifest.test.ts (3 tests) 8ms
+ ✓ tests/integration/navigation-cycle.test.ts (6 tests) 137ms
+ ✓ tests/unit/bookings/scheduling.test.ts (5 tests) 43ms
+ ✓ tests/unit/contact-form-template.test.ts (15 tests) 6ms
+ ✓ tests/integration/audit-append-only.test.ts (4 tests) 151ms
+ ✓ tests/unit/sales/pdf-template.test.ts (7 tests) 34ms
+ ✓ tests/unit/dashboard/period.test.ts (8 tests) 11ms
+ ✓ tests/integration/blog-facets.test.ts (3 tests) 139ms
+ ✓ tests/integration/loaders/page-loader-effect.test.ts (4 tests) 191ms
+stdout | tests/unit/event-outbox-helpers.test.ts > afterCommit > une erreur de hook n'altère pas le résultat validé
+[13:36:23.058] ERROR (#5): [db] after-commit hook failed Error: boom
+    at db.tx.t (/workspace/b5-purchasing/src/lib/effect/transaction.ts:49:12)
 
- ✓ tests/integration/notifications-one-click.test.ts (5 tests) 143ms
- ✓ tests/integration/blog-internal-link.test.ts (8 tests) 96ms
- ✓ tests/unit/database/services-data-invariants.test.ts (5 tests) 28ms
- ✓ tests/unit/i18n-key-completeness.test.ts (7 tests) 59ms
- ✓ tests/integration/contact-api.test.ts (13 tests) 110ms
- ✓ tests/integration/classifieds-migration.test.ts (2 tests) 152ms
- ✓ tests/integration/loaders/page-loader-effect.test.ts (4 tests) 86ms
- ✓ tests/integration/pages-facets.test.ts (5 tests) 69ms
- ✓ tests/integration/draft-preview.test.ts (4 tests) 59ms
- ✓ tests/unit/core/einvoice-pdfa.test.ts (4 tests) 65ms
- ✓ tests/integration/tax-module.test.ts (3 tests) 71ms
- ✓ tests/unit/database/services-data-shape.test.ts (1 test) 53ms
- ✓ tests/integration/consent-cms.test.ts (25 tests) 81ms
- ✓ tests/integration/db-commands-effect.test.ts (10 tests) 34864ms
+ ✓ tests/unit/event-outbox-helpers.test.ts (9 tests) 15ms
+ ✓ tests/integration/sales-seller-profile.test.ts (3 tests) 159ms
+ ✓ tests/unit/tenant-roles.test.ts (5 tests) 14ms
+ ✓ tests/integration/notifications-core.test.ts (3 tests) 172ms
+stdout | tests/unit/notifications-reminders.test.ts > reminder sources > runs every source, isolates failures and supports `only`
+[13:36:23.920] WARN (#1): reminders.source.failed { source: 'demo.ko', error: 'Boom' }
+
+ ✓ tests/unit/notifications-reminders.test.ts (7 tests) 43ms
+ ✓ tests/unit/cms-i18n.test.ts (16 tests) 22ms
+ ✓ tests/unit/core-filters-facets.test.ts (5 tests) 9ms
+ ✓ tests/integration/tax-module.test.ts (3 tests) 123ms
+ ✓ tests/unit/fx/fx.test.ts (6 tests) 10ms
+stdout | tests/unit/blog-newsletter-routes.test.ts > blog newsletter HTTP routes > turns service failures into an operationally visible 503
+[13:36:24.634] ERROR (#13): [newsletter] confirm endpoint failed { name: 'Error' }
+
+ ✓ tests/unit/blog-newsletter-routes.test.ts (5 tests) 48ms
+ ✓ tests/unit/middleware-timeout.test.ts (6 tests) 67ms
+ ✓ tests/integration/loaders/navigation-consent-effect.test.ts (3 tests) 111ms
+ ✓ tests/unit/sections-sanitize.test.ts (10 tests) 29ms
+ ✓ tests/unit/loaders.test.ts (9 tests) 7ms
+ ✓ tests/unit/blog-profile.test.ts (3 tests) 10ms
+ ✓ tests/unit/core/documents.test.ts (9 tests) 7ms
+ ✓ tests/unit/audit-query.test.ts (6 tests) 7ms
+ ✓ tests/unit/services/validation.test.ts (6 tests) 11ms
+ ✓ tests/integration/formations-module.test.ts (4 tests) 89ms
+ ✓ tests/integration/events-module.test.ts (4 tests) 95ms
+ ✓ tests/unit/payments/providers.test.ts (4 tests) 11ms
+ ✓ tests/unit/sepa/pain001.test.ts (4 tests) 8ms
+ ✓ tests/unit/inline-style.test.ts (7 tests) 23ms
+ ✓ tests/unit/portal-ownership.test.ts (6 tests) 8ms
+ ✓ tests/integration/blog-internal-link.test.ts (8 tests) 93ms
+ ✓ tests/integration/auth-flow.test.ts (5 tests) 538ms
+ ✓ tests/unit/platform/fields.test.ts (5 tests) 13ms
+ ✓ tests/unit/admin-helpers.test.ts (7 tests) 65ms
+ ✓ tests/unit/internal-link-resolvers-effect.test.ts (4 tests) 17ms
+ ✓ tests/unit/dashboard/metrics.test.ts (3 tests) 4ms
+ ✓ tests/unit/core/category-taxonomy.test.ts (5 tests) 10ms
+ ✓ tests/integration/crud-engine.test.ts (2 tests) 53ms
+stdout | tests/unit/smtp-send-effect.test.ts > sendEmailEffect > retries transient errors then succeeds
+[13:36:27.261] WARN (#3): [SMTP] Attempt 1 failed, retrying Error: conn
+
+stdout | tests/unit/smtp-send-effect.test.ts > sendEmailEffect > gives up after 3 attempts and writes a dead-letter record
+[13:36:27.264] WARN (#4): [SMTP] Attempt 1 failed, retrying Error: HTTP 503
+
+stdout | tests/unit/smtp-send-effect.test.ts > sendEmailEffect > gives up after 3 attempts and writes a dead-letter record
+[13:36:27.266] WARN (#4): [SMTP] Attempt 2 failed, retrying Error: HTTP 503
+
+ ✓ tests/unit/smtp-send-effect.test.ts (5 tests) 17ms
+ ✓ tests/unit/upload-api.test.ts (9 tests) 4ms
+ ✓ tests/unit/attributes/validation.test.ts (2 tests) 7ms
+ ✓ tests/unit/port-guard.test.ts (2 tests) 317ms
+   ✓ a11y port guard (2)
+     ✓ detects and kills a stale listener bound only to IPv6 [::1] 314ms
+ ✓ tests/unit/mask-utils.test.ts (10 tests) 4ms
+ ✓ tests/unit/i18n-translations.test.ts (12 tests) 724ms
+   ✓ getHomeTranslations (4)
+     ✓ loads fr and has required keys 607ms
+ ✓ tests/unit/routing/content-routes.test.ts (4 tests) 4ms
+ ✓ tests/unit/effect-action.test.ts (6 tests) 9ms
+ ✓ tests/integration/services-facets.test.ts (2 tests) 101ms
+ ✓ tests/unit/cms/module-contract.test.ts (4 tests) 5ms
+ ✓ tests/unit/permissions-registry.test.ts (3 tests) 16ms
+ ✓ tests/unit/seo-meta.test.ts (5 tests) 8ms
+ ✓ tests/unit/cms/admin-module-contract.test.ts (3 tests) 5ms
+stdout | tests/unit/audit-fallback.test.ts > logAuditEvent — JSONL fallback > writes to fallback file when DB insert fails
+[13:36:29.125] ERROR (#1): [audit] Failed to log event {
+  message: 'An error occurred in Effect.tryPromise',
+  cause: Error: DB connection lost
+      at Object.<anonymous> (/workspace/b5-purchasing/tests/unit/audit-fallback.test.ts:24:35)
+      at Object.Mock [as values] (file:///workspace/b5-purchasing/node_modules/.pnpm/vitest@5.0.5_@opentelemetry+api@1.9.1_@types+node@22.20.5_@vitest+coverage-v8@5.0.5_jsd_f5ca3cfb1244e04cd431c7d3559988bb/node_modules/vitest/dist/chunks/spy.DDMXghXv.js:353:40)
+      at /workspace/b5-purchasing/src/lib/audit.ts:72:41
+      at MixedScheduler.<anonymous> (file:///workspace/b5-purchasing/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:785:7)
+      at ~effect/Effect/evaluate (file:///workspace/b5-purchasing/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:804:38)
+      at FiberImpl.runLoop (file:///workspace/b5-purchasing/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:453:97)
+      at FiberImpl.evaluate (file:///workspace/b5-purchasing/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:402:23)
+      at file:///workspace/b5-purchasing/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2474:9
+      at file:///workspace/b5-purchasing/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2526:19
+      at Module.<anonymous> (file:///workspace/b5-purchasing/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2537:31),
+  _tag: 'UnknownError',
+  '~effect/Cause/UnknownError': '~effect/Cause/UnknownError'
+}
+
+ ✓ tests/unit/audit-fallback.test.ts (1 test) 14ms
+ ✓ tests/integration/db-commands-effect.test.ts (10 tests) 43998ms
    ✓ commandes db:* Effect (base jetable) (10)
-     ✓ db:baseline : marque toutes les migrations sur une base existante, puis ne fait plus rien 2808ms
-     ✓ db:reset : « non » annule ; « oui » supprime les tables et l’historique 2526ms
-     ✓ db:migrate : applique toutes les migrations puis ne fait plus rien 3934ms
-     ✓ db:infra : dry run puis application 2353ms
-     ✓ db:seed : insère le manifest, relance idempotente 4851ms
-     ✓ db:seed-media : indexe les uploads puis ignore les déjà indexés 2703ms
-     ✓ db:backfill-variants : rien à traiter sur une base sans média 3749ms
-     ✓ db:sync LOCAL → TEST puis db:compare LOCAL TEST : identiques 4954ms
-     ✓ db:generate : schéma à jour → aucune migration générée 4825ms
-     ✓ db:check : OK sur la base migrée ; URL invalide → échec (code 1) 1364ms
- ✓ tests/integration/db-health.test.ts (4 tests) 26ms
- ✓ tests/unit/middleware-timeout.test.ts (6 tests) 69ms
- ✓ tests/integration/effect/db.test.ts (3 tests) 73ms
-stdout | tests/unit/send-email.test.ts > sendEmail > retries on transient network error and eventually throws
-[07:19:14.213] WARN (#6): [SMTP] Attempt 1 failed, retrying Error: connect failed
-
-stdout | tests/unit/send-email.test.ts > sendEmail > retries on transient network error and eventually throws
-[07:19:15.213] WARN (#6): [SMTP] Attempt 2 failed, retrying Error: connect failed
-
-stdout | tests/unit/send-email.test.ts > sendEmail > retries on HTTP 429 (rate limit)
-[07:19:14.227] WARN (#7): [SMTP] Attempt 1 failed, retrying Error: HTTP 429 Too Many Requests
-
-stdout | tests/unit/send-email.test.ts > sendEmail > retries on HTTP 500/502/503/504 server errors
-[07:19:14.228] WARN (#8): [SMTP] Attempt 1 failed, retrying Error: HTTP 502 Bad Gateway
-
-stdout | tests/unit/send-email.test.ts > sendEmail > retries on HTTP 500/502/503/504 server errors
-[07:19:15.228] WARN (#8): [SMTP] Attempt 2 failed, retrying Error: HTTP 503 Service Unavailable
-
-stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
-[07:19:14.233] WARN (#9): [SMTP] Attempt 1 failed, retrying Error: network
-
-stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
-[07:19:15.233] WARN (#10): [SMTP] Attempt 1 failed, retrying Error: network
-
-stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
-[07:19:16.233] WARN (#11): [SMTP] Attempt 1 failed, retrying Error: network
-
-stdout | tests/unit/send-email.test.ts > sendEmail > retries on ETIMEDOUT, ENOTFOUND, ECONNRESET, EPIPE
-[07:19:17.233] WARN (#12): [SMTP] Attempt 1 failed, retrying Error: network
-
-stdout | tests/unit/send-email.test.ts > sendEmail > verifies exponential backoff delay formula: 1000 * 2^(attempt-1)
-[07:19:14.238] WARN (#13): [SMTP] Attempt 1 failed, retrying Error: fail
-
-stdout | tests/unit/send-email.test.ts > sendEmail > verifies exponential backoff delay formula: 1000 * 2^(attempt-1)
-[07:19:15.238] WARN (#13): [SMTP] Attempt 2 failed, retrying Error: fail
-
- ✓ tests/unit/send-email.test.ts (17 tests) 46ms
- ✓ tests/integration/legal-cms.test.ts (19 tests) 99ms
- ✓ tests/unit/database/migration-sql.test.ts (12 tests) 44ms
- ✓ tests/integration/loaders/navigation-consent-effect.test.ts (3 tests) 58ms
- ✓ tests/unit/rate-limit.test.ts (9 tests) 42ms
- ✓ tests/unit/sanitize.test.ts (44 tests) 72ms
- ✓ tests/unit/smtp-env.test.ts (20 tests) 36ms
- ✓ tests/unit/production-hardening.test.ts (9 tests) 59ms
+     ✓ db:baseline : marque toutes les migrations sur une base existante, puis ne fait plus rien 4515ms
+     ✓ db:reset : « non » annule ; « oui » supprime les tables et l’historique 3628ms
+     ✓ db:migrate : applique toutes les migrations puis ne fait plus rien 4384ms
+     ✓ db:infra : dry run puis application 3181ms
+     ✓ db:seed : insère le manifest, relance idempotente 5986ms
+     ✓ db:seed-media : indexe les uploads puis ignore les déjà indexés 3935ms
+     ✓ db:backfill-variants : rien à traiter sur une base sans média 3872ms
+     ✓ db:sync LOCAL → TEST puis db:compare LOCAL TEST : identiques 6193ms
+     ✓ db:generate : schéma à jour → aucune migration générée 6321ms
+     ✓ db:check : OK sur la base migrée ; URL invalide → échec (code 1) 1360ms
+ ✓ tests/unit/auth-guards.test.ts (5 tests) 10ms
+ ✓ tests/integration/export.test.ts (3 tests) 143ms
+ ✓ tests/unit/auth-providers.test.ts (4 tests) 6ms
+ ✓ tests/unit/media-list.test.ts (4 tests) 14ms
+ ✓ tests/unit/notifications-i18n.test.ts (4 tests) 10ms
+ ✓ tests/unit/cli-utils.test.ts (12 tests) 7ms
+ ✓ tests/unit/services-validation.test.ts (7 tests) 20ms
+ ✓ tests/integration/numbering.test.ts (2 tests) 101ms
+ ✓ tests/unit/platform/revisions-diff.test.ts (4 tests) 15ms
 stdout | tests/unit/request-context.test.ts > request context (middleware) > treats a failing session lookup as anonymous
-[07:19:14.789] ERROR (#5): [middleware] Session check failed {
+[13:36:30.840] ERROR (#5): [middleware] Session check failed {
   message: 'An error occurred in Effect.tryPromise',
   cause: Error: db down
-      at /workspace/b5-classifieds/tests/unit/request-context.test.ts:14:74
-      at MixedScheduler.<anonymous> (file:///workspace/b5-classifieds/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:785:7)
-      at ~effect/Effect/evaluate (file:///workspace/b5-classifieds/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:804:38)
-      at FiberImpl.runLoop (file:///workspace/b5-classifieds/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:453:97)
-      at FiberImpl.evaluate (file:///workspace/b5-classifieds/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:402:23)
-      at forkUnsafe (file:///workspace/b5-classifieds/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2426:11)
-      at MixedScheduler.<anonymous> (file:///workspace/b5-classifieds/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:1131:21)
-      at ~effect/Effect/evaluate (file:///workspace/b5-classifieds/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:804:38)
-      at FiberImpl.runLoop (file:///workspace/b5-classifieds/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:453:97)
-      at FiberImpl.evaluate (file:///workspace/b5-classifieds/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:402:23),
+      at /workspace/b5-purchasing/tests/unit/request-context.test.ts:14:74
+      at MixedScheduler.<anonymous> (file:///workspace/b5-purchasing/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:785:7)
+      at ~effect/Effect/evaluate (file:///workspace/b5-purchasing/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:804:38)
+      at FiberImpl.runLoop (file:///workspace/b5-purchasing/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:453:97)
+      at FiberImpl.evaluate (file:///workspace/b5-purchasing/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:402:23)
+      at forkUnsafe (file:///workspace/b5-purchasing/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2426:11)
+      at MixedScheduler.<anonymous> (file:///workspace/b5-purchasing/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:1131:21)
+      at ~effect/Effect/evaluate (file:///workspace/b5-purchasing/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:804:38)
+      at FiberImpl.runLoop (file:///workspace/b5-purchasing/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:453:97)
+      at FiberImpl.evaluate (file:///workspace/b5-purchasing/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:402:23),
   _tag: 'UnknownError',
   '~effect/Cause/UnknownError': '~effect/Cause/UnknownError'
 }
 
 stdout | tests/unit/request-context.test.ts > request context (middleware) > times out a slow session lookup
-[07:19:14.816] WARN (#7): [middleware] Session check timed out — returning 503
+[13:36:30.866] WARN (#7): [middleware] Session check timed out — returning 503
 
 stdout | tests/unit/request-context.test.ts > request context (middleware) > falls back to null when site resolution fails
-[07:19:14.823] ERROR (#10): [middleware] Site resolution failed { operation: 'x', cause: 'down', _tag: 'DbError' }
+[13:36:30.870] ERROR (#10): [middleware] Site resolution failed { operation: 'x', cause: 'down', _tag: 'DbError' }
 
- ✓ tests/unit/request-context.test.ts (6 tests) 39ms
- ✓ tests/unit/core/payments.test.ts (19 tests) 38ms
- ✓ tests/unit/blog-engagement-actions.test.ts (37 tests) 48ms
- ✓ tests/unit/admin-pages.test.ts (30 tests) 45ms
- ✓ tests/unit/admin-helpers.test.ts (7 tests) 50ms
- ✓ tests/unit/admin-media.test.ts (26 tests) 31ms
- ✓ tests/integration/crud-engine.test.ts (2 tests) 63ms
- ✓ tests/unit/site-loader.test.ts (13 tests) 15ms
- ✓ tests/unit/modules/sales-fec.test.ts (18 tests) 32ms
- ✓ tests/unit/core/money.test.ts (29 tests) 29ms
-stdout | tests/unit/notifications-reminders.test.ts > reminder sources > runs every source, isolates failures and supports `only`
-[07:19:15.892] WARN (#1): reminders.source.failed { source: 'demo.ko', error: 'Boom' }
-
- ✓ tests/unit/services-contract.test.ts (16 tests) 32ms
- ✓ tests/unit/notifications-reminders.test.ts (7 tests) 43ms
- ✓ tests/unit/inline-style.test.ts (7 tests) 22ms
-stdout | tests/unit/blog-newsletter-routes.test.ts > blog newsletter HTTP routes > turns service failures into an operationally visible 503
-[07:19:16.157] ERROR (#13): [newsletter] confirm endpoint failed { name: 'Error' }
-
- ✓ tests/unit/blog-newsletter-routes.test.ts (5 tests) 38ms
- ✓ tests/unit/cms-seeds.test.ts (12 tests) 31ms
- ✓ tests/unit/admin-sections.test.ts (16 tests) 20ms
- ✓ tests/unit/bookings/guest.test.ts (7 tests) 12ms
- ✓ tests/unit/blog-post-actions.test.ts (7 tests) 29ms
- ✓ tests/unit/db-env.test.ts (16 tests) 56ms
- ✓ tests/unit/platform/blocks.test.ts (5 tests) 12ms
- ✓ tests/unit/admin-roles.test.ts (21 tests) 21ms
- ✓ tests/unit/services/admin-actions.test.ts (4 tests) 22ms
- ✓ tests/unit/smtp-providers.test.ts (11 tests) 45ms
- ✓ tests/unit/admin-menus.test.ts (13 tests) 26ms
- ✓ tests/unit/blog-loader.test.ts (14 tests) 31ms
-stdout | tests/unit/smtp-send-effect.test.ts > sendEmailEffect > retries transient errors then succeeds
-[07:19:17.088] WARN (#3): [SMTP] Attempt 1 failed, retrying Error: conn
-
-stdout | tests/unit/smtp-send-effect.test.ts > sendEmailEffect > gives up after 3 attempts and writes a dead-letter record
-[07:19:17.094] WARN (#4): [SMTP] Attempt 1 failed, retrying Error: HTTP 503
-
-stdout | tests/unit/smtp-send-effect.test.ts > sendEmailEffect > gives up after 3 attempts and writes a dead-letter record
-[07:19:17.098] WARN (#4): [SMTP] Attempt 2 failed, retrying Error: HTTP 503
-
- ✓ tests/unit/smtp-send-effect.test.ts (5 tests) 30ms
- ✓ tests/unit/sections-sanitize.test.ts (10 tests) 31ms
- ✓ tests/unit/bookings/domain.test.ts (5 tests) 27ms
- ✓ tests/unit/admin-theme.test.ts (10 tests) 17ms
- ✓ tests/unit/content-locking.test.ts (7 tests) 48ms
- ✓ tests/unit/admin-versions.test.ts (11 tests) 19ms
- ✓ tests/unit/blog-link.test.ts (6 tests) 25ms
- ✓ tests/unit/admin-social.test.ts (9 tests) 16ms
- ✓ tests/unit/contact-api.test.ts (12 tests) 37ms
- ✓ tests/unit/bookings/scheduling.test.ts (5 tests) 32ms
- ✓ tests/unit/blog-taxonomy-actions.test.ts (9 tests) 21ms
- ✓ tests/unit/blog-newsletter-service.test.ts (9 tests) 34ms
- ✓ tests/unit/theme-tokens.test.ts (34 tests) 13ms
- ✓ tests/unit/cms-schemas.test.ts (85 tests) 9ms
- ✓ tests/unit/navigation-menus.test.ts (10 tests) 16ms
- ✓ tests/unit/section-schemas.test.ts (48 tests) 12ms
- ✓ tests/unit/admin-navigation-items.test.ts (11 tests) 19ms
- ✓ tests/unit/media-loader.test.ts (12 tests) 22ms
- ✓ tests/unit/forums/i18n.test.ts (1 test) 15ms
- ✓ tests/unit/cms-i18n.test.ts (16 tests) 15ms
- ✓ tests/unit/payments/providers.test.ts (4 tests) 14ms
- ✓ tests/unit/blog-gallery.test.ts (7 tests) 14ms
- ✓ tests/unit/webhooks/signing-ssrf.test.ts (7 tests) 14ms
- ✓ tests/unit/shop/checkout-domain.test.ts (12 tests) 14ms
- ✓ tests/unit/sales/pdf-template.test.ts (7 tests) 18ms
- ✓ tests/unit/crm/domain.test.ts (9 tests) 9ms
- ✓ tests/unit/permissions-registry.test.ts (3 tests) 42ms
- ✓ tests/unit/fx/fx.test.ts (6 tests) 8ms
- ✓ tests/unit/notifications-i18n.test.ts (4 tests) 25ms
- ✓ tests/unit/pdf-chromium.test.ts (9 tests) 8ms
- ✓ tests/unit/admin-site-social-contact-hours.test.ts (10 tests) 16ms
- ✓ tests/unit/crud-engine.test.ts (8 tests) 22ms
- ✓ tests/unit/platform/fields.test.ts (5 tests) 13ms
- ✓ tests/unit/subscriptions/lifecycle.test.ts (8 tests) 18ms
- ✓ tests/unit/modules/tax-domain.test.ts (16 tests) 28ms
- ✓ tests/unit/admin-pages-theme.test.ts (9 tests) 39ms
- ✓ tests/unit/blog-helpers.test.ts (14 tests) 29ms
-stdout | tests/unit/audit-fallback.test.ts > logAuditEvent — JSONL fallback > writes to fallback file when DB insert fails
-[07:19:20.370] ERROR (#1): [audit] Failed to log event {
-  message: 'An error occurred in Effect.tryPromise',
-  cause: Error: DB connection lost
-      at Object.<anonymous> (/workspace/b5-classifieds/tests/unit/audit-fallback.test.ts:24:35)
-      at Object.Mock [as values] (file:///workspace/b5-classifieds/node_modules/.pnpm/vitest@5.0.5_@opentelemetry+api@1.9.1_@types+node@22.20.5_@vitest+coverage-v8@5.0.5_jsd_f5ca3cfb1244e04cd431c7d3559988bb/node_modules/vitest/dist/chunks/spy.DDMXghXv.js:353:40)
-      at /workspace/b5-classifieds/src/lib/audit.ts:72:41
-      at MixedScheduler.<anonymous> (file:///workspace/b5-classifieds/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:785:7)
-      at ~effect/Effect/evaluate (file:///workspace/b5-classifieds/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:804:38)
-      at FiberImpl.runLoop (file:///workspace/b5-classifieds/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:453:97)
-      at FiberImpl.evaluate (file:///workspace/b5-classifieds/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:402:23)
-      at file:///workspace/b5-classifieds/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2474:9
-      at file:///workspace/b5-classifieds/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2526:19
-      at Module.<anonymous> (file:///workspace/b5-classifieds/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2537:31),
-  _tag: 'UnknownError',
-  '~effect/Cause/UnknownError': '~effect/Cause/UnknownError'
-}
-
- ✓ tests/unit/audit-fallback.test.ts (1 test) 22ms
- ✓ tests/unit/services-validation.test.ts (7 tests) 15ms
- ✓ tests/unit/admin-hours.test.ts (13 tests) 16ms
- ✓ tests/unit/search-fts.test.ts (20 tests) 21ms
- ✓ tests/unit/navigation-loader.test.ts (7 tests) 11ms
- ✓ tests/unit/logistics/inventory-ledger.test.ts (11 tests) 10ms
- ✓ tests/unit/notifications-registry.test.ts (9 tests) 12ms
- ✓ tests/unit/mask-utils.test.ts (10 tests) 6ms
- ✓ tests/unit/admin-contact.test.ts (10 tests) 18ms
- ✓ tests/unit/origin-check.test.ts (6 tests) 9ms
- ✓ tests/unit/content-import-schema.test.ts (10 tests) 22ms
- ✓ tests/unit/classifieds/i18n.test.ts (1 test) 12ms
- ✓ tests/unit/core-locks.test.ts (8 tests) 22ms
- ✓ tests/unit/admin-site.test.ts (7 tests) 14ms
- ✓ tests/unit/services/validation.test.ts (6 tests) 11ms
- ✓ tests/unit/effect/foundation.test.ts (4 tests) 10ms
- ✓ tests/unit/permissions.test.ts (37 tests) 12ms
- ✓ tests/unit/cache.test.ts (12 tests) 16ms
- ✓ tests/unit/blog-subscription.test.ts (5 tests) 27ms
- ✓ tests/unit/core-bulk.test.ts (10 tests) 14ms
-stdout | tests/unit/event-outbox-helpers.test.ts > afterCommit > une erreur de hook n'altère pas le résultat validé
-[07:19:22.009] ERROR (#5): [db] after-commit hook failed Error: boom
-    at db.tx.t (/workspace/b5-classifieds/src/lib/effect/transaction.ts:49:12)
-
- ✓ tests/unit/event-outbox-helpers.test.ts (9 tests) 11ms
- ✓ tests/unit/core-filters-facets.test.ts (5 tests) 8ms
- ✓ tests/unit/media-list.test.ts (4 tests) 14ms
- ✓ tests/unit/sales/domain.test.ts (12 tests) 11ms
- ✓ tests/unit/csp-hash.test.ts (2 tests) 4ms
- ✓ tests/unit/lighthouse-redact.test.ts (4 tests) 4ms
- ✓ tests/unit/admin-consent.test.ts (5 tests) 12ms
- ✓ tests/unit/extract-ip.test.ts (19 tests) 12ms
- ✓ tests/unit/routing/content-routes.test.ts (4 tests) 3ms
- ✓ tests/unit/contact-form-template.test.ts (15 tests) 5ms
- ✓ tests/unit/blog/status-transitions.test.ts (17 tests) 7ms
- ✓ tests/unit/lock-admin-release.test.ts (6 tests) 12ms
- ✓ tests/unit/cms/capabilities.test.ts (2 tests) 4ms
- ✓ tests/unit/cms/module-boundaries.test.ts (2 tests) 9ms
- ✓ tests/unit/core/documents.test.ts (9 tests) 7ms
- ✓ tests/unit/internal-link-resolvers-effect.test.ts (4 tests) 10ms
- ✓ tests/unit/platform/revisions-diff.test.ts (4 tests) 7ms
- ✓ tests/unit/internal-link-effect.test.ts (3 tests) 7ms
- ✓ tests/unit/services/admin-contract.test.ts (2 tests) 5ms
- ✓ tests/unit/logistics/domain.test.ts (9 tests) 13ms
- ✓ tests/unit/blog-profile.test.ts (3 tests) 9ms
- ✓ tests/unit/effect-action.test.ts (6 tests) 7ms
- ✓ tests/unit/dashboard/period.test.ts (8 tests) 7ms
- ✓ tests/unit/navigation-tree.test.ts (10 tests) 18ms
- ✓ tests/unit/forums/rules.test.ts (11 tests) 15ms
- ✓ tests/unit/purchasing/domain.test.ts (5 tests) 12ms
- ✓ tests/unit/seo.test.ts (32 tests) 12ms
- ✓ tests/unit/crm/admin-resource.test.ts (3 tests) 6ms
- ✓ tests/unit/core/numbering.test.ts (3 tests) 10ms
- ✓ tests/unit/blog-validation.test.ts (3 tests) 9ms
- ✓ tests/unit/content-editor-helpers.test.ts (14 tests) 8ms
- ✓ tests/unit/moderation/core.test.ts (6 tests) 14ms
- ✓ tests/unit/loaders.test.ts (9 tests) 8ms
- ✓ tests/unit/core/category-taxonomy.test.ts (5 tests) 7ms
- ✓ tests/unit/shop/returns-domain.test.ts (7 tests) 14ms
- ✓ tests/unit/database/seed-manifest.test.ts (3 tests) 9ms
- ✓ tests/unit/audit-query.test.ts (6 tests) 8ms
- ✓ tests/unit/purchasing/admin-resource.test.ts (3 tests) 7ms
- ✓ tests/unit/i18n-utils.test.ts (6 tests) 4ms
+ ✓ tests/unit/request-context.test.ts (6 tests) 37ms
+ ✓ tests/unit/notifications-unsubscribe.test.ts (3 tests) 6ms
+ ✓ tests/unit/editor-dom-safety.test.ts (4 tests) 6ms
+ ✓ tests/integration/middleware.test.ts (4 tests) 174ms
+ ✓ tests/unit/core-bulk-ui.test.ts (4 tests) 13ms
+ ✓ tests/unit/sales/pay-link.test.ts (4 tests) 6ms
+ ✓ tests/unit/lighthouse-redact.test.ts (4 tests) 6ms
+ ✓ tests/unit/cms/workflow.test.ts (4 tests) 5ms
+ ✓ tests/unit/core/numbering.test.ts (3 tests) 6ms
+ ✓ tests/unit/effect/foundation.test.ts (4 tests) 13ms
  ✓ tests/unit/effect-run.test.ts (4 tests) 7ms
- ✓ tests/unit/attributes/validation.test.ts (2 tests) 7ms
- ✓ tests/unit/classifieds/rules.test.ts (7 tests) 7ms
- ✓ tests/unit/api-tokens-labels.test.ts (2 tests) 3ms
- ✓ tests/unit/portal-ownership.test.ts (6 tests) 10ms
- ✓ tests/unit/auth-providers.test.ts (4 tests) 5ms
- ✓ tests/unit/core-filters-url-state.test.ts (6 tests) 7ms
- ✓ tests/unit/seo-meta.test.ts (5 tests) 9ms
- ✓ tests/unit/cms-audit.test.ts (1 test) 4ms
- ✓ tests/unit/schema-validation.test.ts (12 tests) 8ms
- ✓ tests/unit/readme-builder/node-requirement.test.ts (3 tests) 3ms
- ✓ tests/unit/section-content-xss.test.ts (18 tests) 23ms
- ✓ tests/unit/services/admin-resource.test.ts (3 tests) 4ms
- ✓ tests/unit/core-bulk-ui.test.ts (4 tests) 9ms
- ✓ tests/unit/blog-lifecycle.test.ts (2 tests) 7ms
- ✓ tests/unit/upload-api.test.ts (9 tests) 8ms
- ✓ tests/unit/auth-guards.test.ts (5 tests) 7ms
- ✓ tests/unit/bookings/admin-resource.test.ts (3 tests) 5ms
- ✓ tests/unit/dashboard/metrics.test.ts (3 tests) 8ms
- ✓ tests/unit/cli-utils.test.ts (12 tests) 5ms
- ✓ tests/unit/services-workflow-restore.test.ts (2 tests) 6ms
- ✓ tests/unit/cms/resource-contract.test.ts (6 tests) 3ms
- ✓ tests/unit/notifications-unsubscribe.test.ts (3 tests) 4ms
- ✓ tests/unit/services/workflow.test.ts (3 tests) 3ms
- ✓ tests/unit/cms/workflow.test.ts (4 tests) 4ms
- ✓ tests/unit/editor-dom-safety.test.ts (4 tests) 3ms
+ ✓ tests/unit/cms/module-registry.test.ts (2 tests) 6ms
+ ✓ tests/unit/cms/module-boundaries.test.ts (2 tests) 9ms
+ ✓ tests/unit/schema-validation.test.ts (12 tests) 5ms
+ ✓ tests/unit/blog/status-transitions.test.ts (17 tests) 11ms
+ ✓ tests/unit/bookings/admin-resource.test.ts (3 tests) 6ms
+ ✓ tests/unit/logistics/admin-resource.test.ts (3 tests) 6ms
+ ✓ tests/unit/database/seed-data-contract.test.ts (2 tests) 1238ms
+   ✓ seed data contract (2)
+     ✓ maps every manifest entry to an existing non-empty dataset and schema table 1235ms
+ ✓ tests/unit/services/module-contract.test.ts (3 tests) 5ms
+ ✓ tests/unit/services/workflow.test.ts (3 tests) 5ms
+ ✓ tests/unit/database/services-data-shape.test.ts (1 test) 42ms
+ ✓ tests/unit/services/admin-contract.test.ts (2 tests) 7ms
+ ✓ tests/unit/internal-link-effect.test.ts (3 tests) 6ms
+ ✓ tests/unit/services-workflow-restore.test.ts (2 tests) 5ms
+ ✓ tests/unit/site-access.test.ts (5 tests) 5ms
+ ✓ tests/integration/effect/db.test.ts (3 tests) 65ms
+ ✓ tests/unit/i18n-utils.test.ts (6 tests) 4ms
+ ✓ tests/unit/blog-lifecycle.test.ts (2 tests) 6ms
+ ✓ tests/unit/cms/capabilities.test.ts (2 tests) 8ms
+ ✓ tests/unit/purchasing/po-send-email.test.ts (2 tests) 3ms
+ ✓ tests/unit/purchasing/admin-resource.test.ts (3 tests) 5ms
+ ✓ tests/unit/services/urls.test.ts (3 tests) 4ms
+ ✓ tests/unit/cms-audit.test.ts (1 test) 2ms
+ ✓ tests/unit/api-tokens-labels.test.ts (2 tests) 5ms
  ✓ tests/unit/pdf-puppeteer.test.ts (3 tests) 4ms
- ✓ tests/unit/tenant-roles.test.ts (5 tests) 8ms
- ✓ tests/unit/sales/pay-link.test.ts (4 tests) 4ms
- ✓ tests/unit/cms/admin-module-contract.test.ts (3 tests) 6ms
- ✓ tests/unit/loaders-effect.test.ts (2 tests) 6ms
- ✓ tests/unit/cms/admin-filter-contract.test.ts (2 tests) 3ms
- ✓ tests/unit/cms/module-registry.test.ts (2 tests) 5ms
- ✓ tests/unit/services/urls.test.ts (3 tests) 3ms
- ✓ tests/unit/services/module-contract.test.ts (3 tests) 6ms
- ✓ tests/unit/blog-public-visibility.test.ts (1 test) 3ms
- ✓ tests/unit/logistics/admin-resource.test.ts (3 tests) 5ms
- ✓ tests/unit/site-access.test.ts (5 tests) 4ms
+ ✓ tests/unit/crm/admin-resource.test.ts (3 tests) 5ms
+ ✓ tests/unit/classifieds/i18n.test.ts (1 test) 15ms
+ ✓ tests/unit/blog-validation.test.ts (3 tests) 11ms
+ ✓ tests/unit/cms/admin-filter-contract.test.ts (2 tests) 4ms
+ ✓ tests/unit/forums/i18n.test.ts (1 test) 19ms
+ ✓ tests/unit/csp-hash.test.ts (2 tests) 6ms
+ ✓ tests/unit/readme-builder/node-requirement.test.ts (3 tests) 5ms
+ ✓ tests/integration/db-health.test.ts (4 tests) 58ms
+ ✓ tests/unit/services/admin-resource.test.ts (3 tests) 5ms
+ ✓ tests/unit/blog-public-visibility.test.ts (1 test) 4ms
+ ✓ tests/unit/audit-retention.test.ts (1 test) 3ms
  ✓ tests/unit/messaging/core.test.ts (2 tests) 3ms
- ✓ tests/unit/audit-retention.test.ts (1 test) 2ms
- ✓ tests/unit/cms/module-contract.test.ts (4 tests) 3ms
+ ✓ tests/unit/loaders-effect.test.ts (2 tests) 6ms
+ ✓ tests/integration/seed-demo-login.test.ts (1 test) 130ms
+ ✓ tests/integration/create-admin.test.ts (2 tests) 5367ms
+   ✓ admin:create (repris de les-rochers-blancs) (2)
+     ✓ crée un admin vérifié dont le mot de passe fonctionne avec Better Auth 2934ms
+     ✓ réinitialise le mot de passe si le compte existe déjà 2407ms
+ ✓ tests/integration/seed-idempotent.test.ts (1 test) 11927ms
+   ✓ db:seed idempotent (1)
+     ✓ un second seed ne crée aucune ligne 6370ms
 
- Test Files  276 passed (276)
-      Tests  2295 passed | 1 skipped (2296)
-   Start at  07:18:38
-   Duration  50.45s (import 51%, tests 47%, transform 2%)
+ Test Files  283 passed (283)
+      Tests  2328 passed | 1 skipped (2329)
+   Start at  13:35:36
+   Duration  62.36s (import 48%, tests 47%, transform 4%)
 
-     Import  1071 modules were evaluated 3972 times · 163.02s total, 51% of tracked time
-             ~6.48s faster with isolate: false — shared modules are evaluated once per worker instead of once per file
+     Import  1114 modules were evaluated 5120 times · 187.39s total, 48% of tracked time
+             ~9.63s faster with isolate: false — shared modules are evaluated once per worker instead of once per file
              learn more: https://vitest.dev/guide/improving-performance#test-isolation
 
-JSON report written to /workspace/b5-classifieds/tests/reports/vitest-results.json
+JSON report written to /workspace/b5-purchasing/tests/reports/vitest-results.json

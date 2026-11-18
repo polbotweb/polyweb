@@ -157,6 +157,14 @@ for (const lang of locales) {
   adminUrls.push(`${BASE}/${lang}/admin/sales/fec`);
   // Taux de change (devise de tenue, taux BCE et forçage manuel seedés).
   adminUrls.push(`${BASE}/${lang}/admin/sales/fx`);
+  adminUrls.push(`${BASE}/${lang}/admin/purchasing`);
+  adminUrls.push(`${BASE}/${lang}/admin/purchasing/settings`);
+  adminUrls.push(`${BASE}/${lang}/admin/purchasing/invoices`);
+  adminUrls.push(`${BASE}/${lang}/admin/purchasing/reorder`);
+  adminUrls.push(`${BASE}/${lang}/admin/purchasing/returns`);
+  adminUrls.push(`${BASE}/${lang}/admin/purchasing/sepa`);
+  adminUrls.push(`${BASE}/${lang}/admin/purchasing/imports`);
+
   adminUrls.push(`${BASE}/${lang}/admin/subscriptions`);
   if (subscriptionsSeed) {
     adminUrls.push(`${BASE}/${lang}/admin/subscriptions/plans/${encodeURIComponent(subscriptionsSeed.planId)}`);

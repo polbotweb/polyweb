@@ -10,6 +10,8 @@ import { bigint, boolean, check, date, index, integer, pgTable, text, timestamp,
 import { sql } from "drizzle-orm";
 import { organization, user } from "@database/schemas/auth.schema";
 import { logisticsItems, logisticsStockMovements, logisticsWarehouses } from "@/modules/logistics/schema";
+import { crmCompanies, crmContacts } from "@/modules/crm/schema";
+import { approvalRequests } from "@/core/approvals/schema";
 import { PURCHASE_ORDER_STATUSES } from "../domain/workflow";
 
 export const purchasingSuppliers = pgTable("purchasing_suppliers", {
@@ -23,6 +25,17 @@ export const purchasingSuppliers = pgTable("purchasing_suppliers", {
   address: text("address"),
   paymentTermDays: integer("payment_term_days").default(30).notNull(),
   active: boolean("active").default(true).notNull(),
+  crmCompanyId: text("crm_company_id").references(() => crmCompanies.id, { onDelete: "set null" }),
+  crmContactId: text("crm_contact_id").references(() => crmContacts.id, { onDelete: "set null" }),
+  iban: text("iban"),
+  bic: text("bic"),
+  sepaName: text("sepa_name"),
+  trustedCatalogue: boolean("trusted_catalogue").default(false).notNull(),
+  punchoutEnabled: boolean("punchout_enabled").default(false).notNull(),
+  punchoutSetupUrl: text("punchout_setup_url"),
+  punchoutIdentity: text("punchout_identity"),
+  punchoutDomain: text("punchout_domain"),
+  punchoutSecret: text("punchout_secret"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
 }, (table) => [uniqueIndex("purchasing_suppliers_org_code_uidx").on(table.organizationId, table.code)]);
@@ -42,6 +55,10 @@ export const purchasing = pgTable("purchasing_orders", {
   currency: text("currency").default("EUR").notNull(),
   expectedDate: date("expected_date", { mode: "string" }),
   netMinor: bigint("net_minor", { mode: "number" }).default(0).notNull(),
+  taxMinor: bigint("tax_minor", { mode: "number" }).default(0).notNull(),
+  grossMinor: bigint("gross_minor", { mode: "number" }).default(0).notNull(),
+  approvalRequestId: text("approval_request_id").references(() => approvalRequests.id, { onDelete: "set null" }),
+  origin: text("origin").default("manual").notNull(),
   sentAt: timestamp("sent_at"),
   notes: text("notes"),
   createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
@@ -59,13 +76,19 @@ export const purchasingOrderLines = pgTable("purchasing_order_lines", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   orderId: text("order_id").notNull().references(() => purchasing.id, { onDelete: "cascade" }),
   position: integer("position").notNull(),
-  itemId: text("item_id").notNull().references(() => logisticsItems.id, { onDelete: "no action" }),
+  itemId: text("item_id").references(() => logisticsItems.id, { onDelete: "no action" }),
   sku: text("sku").notNull(),
   description: text("description"),
+  kind: text("kind").default("stock").notNull(),
+  warehouseId: text("warehouse_id").references(() => logisticsWarehouses.id, { onDelete: "no action" }),
   quantity: integer("quantity").notNull(),
   receivedQuantity: integer("received_quantity").default(0).notNull(),
   unitPriceMinor: bigint("unit_price_minor", { mode: "number" }).notNull(),
   netMinor: bigint("net_minor", { mode: "number" }).notNull(),
+  taxCategory: text("tax_category").default("standard").notNull(),
+  ratePercent: text("rate_percent").default("0").notNull(),
+  taxMinor: bigint("tax_minor", { mode: "number" }).default(0).notNull(),
+  grossMinor: bigint("gross_minor", { mode: "number" }).default(0).notNull(),
 }, (table) => [
   uniqueIndex("purchasing_order_lines_position_uidx").on(table.orderId, table.position),
   check("purchasing_order_lines_quantity_positive", sql`${table.quantity} > 0`),
@@ -124,3 +147,4 @@ export const purchasingOrderLocks = pgTable("purchasing_order_locks", {
   lockedAt: timestamp("locked_at").defaultNow().notNull(),
   expiresAt: timestamp("expires_at").notNull(),
 });
+export * from "./extended";

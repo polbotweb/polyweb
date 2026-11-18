@@ -10,12 +10,13 @@ import { eq } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
 import { requireTenantPermission, requireTenantResourcePermission } from "@/lib/effect/action";
 import { purchasing, purchasingReceipts, purchasingSuppliers } from "../schema";
+import { purchasingEinvoiceImports, purchasingInvoices, purchasingReturns, purchasingSepaExports } from "../schema/extended";
 
-export const PURCHASING_PERMISSIONS = ["create", "read", "update", "delete"] as const;
+export const PURCHASING_PERMISSIONS = ["create", "read", "update", "delete", "send", "approve", "invoice", "payment"] as const;
 export type PurchasingPermission = (typeof PURCHASING_PERMISSIONS)[number];
 
 /** Ressources du module dont l'organisation se lit en base. */
-export const PURCHASING_RESOURCES = { order: purchasing, supplier: purchasingSuppliers, receipt: purchasingReceipts } as const;
+export const PURCHASING_RESOURCES = { order: purchasing, supplier: purchasingSuppliers, receipt: purchasingReceipts, invoice: purchasingInvoices, return: purchasingReturns, sepa: purchasingSepaExports, import: purchasingEinvoiceImports } as const;
 export type PurchasingResource = keyof typeof PURCHASING_RESOURCES;
 
 /** Données de l'organisation `organizationId` (`null` = plateforme) : création, actions groupées. */

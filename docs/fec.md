@@ -8,8 +8,9 @@ des documents de vente et des règlements. Domaine pur : `domain/fec.ts` ; orche
 
 - **VE** (ventes) : une écriture par facture / avoir numéroté émis dans la période (ni brouillon ni annulé) —
   411 client, 706 produits HT et 44571 TVA collectée par taux ; avoir = sens inversé.
+- **HA** (achats) : une écriture par facture / avoir fournisseur émis dans la période (`buildPurchaseEntry`, comptes 401 / 607 / 44566) et les règlements fournisseurs (401 / 512). Voir le module achats (`docs/purchasing.md`, section « Pour les comptables »).
 - **BQ** (banque) : une écriture par encaissement (512 / 411) ou remboursement (sens inversé) daté du mois.
-- Tri déterministe (date, journal VE avant BQ, pièce, identifiant) ; `EcritureNum` = `<journal><AAAAMM><seq:5>`.
+- Tri déterministe (date, journal VE puis HA puis BQ, pièce, identifiant) ; `EcritureNum` = `<journal><AAAAMM><seq:5>`.
 - Chaque écriture est équilibrée, totaux débit = crédit vérifiés ; documents en devise exportés en contre-valeur EUR figée avec `Montantdevise`/`Idevise` (voir [multi-devises](./multi-currency.md)) ; devise de tenue autre que EUR → échec motivé.
 - Fichier `<SIREN>FEC<AAAAMMJJ>.txt` (date de clôture de la période), 18 colonnes, séparateur `|`, fins de ligne
   CRLF, encodage ISO 8859-15 ; les séparateurs et sauts de ligne des libellés sont neutralisés.

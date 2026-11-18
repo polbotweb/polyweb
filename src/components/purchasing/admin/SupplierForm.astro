@@ -10,7 +10,13 @@ interface Props {
   locale: Locale;
   organizationId?: string | null;
   viewBaseUrl?: string;
-  supplier?: { id: string; code: string; name: string; email: string | null; country: string | null; vatNumber: string | null; address: string | null; paymentTermDays: number; active: boolean };
+  supplier?: {
+    id: string; code: string; name: string; email: string | null; country: string | null; vatNumber: string | null; address: string | null;
+    paymentTermDays: number; active: boolean;
+    iban: string | null; bic: string | null; sepaName: string | null;
+    crmCompanyId: string | null; crmContactId: string | null; trustedCatalogue: boolean;
+    punchoutEnabled: boolean; punchoutSetupUrl: string | null; punchoutIdentity: string | null; punchoutDomain: string | null;
+  };
 }
 const { locale, organizationId = null, viewBaseUrl = "", supplier: s } = Astro.props as Props;
 const t = getPurchasingTranslations(locale);
@@ -27,6 +33,27 @@ const p = s ? "po-sup-edit" : "po-sup-new";
     <div class="grid gap-2 sm:col-span-3"><Label for={`${p}-address`}>{t.fields.address}</Label><textarea id={`${p}-address`} name="address" rows="2" maxlength="1000" class="rounded-md border bg-transparent px-3 py-2 text-sm">{s?.address ?? ""}</textarea></div>
     <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" class="size-6" name="active" checked={s ? s.active : true} />{t.fields.active}</label>
   </div>
+  <fieldset class="grid gap-4 rounded-md border p-4 sm:grid-cols-3">
+    <legend class="px-1 font-medium">{t.fields.iban} / {t.fields.bic}</legend>
+    <div class="grid gap-2"><Label for={`${p}-iban`}>{t.fields.iban}</Label><Input id={`${p}-iban`} name="iban" maxlength={34} autocomplete="off" value={s?.iban ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${p}-bic`}>{t.fields.bic}</Label><Input id={`${p}-bic`} name="bic" maxlength={11} autocomplete="off" value={s?.bic ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${p}-sepa`}>{t.fields.sepaName}</Label><Input id={`${p}-sepa`} name="sepaName" maxlength={70} value={s?.sepaName ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${p}-crm-co`}>{t.fields.crmCompanyId}</Label><Input id={`${p}-crm-co`} name="crmCompanyId" maxlength={36} value={s?.crmCompanyId ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${p}-crm-ct`}>{t.fields.crmContactId}</Label><Input id={`${p}-crm-ct`} name="crmContactId" maxlength={36} value={s?.crmContactId ?? ""} /></div>
+    <label class="flex min-h-11 items-center gap-2 text-sm sm:col-span-3"><input type="checkbox" class="size-6" name="trustedCatalogue" checked={s?.trustedCatalogue ?? false} />{t.fields.trustedCatalogue}</label>
+  </fieldset>
+  <fieldset class="grid gap-4 rounded-md border p-4 sm:grid-cols-2">
+    <legend class="px-1 font-medium">{t.fields.punchout}</legend>
+    <label class="flex min-h-11 items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" class="size-6" name="punchoutEnabled" checked={s?.punchoutEnabled ?? false} />{t.fields.punchoutEnabled}</label>
+    <div class="grid gap-2 sm:col-span-2"><Label for={`${p}-po-url`}>{t.fields.punchoutSetupUrl}</Label><Input id={`${p}-po-url`} name="punchoutSetupUrl" maxlength={2000} value={s?.punchoutSetupUrl ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${p}-po-id`}>{t.fields.punchoutIdentity}</Label><Input id={`${p}-po-id`} name="punchoutIdentity" maxlength={200} value={s?.punchoutIdentity ?? ""} /></div>
+    <div class="grid gap-2"><Label for={`${p}-po-dom`}>{t.fields.punchoutDomain}</Label><Input id={`${p}-po-dom`} name="punchoutDomain" maxlength={200} value={s?.punchoutDomain ?? ""} /></div>
+    <div class="grid gap-2 sm:col-span-2">
+      <Label for={`${p}-po-sec`}>{t.fields.punchoutSecret}</Label>
+      <Input id={`${p}-po-sec`} name="punchoutSecret" type="password" maxlength={500} autocomplete="new-password" value="" />
+      {s && <p class="text-sm text-muted-foreground">{t.fields.keepSecret}</p>}
+    </div>
+  </fieldset>
   <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
   <div><Button type="submit">{s ? t.admin.save : t.admin.create}</Button></div>
 </form>

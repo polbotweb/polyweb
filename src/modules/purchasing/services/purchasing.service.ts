@@ -16,6 +16,7 @@ import { canTransition } from "@/core/workflow";
 import { assignDocumentNumber } from "@/core/numbering";
 import type { LockOwner } from "@/core/locks/policy";
 import { logisticsStockPort } from "@/modules/logistics/services/logistics.service";
+import { crmCompanies, crmContacts } from "@/modules/crm/schema";
 import {
   purchasing, purchasingOrderLines, purchasingOrderRevisions, purchasingReceiptLines, purchasingReceipts, purchasingSuppliers,
 } from "../schema";
@@ -25,6 +26,8 @@ import { validatePurchaseOrder, validateSupplier, type PurchaseOrderLineInput } 
 import { planReceipt, type ReceiptLineInput } from "../domain/receipt";
 import { DEFAULT_GOODS_RECEIPT_NUMBERING, DEFAULT_PURCHASE_ORDER_NUMBERING, GOODS_RECEIPT_NUMBERING_KEY, PURCHASE_ORDER_NUMBERING_KEY } from "../domain/numbering";
 import type { InvalidPurchaseOrderError, InvalidReceiptError, InvalidSupplierError } from "../domain/errors";
+import { purchasingSettingsService } from "./settings.service";
+import { approvalNeeded, openPurchaseApproval } from "./approvals.service";
 
 export type PurchaseOrderRow = typeof purchasing.$inferSelect;
 export type SupplierRow = typeof purchasingSuppliers.$inferSelect;
@@ -68,17 +71,45 @@ export interface SupplierInput {
   readonly address?: string | null;
   readonly paymentTermDays?: number;
   readonly active?: boolean;
+  readonly iban?: string | null;
+  readonly bic?: string | null;
+  readonly sepaName?: string | null;
+  readonly crmCompanyId?: string | null;
+  readonly crmContactId?: string | null;
+  readonly trustedCatalogue?: boolean;
+  readonly punchoutEnabled?: boolean;
+  readonly punchoutSetupUrl?: string | null;
+  readonly punchoutIdentity?: string | null;
+  readonly punchoutDomain?: string | null;
+  readonly punchoutSecret?: string | null;
 }
 
 const supplierColumns = (executor: Executor, input: SupplierInput, organizationId: string | null, exceptId?: string) =>
   Effect.gen(function* () {
     const valid = yield* domain(validateSupplier({
       code: input.code, name: input.name, email: input.email ?? null, country: input.country ?? null, paymentTermDays: input.paymentTermDays ?? 30,
+      iban: input.iban ?? null, bic: input.bic ?? null, sepaName: input.sepaName ?? null,
+      crmCompanyId: input.crmCompanyId ?? null, crmContactId: input.crmContactId ?? null,
+      trustedCatalogue: input.trustedCatalogue, punchoutEnabled: input.punchoutEnabled,
+      punchoutSetupUrl: input.punchoutSetupUrl ?? null, punchoutIdentity: input.punchoutIdentity ?? null,
+      punchoutDomain: input.punchoutDomain ?? null, punchoutSecret: input.punchoutSecret ?? null,
     }));
     const clash = yield* dbTry("purchasing.supplier.dedup", () =>
       executor.select({ id: purchasingSuppliers.id }).from(purchasingSuppliers)
         .where(and(eq(purchasingSuppliers.code, valid.code), sameTenant(purchasingSuppliers.organizationId, organizationId), exceptId ? ne(purchasingSuppliers.id, exceptId) : undefined)).limit(1));
     if (clash[0]) return yield* fail("CONFLICT", `Le code fournisseur ${valid.code} existe déjà.`);
+    if (valid.crmCompanyId) {
+      const [company] = yield* dbTry("purchasing.supplier.crmCompany", () =>
+        executor.select({ id: crmCompanies.id }).from(crmCompanies)
+          .where(and(eq(crmCompanies.id, valid.crmCompanyId!), sameTenant(crmCompanies.organizationId, organizationId))).limit(1));
+      if (!company) return yield* fail("NOT_FOUND", "Société CRM introuvable.");
+    }
+    if (valid.crmContactId) {
+      const [contact] = yield* dbTry("purchasing.supplier.crmContact", () =>
+        executor.select({ id: crmContacts.id }).from(crmContacts)
+          .where(and(eq(crmContacts.id, valid.crmContactId!), sameTenant(crmContacts.organizationId, organizationId))).limit(1));
+      if (!contact) return yield* fail("NOT_FOUND", "Contact CRM introuvable.");
+    }
     return { ...valid, vatNumber: input.vatNumber?.trim() || null, address: input.address?.trim() || null, active: input.active ?? true };
   });
 
@@ -101,8 +132,22 @@ const orderColumns = (tx: DbTransaction, input: PurchaseOrderInput, organization
     if (!supplier) return yield* fail("NOT_FOUND", "Fournisseur introuvable.");
     if (!supplier.active) return yield* fail("BAD_REQUEST", "Fournisseur inactif.");
     yield* logisticsStockPort.lockWarehouse(tx, input.warehouseId, organizationId);
-    const lines = yield* Effect.forEach(valid.lines, (line) =>
-      logisticsStockPort.findItemBySku(tx, line.sku, organizationId).pipe(Effect.map((item) => ({ ...line, itemId: item.id }))));
+    const { settings } = yield* purchasingSettingsService.get(organizationId);
+    if (valid.lines.some((line) => line.kind === "service") && !settings.allowServiceLines) {
+      return yield* fail("BAD_REQUEST", "Les lignes de prestation ne sont pas autorisées.");
+    }
+    const lines = yield* Effect.forEach(valid.lines, (line) => Effect.gen(function* () {
+      const warehouseId = line.warehouseId ?? input.warehouseId;
+      if (line.warehouseId && line.warehouseId !== input.warehouseId && !settings.allowMultiWarehouse) {
+        return yield* fail("BAD_REQUEST", "Les commandes multi-entrepôts ne sont pas autorisées.");
+      }
+      if (warehouseId !== input.warehouseId) yield* logisticsStockPort.lockWarehouse(tx, warehouseId, organizationId);
+      if (line.kind === "service") {
+        return { ...line, itemId: null as string | null, warehouseId, receivedQuantity: line.quantity };
+      }
+      const item = yield* logisticsStockPort.findItemBySku(tx, line.sku, organizationId);
+      return { ...line, itemId: item.id, warehouseId, receivedQuantity: 0 };
+    }));
     const title = input.title?.trim() || `${supplier.name} — ${valid.lines.length} ligne(s)`;
     return {
       columns: {
@@ -113,7 +158,10 @@ const orderColumns = (tx: DbTransaction, input: PurchaseOrderInput, organization
     };
   });
 
-const writeLines = (tx: DbTransaction, orderId: string, lines: readonly { position: number; sku: string; description: string | null; quantity: number; unitPriceMinor: number; netMinor: number; itemId: string }[]) =>
+const writeLines = (tx: DbTransaction, orderId: string, lines: readonly {
+  position: number; sku: string; description: string | null; quantity: number; unitPriceMinor: number; netMinor: number;
+  itemId: string | null; kind: "stock" | "service"; warehouseId: string | null; receivedQuantity: number;
+}[]) =>
   Effect.gen(function* () {
     yield* dbTry("purchasing.lines.clear", () => tx.delete(purchasingOrderLines).where(eq(purchasingOrderLines.orderId, orderId)));
     yield* dbTry("purchasing.lines.insert", () => tx.insert(purchasingOrderLines).values(lines.map((line) => ({ ...line, orderId }))));
@@ -140,7 +188,7 @@ export const purchasingService = {
       Effect.gen(function* () {
         const [current] = yield* dbTry("purchasing.supplier.find", () => tx.select().from(purchasingSuppliers).where(eq(purchasingSuppliers.id, id)).limit(1).for("update"));
         if (!current) return yield* fail("NOT_FOUND", "Fournisseur introuvable.");
-        const columns = yield* supplierColumns(tx, input, current.organizationId, id);
+        const columns = yield* supplierColumns(tx, { ...input, punchoutSecret: input.punchoutSecret?.trim() ? input.punchoutSecret : current.punchoutSecret }, current.organizationId, id);
         const [row] = yield* dbTry("purchasing.supplier.update", () => tx.update(purchasingSuppliers).set(columns).where(eq(purchasingSuppliers.id, id)).returning());
         return row!;
       })),
@@ -192,9 +240,28 @@ export const purchasingService = {
         Effect.gen(function* () {
           const current = yield* findOrder(tx, id, true);
           if (!canTransition(purchaseOrderWorkflow, current.status, to)) return yield* fail("BAD_REQUEST", `Transition invalide : ${current.status} → ${to}.`);
+          if (to === "SENT" && current.status === "DRAFT") {
+            const { settings, approval } = yield* purchasingSettingsService.get(current.organizationId);
+            const amount = current.grossMinor || current.netMinor;
+            if (approvalNeeded(approval, amount)) {
+              const request = yield* openPurchaseApproval(tx, {
+                organizationId: current.organizationId, orderId: current.id, amountMinor: amount, currency: current.currency,
+                requestedBy: owner.userId, policy: approval,
+              });
+              const [row] = yield* dbTry("purchasing.transition.approval", () => tx.update(purchasing).set({ status: "PENDING_APPROVAL", approvalRequestId: request.id }).where(eq(purchasing.id, id)).returning());
+              yield* revision(tx, row!, owner.userId, "Soumise à approbation");
+              return row!;
+            }
+            void settings;
+          }
+          if (to === "SENT" && current.status === "PENDING_APPROVAL") {
+            return yield* fail("BAD_REQUEST", "La commande doit être approuvée avant l'envoi.");
+          }
           const patch: Partial<typeof purchasing.$inferInsert> = { status: to };
           if (assignsNumber(current.status, to)) {
-            if (!current.number) patch.number = yield* numberFor(tx, current.organizationId, PURCHASE_ORDER_NUMBERING_KEY, DEFAULT_PURCHASE_ORDER_NUMBERING, options.today);
+            const { settings } = yield* purchasingSettingsService.get(current.organizationId);
+            const scheme = { ...DEFAULT_PURCHASE_ORDER_NUMBERING, prefix: settings.poPrefix };
+            if (!current.number) patch.number = yield* numberFor(tx, current.organizationId, PURCHASE_ORDER_NUMBERING_KEY, scheme, options.today);
             patch.sentAt = new Date();
           }
           const [row] = yield* dbTry("purchasing.transition", () => tx.update(purchasing).set(patch).where(eq(purchasing.id, id)).returning());
@@ -215,7 +282,7 @@ export const purchasingService = {
           const order = yield* findOrder(tx, id, true);
           if (!isReceivable(order.status)) return yield* fail("BAD_REQUEST", "Commande non réceptionnable : envoyez-la d'abord.");
           const lines = yield* orderLines(tx, id);
-          const plan = yield* domain(planReceipt(lines, input.lines));
+          const plan = yield* domain(planReceipt(lines.map((line) => ({ ...line, kind: line.kind === "service" ? "service" as const : "stock" as const })), input.lines));
           yield* logisticsStockPort.lockWarehouse(tx, order.warehouseId, order.organizationId);
           const number = yield* numberFor(tx, order.organizationId, GOODS_RECEIPT_NUMBERING_KEY, DEFAULT_GOODS_RECEIPT_NUMBERING, options.today);
           const [receipt] = yield* dbTry("purchasing.receipt.create", () => tx.insert(purchasingReceipts).values({
@@ -225,8 +292,11 @@ export const purchasingService = {
           const byId = new Map(lines.map((l) => [l.id, l]));
           for (const entry of plan.lines) {
             const line = byId.get(entry.lineId)!;
+            if (line.kind === "service") continue;
+            const warehouseId = line.warehouseId ?? order.warehouseId;
+            if (warehouseId !== order.warehouseId) yield* logisticsStockPort.lockWarehouse(tx, warehouseId, order.organizationId);
             const item = yield* logisticsStockPort.findItemBySku(tx, line.sku, order.organizationId);
-            const movement = yield* logisticsStockPort.receive(tx, { organizationId: order.organizationId, warehouseId: order.warehouseId, item, quantity: entry.quantity, reference: number }, owner.userId);
+            const movement = yield* logisticsStockPort.receive(tx, { organizationId: order.organizationId, warehouseId, item, quantity: entry.quantity, reference: number }, owner.userId);
             yield* dbTry("purchasing.receipt.line", () => tx.insert(purchasingReceiptLines).values({ receiptId: receipt!.id, orderLineId: line.id, itemId: item.id, sku: line.sku, quantity: entry.quantity, movementId: movement.id }));
             yield* dbTry("purchasing.line.received", () => tx.update(purchasingOrderLines).set({ receivedQuantity: plan.received.get(line.id)! }).where(eq(purchasingOrderLines.id, line.id)));
           }

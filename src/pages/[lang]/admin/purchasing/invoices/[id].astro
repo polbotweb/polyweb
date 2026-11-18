@@ -1,0 +1,84 @@
+---
+/** Fiche facture fournisseur : émission, rapprochement, règlement. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Button } from "@atoms/button";
+import { Effect } from "effect";
+import { requirePermission } from "@lib/auth-guards";
+import PurchasingAdminNav from "@/components/purchasing/admin/PurchasingAdminNav.astro";
+import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
+import { purchasingInvoicesService } from "@/modules/purchasing/services/invoices.service";
+import { hasPurchasingPermission } from "@/modules/purchasing/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { purchasing: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getPurchasingTranslations(locale);
+const id = Astro.params.id ?? "";
+const data = await Effect.runPromise(Effect.result(purchasingInvoicesService.get(id)));
+if (data._tag === "Failure") return new Response(null, { status: 404 });
+const { invoice, lines } = data.success;
+const match = invoice.status === "DRAFT" ? await Effect.runPromise(purchasingInvoicesService.previewMatch(id)) : null;
+const canInvoice = await hasPurchasingPermission(Astro, ["invoice"]);
+const canPay = await hasPurchasingPermission(Astro, ["payment"]);
+---
+<BaseLayout title={invoice.number ?? t.admin.invoices} description={t.meta.description}>
+  <AuthLayout title={invoice.number ?? t.admin.invoices}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="purchasing" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <h1 class="text-2xl font-semibold">{invoice.number ?? t.statuses.DRAFT} — {invoice.title}</h1>
+      <PurchasingAdminNav locale={locale} active="invoices" />
+      <p>{t.fields.status} : {invoice.status}</p>
+      <p>{t.fields.net} : {(invoice.netMinor / 100).toFixed(2)} {invoice.currency} — TTC {(invoice.grossMinor / 100).toFixed(2)}</p>
+      {invoice.dueDate && <p>{t.fields.dueDate} : {invoice.dueDate}</p>}
+      <table class="w-full text-left">
+        <thead><tr><th scope="col">{t.fields.description}</th><th scope="col">{t.fields.quantity}</th><th scope="col">{t.fields.unitPrice}</th><th scope="col">{t.fields.net}</th></tr></thead>
+        <tbody>
+          {lines.map((line) => (
+            <tr>
+              <td>{line.description}</td>
+              <td>{line.quantity}</td>
+              <td>{(line.unitPriceMinor / 100).toFixed(2)}</td>
+              <td>{(line.netMinor / 100).toFixed(2)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {match && <p>{t.fields.match} : {match.status}{match.blocked ? " — bloqué" : ""}</p>}
+      {canInvoice && invoice.status === "DRAFT" && (
+        <form data-purchasing-form="issueInvoice" data-id={invoice.id} data-done={t.admin.saved}>
+          <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+          <Button type="submit">{t.admin.issue}</Button>
+        </form>
+      )}
+      {canPay && (invoice.status === "ISSUED" || invoice.status === "PARTIALLY_PAID") && (
+        <form class="flex max-w-md flex-col gap-3" data-purchasing-form="payment" data-id={invoice.id} data-done={t.admin.saved}>
+          <label class="flex min-h-11 flex-col gap-1"><span>{t.fields.amount}</span><input class="min-h-11 rounded-md border px-3" type="number" name="amountMinor" min="1" value={invoice.grossMinor - invoice.paidMinor - invoice.creditedMinor} /></label>
+          <label class="flex min-h-11 flex-col gap-1"><span>{t.fields.method}</span>
+            <select class="min-h-11 rounded-md border bg-background px-3" name="method">
+              <option value="bank_transfer">SEPA</option>
+              <option value="card">Card</option>
+              <option value="cash">Cash</option>
+              <option value="check">Check</option>
+              <option value="direct_debit">Direct debit</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label class="flex min-h-11 flex-col gap-1"><span>{t.fields.paidAt}</span><input class="min-h-11 rounded-md border px-3" type="date" name="paidAt" /></label>
+          <label class="flex min-h-11 flex-col gap-1"><span>{t.fields.reference}</span><input class="min-h-11 rounded-md border px-3" name="reference" /></label>
+          <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+          <Button type="submit">{t.admin.pay}</Button>
+        </form>
+      )}
+    </main>
+  </AuthLayout>
+</BaseLayout>
+
+<script>
+  import { initPurchasing } from "@/modules/purchasing/client/init";
+
+  initPurchasing();
+  document.addEventListener("astro:after-swap", initPurchasing);
+</script>

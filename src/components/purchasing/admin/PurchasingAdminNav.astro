@@ -1,0 +1,37 @@
+---
+/**
+ * Navigation interne du module achats (admin organisation uniquement).
+ * Réutilise le même motif de liens que les listes existantes (commandes, fournisseurs, réceptions).
+ */
+import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
+import type { Locale } from "@i18n/config";
+
+interface Props {
+  locale: Locale;
+  active: "orders" | "suppliers" | "receipts" | "invoices" | "reorder" | "returns" | "sepa" | "imports" | "settings";
+}
+
+const { locale, active } = Astro.props;
+const t = getPurchasingTranslations(locale);
+const base = `/${locale}/admin/purchasing`;
+const items = [
+  { id: "orders", href: base, label: t.admin.orders },
+  { id: "suppliers", href: `${base}/suppliers`, label: t.admin.suppliers },
+  { id: "receipts", href: `${base}/receipts`, label: t.admin.receipts },
+  { id: "invoices", href: `${base}/invoices`, label: t.admin.invoices },
+  { id: "reorder", href: `${base}/reorder`, label: t.admin.reorder },
+  { id: "returns", href: `${base}/returns`, label: t.admin.returns },
+  { id: "sepa", href: `${base}/sepa`, label: t.admin.sepa },
+  { id: "imports", href: `${base}/imports`, label: t.admin.imports },
+  { id: "settings", href: `${base}/settings`, label: t.admin.settings },
+] as const;
+---
+<nav class="flex flex-wrap gap-2" aria-label={t.admin.title}>
+  {items.map((item) => (
+    <a
+      class:list={["inline-flex min-h-11 items-center rounded-md border px-4", item.id === active && "bg-muted font-medium"]}
+      href={item.href}
+      aria-current={item.id === active ? "page" : undefined}
+    >{item.label}</a>
+  ))}
+</nav>

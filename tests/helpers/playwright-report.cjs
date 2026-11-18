@@ -46,7 +46,7 @@ function extractSpecs(suite, suiteName) {
     for (const test of (spec.tests || [])) {
       totalTests++;
       const status = test.status || test.expectedStatus;
-      if (status === 'expected' || status === 'passed') {
+      if (status === 'expected' || status === 'passed' || status === 'flaky') {
         totalPassed++;
       } else if (status === 'skipped') {
         totalSkipped++;
@@ -73,25 +73,29 @@ for (const suite of suites) {
 
 // List suites with pass/fail (count recursively)
 function countSuiteResults(suite) {
-  let passed = 0, total = 0;
+  let passed = 0, skipped = 0, total = 0;
   for (const spec of (suite.specs || [])) {
     for (const test of (spec.tests || [])) {
       total++;
-      if (test.status === 'expected' || test.status === 'passed') passed++;
+      const status = test.status || test.expectedStatus;
+      if (status === 'expected' || status === 'passed' || status === 'flaky') passed++;
+      else if (status === 'skipped') skipped++;
     }
   }
   for (const child of (suite.suites || [])) {
     const r = countSuiteResults(child);
     passed += r.passed;
+    skipped += r.skipped;
     total += r.total;
   }
-  return { passed, total };
+  return { passed, skipped, total };
 }
 
 for (const suite of suites) {
-  const { passed, total } = countSuiteResults(suite);
-  const icon = passed === total ? '✅' : '❌';
-  lines.push(`  ${icon} ${suite.title}  (${passed}/${total} tests passed)`);
+  const { passed, skipped, total } = countSuiteResults(suite);
+  const icon = passed + skipped === total ? '✅' : '❌';
+  const skipBit = skipped ? `, ${skipped} skipped` : '';
+  lines.push(`  ${icon} ${suite.title}  (${passed}/${total} tests passed${skipBit})`);
 }
 
 lines.push('');

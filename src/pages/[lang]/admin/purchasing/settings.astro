@@ -1,0 +1,217 @@
+---
+/** Réglages d'achats du tenant (mode réassort, rapprochement, validation, préfixes). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Button } from "@atoms/button";
+import { requirePermission } from "@lib/auth-guards";
+import PurchasingAdminNav from "@/components/purchasing/admin/PurchasingAdminNav.astro";
+import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
+import { purchasingSettingsService } from "@/modules/purchasing/services/settings.service";
+import { Effect } from "effect";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { purchasing: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getPurchasingTranslations(locale);
+const { settings, approval, templates } = await Effect.runPromise(purchasingSettingsService.get(null));
+const roles = [
+  ["orgMember", t.admin.roleOrgMember], ["orgAdmin", t.admin.roleOrgAdmin], ["orgOwner", t.admin.roleOrgOwner],
+  ["admin", t.admin.roleAdmin], ["any", t.admin.roleAny],
+] as const;
+const purposes = [
+  ["po_send", t.admin.purposePoSend], ["po_reminder", t.admin.purposePoReminder], ["return_notice", t.admin.purposeReturnNotice],
+] as const;
+const locales = ["fr", "en", "es", "ar"] as const;
+
+---
+<BaseLayout title={t.admin.settings} description={t.meta.description}>
+  <AuthLayout title={t.admin.settings}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="purchasing" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{t.admin.settings}</h1>
+      </div>
+      <PurchasingAdminNav locale={locale} active="settings" />
+      <p class="text-sm text-muted-foreground">{t.meta.description}</p>
+      <form class="flex max-w-3xl flex-col gap-6" data-purchasing-form="settings" data-organization-id="" data-done={t.admin.saved}>
+        <fieldset class="flex flex-col gap-3 rounded-md border p-4">
+          <legend class="px-1 font-medium">{t.admin.reorder}</legend>
+          <label class="flex min-h-11 flex-col gap-1">
+            <span>{t.admin.reorderMode}</span>
+            <select name="reorderMode" class="min-h-11 rounded-md border bg-background px-3" value={settings.reorderMode}>
+              <option value="off" selected={settings.reorderMode === "off"}>{t.admin.modeOff}</option>
+              <option value="suggestions" selected={settings.reorderMode === "suggestions"}>{t.admin.modeSuggestions}</option>
+              <option value="auto_draft" selected={settings.reorderMode === "auto_draft"}>{t.admin.modeAutoDraft}</option>
+              <option value="auto_send" selected={settings.reorderMode === "auto_send"}>{t.admin.modeAutoSend}</option>
+            </select>
+          </label>
+          <label class="flex min-h-11 items-center gap-2">
+            <span>{t.admin.reorderHour}</span>
+            <input class="min-h-11 w-24 rounded-md border px-3" type="number" name="reorderHour" min="0" max="23" value={settings.reorderHour} />
+          </label>
+          <label class="flex min-h-11 items-center gap-2">
+            <input type="checkbox" name="reorderIncludeReservations" checked={settings.reorderIncludeReservations} />
+            <span>{t.admin.includeReservations}</span>
+          </label>
+          <label class="flex min-h-11 items-center gap-2">
+            <input type="checkbox" name="reorderAutoSendTrustedOnly" checked={settings.reorderAutoSendTrustedOnly} />
+            <span>{t.admin.autoSendTrusted}</span>
+          </label>
+        </fieldset>
+        <fieldset class="flex flex-col gap-3 rounded-md border p-4">
+          <legend class="px-1 font-medium">{t.admin.matching}</legend>
+          <label class="flex min-h-11 flex-col gap-1">
+            <span>{t.admin.matchingMode}</span>
+            <select name="matchingMode" class="min-h-11 rounded-md border bg-background px-3">
+              <option value="two_way" selected={settings.matchingMode === "two_way"}>{t.admin.twoWay}</option>
+              <option value="three_way" selected={settings.matchingMode === "three_way"}>{t.admin.threeWay}</option>
+            </select>
+          </label>
+          <label class="flex min-h-11 flex-col gap-1">
+            <span>{t.admin.matchingPolicy}</span>
+            <select name="matchingPolicy" class="min-h-11 rounded-md border bg-background px-3">
+              <option value="allow_with_acceptance" selected={settings.matchingPolicy === "allow_with_acceptance"}>{t.admin.policyAccept}</option>
+              <option value="block" selected={settings.matchingPolicy === "block"}>{t.admin.policyBlock}</option>
+            </select>
+          </label>
+          <label class="flex min-h-11 items-center gap-2">
+            <span>{t.admin.toleranceAbs}</span>
+            <input class="min-h-11 w-32 rounded-md border px-3" type="number" name="toleranceAbsoluteMinor" min="0" value={settings.toleranceAbsoluteMinor} />
+          </label>
+          <label class="flex min-h-11 items-center gap-2">
+            <span>{t.admin.tolerancePct}</span>
+            <input class="min-h-11 w-32 rounded-md border px-3" type="number" name="tolerancePercent" min="0" max="100" step="0.01" value={settings.tolerancePercent} />
+          </label>
+        </fieldset>
+        <fieldset class="flex flex-col gap-3 rounded-md border p-4">
+          <legend class="px-1 font-medium">{t.admin.approval}</legend>
+          <label class="flex min-h-11 flex-col gap-1">
+            <span>{t.admin.approval}</span>
+            <select name="approvalMode" class="min-h-11 rounded-md border bg-background px-3">
+              <option value="none" selected={approval.mode === "none"}>{t.admin.approvalNone}</option>
+              <option value="single_threshold" selected={approval.mode === "single_threshold"}>{t.admin.approvalThreshold}</option>
+              <option value="bands" selected={approval.mode === "bands"}>{t.admin.approvalBands}</option>
+            </select>
+          </label>
+          <label class="flex min-h-11 items-center gap-2">
+            <span>{t.admin.threshold}</span>
+            <input class="min-h-11 w-40 rounded-md border px-3" type="number" name="approvalThresholdMinor" min="0" value={approval.thresholdMinor} />
+          </label>
+          <p class="text-sm text-muted-foreground">{t.admin.bandsHelp}</p>
+          <div class="flex flex-col gap-3" data-approval-bands>
+            {approval.bands.map((band, index) => (
+              <div class="grid gap-2 rounded-md border p-3 sm:grid-cols-[5rem_8rem_8rem_1fr_1fr_auto] sm:items-end" data-approval-band>
+                <label class="flex min-h-11 flex-col gap-1"><span>{t.admin.bandLevel}</span><input class="min-h-11 rounded-md border px-3" type="number" name="bandLevel" min="1" max="20" value={band.level} /></label>
+                <label class="flex min-h-11 flex-col gap-1"><span>{t.admin.bandMin}</span><input class="min-h-11 rounded-md border px-3" type="number" name="bandMinMinor" min="0" value={band.minMinor} /></label>
+                <label class="flex min-h-11 flex-col gap-1"><span>{t.admin.bandMax}</span><input class="min-h-11 rounded-md border px-3" type="number" name="bandMaxMinor" min="1" value={band.maxMinor ?? ""} /></label>
+                <label class="flex min-h-11 flex-col gap-1"><span>{t.admin.bandRole}</span>
+                  <select name="bandRole" class="min-h-11 rounded-md border bg-background px-3">
+                    {roles.map(([value, label]) => <option value={value} selected={band.requiredRole === value}>{label}</option>)}
+                  </select>
+                </label>
+                <label class="flex min-h-11 flex-col gap-1"><span>{t.admin.bandPermission}</span><input class="min-h-11 rounded-md border px-3" name="bandPermission" value={band.requiredPermission ?? "purchasing:approve"} /></label>
+                <Button type="button" variant="outline" data-remove-band>{t.admin.removeBand}</Button>
+              </div>
+            ))}
+          </div>
+          <template data-band-template>
+            <div class="grid gap-2 rounded-md border p-3 sm:grid-cols-[5rem_8rem_8rem_1fr_1fr_auto] sm:items-end" data-approval-band>
+              <label class="flex min-h-11 flex-col gap-1"><span>{t.admin.bandLevel}</span><input class="min-h-11 rounded-md border px-3" type="number" name="bandLevel" min="1" max="20" value="1" /></label>
+              <label class="flex min-h-11 flex-col gap-1"><span>{t.admin.bandMin}</span><input class="min-h-11 rounded-md border px-3" type="number" name="bandMinMinor" min="0" value="0" /></label>
+              <label class="flex min-h-11 flex-col gap-1"><span>{t.admin.bandMax}</span><input class="min-h-11 rounded-md border px-3" type="number" name="bandMaxMinor" min="1" /></label>
+              <label class="flex min-h-11 flex-col gap-1"><span>{t.admin.bandRole}</span>
+                <select name="bandRole" class="min-h-11 rounded-md border bg-background px-3">
+                  {roles.map(([value, label]) => <option value={value} selected={value === "orgAdmin"}>{label}</option>)}
+                </select>
+              </label>
+              <label class="flex min-h-11 flex-col gap-1"><span>{t.admin.bandPermission}</span><input class="min-h-11 rounded-md border px-3" name="bandPermission" value="purchasing:approve" /></label>
+              <Button type="button" variant="outline" data-remove-band>{t.admin.removeBand}</Button>
+            </div>
+          </template>
+          <div><Button type="button" variant="outline" data-add-band>{t.admin.addBand}</Button></div>
+        </fieldset>
+        <fieldset class="flex flex-col gap-3 rounded-md border p-4">
+          <legend class="px-1 font-medium">{t.admin.prefixes}</legend>
+          <label class="flex min-h-11 items-center gap-2"><span>{t.fields.currency}</span><input class="min-h-11 w-24 rounded-md border px-3" name="defaultCurrency" maxlength="3" value={settings.defaultCurrency} /></label>
+          <label class="flex min-h-11 items-center gap-2"><span>{t.fields.paymentTermDays}</span><input class="min-h-11 w-24 rounded-md border px-3" type="number" name="defaultPaymentTermDays" min="0" max="365" value={settings.defaultPaymentTermDays} /></label>
+          <label class="flex min-h-11 items-center gap-2"><span>{t.admin.taxCategory}</span><input class="min-h-11 w-40 rounded-md border px-3" name="defaultTaxCategory" value={settings.defaultTaxCategory} /></label>
+          <label class="flex min-h-11 items-center gap-2"><input type="checkbox" name="allowServiceLines" checked={settings.allowServiceLines} /><span>{t.admin.allowService}</span></label>
+          <label class="flex min-h-11 items-center gap-2"><input type="checkbox" name="allowMultiWarehouse" checked={settings.allowMultiWarehouse} /><span>{t.admin.allowMultiWh}</span></label>
+          <label class="flex min-h-11 items-center gap-2"><input type="checkbox" name="qualityControlRequired" checked={settings.qualityControlRequired} /><span>{t.admin.qualityRequired}</span></label>
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <label class="flex flex-col gap-1"><span>{t.admin.prefixPo}</span><input class="min-h-11 rounded-md border px-3" name="poPrefix" value={settings.poPrefix} /></label>
+            <label class="flex flex-col gap-1"><span>{t.admin.prefixReceipt}</span><input class="min-h-11 rounded-md border px-3" name="receiptPrefix" value={settings.receiptPrefix} /></label>
+            <label class="flex flex-col gap-1"><span>{t.admin.prefixInvoice}</span><input class="min-h-11 rounded-md border px-3" name="invoicePrefix" value={settings.invoicePrefix} /></label>
+            <label class="flex flex-col gap-1"><span>{t.admin.prefixCredit}</span><input class="min-h-11 rounded-md border px-3" name="creditPrefix" value={settings.creditPrefix} /></label>
+            <label class="flex flex-col gap-1"><span>{t.admin.prefixReturn}</span><input class="min-h-11 rounded-md border px-3" name="returnPrefix" value={settings.returnPrefix} /></label>
+            <label class="flex flex-col gap-1"><span>{t.admin.prefixSepa}</span><input class="min-h-11 rounded-md border px-3" name="sepaPrefix" value={settings.sepaPrefix} /></label>
+          </div>
+        </fieldset>
+                <fieldset class="flex flex-col gap-3 rounded-md border p-4">
+          <legend class="px-1 font-medium">{t.admin.debtor}</legend>
+          <label class="flex min-h-11 flex-col gap-1"><span>{t.fields.debtorName}</span><input class="min-h-11 rounded-md border px-3" name="debtorName" value={settings.debtorName ?? ""} /></label>
+          <label class="flex min-h-11 flex-col gap-1"><span>{t.fields.iban}</span><input class="min-h-11 rounded-md border px-3" name="debtorIban" value={settings.debtorIban ?? ""} autocomplete="off" /></label>
+          <label class="flex min-h-11 flex-col gap-1"><span>{t.fields.bic}</span><input class="min-h-11 rounded-md border px-3" name="debtorBic" value={settings.debtorBic ?? ""} autocomplete="off" /></label>
+        </fieldset>
+
+        <fieldset class="flex flex-col gap-3 rounded-md border p-4">
+          <legend class="px-1 font-medium">{t.admin.emailTemplates}</legend>
+          <p class="text-sm text-muted-foreground">{t.admin.emailTemplatesHelp}</p>
+          <div class="flex flex-col gap-3" data-email-templates>
+            {templates.map((tpl) => (
+              <div class="grid gap-2 rounded-md border p-3" data-email-template>
+                <div class="grid gap-2 sm:grid-cols-2">
+                  <label class="flex min-h-11 flex-col gap-1"><span>{t.admin.emailPurpose}</span>
+                    <select name="templatePurpose" class="min-h-11 rounded-md border bg-background px-3">
+                      {purposes.map(([value, label]) => <option value={value} selected={tpl.purpose === value}>{label}</option>)}
+                    </select>
+                  </label>
+                  <label class="flex min-h-11 flex-col gap-1"><span>Locale</span>
+                    <select name="templateLocale" class="min-h-11 rounded-md border bg-background px-3">
+                      {locales.map((locale) => <option value={locale} selected={tpl.locale === locale}>{locale}</option>)}
+                    </select>
+                  </label>
+                </div>
+                <label class="flex min-h-11 flex-col gap-1"><span>{t.admin.emailSubject}</span><input class="min-h-11 rounded-md border px-3" name="templateSubject" maxlength={200} value={tpl.subject} /></label>
+                <label class="flex flex-col gap-1"><span>{t.admin.emailBody}</span><textarea class="rounded-md border px-3 py-2" name="templateBody" rows="4" maxlength="10000">{tpl.bodyHtml}</textarea></label>
+                <div><Button type="button" variant="outline" data-remove-template>{t.admin.delete}</Button></div>
+              </div>
+            ))}
+          </div>
+          <template data-template-template>
+            <div class="grid gap-2 rounded-md border p-3" data-email-template>
+              <div class="grid gap-2 sm:grid-cols-2">
+                <label class="flex min-h-11 flex-col gap-1"><span>{t.admin.emailPurpose}</span>
+                  <select name="templatePurpose" class="min-h-11 rounded-md border bg-background px-3">
+                    {purposes.map(([value, label]) => <option value={value}>{label}</option>)}
+                  </select>
+                </label>
+                <label class="flex min-h-11 flex-col gap-1"><span>Locale</span>
+                  <select name="templateLocale" class="min-h-11 rounded-md border bg-background px-3">
+                    {locales.map((loc) => <option value={loc}>{loc}</option>)}
+                  </select>
+                </label>
+              </div>
+              <label class="flex min-h-11 flex-col gap-1"><span>{t.admin.emailSubject}</span><input class="min-h-11 rounded-md border px-3" name="templateSubject" maxlength={200} /></label>
+              <label class="flex flex-col gap-1"><span>{t.admin.emailBody}</span><textarea class="rounded-md border px-3 py-2" name="templateBody" rows="4" maxlength="10000"></textarea></label>
+              <div><Button type="button" variant="outline" data-remove-template>{t.admin.delete}</Button></div>
+            </div>
+          </template>
+          <div><Button type="button" variant="outline" data-add-template>{t.admin.addTemplate}</Button></div>
+        </fieldset>
+
+        <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+        <Button type="submit">{t.admin.save}</Button>
+      </form>
+    </main>
+  </AuthLayout>
+</BaseLayout>
+
+<script>
+  import { initPurchasing } from "@/modules/purchasing/client/init";
+
+  initPurchasing();
+  document.addEventListener("astro:after-swap", initPurchasing);
+</script>

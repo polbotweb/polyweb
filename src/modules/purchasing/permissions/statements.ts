@@ -4,11 +4,11 @@ import { defineModulePermissions } from "@/core/permissions/registry";
 export const purchasingPermissions = defineModulePermissions({
   module: "purchasing",
   label: "Achats",
-  statements: { purchasing: ["create", "read", "update", "delete"] },
+  statements: { purchasing: ["create", "read", "update", "delete", "send", "approve", "invoice", "payment"] },
   grants: {
-    admin: { purchasing: ["create", "read", "update", "delete"] },
-    orgOwner: { purchasing: ["create", "read", "update", "delete"] },
-    orgAdmin: { purchasing: ["create", "read", "update", "delete"] },
+    admin: { purchasing: ["create", "read", "update", "delete", "send", "approve", "invoice", "payment"] },
+    orgOwner: { purchasing: ["create", "read", "update", "delete", "send", "approve", "invoice", "payment"] },
+    orgAdmin: { purchasing: ["create", "read", "update", "delete", "send", "approve", "invoice", "payment"] },
     orgMember: { purchasing: ["read"] },
   },
 });

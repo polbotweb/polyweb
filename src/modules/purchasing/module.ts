@@ -2,7 +2,9 @@ import type { PolywebModuleCapabilityProviders, PolywebModuleDefinition } from "
 import { assertModuleCapabilityProviders, defineModuleCapabilities, defineModuleCapabilityProviders, defineModulePresentations } from "@/core/modules/module-contract";
 import { purchasingCapabilityProviders } from "./capabilities";
 
-/** Module achats : fournisseurs, commandes fournisseur, réceptions de marchandises (entrées en stock). Toutes les capacités sont explicites. */
+/** Module achats : fournisseurs, commandes, réceptions, factures, rapprochement, réassort, retours, SEPA, e-facture, punch-out.
+ * Documentation A–Z (tous profils, 4 locales) : `docs/purchasing.md`. Journal FEC HA : `docs/fec.md`.
+ * Capacités explicites. Pages strictement admin `/{lang}/admin/purchasing`. */
 export const purchasingModule: PolywebModuleDefinition = {
   id: "purchasing",
   entity: "purchaseOrder",

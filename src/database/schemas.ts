@@ -37,6 +37,7 @@ export * from "../modules/crm/schema";
 export * from "../modules/logistics/schema";
 export * from "../modules/shop/schema/orders";
 export * from "../modules/shop/schema/returns";
+export * from "../core/approvals/schema";
 export * from "../modules/purchasing/schema";
 export * from "../modules/subscriptions/schema";
 export * from "../modules/bookings/schema";

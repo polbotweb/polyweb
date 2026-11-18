@@ -14,6 +14,9 @@ export async function send(payload: EmailPayload, from: EmailFrom): Promise<void
     htmlContent: payload.html,
     textContent: payload.text,
     ...(payload.headers ? { headers: payload.headers } : {}),
+    ...(payload.attachments?.length
+      ? { attachment: payload.attachments.map((item) => ({ name: item.filename, content: Buffer.from(item.content).toString("base64") })) }
+      : {}),
   };
 
   const controller = new AbortController();

@@ -259,6 +259,8 @@ export const logisticsStockPort = {
   findItemBySku: (tx: DbTransaction, sku: string, organizationId: string | null) => findItemBySku(tx, sku, organizationId),
   receive: (tx: DbTransaction, input: { readonly organizationId: string | null; readonly warehouseId: string; readonly item: ItemRow; readonly quantity: number; readonly reference: string }, authorId: string) =>
     writeMovement(tx, { ...input, kind: "receipt", source: "purchase" }, authorId),
+  purchaseReturn: (tx: DbTransaction, input: { readonly organizationId: string | null; readonly warehouseId: string; readonly item: ItemRow; readonly quantity: number; readonly reference: string }, authorId: string) =>
+    writeMovement(tx, { ...input, kind: "issue", source: "purchase_return" }, authorId),
 
   /**
    * Réserve, dans la transaction de l'appelant, le stock des variantes boutique suivies en

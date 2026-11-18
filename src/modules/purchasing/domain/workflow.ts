@@ -10,7 +10,7 @@
  */
 import type { WorkflowDefinition } from "@/core/workflow";
 
-export const PURCHASE_ORDER_STATUSES = ["DRAFT", "SENT", "PARTIALLY_RECEIVED", "RECEIVED", "CLOSED", "CANCELLED"] as const;
+export const PURCHASE_ORDER_STATUSES = ["DRAFT", "PENDING_APPROVAL", "SENT", "PARTIALLY_RECEIVED", "RECEIVED", "CLOSED", "CANCELLED"] as const;
 export type PurchaseOrderStatus = (typeof PURCHASE_ORDER_STATUSES)[number];
 /** Alias attendu par le socle généré. */
 export const PURCHASING_STATUSES = PURCHASE_ORDER_STATUSES;
@@ -24,6 +24,10 @@ export const purchaseOrderWorkflow: WorkflowDefinition<PurchaseOrderStatus> = {
   states: PURCHASE_ORDER_STATUSES,
   transitions: [
     { from: "DRAFT", to: "SENT" },
+    { from: "DRAFT", to: "PENDING_APPROVAL" },
+    { from: "PENDING_APPROVAL", to: "DRAFT" },
+    { from: "PENDING_APPROVAL", to: "SENT" },
+    { from: "PENDING_APPROVAL", to: "CANCELLED" },
     { from: "SENT", to: "DRAFT" },
     { from: "DRAFT", to: "CANCELLED" },
     { from: "SENT", to: "CANCELLED" },
@@ -46,4 +50,4 @@ export const nextStatuses = (from: PurchaseOrderStatus): readonly PurchaseOrderS
   PURCHASE_ORDER_STATUSES.filter((to) => !RECEIPT_DRIVEN_STATUSES.includes(to) && purchaseOrderWorkflow.transitions.some((t) => t.from === from && t.to === to));
 
 /** Numéro attribué à l'envoi (sans trou, `core/numbering`). */
-export const assignsNumber = (from: PurchaseOrderStatus, to: PurchaseOrderStatus) => from === "DRAFT" && to === "SENT";
+export const assignsNumber = (from: PurchaseOrderStatus, to: PurchaseOrderStatus) => (from === "DRAFT" || from === "PENDING_APPROVAL") && to === "SENT";

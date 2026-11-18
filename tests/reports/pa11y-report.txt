@@ -1,11 +1,11 @@
 ════════════════════════════════════════════════════════════════════════════════
   PA11Y ACCESSIBILITY REPORT — WCAG 2.1 AAA
-  Generated: 2026-11-16 08:58:28
+  Generated: 2026-11-18 14:20:08
 ════════════════════════════════════════════════════════════════════════════════
 
-  Total URLs tested:  284
-  Passed:             284/284  ✅
-  Failed:             0/284
+  Total URLs tested:  308
+  Passed:             308/308  ✅
+  Failed:             0/308
 
 ────────────────────────────────────────────────────────────────────────────────
 
@@ -26,11 +26,11 @@
   ✅ http://localhost:4321/fr/shop/a11y-t-shirt
   ✅ http://localhost:4321/fr/shop/cart
   ✅ http://localhost:4321/fr/shop/checkout
-  ✅ http://localhost:4321/fr/shop/order/a97e54af-c2fd-4989-96da-0229f582038e?t=REDACTED
-  ✅ http://localhost:4321/fr/shop/order/5456e69a-5f77-4114-a80d-07e00e5bd503?t=REDACTED
+  ✅ http://localhost:4321/fr/shop/order/0bdedfc0-a175-4fd1-a598-3ef2c75a67ae?t=REDACTED
+  ✅ http://localhost:4321/fr/shop/order/7eab5eb2-6a43-403f-8a9c-4ca56772e3da?t=REDACTED
   ✅ http://localhost:4321/fr/forums
   ✅ http://localhost:4321/fr/forums/communaute
-  ✅ http://localhost:4321/fr/forums/communaute/t/c7790045-b79f-4fac-9d52-85d755717d33
+  ✅ http://localhost:4321/fr/forums/communaute/t/04f11bd1-bcf5-499a-8cfa-8539b8805b08
   ✅ http://localhost:4321/fr/classifieds
   ✅ http://localhost:4321/fr/classifieds/c/dons
   ✅ http://localhost:4321/fr/classifieds/a/a11y-annonce-de-test
@@ -48,11 +48,11 @@
   ✅ http://localhost:4321/en/shop/a11y-t-shirt
   ✅ http://localhost:4321/en/shop/cart
   ✅ http://localhost:4321/en/shop/checkout
-  ✅ http://localhost:4321/en/shop/order/a97e54af-c2fd-4989-96da-0229f582038e?t=REDACTED
-  ✅ http://localhost:4321/en/shop/order/5456e69a-5f77-4114-a80d-07e00e5bd503?t=REDACTED
+  ✅ http://localhost:4321/en/shop/order/0bdedfc0-a175-4fd1-a598-3ef2c75a67ae?t=REDACTED
+  ✅ http://localhost:4321/en/shop/order/7eab5eb2-6a43-403f-8a9c-4ca56772e3da?t=REDACTED
   ✅ http://localhost:4321/en/forums
   ✅ http://localhost:4321/en/forums/communaute
-  ✅ http://localhost:4321/en/forums/communaute/t/c7790045-b79f-4fac-9d52-85d755717d33
+  ✅ http://localhost:4321/en/forums/communaute/t/04f11bd1-bcf5-499a-8cfa-8539b8805b08
   ✅ http://localhost:4321/en/classifieds
   ✅ http://localhost:4321/en/classifieds/c/dons
   ✅ http://localhost:4321/en/classifieds/a/a11y-annonce-de-test
@@ -70,11 +70,11 @@
   ✅ http://localhost:4321/es/shop/a11y-camiseta
   ✅ http://localhost:4321/es/shop/cart
   ✅ http://localhost:4321/es/shop/checkout
-  ✅ http://localhost:4321/es/shop/order/a97e54af-c2fd-4989-96da-0229f582038e?t=REDACTED
-  ✅ http://localhost:4321/es/shop/order/5456e69a-5f77-4114-a80d-07e00e5bd503?t=REDACTED
+  ✅ http://localhost:4321/es/shop/order/0bdedfc0-a175-4fd1-a598-3ef2c75a67ae?t=REDACTED
+  ✅ http://localhost:4321/es/shop/order/7eab5eb2-6a43-403f-8a9c-4ca56772e3da?t=REDACTED
   ✅ http://localhost:4321/es/forums
   ✅ http://localhost:4321/es/forums/communaute
-  ✅ http://localhost:4321/es/forums/communaute/t/c7790045-b79f-4fac-9d52-85d755717d33
+  ✅ http://localhost:4321/es/forums/communaute/t/04f11bd1-bcf5-499a-8cfa-8539b8805b08
   ✅ http://localhost:4321/es/classifieds
   ✅ http://localhost:4321/es/classifieds/c/dons
   ✅ http://localhost:4321/es/classifieds/a/a11y-annonce-de-test
@@ -92,11 +92,11 @@
   ✅ http://localhost:4321/ar/shop/a11y-qamis
   ✅ http://localhost:4321/ar/shop/cart
   ✅ http://localhost:4321/ar/shop/checkout
-  ✅ http://localhost:4321/ar/shop/order/a97e54af-c2fd-4989-96da-0229f582038e?t=REDACTED
-  ✅ http://localhost:4321/ar/shop/order/5456e69a-5f77-4114-a80d-07e00e5bd503?t=REDACTED
+  ✅ http://localhost:4321/ar/shop/order/0bdedfc0-a175-4fd1-a598-3ef2c75a67ae?t=REDACTED
+  ✅ http://localhost:4321/ar/shop/order/7eab5eb2-6a43-403f-8a9c-4ca56772e3da?t=REDACTED
   ✅ http://localhost:4321/ar/forums
   ✅ http://localhost:4321/ar/forums/communaute
-  ✅ http://localhost:4321/ar/forums/communaute/t/c7790045-b79f-4fac-9d52-85d755717d33
+  ✅ http://localhost:4321/ar/forums/communaute/t/04f11bd1-bcf5-499a-8cfa-8539b8805b08
   ✅ http://localhost:4321/ar/classifieds
   ✅ http://localhost:4321/ar/classifieds/c/dons
   ✅ http://localhost:4321/ar/classifieds/a/a11y-annonce-de-test
@@ -106,10 +106,10 @@
   ✅ http://localhost:4321/fr/messages
   ✅ http://localhost:4321/fr/notifications
   ✅ http://localhost:4321/fr/notifications/preferences
-  ✅ http://localhost:4321/fr/notifications/unsubscribe?token=eyJ1IjoiRG5pQmpGdklQTU1XWkRBWkRZQm41UlR4NFRkUGZiUFAiLCJjIjoiY29tbWVudHMiLCJjaCI6ImVtYWlsIiwiZSI6MTgwMDAwMjY2ODY3Nn0.mCNIsY_ru7ZSVfSTpaxJ8-1flK4DzlC_s9unv_3DIHY
+  ✅ http://localhost:4321/fr/notifications/unsubscribe?token=eyJ1IjoiNFNZY3doWG02T2JoelRwcVMxbFJDTlhOWDNFV1Zvb0kiLCJjIjoiY29tbWVudHMiLCJjaCI6ImVtYWlsIiwiZSI6MTgwMDE5NDY4NDI0M30.MqZ8fAPnyKby1pRfZ1VzIT36QXtV-E8UNmDwHnK9bB4
   ✅ http://localhost:4321/fr/forums/communaute?page=1
   ✅ http://localhost:4321/fr/forums/communaute/new
-  ✅ http://localhost:4321/fr/forums/communaute/t/c7790045-b79f-4fac-9d52-85d755717d33?notice=replied
+  ✅ http://localhost:4321/fr/forums/communaute/t/04f11bd1-bcf5-499a-8cfa-8539b8805b08?notice=replied
   ✅ http://localhost:4321/fr/classifieds/new?categoryId=356c6a45-bd78-40f1-9899-edc0c1bdb3e0
   ✅ http://localhost:4321/fr/classifieds/mine
   ✅ http://localhost:4321/fr/classifieds/favorites
@@ -121,10 +121,10 @@
   ✅ http://localhost:4321/en/messages
   ✅ http://localhost:4321/en/notifications
   ✅ http://localhost:4321/en/notifications/preferences
-  ✅ http://localhost:4321/en/notifications/unsubscribe?token=eyJ1IjoiRG5pQmpGdklQTU1XWkRBWkRZQm41UlR4NFRkUGZiUFAiLCJjIjoiY29tbWVudHMiLCJjaCI6ImVtYWlsIiwiZSI6MTgwMDAwMjY2ODY3Nn0.mCNIsY_ru7ZSVfSTpaxJ8-1flK4DzlC_s9unv_3DIHY
+  ✅ http://localhost:4321/en/notifications/unsubscribe?token=eyJ1IjoiNFNZY3doWG02T2JoelRwcVMxbFJDTlhOWDNFV1Zvb0kiLCJjIjoiY29tbWVudHMiLCJjaCI6ImVtYWlsIiwiZSI6MTgwMDE5NDY4NDI0M30.MqZ8fAPnyKby1pRfZ1VzIT36QXtV-E8UNmDwHnK9bB4
   ✅ http://localhost:4321/en/forums/communaute?page=1
   ✅ http://localhost:4321/en/forums/communaute/new
-  ✅ http://localhost:4321/en/forums/communaute/t/c7790045-b79f-4fac-9d52-85d755717d33?notice=replied
+  ✅ http://localhost:4321/en/forums/communaute/t/04f11bd1-bcf5-499a-8cfa-8539b8805b08?notice=replied
   ✅ http://localhost:4321/en/classifieds/new?categoryId=356c6a45-bd78-40f1-9899-edc0c1bdb3e0
   ✅ http://localhost:4321/en/classifieds/mine
   ✅ http://localhost:4321/en/classifieds/favorites
@@ -136,10 +136,10 @@
   ✅ http://localhost:4321/es/messages
   ✅ http://localhost:4321/es/notifications
   ✅ http://localhost:4321/es/notifications/preferences
-  ✅ http://localhost:4321/es/notifications/unsubscribe?token=eyJ1IjoiRG5pQmpGdklQTU1XWkRBWkRZQm41UlR4NFRkUGZiUFAiLCJjIjoiY29tbWVudHMiLCJjaCI6ImVtYWlsIiwiZSI6MTgwMDAwMjY2ODY3Nn0.mCNIsY_ru7ZSVfSTpaxJ8-1flK4DzlC_s9unv_3DIHY
+  ✅ http://localhost:4321/es/notifications/unsubscribe?token=eyJ1IjoiNFNZY3doWG02T2JoelRwcVMxbFJDTlhOWDNFV1Zvb0kiLCJjIjoiY29tbWVudHMiLCJjaCI6ImVtYWlsIiwiZSI6MTgwMDE5NDY4NDI0M30.MqZ8fAPnyKby1pRfZ1VzIT36QXtV-E8UNmDwHnK9bB4
   ✅ http://localhost:4321/es/forums/communaute?page=1
   ✅ http://localhost:4321/es/forums/communaute/new
-  ✅ http://localhost:4321/es/forums/communaute/t/c7790045-b79f-4fac-9d52-85d755717d33?notice=replied
+  ✅ http://localhost:4321/es/forums/communaute/t/04f11bd1-bcf5-499a-8cfa-8539b8805b08?notice=replied
   ✅ http://localhost:4321/es/classifieds/new?categoryId=356c6a45-bd78-40f1-9899-edc0c1bdb3e0
   ✅ http://localhost:4321/es/classifieds/mine
   ✅ http://localhost:4321/es/classifieds/favorites
@@ -151,10 +151,10 @@
   ✅ http://localhost:4321/ar/messages
   ✅ http://localhost:4321/ar/notifications
   ✅ http://localhost:4321/ar/notifications/preferences
-  ✅ http://localhost:4321/ar/notifications/unsubscribe?token=eyJ1IjoiRG5pQmpGdklQTU1XWkRBWkRZQm41UlR4NFRkUGZiUFAiLCJjIjoiY29tbWVudHMiLCJjaCI6ImVtYWlsIiwiZSI6MTgwMDAwMjY2ODY3Nn0.mCNIsY_ru7ZSVfSTpaxJ8-1flK4DzlC_s9unv_3DIHY
+  ✅ http://localhost:4321/ar/notifications/unsubscribe?token=eyJ1IjoiNFNZY3doWG02T2JoelRwcVMxbFJDTlhOWDNFV1Zvb0kiLCJjIjoiY29tbWVudHMiLCJjaCI6ImVtYWlsIiwiZSI6MTgwMDE5NDY4NDI0M30.MqZ8fAPnyKby1pRfZ1VzIT36QXtV-E8UNmDwHnK9bB4
   ✅ http://localhost:4321/ar/forums/communaute?page=1
   ✅ http://localhost:4321/ar/forums/communaute/new
-  ✅ http://localhost:4321/ar/forums/communaute/t/c7790045-b79f-4fac-9d52-85d755717d33?notice=replied
+  ✅ http://localhost:4321/ar/forums/communaute/t/04f11bd1-bcf5-499a-8cfa-8539b8805b08?notice=replied
   ✅ http://localhost:4321/ar/classifieds/new?categoryId=356c6a45-bd78-40f1-9899-edc0c1bdb3e0
   ✅ http://localhost:4321/ar/classifieds/mine
   ✅ http://localhost:4321/ar/classifieds/favorites
@@ -168,28 +168,34 @@
   ✅ http://localhost:4321/fr/admin/moderation
   ✅ http://localhost:4321/fr/admin/dashboard
   ✅ http://localhost:4321/fr/admin/orders
-  ✅ http://localhost:4321/fr/admin/orders/a97e54af-c2fd-4989-96da-0229f582038e
+  ✅ http://localhost:4321/fr/admin/orders/0bdedfc0-a175-4fd1-a598-3ef2c75a67ae
   ✅ http://localhost:4321/fr/admin/returns
-  ✅ http://localhost:4321/fr/admin/returns/45489e2e-8213-4a0d-a00f-b1ad0627f737
-  ✅ http://localhost:4321/fr/admin/orders/5456e69a-5f77-4114-a80d-07e00e5bd503
+  ✅ http://localhost:4321/fr/admin/returns/27d3898c-bcee-46d3-a30d-7955836acbc6
+  ✅ http://localhost:4321/fr/admin/orders/7eab5eb2-6a43-403f-8a9c-4ca56772e3da
   ✅ http://localhost:4321/fr/admin/logistics/inventories
   ✅ http://localhost:4321/fr/admin/logistics/movements
   ✅ http://localhost:4321/fr/admin/logistics/items
   ✅ http://localhost:4321/fr/admin/platform/api-tokens
-  ✅ http://localhost:4321/fr/admin/logistics/inventories/cee4c0ee-7e68-426b-baf2-60943de0653c
-  ✅ http://localhost:4321/fr/admin/logistics/inventories/5b6a0885-6ed9-4c73-a4e9-e391ed3d6de0
+  ✅ http://localhost:4321/fr/admin/logistics/inventories/3c0a3043-637e-46f0-89d3-f9221238619b
+  ✅ http://localhost:4321/fr/admin/logistics/inventories/41950e79-8b0c-4d86-a2f4-3e2dd72dae7d
   ✅ http://localhost:4321/fr/admin/sales/fec
   ✅ http://localhost:4321/fr/admin/sales/fx
+  ✅ http://localhost:4321/fr/admin/purchasing/settings
+  ✅ http://localhost:4321/fr/admin/purchasing/invoices
+  ✅ http://localhost:4321/fr/admin/purchasing/reorder
+  ✅ http://localhost:4321/fr/admin/purchasing/returns
+  ✅ http://localhost:4321/fr/admin/purchasing/sepa
+  ✅ http://localhost:4321/fr/admin/purchasing/imports
   ✅ http://localhost:4321/fr/admin/subscriptions
-  ✅ http://localhost:4321/fr/admin/subscriptions/plans/7c165087-234a-4ea5-8eff-321ea55569aa
-  ✅ http://localhost:4321/fr/admin/subscriptions/a355f52b-aeb7-4fe3-95e0-7e3b70a872c1
+  ✅ http://localhost:4321/fr/admin/subscriptions/plans/79ff7f97-e38b-41a2-9e35-7294a45e1004
+  ✅ http://localhost:4321/fr/admin/subscriptions/f4e901ad-14c3-4473-b281-f341c91242b7
   ✅ http://localhost:4321/fr/organizations/a11y-roles-org/roles
   ✅ http://localhost:4321/fr/organizations/a11y-roles-org/sites
   ✅ http://localhost:4321/fr/organizations/a11y-roles-org/audit
   ✅ http://localhost:4321/fr/organizations/a11y-roles-org/moderation
   ✅ http://localhost:4321/fr/admin/forums
   ✅ http://localhost:4321/fr/admin/forums/sanctions
-  ✅ http://localhost:4321/fr/forums/communaute/t/c7790045-b79f-4fac-9d52-85d755717d33?notice=moderated
+  ✅ http://localhost:4321/fr/forums/communaute/t/04f11bd1-bcf5-499a-8cfa-8539b8805b08?notice=moderated
   ✅ http://localhost:4321/fr/admin/classifieds
   ✅ http://localhost:4321/fr/admin/classifieds/categories
   ✅ http://localhost:4321/fr/admin/classifieds/attributes
@@ -202,28 +208,34 @@
   ✅ http://localhost:4321/en/admin/moderation
   ✅ http://localhost:4321/en/admin/dashboard
   ✅ http://localhost:4321/en/admin/orders
-  ✅ http://localhost:4321/en/admin/orders/a97e54af-c2fd-4989-96da-0229f582038e
+  ✅ http://localhost:4321/en/admin/orders/0bdedfc0-a175-4fd1-a598-3ef2c75a67ae
   ✅ http://localhost:4321/en/admin/returns
-  ✅ http://localhost:4321/en/admin/returns/45489e2e-8213-4a0d-a00f-b1ad0627f737
-  ✅ http://localhost:4321/en/admin/orders/5456e69a-5f77-4114-a80d-07e00e5bd503
+  ✅ http://localhost:4321/en/admin/returns/27d3898c-bcee-46d3-a30d-7955836acbc6
+  ✅ http://localhost:4321/en/admin/orders/7eab5eb2-6a43-403f-8a9c-4ca56772e3da
   ✅ http://localhost:4321/en/admin/logistics/inventories
   ✅ http://localhost:4321/en/admin/logistics/movements
   ✅ http://localhost:4321/en/admin/logistics/items
   ✅ http://localhost:4321/en/admin/platform/api-tokens
-  ✅ http://localhost:4321/en/admin/logistics/inventories/cee4c0ee-7e68-426b-baf2-60943de0653c
-  ✅ http://localhost:4321/en/admin/logistics/inventories/5b6a0885-6ed9-4c73-a4e9-e391ed3d6de0
+  ✅ http://localhost:4321/en/admin/logistics/inventories/3c0a3043-637e-46f0-89d3-f9221238619b
+  ✅ http://localhost:4321/en/admin/logistics/inventories/41950e79-8b0c-4d86-a2f4-3e2dd72dae7d
   ✅ http://localhost:4321/en/admin/sales/fec
   ✅ http://localhost:4321/en/admin/sales/fx
+  ✅ http://localhost:4321/en/admin/purchasing/settings
+  ✅ http://localhost:4321/en/admin/purchasing/invoices
+  ✅ http://localhost:4321/en/admin/purchasing/reorder
+  ✅ http://localhost:4321/en/admin/purchasing/returns
+  ✅ http://localhost:4321/en/admin/purchasing/sepa
+  ✅ http://localhost:4321/en/admin/purchasing/imports
   ✅ http://localhost:4321/en/admin/subscriptions
-  ✅ http://localhost:4321/en/admin/subscriptions/plans/7c165087-234a-4ea5-8eff-321ea55569aa
-  ✅ http://localhost:4321/en/admin/subscriptions/a355f52b-aeb7-4fe3-95e0-7e3b70a872c1
+  ✅ http://localhost:4321/en/admin/subscriptions/plans/79ff7f97-e38b-41a2-9e35-7294a45e1004
+  ✅ http://localhost:4321/en/admin/subscriptions/f4e901ad-14c3-4473-b281-f341c91242b7
   ✅ http://localhost:4321/en/organizations/a11y-roles-org/roles
   ✅ http://localhost:4321/en/organizations/a11y-roles-org/sites
   ✅ http://localhost:4321/en/organizations/a11y-roles-org/audit
   ✅ http://localhost:4321/en/organizations/a11y-roles-org/moderation
   ✅ http://localhost:4321/en/admin/forums
   ✅ http://localhost:4321/en/admin/forums/sanctions
-  ✅ http://localhost:4321/en/forums/communaute/t/c7790045-b79f-4fac-9d52-85d755717d33?notice=moderated
+  ✅ http://localhost:4321/en/forums/communaute/t/04f11bd1-bcf5-499a-8cfa-8539b8805b08?notice=moderated
   ✅ http://localhost:4321/en/admin/classifieds
   ✅ http://localhost:4321/en/admin/classifieds/categories
   ✅ http://localhost:4321/en/admin/classifieds/attributes
@@ -236,28 +248,34 @@
   ✅ http://localhost:4321/es/admin/moderation
   ✅ http://localhost:4321/es/admin/dashboard
   ✅ http://localhost:4321/es/admin/orders
-  ✅ http://localhost:4321/es/admin/orders/a97e54af-c2fd-4989-96da-0229f582038e
+  ✅ http://localhost:4321/es/admin/orders/0bdedfc0-a175-4fd1-a598-3ef2c75a67ae
   ✅ http://localhost:4321/es/admin/returns
-  ✅ http://localhost:4321/es/admin/returns/45489e2e-8213-4a0d-a00f-b1ad0627f737
-  ✅ http://localhost:4321/es/admin/orders/5456e69a-5f77-4114-a80d-07e00e5bd503
+  ✅ http://localhost:4321/es/admin/returns/27d3898c-bcee-46d3-a30d-7955836acbc6
+  ✅ http://localhost:4321/es/admin/orders/7eab5eb2-6a43-403f-8a9c-4ca56772e3da
   ✅ http://localhost:4321/es/admin/logistics/inventories
   ✅ http://localhost:4321/es/admin/logistics/movements
   ✅ http://localhost:4321/es/admin/logistics/items
   ✅ http://localhost:4321/es/admin/platform/api-tokens
-  ✅ http://localhost:4321/es/admin/logistics/inventories/cee4c0ee-7e68-426b-baf2-60943de0653c
-  ✅ http://localhost:4321/es/admin/logistics/inventories/5b6a0885-6ed9-4c73-a4e9-e391ed3d6de0
+  ✅ http://localhost:4321/es/admin/logistics/inventories/3c0a3043-637e-46f0-89d3-f9221238619b
+  ✅ http://localhost:4321/es/admin/logistics/inventories/41950e79-8b0c-4d86-a2f4-3e2dd72dae7d
   ✅ http://localhost:4321/es/admin/sales/fec
   ✅ http://localhost:4321/es/admin/sales/fx
+  ✅ http://localhost:4321/es/admin/purchasing/settings
+  ✅ http://localhost:4321/es/admin/purchasing/invoices
+  ✅ http://localhost:4321/es/admin/purchasing/reorder
+  ✅ http://localhost:4321/es/admin/purchasing/returns
+  ✅ http://localhost:4321/es/admin/purchasing/sepa
+  ✅ http://localhost:4321/es/admin/purchasing/imports
   ✅ http://localhost:4321/es/admin/subscriptions
-  ✅ http://localhost:4321/es/admin/subscriptions/plans/7c165087-234a-4ea5-8eff-321ea55569aa
-  ✅ http://localhost:4321/es/admin/subscriptions/a355f52b-aeb7-4fe3-95e0-7e3b70a872c1
+  ✅ http://localhost:4321/es/admin/subscriptions/plans/79ff7f97-e38b-41a2-9e35-7294a45e1004
+  ✅ http://localhost:4321/es/admin/subscriptions/f4e901ad-14c3-4473-b281-f341c91242b7
   ✅ http://localhost:4321/es/organizations/a11y-roles-org/roles
   ✅ http://localhost:4321/es/organizations/a11y-roles-org/sites
   ✅ http://localhost:4321/es/organizations/a11y-roles-org/audit
   ✅ http://localhost:4321/es/organizations/a11y-roles-org/moderation
   ✅ http://localhost:4321/es/admin/forums
   ✅ http://localhost:4321/es/admin/forums/sanctions
-  ✅ http://localhost:4321/es/forums/communaute/t/c7790045-b79f-4fac-9d52-85d755717d33?notice=moderated
+  ✅ http://localhost:4321/es/forums/communaute/t/04f11bd1-bcf5-499a-8cfa-8539b8805b08?notice=moderated
   ✅ http://localhost:4321/es/admin/classifieds
   ✅ http://localhost:4321/es/admin/classifieds/categories
   ✅ http://localhost:4321/es/admin/classifieds/attributes
@@ -270,33 +288,39 @@
   ✅ http://localhost:4321/ar/admin/moderation
   ✅ http://localhost:4321/ar/admin/dashboard
   ✅ http://localhost:4321/ar/admin/orders
-  ✅ http://localhost:4321/ar/admin/orders/a97e54af-c2fd-4989-96da-0229f582038e
+  ✅ http://localhost:4321/ar/admin/orders/0bdedfc0-a175-4fd1-a598-3ef2c75a67ae
   ✅ http://localhost:4321/ar/admin/returns
-  ✅ http://localhost:4321/ar/admin/returns/45489e2e-8213-4a0d-a00f-b1ad0627f737
-  ✅ http://localhost:4321/ar/admin/orders/5456e69a-5f77-4114-a80d-07e00e5bd503
+  ✅ http://localhost:4321/ar/admin/returns/27d3898c-bcee-46d3-a30d-7955836acbc6
+  ✅ http://localhost:4321/ar/admin/orders/7eab5eb2-6a43-403f-8a9c-4ca56772e3da
   ✅ http://localhost:4321/ar/admin/logistics/inventories
   ✅ http://localhost:4321/ar/admin/logistics/movements
   ✅ http://localhost:4321/ar/admin/logistics/items
   ✅ http://localhost:4321/ar/admin/platform/api-tokens
-  ✅ http://localhost:4321/ar/admin/logistics/inventories/cee4c0ee-7e68-426b-baf2-60943de0653c
-  ✅ http://localhost:4321/ar/admin/logistics/inventories/5b6a0885-6ed9-4c73-a4e9-e391ed3d6de0
+  ✅ http://localhost:4321/ar/admin/logistics/inventories/3c0a3043-637e-46f0-89d3-f9221238619b
+  ✅ http://localhost:4321/ar/admin/logistics/inventories/41950e79-8b0c-4d86-a2f4-3e2dd72dae7d
   ✅ http://localhost:4321/ar/admin/sales/fec
   ✅ http://localhost:4321/ar/admin/sales/fx
+  ✅ http://localhost:4321/ar/admin/purchasing/settings
+  ✅ http://localhost:4321/ar/admin/purchasing/invoices
+  ✅ http://localhost:4321/ar/admin/purchasing/reorder
+  ✅ http://localhost:4321/ar/admin/purchasing/returns
+  ✅ http://localhost:4321/ar/admin/purchasing/sepa
+  ✅ http://localhost:4321/ar/admin/purchasing/imports
   ✅ http://localhost:4321/ar/admin/subscriptions
-  ✅ http://localhost:4321/ar/admin/subscriptions/plans/7c165087-234a-4ea5-8eff-321ea55569aa
-  ✅ http://localhost:4321/ar/admin/subscriptions/a355f52b-aeb7-4fe3-95e0-7e3b70a872c1
+  ✅ http://localhost:4321/ar/admin/subscriptions/plans/79ff7f97-e38b-41a2-9e35-7294a45e1004
+  ✅ http://localhost:4321/ar/admin/subscriptions/f4e901ad-14c3-4473-b281-f341c91242b7
   ✅ http://localhost:4321/ar/organizations/a11y-roles-org/roles
   ✅ http://localhost:4321/ar/organizations/a11y-roles-org/sites
   ✅ http://localhost:4321/ar/organizations/a11y-roles-org/audit
   ✅ http://localhost:4321/ar/organizations/a11y-roles-org/moderation
   ✅ http://localhost:4321/ar/admin/forums
   ✅ http://localhost:4321/ar/admin/forums/sanctions
-  ✅ http://localhost:4321/ar/forums/communaute/t/c7790045-b79f-4fac-9d52-85d755717d33?notice=moderated
+  ✅ http://localhost:4321/ar/forums/communaute/t/04f11bd1-bcf5-499a-8cfa-8539b8805b08?notice=moderated
   ✅ http://localhost:4321/ar/admin/classifieds
   ✅ http://localhost:4321/ar/admin/classifieds/categories
   ✅ http://localhost:4321/ar/admin/classifieds/attributes
   ✅ http://localhost:4321/ar/admin/classifieds/ads
 
 ════════════════════════════════════════════════════════════════════════════════
-  END OF REPORT — 284/284 passed
+  END OF REPORT — 308/308 passed
 ════════════════════════════════════════════════════════════════════════════════
