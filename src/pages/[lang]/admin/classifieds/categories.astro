@@ -1,0 +1,95 @@
+---
+import { Effect } from "effect";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import AdminResourceShell from "@organisms/AdminResourceShell.astro";
+import Button from "@atoms/button/Button.astro";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import ClassifiedsNotice from "@/components/classifieds/ClassifiedsNotice.astro";
+import ClassifiedsAdminNav from "@/components/classifieds/ClassifiedsAdminNav.astro";
+import { requireAuth } from "@/lib/auth-guards";
+import { getAdminSite } from "@/lib/platform/admin";
+import { runApp } from "@/lib/effect/http";
+import { LOCALES } from "@i18n/config";
+import { classifiedsCan } from "@/modules/classifieds/services/access";
+import { ensureSiteClassifieds } from "@/modules/classifieds/services/seed";
+import { categoryTree, flattenTree } from "@/modules/classifieds/services/categories";
+import { handleAdminClassifiedsForm } from "@/modules/classifieds/web/admin-forms";
+import { getClassifiedsTranslations } from "@/modules/classifieds/i18n";
+
+export const prerender = false;
+const auth = await requireAuth(Astro);
+if ("redirect" in auth) return auth.redirect;
+const { user, locale, authT } = auth;
+const site = await getAdminSite(Astro);
+const scope = { organizationId: site.organizationId ?? null, siteId: site.id };
+const canConfigure = await Effect.runPromise(classifiedsCan(user, scope, ["configure"]));
+const canModerate = await Effect.runPromise(classifiedsCan(user, scope, ["moderate"]));
+if (!canConfigure && !canModerate) return Astro.redirect(`/${locale}/auth/${authT.routes["dashboard"]}`);
+const self = `/${locale}/admin/classifieds/categories`;
+const t = getClassifiedsTranslations(locale);
+const a = t.admin;
+
+if (Astro.request.method === "POST") {
+  const result = await handleAdminClassifiedsForm(await Astro.request.formData(), { viewer: user, scope });
+  return Astro.redirect(result.ok ? `${self}?notice=${result.notice}` : `${self}?error=${result.error}`, 303);
+}
+
+if (canConfigure) await runApp(ensureSiteClassifieds(scope));
+const tree = await runApp(categoryTree(site.id, locale));
+const flat = flattenTree(tree);
+---
+<BaseLayout title={`${a.categories} — ${a.title}`}>
+  <AuthLayout title={a.categories}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="classifieds" />
+    <AdminResourceShell title={a.categories} description={a.intro}>
+      <div class="grid gap-8 p-4 sm:p-6" data-testid="admin-classifieds-categories">
+        <ClassifiedsAdminNav t={t} locale={locale} active="categories" />
+        <ClassifiedsNotice t={t} url={Astro.url} />
+        <ul class="grid gap-6">
+          {flat.map((c) => (
+            <li class="grid gap-3 rounded-xl border p-4">
+              <h2 class="font-medium">{c.name} <span class="text-sm text-muted-foreground">({c.slug})</span></h2>
+              {canConfigure && (
+                <>
+                  <form method="post" class="grid gap-3">
+                    <input type="hidden" name="intent" value="categoryUpdate" />
+                    <input type="hidden" name="categoryId" value={c.id} />
+                    <fieldset class="grid gap-3 sm:grid-cols-2">
+                      <legend class="text-sm font-medium">{a.localeFields}</legend>
+                      {LOCALES.map((loc) => (
+                        <div class="grid gap-1">
+                          <Label for={`cat-${c.id}-${loc}-name`}>{a.categoryName} ({loc})</Label>
+                          <Input id={`cat-${c.id}-${loc}-name`} name={`cat_${loc}_name`} value={c.names[loc] ?? ""} maxlength="120" required />
+                          <Label for={`cat-${c.id}-${loc}-description`}>{a.categoryDescription} ({loc})</Label>
+                          <Input id={`cat-${c.id}-${loc}-description`} name={`cat_${loc}_description`} value={c.descriptions[loc] ?? ""} maxlength="500" />
+                        </div>
+                      ))}
+                    </fieldset>
+                    <Button type="submit" size="sm">{a.save}</Button>
+                  </form>
+                  {c.leaf && (
+                    <form method="post" class="flex flex-wrap items-end gap-2">
+                      <input type="hidden" name="intent" value="categoryDelete" />
+                      <input type="hidden" name="categoryId" value={c.id} />
+                      <div class="grid gap-1">
+                        <Label for={`move-${c.id}`}>{a.moveAdsTo}</Label>
+                        <NativeSelect id={`move-${c.id}`} name="moveTo" class="min-w-48">
+                          {flat.filter((o) => o.id !== c.id && o.leaf).map((o) => <NativeSelectOption value={o.id}>{o.name}</NativeSelectOption>)}
+                        </NativeSelect>
+                      </div>
+                      <Button type="submit" variant="outline" size="sm">{a.deleteCategory}</Button>
+                    </form>
+                  )}
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </AdminResourceShell>
+  </AuthLayout>
+</BaseLayout>

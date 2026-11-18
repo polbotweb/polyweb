@@ -1,3 +1,8 @@
+/**
+ * Attributs dynamiques typés (core). Contrat de validation historique conservé ;
+ * la persistance générique (`schema`, `service`, `validation`) est le chemin à suivre.
+ * L'EAV du module services n'est pas migré dans cette livraison.
+ */
 export type AttributeValueKind = "text" | "number" | "boolean" | "date" | "select" | "multi-select";
 
 export interface AttributeDefinition {
@@ -20,3 +25,8 @@ export function assertAttributeDefinition(definition: AttributeDefinition): void
     if (!definition.options || definition.options.length === 0) throw new Error(`Attribute ${definition.id} requires options`);
   }
 }
+
+export * from "./kinds";
+export * from "./schema";
+export * from "./validation";
+export * from "./service";

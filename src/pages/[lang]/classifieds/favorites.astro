@@ -1,0 +1,39 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AuthSidebar from "@organisms/AuthSidebar/AuthSidebar.astro";
+import ClassifiedsCard from "@/components/classifieds/ClassifiedsCard.astro";
+import ClassifiedsPagination from "@/components/classifieds/ClassifiedsPagination.astro";
+import { requireAuth } from "@/lib/auth-guards";
+import { runApp } from "@/lib/effect/http";
+import { ensureDefaultSite } from "@/modules/sites/domain/sites";
+import { ensureSiteClassifieds } from "@/modules/classifieds/services/seed";
+import { listFavorites } from "@/modules/classifieds/services/list";
+import { formatClassifiedPrice } from "@/modules/classifieds/web/price";
+import { getClassifiedsTranslations } from "@/modules/classifieds/i18n";
+
+export const prerender = false;
+const auth = await requireAuth(Astro);
+if ("redirect" in auth) return auth.redirect;
+const { user, locale, authT } = auth;
+const t = getClassifiedsTranslations(locale);
+const site = Astro.locals.site ?? (await ensureDefaultSite());
+await runApp(ensureSiteClassifieds({ siteId: site.id, organizationId: site.organizationId ?? null }));
+const list = await runApp(listFavorites(site.id, user, Number(Astro.url.searchParams.get("page") ?? 1)));
+---
+<BaseLayout title={t.favorites}>
+  <AuthLayout title={t.favorites}>
+    <AuthSidebar slot="sidebar" t={authT} locale={locale} user={user} activeItem="classifieds-favorites" />
+    <div data-testid="classifieds-favorites" class="grid gap-6">
+      <h1 class="font-heading text-2xl font-semibold">{t.favorites}</h1>
+      {list.items.length === 0 ? <p>{t.noFavorites}</p> : (
+        <ul class="grid gap-4 sm:grid-cols-2">
+          {list.items.map((ad) => (
+            <ClassifiedsCard href={`/${locale}/classifieds/a/${ad.slug}`} title={ad.title} city={ad.city} kind={ad.kind} coverUrl={ad.coverUrl} t={t} price={formatClassifiedPrice(ad.priceKind, ad.priceMinor, ad.currency, locale, t)} />
+          ))}
+        </ul>
+      )}
+      <ClassifiedsPagination t={t} page={list.page} pages={list.pages} hrefFor={(p) => `/${locale}/classifieds/favorites?page=${p}`} />
+    </div>
+  </AuthLayout>
+</BaseLayout>

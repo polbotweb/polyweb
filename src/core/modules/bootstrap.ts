@@ -15,6 +15,7 @@ import { registerSubscriptions } from "@/modules/subscriptions/register";
 import { bookingsModule } from "@/modules/bookings/module";
 import { coursesModule } from "@/modules/courses/module";
 import { formationsModule } from "@/modules/formations/module";
+import { classifiedsModule } from "@/modules/classifieds/module";
 import { registerInternalLinkResolver } from "@/lib/content/internal-link-resolver";
 import { blogInternalLinkResolver } from "@/lib/blog/blog-internal-link";
 import { serviceInternalLinkResolver } from "@/lib/services/services-internal-link";
@@ -57,10 +58,12 @@ export function bootstrapModules(): void {
   registerModule(bookingsModule);
   registerModule(coursesModule);
   registerModule(formationsModule);
+  registerModule(classifiedsModule);
   // Modules optionnels, activés par variable d'environnement
   if (process.env.PAYMENTS_ENABLED === "true") registerModule(paymentsModule);
   if (blogModule.searchDefinition) registerSearchResource(blogModule.searchDefinition);
   if (servicesModule.searchDefinition) registerSearchResource(servicesModule.searchDefinition);
+  if (classifiedsModule.searchDefinition) registerSearchResource(classifiedsModule.searchDefinition);
   registerInternalLinkResolver(blogInternalLinkResolver);
   registerInternalLinkResolver(serviceInternalLinkResolver);
   // API publique v1 + événements webhooks : chaque module déclare ses ressources, scopes et événements.

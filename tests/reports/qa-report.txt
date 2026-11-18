@@ -1,49 +1,44 @@
 ══════════════════════════════════════════════════════════════════════════════════
   POLYWEB — GLOBAL QA REPORT
-  Generated: 2026-11-15 08:08:05
+  Generated: 2026-11-16 09:18:09
 ══════════════════════════════════════════════════════════════════════════════════
 
   ✅ Type & Template Check (astro check)
-     0 errors, 0 warnings, 64 hints
+     0 errors, 0 warnings, 71 hints
 
   ✅ Lint (ESLint)
      0 errors, 0 warnings
 
   ✅ Unit & Integration Tests (Vitest)
-     2281/2282 passed, 1 skipped
+     2295/2296 passed, 1 skipped
 
-  ❌ End-to-End Tests (Playwright)
-     306/393 passed, 86 skipped, 1 failed
-
-  • auth.spec.ts > Public pages › legal page loads
-    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+  ✅ End-to-End Tests (Playwright)
+     308/396 passed, 88 skipped
 
   ✅ Accessibility Audit (Pa11y — WCAG 2.1 AAA)
-     232/232 URLs clean
+     284/284 URLs clean
 
-  ❌ Performance & Quality Audit (Lighthouse CI)
-     220 page(s) audited, 1 below threshold (≥90)
-
-  • 1 page(s) scored below the 90 threshold (see lighthouse-report.txt for detail)
+  ✅ Performance & Quality Audit (Lighthouse CI)
+     268 page(s) audited, all ≥90
 
 ══════════════════════════════════════════════════════════════════════════════════
   GLOBAL STATUS
 ══════════════════════════════════════════════════════════════════════════════════
 
   Reports in scope: 6/6 (check, lint, vitest, playwright, pa11y, lighthouse)
-  Overall:           ❌ ISSUES DETECTED
+  Overall:           ✅ ALL GREEN
 
   ┌─────────────────────────────────────────────┬──────────────┬─────────┐
   │ Report                                      │ Status       │ Result  │
   ├─────────────────────────────────────────────┼──────────────┼─────────┤
   │ Astro check                                 │ GREEN        │ 0 error │
   │ ESLint                                      │ GREEN        │ 0 error │
-  │ Vitest (unit/integration)                   │ GREEN        │ 2281/22 │
-  │ Playwright (e2e)                            │ RED          │ 306/393 │
-  │ Pa11y (a11y)                                │ GREEN        │ 232/232 │
-  │ Lighthouse (perf)                           │ RED          │ 220 pag │
+  │ Vitest (unit/integration)                   │ GREEN        │ 2295/22 │
+  │ Playwright (e2e)                            │ GREEN        │ 308/396 │
+  │ Pa11y (a11y)                                │ GREEN        │ 284/284 │
+  │ Lighthouse (perf)                           │ GREEN        │ 268 pag │
   └─────────────────────────────────────────────┴──────────────┴─────────┘
 
 ══════════════════════════════════════════════════════════════════════════════════
-  END OF GLOBAL REPORT — ACTION REQUIRED
+  END OF GLOBAL REPORT — ALL GREEN
 ══════════════════════════════════════════════════════════════════════════════════

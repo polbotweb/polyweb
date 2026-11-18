@@ -1,0 +1,136 @@
+---
+import Button from "@atoms/button/Button.astro";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import MediaPicker from "@atoms/media-picker/MediaPicker.astro";
+import AttributeFields from "./AttributeFields.astro";
+import { CLASSIFIED_CONDITIONS, CLASSIFIED_KINDS, CLASSIFIED_PRICE_KINDS } from "@/modules/classifieds/domain/workflow";
+import type { ClassifiedsTranslations } from "@/modules/classifieds/i18n";
+import type { CategoryNode } from "@/modules/classifieds/services/categories";
+import { flattenTree } from "@/modules/classifieds/services/categories";
+import type { LoadedDefinition, ValidatedAttributeValue } from "@/core/attributes";
+import type { Locale } from "@i18n/config";
+
+interface MediaValue { mediaId: string; altText: string; url?: string | null }
+interface Props {
+  t: ClassifiedsTranslations;
+  locale: Locale;
+  tree: readonly CategoryNode[];
+  definitions: readonly LoadedDefinition[];
+  values?: {
+    categoryId?: string;
+    title?: string;
+    body?: string;
+    kind?: string;
+    condition?: string;
+    priceKind?: string;
+    price?: string;
+    currency?: string;
+    city?: string;
+    postalCode?: string | null;
+    country?: string | null;
+    media?: MediaValue[];
+    attributes?: readonly ValidatedAttributeValue[];
+  };
+  organizationId?: string | null;
+  currencyDefault?: string;
+}
+const { t, locale, tree, definitions, values = {}, organizationId, currencyDefault = "EUR" } = Astro.props;
+const leaves = flattenTree(tree).filter((c) => c.leaf);
+---
+<div class="grid gap-6" data-testid="classifieds-form">
+  <div class="grid gap-1">
+    <Label for="ad-category">{t.categoryLabel}</Label>
+    <NativeSelect id="ad-category" name="categoryId" required class="w-full">
+      <NativeSelectOption value="" selected={!values.categoryId}>—</NativeSelectOption>
+      {leaves.map((c) => <NativeSelectOption value={c.id} selected={values.categoryId === c.id}>{c.name}</NativeSelectOption>)}
+    </NativeSelect>
+  </div>
+  <div class="grid gap-1">
+    <Label for="ad-title">{t.titleLabel}</Label>
+    <Input id="ad-title" name="title" required minlength="3" maxlength="120" value={values.title ?? ""} />
+  </div>
+  <div class="grid gap-1">
+    <Label for="ad-body">{t.bodyLabel}</Label>
+    <textarea id="ad-body" name="body" required minlength="10" maxlength="20000" rows="8" class="min-h-32 rounded-md border px-3 py-2">{values.body ?? ""}</textarea>
+    <p class="text-sm text-muted-foreground">{t.markdownHelp}</p>
+  </div>
+  <div class="grid gap-3 sm:grid-cols-2">
+    <div class="grid gap-1">
+      <Label for="ad-kind">{t.kindLabel}</Label>
+      <NativeSelect id="ad-kind" name="kind" class="w-full">
+        {CLASSIFIED_KINDS.map((k) => <NativeSelectOption value={k} selected={(values.kind ?? "offer") === k}>{t.kinds[k]}</NativeSelectOption>)}
+      </NativeSelect>
+    </div>
+    <div class="grid gap-1">
+      <Label for="ad-condition">{t.conditionLabel}</Label>
+      <NativeSelect id="ad-condition" name="condition" class="w-full">
+        {CLASSIFIED_CONDITIONS.map((c) => <NativeSelectOption value={c} selected={(values.condition ?? "used") === c}>{t.conditions[c]}</NativeSelectOption>)}
+      </NativeSelect>
+    </div>
+  </div>
+  <div class="grid gap-3 sm:grid-cols-3">
+    <div class="grid gap-1">
+      <Label for="ad-price-kind">{t.priceKindLabel}</Label>
+      <NativeSelect id="ad-price-kind" name="priceKind" class="w-full">
+        {CLASSIFIED_PRICE_KINDS.map((k) => <NativeSelectOption value={k} selected={(values.priceKind ?? "fixed") === k}>{t.priceKinds[k]}</NativeSelectOption>)}
+      </NativeSelect>
+    </div>
+    <div class="grid gap-1">
+      <Label for="ad-price">{t.priceLabel}</Label>
+      <Input id="ad-price" name="price" value={values.price ?? ""} inputmode="decimal" />
+    </div>
+    <div class="grid gap-1">
+      <Label for="ad-currency">{t.currencyLabel}</Label>
+      <Input id="ad-currency" name="currency" value={values.currency ?? currencyDefault} maxlength="3" />
+    </div>
+  </div>
+  <div class="grid gap-3 sm:grid-cols-3">
+    <div class="grid gap-1">
+      <Label for="ad-city">{t.cityLabel}</Label>
+      <Input id="ad-city" name="city" required maxlength="120" value={values.city ?? ""} />
+    </div>
+    <div class="grid gap-1">
+      <Label for="ad-postal">{t.postalLabel}</Label>
+      <Input id="ad-postal" name="postalCode" maxlength="20" value={values.postalCode ?? ""} />
+    </div>
+    <div class="grid gap-1">
+      <Label for="ad-country">{t.countryLabel}</Label>
+      <Input id="ad-country" name="country" maxlength="2" value={values.country ?? ""} />
+    </div>
+  </div>
+  <fieldset class="grid gap-3" data-classifieds-media>
+    <legend class="font-medium">{t.photosLabel}</legend>
+    <div data-media-list class="grid gap-2">
+      {(values.media ?? []).map((m) => (
+        <div class="grid gap-1 sm:grid-cols-2">
+          <input type="hidden" name="mediaId" value={m.mediaId} />
+          <Label>{t.altLabel}<Input name={`alt_${m.mediaId}`} value={m.altText} required maxlength="200" /></Label>
+        </div>
+      ))}
+    </div>
+    <MediaPicker id="classifieds-picker" locale={locale} organizationId={organizationId} />
+    <Button type="button" variant="outline" size="sm" data-media-picker="classifieds-picker">{t.photosLabel}</Button>
+  </fieldset>
+  {definitions.length > 0 && (
+    <fieldset class="grid gap-3">
+      <legend class="font-medium">{t.attributes}</legend>
+      <AttributeFields definitions={definitions} values={values.attributes ?? []} locale={locale} />
+    </fieldset>
+  )}
+</div>
+<script>
+  const root = document.querySelector("[data-classifieds-media]");
+  const list = root?.querySelector("[data-media-list]");
+  const picker = document.querySelector("#classifieds-picker");
+  picker?.addEventListener("media-select", (event) => {
+    const detail = (event as CustomEvent).detail as { fileId?: string; alt?: string; url?: string };
+    if (!detail.fileId || !list) return;
+    if (list.querySelector(`input[name="mediaId"][value="${detail.fileId}"]`)) return;
+    const wrap = document.createElement("div");
+    wrap.className = "grid gap-1 sm:grid-cols-2";
+    wrap.innerHTML = `<input type="hidden" name="mediaId" value="${detail.fileId}" /><label class="grid gap-1 text-sm"><span>Alt</span><input class="min-h-11 rounded-md border px-3" name="alt_${detail.fileId}" value="${(detail.alt ?? "").replace(/"/g, "&quot;")}" required maxlength="200" /></label>`;
+    list.appendChild(wrap);
+  });
+</script>

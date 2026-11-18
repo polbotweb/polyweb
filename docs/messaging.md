@@ -24,3 +24,12 @@ Catégorie `messaging`, `MESSAGE_RECEIVED` sur `messaging.message_created` (sans
 `/{lang}/messages`, `/{lang}/messages/{id}`.
 
 Hors périmètre : groupes, PJ, E2E, typing, unsends globaux, purge.
+
+## Exception petites annonces
+
+Publier une annonce visible permet d'être contacté **au sujet de cette annonce**, même si
+`who_can_message` vaut `shared_org` ou `nobody`. Les blocages restent appliqués ; un refus est
+toujours un `NOT_FOUND` indiscernable. L'exception est limitée aux conversations ouvertes depuis
+une annonce publiée et visible, et consignée dans `classified_inquiries` (les messages suivants
+de la même conversation en bénéficient aussi). Un texte d'aide figure sous le réglage de préférence
+(`/{lang}/messages`, 4 locales). Détail : [classifieds.md](classifieds.md).

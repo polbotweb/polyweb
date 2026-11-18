@@ -30,6 +30,7 @@ const who = await Effect.runPromise(getMessagingPreference(user.id));
             </select>
           </label>
           <button type="submit" class="min-h-11 rounded-md border px-4">{mt.saved}</button>
+          <p class="basis-full text-sm text-muted-foreground">{mt.preferenceHelp}</p>
         </form>
       </section>
       <section class="rounded-xl border p-4">

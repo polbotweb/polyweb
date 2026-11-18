@@ -393,6 +393,13 @@
       "when": 1794260000000,
       "tag": "0055_forums_core",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1794741284324,
+      "tag": "0056_classifieds_core",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,136 @@
+---
+import Button from "@atoms/button/Button.astro";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import type { ClassifiedsTranslations } from "@/modules/classifieds/i18n";
+import type { CategoryNode } from "@/modules/classifieds/services/categories";
+import { flattenTree } from "@/modules/classifieds/services/categories";
+import { CLASSIFIED_CONDITIONS, CLASSIFIED_KINDS } from "@/modules/classifieds/domain/workflow";
+import { definitionLabel, optionLabel, type LoadedDefinition } from "@/core/attributes";
+import type { Locale } from "@i18n/config";
+
+interface Props {
+  t: ClassifiedsTranslations;
+  action: string;
+  locale: Locale;
+  tree: readonly CategoryNode[];
+  definitions?: readonly LoadedDefinition[];
+  values: URLSearchParams;
+  signedIn?: boolean;
+}
+const { t, action, locale, tree, definitions = [], values, signedIn } = Astro.props;
+const flat = flattenTree(tree);
+const selectedCategory = values.get("category") ?? "";
+---
+<form method="get" action={action} class="grid gap-4 rounded-xl border p-4" data-testid="classifieds-filters">
+  <div class="grid gap-1">
+    <Label for="classifieds-q">{t.searchLabel}</Label>
+    <Input id="classifieds-q" name="q" value={values.get("q") ?? ""} maxlength="200" />
+  </div>
+  <div class="grid gap-1">
+    <Label for="classifieds-category">{t.categoryLabel}</Label>
+    <NativeSelect id="classifieds-category" name="category" class="w-full">
+      <NativeSelectOption value="" selected={!selectedCategory}>{t.allCategories}</NativeSelectOption>
+      {flat.map((c) => (
+        <NativeSelectOption value={c.slug} selected={selectedCategory === c.slug || selectedCategory === c.id}>
+          {"— ".repeat(c.parentId ? 1 : 0)}{c.name}
+        </NativeSelectOption>
+      ))}
+    </NativeSelect>
+  </div>
+  <div class="grid gap-3 sm:grid-cols-2">
+    <div class="grid gap-1">
+      <Label for="classifieds-kind">{t.kindLabel}</Label>
+      <NativeSelect id="classifieds-kind" name="kind" class="w-full">
+        <NativeSelectOption value="" selected={!values.get("kind")}>"—"</NativeSelectOption>
+        {CLASSIFIED_KINDS.map((k) => <NativeSelectOption value={k} selected={values.get("kind") === k}>{t.kinds[k]}</NativeSelectOption>)}
+      </NativeSelect>
+    </div>
+    <div class="grid gap-1">
+      <Label for="classifieds-condition">{t.conditionLabel}</Label>
+      <NativeSelect id="classifieds-condition" name="condition" class="w-full">
+        <NativeSelectOption value="" selected={!values.get("condition")}>—</NativeSelectOption>
+        {CLASSIFIED_CONDITIONS.map((c) => <NativeSelectOption value={c} selected={values.get("condition") === c}>{t.conditions[c]}</NativeSelectOption>)}
+      </NativeSelect>
+    </div>
+  </div>
+  <div class="grid gap-3 sm:grid-cols-2">
+    <div class="grid gap-1">
+      <Label for="classifieds-city">{t.cityLabel}</Label>
+      <Input id="classifieds-city" name="city" value={values.get("city") ?? ""} maxlength="120" />
+    </div>
+    <div class="grid gap-1">
+      <Label for="classifieds-postal">{t.postalLabel}</Label>
+      <Input id="classifieds-postal" name="postal" value={values.get("postal") ?? ""} maxlength="20" />
+    </div>
+  </div>
+  <div class="grid gap-3 sm:grid-cols-2">
+    <div class="grid gap-1">
+      <Label for="classifieds-price-min">{t.priceMinLabel}</Label>
+      <Input id="classifieds-price-min" name="priceMin" type="number" min="0" value={values.get("priceMin") ?? ""} />
+    </div>
+    <div class="grid gap-1">
+      <Label for="classifieds-price-max">{t.priceMaxLabel}</Label>
+      <Input id="classifieds-price-max" name="priceMax" type="number" min="0" value={values.get("priceMax") ?? ""} />
+    </div>
+  </div>
+  {definitions.filter((d) => d.filterable).map((def) => {
+    const label = definitionLabel(def, locale);
+    const name = `a_${def.key}`;
+    if (def.kind === "boolean") {
+      return (
+        <div class="grid gap-1">
+          <Label for={`f-${def.key}`}>{label}</Label>
+          <NativeSelect id={`f-${def.key}`} name={name} class="w-full">
+            <NativeSelectOption value="" selected={!values.get(name)}>—</NativeSelectOption>
+            <NativeSelectOption value="true" selected={values.get(name) === "true"}>{t.yes}</NativeSelectOption>
+            <NativeSelectOption value="false" selected={values.get(name) === "false"}>{t.no}</NativeSelectOption>
+          </NativeSelect>
+        </div>
+      );
+    }
+    if (def.kind === "select" || def.kind === "multiselect") {
+      return (
+        <div class="grid gap-1">
+          <Label for={`f-${def.key}`}>{label}{def.unit ? ` (${def.unit})` : ""}</Label>
+          <NativeSelect id={`f-${def.key}`} name={name} class="w-full">
+            <NativeSelectOption value="" selected={!values.get(name)}>—</NativeSelectOption>
+            {def.options.map((o) => <NativeSelectOption value={o.key} selected={values.get(name) === o.key}>{optionLabel(o, locale)}</NativeSelectOption>)}
+          </NativeSelect>
+        </div>
+      );
+    }
+    if (def.kind === "number" || def.kind === "integer") {
+      return (
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div class="grid gap-1">
+            <Label for={`f-${def.key}-min`}>{label} min{def.unit ? ` (${def.unit})` : ""}</Label>
+            <Input id={`f-${def.key}-min`} name={`${name}_min`} type="number" value={values.get(`${name}_min`) ?? ""} />
+          </div>
+          <div class="grid gap-1">
+            <Label for={`f-${def.key}-max`}>{label} max</Label>
+            <Input id={`f-${def.key}-max`} name={`${name}_max`} type="number" value={values.get(`${name}_max`) ?? ""} />
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div class="grid gap-1">
+        <Label for={`f-${def.key}`}>{label}</Label>
+        <Input id={`f-${def.key}`} name={name} value={values.get(name) ?? ""} />
+      </div>
+    );
+  })}
+  <div class="flex flex-wrap gap-2">
+    <Button type="submit" size="sm">{t.filter}</Button>
+    <Button href={action} variant="outline" size="sm">{t.clearFilters}</Button>
+  </div>
+</form>
+{signedIn && (
+  <form method="post" class="mt-3">
+    <input type="hidden" name="intent" value="saveSearch" />
+    {Array.from(values.entries()).map(([k, v]) => v ? <input type="hidden" name={k} value={v} /> : null)}
+    <Button type="submit" variant="outline" size="sm">{t.saveSearch}</Button>
+  </form>
+)}

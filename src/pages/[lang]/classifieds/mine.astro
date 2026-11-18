@@ -1,0 +1,47 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AuthSidebar from "@organisms/AuthSidebar/AuthSidebar.astro";
+import Button from "@atoms/button/Button.astro";
+import Badge from "@atoms/badge/Badge.astro";
+import ClassifiedsNotice from "@/components/classifieds/ClassifiedsNotice.astro";
+import ClassifiedsPagination from "@/components/classifieds/ClassifiedsPagination.astro";
+import { requireAuth } from "@/lib/auth-guards";
+import { runApp } from "@/lib/effect/http";
+import { ensureDefaultSite } from "@/modules/sites/domain/sites";
+import { ensureSiteClassifieds } from "@/modules/classifieds/services/seed";
+import { listMine } from "@/modules/classifieds/services/list";
+import { getClassifiedsTranslations } from "@/modules/classifieds/i18n";
+
+export const prerender = false;
+const auth = await requireAuth(Astro);
+if ("redirect" in auth) return auth.redirect;
+const { user, locale, authT } = auth;
+const t = getClassifiedsTranslations(locale);
+const site = Astro.locals.site ?? (await ensureDefaultSite());
+await runApp(ensureSiteClassifieds({ siteId: site.id, organizationId: site.organizationId ?? null }));
+const list = await runApp(listMine(site.id, user, Number(Astro.url.searchParams.get("page") ?? 1)));
+---
+<BaseLayout title={t.mine}>
+  <AuthLayout title={t.mine}>
+    <AuthSidebar slot="sidebar" t={authT} locale={locale} user={user} activeItem="classifieds-mine" />
+    <div data-testid="classifieds-mine" class="grid gap-6">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h1 class="font-heading text-2xl font-semibold">{t.mine}</h1>
+        <Button href={`/${locale}/classifieds/new`} size="sm">{t.newAd}</Button>
+      </div>
+      <ClassifiedsNotice t={t} url={Astro.url} />
+      {list.items.length === 0 ? <p>{t.noMine}</p> : (
+        <ul class="grid gap-3">
+          {list.items.map((ad) => (
+            <li class="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
+              <a class="font-medium underline-offset-4 hover:underline" href={`/${locale}/classifieds/a/${ad.slug}`}>{ad.title}</a>
+              <Badge variant="outline">{t.lifecycles[ad.lifecycle]}</Badge>
+            </li>
+          ))}
+        </ul>
+      )}
+      <ClassifiedsPagination t={t} page={list.page} pages={list.pages} hrefFor={(p) => `/${locale}/classifieds/mine?page=${p}`} />
+    </div>
+  </AuthLayout>
+</BaseLayout>

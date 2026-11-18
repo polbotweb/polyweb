@@ -1,0 +1,93 @@
+---
+/**
+ * Réglages du tableau de petites annonces du site administré (cookie `pw_admin_site`).
+ */
+import { Effect } from "effect";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import AdminResourceShell from "@organisms/AdminResourceShell.astro";
+import Button from "@atoms/button/Button.astro";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import ClassifiedsNotice from "@/components/classifieds/ClassifiedsNotice.astro";
+import ClassifiedsAdminNav from "@/components/classifieds/ClassifiedsAdminNav.astro";
+import { requireAuth } from "@/lib/auth-guards";
+import { getAdminSite } from "@/lib/platform/admin";
+import { runApp } from "@/lib/effect/http";
+import { classifiedsCan, loadSettings } from "@/modules/classifieds/services/access";
+import { ensureSiteClassifieds } from "@/modules/classifieds/services/seed";
+import { handleAdminClassifiedsForm } from "@/modules/classifieds/web/admin-forms";
+import { CLASSIFIED_VISIBILITIES } from "@/modules/classifieds/domain/workflow";
+import { getClassifiedsTranslations } from "@/modules/classifieds/i18n";
+
+export const prerender = false;
+const auth = await requireAuth(Astro);
+if ("redirect" in auth) return auth.redirect;
+const { user, locale, authT } = auth;
+const site = await getAdminSite(Astro);
+const scope = { organizationId: site.organizationId ?? null, siteId: site.id };
+const [canConfigure, canModerate] = await Promise.all([
+  Effect.runPromise(classifiedsCan(user, scope, ["configure"])),
+  Effect.runPromise(classifiedsCan(user, scope, ["moderate"])),
+]);
+if (!canConfigure && !canModerate) return Astro.redirect(`/${locale}/auth/${authT.routes["dashboard"]}`);
+const self = `/${locale}/admin/classifieds`;
+const t = getClassifiedsTranslations(locale);
+const a = t.admin;
+
+if (Astro.request.method === "POST") {
+  const result = await handleAdminClassifiedsForm(await Astro.request.formData(), { viewer: user, scope });
+  return Astro.redirect(result.ok ? `${self}?notice=${result.notice}` : `${self}?error=${result.error}`, 303);
+}
+
+if (canConfigure) await runApp(ensureSiteClassifieds(scope));
+const settings = await runApp(loadSettings(site.id));
+---
+<BaseLayout title={`${a.title} — ${site.name}`} description={a.intro}>
+  <AuthLayout title={a.title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="classifieds" />
+    <AdminResourceShell title={a.title} description={`${a.intro} (${site.name})`}>
+      <Fragment slot="actions">
+        <Button href={`/${locale}/classifieds`} variant="outline" size="sm">{a.openPublic}</Button>
+      </Fragment>
+      <div class="grid gap-8 p-4 sm:p-6" data-testid="admin-classifieds">
+        <ClassifiedsAdminNav t={t} locale={locale} active="settings" />
+        <ClassifiedsNotice t={t} url={Astro.url} />
+        {canConfigure && (
+          <form method="post" class="grid max-w-xl gap-4">
+            <input type="hidden" name="intent" value="settings" />
+            <div class="grid gap-1">
+              <Label for="visibility">{a.visibility}</Label>
+              <NativeSelect id="visibility" name="visibility" class="w-full">
+                {CLASSIFIED_VISIBILITIES.map((v) => <NativeSelectOption value={v} selected={v === settings.visibility}>{a.visibilities[v]}</NativeSelectOption>)}
+              </NativeSelect>
+            </div>
+            <label class="flex items-center gap-2">
+              <input type="checkbox" name="preModeration" value="1" checked={settings.preModeration} class="size-4" />
+              <span>{a.preModeration}</span>
+            </label>
+            <div class="grid gap-1">
+              <Label for="durationDays">{a.durationDays}</Label>
+              <Input id="durationDays" name="durationDays" type="number" min="7" max="90" value={settings.durationDays} />
+            </div>
+            <div class="grid gap-1">
+              <Label for="defaultCurrency">{a.defaultCurrency}</Label>
+              <Input id="defaultCurrency" name="defaultCurrency" maxlength="3" value={settings.defaultCurrency} />
+            </div>
+            <div class="grid gap-1">
+              <Label for="maxImages">{a.maxImages}</Label>
+              <Input id="maxImages" name="maxImages" type="number" min="1" max="8" value={settings.maxImages} />
+            </div>
+            <div class="grid gap-1">
+              <Label for="maxRenewals">{a.maxRenewals}</Label>
+              <Input id="maxRenewals" name="maxRenewals" type="number" min="0" max="20" value={settings.maxRenewals} />
+            </div>
+            <Button type="submit" size="sm">{a.save}</Button>
+          </form>
+        )}
+      </div>
+    </AdminResourceShell>
+  </AuthLayout>
+</BaseLayout>

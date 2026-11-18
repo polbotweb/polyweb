@@ -1,0 +1,60 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Button from "@atoms/button/Button.astro";
+import ClassifiedsForm from "@/components/classifieds/ClassifiedsForm.astro";
+import ClassifiedsNotice from "@/components/classifieds/ClassifiedsNotice.astro";
+import { requireAuth } from "@/lib/auth-guards";
+import { runApp } from "@/lib/effect/http";
+import { ensureDefaultSite } from "@/modules/sites/domain/sites";
+import { ensureSiteClassifieds } from "@/modules/classifieds/services/seed";
+import { categoryTree, flattenTree } from "@/modules/classifieds/services/categories";
+import { loadAdDefinitions } from "@/modules/classifieds/services/ad.service";
+import { handleNewAdForm } from "@/modules/classifieds/web/forms";
+import { getClassifiedsTranslations } from "@/modules/classifieds/i18n";
+import { loadSettings } from "@/modules/classifieds/services/access";
+
+export const prerender = false;
+const auth = await requireAuth(Astro);
+if ("redirect" in auth) return auth.redirect;
+const { user, locale } = auth;
+const t = getClassifiedsTranslations(locale);
+const site = Astro.locals.site ?? (await ensureDefaultSite());
+await runApp(ensureSiteClassifieds({ siteId: site.id, organizationId: site.organizationId ?? null }));
+const self = `/${locale}/classifieds/new`;
+
+if (Astro.request.method === "POST") {
+  const result = await handleNewAdForm(await Astro.request.formData(), {
+    siteId: site.id, viewer: user, adUrl: (slug) => `/${locale}/classifieds/a/${slug}`,
+  });
+  return Astro.redirect(result.ok ? `${result.location ?? self}?notice=${result.notice}` : `${self}?error=${result.error}`, 303);
+}
+
+const tree = await runApp(categoryTree(site.id, locale));
+const settings = await runApp(loadSettings(site.id));
+const selectedCategory = Astro.url.searchParams.get("categoryId") || "";
+const definitions = selectedCategory ? await runApp(loadAdDefinitions(site.id, selectedCategory)) : [];
+---
+<BaseLayout title={t.newAd} description={t.intro}>
+  <main class="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8" data-testid="classifieds-new">
+    <h1 class="mb-6 font-heading text-3xl font-bold">{t.newAd}</h1>
+    <ClassifiedsNotice t={t} url={Astro.url} />
+    <form method="get" class="mb-6 grid gap-2">
+      <label class="grid gap-1 text-sm" for="pick-category">{t.categoryLabel}
+        <select id="pick-category" name="categoryId" class="min-h-11 rounded-md border px-3" onchange="this.form.submit()">
+          <option value="">—</option>
+          {flattenTree(tree).filter((c) => c.leaf).map((c) => <option value={c.id} selected={c.id === selectedCategory}>{c.name}</option>)}
+        </select>
+      </label>
+      <noscript><button type="submit" class="min-h-11 w-fit rounded-md border px-4">{t.filter}</button></noscript>
+    </form>
+    <form method="post" class="grid gap-6">
+      <ClassifiedsForm t={t} locale={locale} tree={tree} definitions={definitions} values={{ categoryId: selectedCategory || undefined }} organizationId={site.organizationId ?? null} currencyDefault={settings.defaultCurrency} />
+      <p class="text-sm text-muted-foreground">{t.intro}</p>
+      <div class="flex flex-wrap gap-2">
+        <Button type="submit" name="intent" value="publish">{t.submit}</Button>
+        <Button type="submit" name="intent" value="save" variant="outline">{t.saveDraft}</Button>
+        <Button href={`/${locale}/classifieds`} variant="outline">{t.cancel}</Button>
+      </div>
+    </form>
+  </main>
+</BaseLayout>

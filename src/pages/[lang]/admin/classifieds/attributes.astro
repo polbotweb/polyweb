@@ -1,0 +1,120 @@
+---
+import { Effect } from "effect";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import AdminResourceShell from "@organisms/AdminResourceShell.astro";
+import Button from "@atoms/button/Button.astro";
+import Badge from "@atoms/badge/Badge.astro";
+import { Input } from "@atoms/input";
+import { Label } from "@atoms/label";
+import { NativeSelect, NativeSelectOption } from "@atoms/native-select";
+import ClassifiedsNotice from "@/components/classifieds/ClassifiedsNotice.astro";
+import ClassifiedsAdminNav from "@/components/classifieds/ClassifiedsAdminNav.astro";
+import { requireAuth } from "@/lib/auth-guards";
+import { getAdminSite } from "@/lib/platform/admin";
+import { runApp } from "@/lib/effect/http";
+import { LOCALES } from "@i18n/config";
+import { ATTRIBUTE_KINDS, definitionLabel, listDefinitions } from "@/core/attributes";
+import { classifiedsCan } from "@/modules/classifieds/services/access";
+import { ensureSiteClassifieds } from "@/modules/classifieds/services/seed";
+import { ancestryIds, categoryTree, flattenTree } from "@/modules/classifieds/services/categories";
+import { ATTRIBUTE_OWNER } from "@/modules/classifieds/domain/rules";
+import { handleAdminClassifiedsForm } from "@/modules/classifieds/web/admin-forms";
+import { getClassifiedsTranslations } from "@/modules/classifieds/i18n";
+
+export const prerender = false;
+const auth = await requireAuth(Astro);
+if ("redirect" in auth) return auth.redirect;
+const { user, locale, authT } = auth;
+const site = await getAdminSite(Astro);
+const scope = { organizationId: site.organizationId ?? null, siteId: site.id };
+const canConfigure = await Effect.runPromise(classifiedsCan(user, scope, ["configure"]));
+const canModerate = await Effect.runPromise(classifiedsCan(user, scope, ["moderate"]));
+if (!canConfigure && !canModerate) return Astro.redirect(`/${locale}/auth/${authT.routes["dashboard"]}`);
+const self = `/${locale}/admin/classifieds/attributes`;
+const t = getClassifiedsTranslations(locale);
+const a = t.admin;
+
+if (Astro.request.method === "POST") {
+  const fd = await Astro.request.formData();
+  const cat = String(fd.get("categoryId") ?? "");
+  const result = await handleAdminClassifiedsForm(fd, { viewer: user, scope });
+  const next = new URLSearchParams();
+  if (cat) next.set("categoryId", cat);
+  if (result.ok) next.set("notice", result.notice); else next.set("error", result.error);
+  return Astro.redirect(`${self}?${next}`, 303);
+}
+
+if (canConfigure) await runApp(ensureSiteClassifieds(scope));
+const tree = await runApp(categoryTree(site.id, locale));
+const flat = flattenTree(tree);
+const categoryId = Astro.url.searchParams.get("categoryId") || flat.find((c) => c.leaf)?.id || "";
+const category = flat.find((c) => c.id === categoryId) ?? null;
+const inherited = category ? await runApp(listDefinitions("classifieds", ATTRIBUTE_OWNER, await runApp(ancestryIds(site.id, category.id)))) : [];
+---
+<BaseLayout title={`${a.attributesPage} — ${a.title}`}>
+  <AuthLayout title={a.attributesPage}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="classifieds" />
+    <AdminResourceShell title={a.attributesPage} description={a.intro}>
+      <div class="grid gap-8 p-4 sm:p-6" data-testid="admin-classifieds-attributes">
+        <ClassifiedsAdminNav t={t} locale={locale} active="attributes" />
+        <ClassifiedsNotice t={t} url={Astro.url} />
+        <form method="get" class="grid max-w-md gap-2">
+          <Label for="pick-cat">{a.categories}</Label>
+          <NativeSelect id="pick-cat" name="categoryId" class="w-full" onchange="this.form.submit()">
+            {flat.map((c) => <NativeSelectOption value={c.id} selected={c.id === categoryId}>{c.name}</NativeSelectOption>)}
+          </NativeSelect>
+          <noscript><Button type="submit" size="sm">{t.filter}</Button></noscript>
+        </form>
+        <ul class="grid gap-4">
+          {inherited.map((def) => (
+            <li class="grid gap-2 rounded-xl border p-4">
+              <div class="flex flex-wrap items-center gap-2">
+                <h2 class="font-medium">{definitionLabel(def, locale)} <span class="text-sm text-muted-foreground">({def.key})</span></h2>
+                <Badge variant="outline" size="sm">{def.kind}</Badge>
+                {def.ownerId !== categoryId && <Badge variant="secondary" size="sm">héritage</Badge>}
+              </div>
+              {canConfigure && def.ownerId === categoryId && (
+                <form method="post" class="flex gap-2">
+                  <input type="hidden" name="intent" value="attributeDelete" />
+                  <input type="hidden" name="definitionId" value={def.id} />
+                  <input type="hidden" name="categoryId" value={categoryId} />
+                  <Button type="submit" variant="outline" size="sm">{a.deleteCategory}</Button>
+                </form>
+              )}
+            </li>
+          ))}
+        </ul>
+        {canConfigure && category && (
+          <form method="post" class="grid max-w-xl gap-3 rounded-xl border p-4">
+            <h2 class="font-medium">{a.addAttribute}</h2>
+            <input type="hidden" name="intent" value="attributeCreate" />
+            <input type="hidden" name="categoryId" value={category.id} />
+            <div class="grid gap-1"><Label for="attr-key">{a.attributeKey}</Label><Input id="attr-key" name="key" required maxlength="64" pattern="[a-z][a-z0-9_]*" /></div>
+            <div class="grid gap-1">
+              <Label for="attr-kind">{a.attributeKind}</Label>
+              <NativeSelect id="attr-kind" name="kind" class="w-full">
+                {ATTRIBUTE_KINDS.map((k) => <NativeSelectOption value={k}>{k}</NativeSelectOption>)}
+              </NativeSelect>
+            </div>
+            <fieldset class="grid gap-2 sm:grid-cols-2">
+              <legend class="text-sm font-medium">{a.labels}</legend>
+              {LOCALES.map((loc) => (
+                <div class="grid gap-1">
+                  <Label for={`label-${loc}`}>{loc}</Label>
+                  <Input id={`label-${loc}`} name={`label_${loc}`} required maxlength="120" />
+                </div>
+              ))}
+            </fieldset>
+            <div class="grid gap-1"><Label for="option-keys">{a.optionKeys}</Label><textarea id="option-keys" name="optionKeys" rows="3" class="rounded-md border px-3 py-2"></textarea></div>
+            <label class="flex items-center gap-2"><input type="checkbox" name="required" class="size-4" /><span>{a.required}</span></label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="filterable" checked class="size-4" /><span>{a.filterable}</span></label>
+            <div class="grid gap-1"><Label for="unit">{a.unit}</Label><Input id="unit" name="unit" maxlength="24" /></div>
+            <Button type="submit" size="sm">{a.save}</Button>
+          </form>
+        )}
+      </div>
+    </AdminResourceShell>
+  </AuthLayout>
+</BaseLayout>

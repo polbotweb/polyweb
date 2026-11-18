@@ -1,12 +1,12 @@
 
-> polyweb@0.0.1 check /workspace/b5-forums
+> polyweb@0.0.1 check /workspace/b5-classifieds
 > astro check
 
-06:30:32 [@astrojs/node] Enabling sessions with filesystem storage
-06:30:32 [content] Syncing content
-06:30:32 [content] Synced content
-06:30:32 [types] Generated 144ms
-06:30:32 [check] Getting diagnostics for Astro files in /workspace/b5-forums...
+07:17:37 [@astrojs/node] Enabling sessions with filesystem storage
+07:17:38 [content] Syncing content
+07:17:38 [content] Synced content
+07:17:38 [types] Generated 179ms
+07:17:38 [check] Getting diagnostics for Astro files in /workspace/b5-classifieds...
 [96msrc/actions/admin/pages.ts[0m:[93m4[0m:[93m38[0m - [93mwarning[0m[90m ts(6133): [0m'isNotNull' is declared but its value is never read.
 
 [7m4[0m import { eq, and, asc, desc, isNull, isNotNull, inArray, max } from "drizzle-orm";
@@ -143,6 +143,38 @@
 
 [7m61[0m   if (data.status !== undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["status"], message: "Le statut doit être modifié via une action de lifecycle explicite." });
 [7m  [0m [93m                                                        ~~~~~~~~~~~~[0m
+
+[96msrc/modules/classifieds/services/access.ts[0m:[93m4[0m:[93m10[0m - [93mwarning[0m[90m ts(6133): [0m'and' is declared but its value is never read.
+
+[7m4[0m import { and, eq } from "drizzle-orm";
+[7m [0m [93m         ~~~[0m
+
+[96msrc/modules/classifieds/services/inquiry.ts[0m:[93m10[0m:[93m10[0m - [93mwarning[0m[90m ts(6133): [0m'classifiedAds' is declared but its value is never read.
+
+[7m10[0m import { classifiedAds, classifiedInquiries } from "../schema";
+[7m  [0m [93m         ~~~~~~~~~~~~~[0m
+
+[96msrc/modules/classifieds/services/settings.ts[0m:[93m1[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'eq' is declared but its value is never read.
+
+[7m1[0m import { eq } from "drizzle-orm";
+[7m [0m [93m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/modules/classifieds/web/forms.ts[0m:[93m73[0m:[93m14[0m - [93mwarning[0m[90m ts(80006): [0mThis may be converted to an async function.
+
+[7m73[0m export const handleEditAdForm = (form: FormData, input: { adId: string; viewer: ClassifiedViewer; adUrl: (slug: string) => string }) => {
+[7m  [0m [93m             ~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/classifieds/web/forms.ts[0m:[93m8[0m:[93m127[0m - [93mwarning[0m[90m ts(6133): [0m'ClassifiedPriceKind' is declared but its value is never read.
+
+[7m8[0m import { CLASSIFIED_CONDITIONS, CLASSIFIED_KINDS, CLASSIFIED_PRICE_KINDS, type ClassifiedCondition, type ClassifiedKind, type ClassifiedPriceKind } from "../domain/workflow";
+[7m [0m [93m                                                                                                                              ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/classifieds/web/forms.ts[0m:[93m8[0m:[93m106[0m - [93mwarning[0m[90m ts(6133): [0m'ClassifiedKind' is declared but its value is never read.
+
+[7m8[0m import { CLASSIFIED_CONDITIONS, CLASSIFIED_KINDS, CLASSIFIED_PRICE_KINDS, type ClassifiedCondition, type ClassifiedKind, type ClassifiedPriceKind } from "../domain/workflow";
+[7m [0m [93m                                                                                                         ~~~~~~~~~~~~~~[0m
+[96msrc/modules/classifieds/web/forms.ts[0m:[93m8[0m:[93m80[0m - [93mwarning[0m[90m ts(6133): [0m'ClassifiedCondition' is declared but its value is never read.
+
+[7m8[0m import { CLASSIFIED_CONDITIONS, CLASSIFIED_KINDS, CLASSIFIED_PRICE_KINDS, type ClassifiedCondition, type ClassifiedKind, type ClassifiedPriceKind } from "../domain/workflow";
+[7m [0m [93m                                                                               ~~~~~~~~~~~~~~~~~~~[0m
 
 [96msrc/modules/services/admin/loader.ts[0m:[93m42[0m:[93m24[0m - [93mwarning[0m[90m ts(6133): [0m'tagRows' is declared but its value is never read.
 
@@ -291,8 +323,8 @@
 [7m23[0m import { bookings, bookingsResources } from '@/modules/bookings/schema';
 [7m  [0m [93m                   ~~~~~~~~~~~~~~~~~[0m
 
-Result (1910 files): 
+Result (1980 files): 
 - 0 errors
 - 0 warnings
-- 64 hints
+- 71 hints
 

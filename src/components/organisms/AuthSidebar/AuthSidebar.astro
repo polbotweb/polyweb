@@ -13,6 +13,9 @@ import UserIcon from '@tabler/icons/outline/user.svg';
 import ReceiptIcon from '@tabler/icons/outline/receipt.svg';
 import BellIcon from '@tabler/icons/outline/bell.svg';
 import MessageIcon from '@tabler/icons/outline/message.svg';
+import MegaphoneIcon from '@tabler/icons/outline/speakerphone.svg';
+import HeartIcon from '@tabler/icons/outline/heart.svg';
+import SearchIcon from '@tabler/icons/outline/search.svg';
 import ShieldIcon from '@tabler/icons/outline/shield.svg';
 import LogoutIcon from '@tabler/icons/outline/logout.svg';
 
@@ -37,15 +40,17 @@ import { portalPaths } from '@/modules/portal/public/links';
 import { runApp } from '@/lib/effect/http';
 import { unreadNotificationCount } from '@/core/notifications/service';
 import { fill, getNotificationsTranslations } from '@/core/notifications/i18n';
+import { getClassifiedsTranslations } from '@/modules/classifieds/i18n';
 
 interface Props {
   t: AuthTranslations;
   locale: Locale;
   user: AppUser;
-  activeItem?: 'dashboard' | 'profile' | 'account' | 'notifications' | 'messages' | 'organizations' | 'admin';
+  activeItem?: 'dashboard' | 'profile' | 'account' | 'notifications' | 'messages' | 'organizations' | 'admin' | 'classifieds-mine' | 'classifieds-favorites' | 'classifieds-saved-searches';
 }
 
 const { t, locale, user, activeItem } = Astro.props;
+const classifiedsT = getClassifiedsTranslations(locale);
 
 const dashboardUrl = getAuthUrl(locale, 'dashboard', t);
 const profileUrl = getAuthUrl(locale, 'profile', t);
@@ -60,6 +65,9 @@ const navItems = [
   { id: 'dashboard' as const, title: t.userMenu.dashboard, url: dashboardUrl, icon: DashboardIcon },
   { id: 'profile' as const, title: t.userMenu.profile, url: profileUrl, icon: UserIcon },
   { id: 'messages' as const, title: locale.startsWith('en') ? 'Messages' : locale.startsWith('es') ? 'Mensajes' : locale.startsWith('ar') ? 'الرسائل' : 'Messages', url: `/${locale}/messages`, icon: MessageIcon },
+  { id: 'classifieds-mine' as const, title: classifiedsT.mine, url: `/${locale}/classifieds/mine`, icon: MegaphoneIcon },
+  { id: 'classifieds-favorites' as const, title: classifiedsT.favorites, url: `/${locale}/classifieds/favorites`, icon: HeartIcon },
+  { id: 'classifieds-saved-searches' as const, title: classifiedsT.savedSearches, url: `/${locale}/classifieds/saved-searches`, icon: SearchIcon },
   { id: 'account' as const, title: getPortalTranslations(locale).title, url: portalPaths.home(locale), icon: ReceiptIcon },
 ];
 
