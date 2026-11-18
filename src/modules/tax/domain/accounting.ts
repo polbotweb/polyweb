@@ -17,6 +17,9 @@ export interface JournalLine {
   readonly credit: Money;
   /** Montant d'origine en devise étrangère (FEC : `Montantdevise` / `Idevise`) ; débit/crédit restent en devise de tenue. */
   readonly foreign?: Money;
+  /** Code de lettrage (FEC : `EcritureLet`) et date de lettrage AAAA-MM-JJ (`DateLet`), comptes de tiers. */
+  readonly lettering?: string;
+  readonly letteringDate?: string;
 }
 
 export interface JournalEntry {
@@ -64,6 +67,8 @@ export interface SaleEntryInput {
   readonly journalCode?: string;
   readonly journalLabel?: string;
   readonly accounts?: { readonly receivable?: string; readonly revenue?: string; readonly vat?: string };
+  /** Libellé du compte client (plan comptable du tenant, défaut « Clients »). */
+  readonly receivableLabel?: string;
 }
 
 /** Écriture de vente : débit 411 (TTC) ; crédit 706 (HT par taux) et 44571 (TVA par taux). */
@@ -76,7 +81,7 @@ export const buildSaleEntry = (input: SaleEntryInput): Effect.Effect<JournalEntr
   const vat = input.accounts?.vat ?? "445710";
   const label = `${input.creditNote ? "Avoir" : "Facture"} ${input.pieceRef} ${input.customerName}`;
   const lines: JournalLine[] = [
-    { account: receivable, accountLabel: "Clients", auxAccount: input.customerAccount, auxLabel: input.customerName, label, ...side(input.totals.gross, true) },
+    { account: receivable, accountLabel: input.receivableLabel ?? "Clients", auxAccount: input.customerAccount, auxLabel: input.customerName, label, ...side(input.totals.gross, true) },
     ...input.totals.byRate.filter((row) => row.base.amountMinor !== 0).map((row) => ({ account: revenue, accountLabel: `Ventes ${row.ratePercent} %`, label, ...side(row.base, false) })),
     ...input.totals.byRate.filter((row) => row.tax.amountMinor !== 0).map((row) => ({ account: vat, accountLabel: `TVA collectée ${row.ratePercent} %`, label, ...side(row.tax, false) })),
   ];
@@ -94,6 +99,8 @@ export interface PurchaseEntryInput {
   readonly journalCode?: string;
   readonly journalLabel?: string;
   readonly accounts?: { readonly payable?: string; readonly expense?: string; readonly vat?: string };
+  /** Libellé du compte fournisseur (plan comptable du tenant, défaut « Fournisseurs »). */
+  readonly payableLabel?: string;
 }
 
 /** Écriture d'achat : débit 607 (HT par taux) et 44566 (TVA déductible) ; crédit 401 (TTC). Avoir = sens inversé. */
@@ -108,7 +115,7 @@ export const buildPurchaseEntry = (input: PurchaseEntryInput): Effect.Effect<Jou
   const lines: JournalLine[] = [
     ...input.totals.byRate.filter((row) => row.base.amountMinor !== 0).map((row) => ({ account: expense, accountLabel: `Achats ${row.ratePercent} %`, label, ...side(row.base, true) })),
     ...input.totals.byRate.filter((row) => row.tax.amountMinor !== 0).map((row) => ({ account: vat, accountLabel: `TVA déductible ${row.ratePercent} %`, label, ...side(row.tax, true) })),
-    { account: payable, accountLabel: "Fournisseurs", auxAccount: input.supplierAccount, auxLabel: input.supplierName, label, ...side(input.totals.gross, false) },
+    { account: payable, accountLabel: input.payableLabel ?? "Fournisseurs", auxAccount: input.supplierAccount, auxLabel: input.supplierName, label, ...side(input.totals.gross, false) },
   ];
   return assertBalanced({ journalCode: input.journalCode ?? "HA", journalLabel: input.journalLabel ?? "Achats", entryNumber: input.entryNumber, entryDate: input.date, pieceRef: input.pieceRef, pieceDate: input.date, lines });
 };
@@ -142,7 +149,8 @@ export const toFec = (entries: readonly JournalEntry[], options: { readonly sire
         const foreign = line.foreign && line.foreign.currency !== "EUR" ? line.foreign : null;
         rows.push([
           entry.journalCode, entry.journalLabel, entry.entryNumber, date, line.account, line.accountLabel, line.auxAccount ?? "", line.auxLabel ?? "",
-          entry.pieceRef, pieceDate, line.label, fecAmount(line.debit), fecAmount(line.credit), "", "", validDate,
+          entry.pieceRef, pieceDate, line.label, fecAmount(line.debit), fecAmount(line.credit),
+          line.lettering ?? "", line.lettering && line.letteringDate ? yield* fecDate(line.letteringDate) : "", validDate,
           foreign ? fecAmount(foreign) : "", foreign ? foreign.currency : "",
         ].map(fecText).join("|"));
       }

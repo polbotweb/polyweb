@@ -11,13 +11,14 @@
  *   à l'émission (core/fx, colonnes `*_base_minor`), le montant d'origine en `Montantdevise` /
  *   `Idevise`. Lignes par taux converties au taux figé puis ajustées (plus grosse ligne) pour égaler
  *   exactement les totaux figés. Un règlement en devise est valorisé au taux figé de sa pièce
- *   (pas d'écart de change 666/766 à ce stade). Sans contre-valeur EUR figée → échec explicite.
+ *   ; les écarts de change réalisés au rapprochement bancaire (666/766) arrivent par le grand livre banque. Sans contre-valeur EUR figée → échec explicite.
  */
 import { createHash } from "node:crypto";
 import { Data, Effect } from "effect";
 import { computeTaxTotals, type CurrencyCode, type Money, type TaxTotals } from "@/core/money";
 import { convertAt, parseRate } from "@/core/fx";
-import { assertBalanced, buildPurchaseEntry, buildSaleEntry, type AccountingExportError, type JournalEntry, type UnbalancedEntryError } from "@/modules/tax/domain/accounting";
+import { assertBalanced, buildPurchaseEntry, buildSaleEntry, type AccountingExportError, type JournalEntry, type JournalLine, type UnbalancedEntryError } from "@/modules/tax/domain/accounting";
+import { DEFAULT_ACCOUNTING_CONFIG, type AccountingConfig } from "@/core/accounting/chart";
 import { isValidSiren } from "./seller-profile";
 
 export class FecExportError extends Data.TaggedError("FecExportError")<{
@@ -97,6 +98,8 @@ export interface FecDocument {
   readonly lines: readonly FecDocumentLine[];
   /** Contre-valeur figée à l'émission (null pour une pièce en EUR antérieure au multi-devise). */
   readonly fx?: FecFrozen | null;
+  /** Lettrage de la pièce soldée (ligne de tiers). */
+  readonly lettering?: FecLettering | null;
 }
 
 export interface FecFrozen {
@@ -119,10 +122,59 @@ export interface FecPayment {
   readonly customerVatNumber: string | null;
   /** Taux figé de la pièce réglée (règlement en devise étrangère). */
   readonly fx?: FecFrozen | null;
+  /** Compte bancaire du règlement (rapprochement) : compte et journal propres ; absent = rôle `bank`. */
+  readonly bankAccount?: FecBankAccount | null;
+  /** Lettrage du règlement avec sa pièce (rapprochement), sur la ligne de tiers. */
+  readonly lettering?: FecLettering | null;
 }
 
-export const FEC_ACCOUNTS = { receivable: "411000", revenue: "706000", vat: "445710", bank: "512000", payable: "401000", expense: "607000", vatDeductible: "445660" } as const;
-export const FEC_JOURNALS = { sales: { code: "VE", label: "Ventes" }, purchases: { code: "HA", label: "Achats" }, bank: { code: "BQ", label: "Banque" } } as const;
+export interface FecBankAccount {
+  readonly account: string;
+  readonly accountLabel: string;
+  readonly journalCode: string;
+  readonly journalLabel: string;
+}
+
+export interface FecLettering {
+  readonly code: string;
+  /** AAAA-MM-JJ. */
+  readonly date: string;
+}
+
+/**
+ * Écriture du grand livre banque (frais, écarts, change, virements internes, opérations par règle),
+ * déjà en EUR et équilibrée par construction ; vérifiée à nouveau par `assertBalanced`.
+ */
+export interface FecLedgerEntry {
+  readonly id: string;
+  readonly date: string;
+  readonly journalCode: string;
+  readonly journalLabel: string;
+  readonly pieceRef: string;
+  readonly lines: readonly {
+    readonly account: string;
+    readonly accountLabel: string;
+    readonly auxAccount?: string | null;
+    readonly auxLabel?: string | null;
+    readonly label: string;
+    readonly debitMinor: number;
+    readonly creditMinor: number;
+    readonly foreignMinor?: number | null;
+    readonly foreignCurrency?: string | null;
+    readonly lettering?: string | null;
+    readonly letteringDate?: string | null;
+  }[];
+}
+
+/** Constantes historiques (= rôles par défaut de core/accounting) ; conservées pour compatibilité. */
+export const FEC_ACCOUNTS = {
+  receivable: DEFAULT_ACCOUNTING_CONFIG.roles.receivable.code, revenue: DEFAULT_ACCOUNTING_CONFIG.roles.revenue.code, vat: DEFAULT_ACCOUNTING_CONFIG.roles.vatCollected.code,
+  bank: DEFAULT_ACCOUNTING_CONFIG.roles.bank.code, payable: DEFAULT_ACCOUNTING_CONFIG.roles.payable.code, expense: DEFAULT_ACCOUNTING_CONFIG.roles.expense.code,
+  vatDeductible: DEFAULT_ACCOUNTING_CONFIG.roles.vatDeductible.code,
+} as const;
+export const FEC_JOURNALS = {
+  sales: DEFAULT_ACCOUNTING_CONFIG.journals.sales, purchases: DEFAULT_ACCOUNTING_CONFIG.journals.purchases, bank: DEFAULT_ACCOUNTING_CONFIG.journals.bank,
+} as const;
 
 /** Taux normalisé pour les libellés (`20.0000` → `20`, `5.5000` → `5.5`). */
 export const normalizeRate = (rate: string) => {
@@ -180,18 +232,26 @@ const withForeign = (entry: JournalEntry, original: TaxTotals): JournalEntry => 
 };
 
 interface Draft {
-  readonly journal: "VE" | "HA" | "BQ";
+  /** Code du journal (VE, HA, BQ, BQ1…, OD). */
+  readonly journal: string;
+  /** Rang de la nature du journal : ventes 0, achats 1, banque 2, opérations diverses 3. */
+  readonly rank?: number;
   readonly date: string;
   readonly pieceRef: string;
   readonly sortId: string;
   readonly entry: (entryNumber: string) => Effect.Effect<JournalEntry, UnbalancedEntryError | AccountingExportError>;
 }
 
-const JOURNAL_ORDER = { VE: 0, HA: 1, BQ: 2 } as const;
+const JOURNAL_ORDER: Readonly<Record<string, number>> = { VE: 0, HA: 1, BQ: 2 };
+const rankOf = (draft: Pick<Draft, "journal" | "rank">) => draft.rank ?? JOURNAL_ORDER[draft.journal] ?? 3;
 
-/** Ordre total déterministe des écritures (date, journal, pièce, identifiant). */
-export const compareFecEntries = (a: Pick<Draft, "journal" | "date" | "pieceRef" | "sortId">, b: Pick<Draft, "journal" | "date" | "pieceRef" | "sortId">) =>
-  a.date.localeCompare(b.date) || JOURNAL_ORDER[a.journal] - JOURNAL_ORDER[b.journal] || a.pieceRef.localeCompare(b.pieceRef) || a.sortId.localeCompare(b.sortId);
+/** Ordre total déterministe des écritures (date, nature de journal, journal, pièce, identifiant). */
+export const compareFecEntries = (a: Pick<Draft, "journal" | "rank" | "date" | "pieceRef" | "sortId">, b: Pick<Draft, "journal" | "rank" | "date" | "pieceRef" | "sortId">) =>
+  a.date.localeCompare(b.date) || rankOf(a) - rankOf(b) || a.journal.localeCompare(b.journal) || a.pieceRef.localeCompare(b.pieceRef) || a.sortId.localeCompare(b.sortId);
+
+/** Ajoute le lettrage aux lignes du compte de tiers `account`. */
+const lettered = (entry: JournalEntry, account: string, lettering: FecLettering | null | undefined): JournalEntry =>
+  lettering ? { ...entry, lines: entry.lines.map((line): JournalLine => (line.account === account && line.auxAccount ? { ...line, lettering: lettering.code, letteringDate: lettering.date } : line)) } : entry;
 
 export interface FecSummary {
   readonly entryCount: number;
@@ -217,8 +277,19 @@ export const buildFecEntries = (input: {
   readonly payments: readonly FecPayment[];
   readonly purchaseDocuments?: readonly FecPurchaseDocument[];
   readonly purchasePayments?: readonly FecPurchasePayment[];
+  /** Plan comptable et journaux du tenant (core/accounting) ; défauts = constantes historiques. */
+  readonly chart?: AccountingConfig;
+  /** Écritures du grand livre banque (rapprochement : frais, écarts, change, virements, règles). */
+  readonly ledgerEntries?: readonly FecLedgerEntry[];
 }) =>
   Effect.gen(function* () {
+    const chart = input.chart ?? DEFAULT_ACCOUNTING_CONFIG;
+    const roles = chart.roles;
+    const journals = chart.journals;
+    const letter = chart.letteringEnabled;
+    const bankOf = (account: FecBankAccount | null | undefined): FecBankAccount => account ?? {
+      account: roles.bank.code, accountLabel: roles.bank.label, journalCode: journals.bank.code, journalLabel: journals.bank.label,
+    };
     const inPeriod = (date: string) => date >= input.period.start && date < input.period.endExclusive;
     const drafts: Draft[] = [];
     for (const doc of input.documents) {
@@ -231,12 +302,12 @@ export const buildFecEntries = (input: {
       const foreign = currency !== "EUR";
       const booked = foreign ? yield* toBaseTotals(totals, doc.fx, `${doc.number} en ${currency}`) : totals;
       drafts.push({
-        journal: "VE", date: doc.issueDate, pieceRef: doc.number, sortId: doc.id,
+        journal: journals.sales.code, rank: 0, date: doc.issueDate, pieceRef: doc.number, sortId: doc.id,
         entry: (entryNumber) => buildSaleEntry({
           entryNumber, date: doc.issueDate, pieceRef: doc.number, customerAccount: customerAuxAccount(doc.customerName, doc.customerVatNumber), customerName: doc.customerName,
-          totals: booked, creditNote: doc.kind === "credit_note", journalCode: FEC_JOURNALS.sales.code, journalLabel: FEC_JOURNALS.sales.label,
-          accounts: { receivable: FEC_ACCOUNTS.receivable, revenue: FEC_ACCOUNTS.revenue, vat: FEC_ACCOUNTS.vat },
-        }).pipe(Effect.map((entry) => (foreign ? withForeign(entry, totals) : entry))),
+          totals: booked, creditNote: doc.kind === "credit_note", journalCode: journals.sales.code, journalLabel: journals.sales.label,
+          accounts: { receivable: roles.receivable.code, revenue: roles.revenue.code, vat: roles.vatCollected.code }, receivableLabel: roles.receivable.label,
+        }).pipe(Effect.map((entry) => lettered(foreign ? withForeign(entry, totals) : entry, roles.receivable.code, letter ? doc.lettering : null))),
       });
     }
     for (const doc of input.purchaseDocuments ?? []) {
@@ -249,12 +320,12 @@ export const buildFecEntries = (input: {
       const foreign = currency !== "EUR";
       const booked = foreign ? yield* toBaseTotals(totals, doc.fx, `${doc.number} en ${currency}`) : totals;
       drafts.push({
-        journal: "HA", date: doc.issueDate, pieceRef: doc.number, sortId: doc.id,
+        journal: journals.purchases.code, rank: 1, date: doc.issueDate, pieceRef: doc.number, sortId: doc.id,
         entry: (entryNumber) => buildPurchaseEntry({
           entryNumber, date: doc.issueDate, pieceRef: doc.number, supplierAccount: supplierAuxAccount(doc.supplierName, doc.supplierVatNumber), supplierName: doc.supplierName,
-          totals: booked, creditNote: doc.kind === "credit_note", journalCode: FEC_JOURNALS.purchases.code, journalLabel: FEC_JOURNALS.purchases.label,
-          accounts: { payable: FEC_ACCOUNTS.payable, expense: FEC_ACCOUNTS.expense, vat: FEC_ACCOUNTS.vatDeductible },
-        }).pipe(Effect.map((entry) => (foreign ? withForeign(entry, totals) : entry))),
+          totals: booked, creditNote: doc.kind === "credit_note", journalCode: journals.purchases.code, journalLabel: journals.purchases.label,
+          accounts: { payable: roles.payable.code, expense: roles.expense.code, vat: roles.vatDeductible.code }, payableLabel: roles.payable.label,
+        }).pipe(Effect.map((entry) => lettered(foreign ? withForeign(entry, totals) : entry, roles.payable.code, letter ? doc.lettering : null))),
       });
     }
     for (const payment of input.purchasePayments ?? []) {
@@ -269,14 +340,16 @@ export const buildFecEntries = (input: {
       const none = money(0);
       const label = `${refund ? "Remboursement fournisseur" : "Règlement fournisseur"} ${payment.documentNumber} ${payment.supplierName}`;
       const aux = supplierAuxAccount(payment.supplierName, payment.supplierVatNumber);
+      const bank = bankOf(payment.bankAccount);
+      const lettering = letter && payment.lettering ? { lettering: payment.lettering.code, letteringDate: payment.lettering.date } : {};
       drafts.push({
-        journal: "BQ", date: payment.paidAt, pieceRef: payment.reference?.trim() || payment.documentNumber, sortId: payment.id,
+        journal: bank.journalCode, rank: 2, date: payment.paidAt, pieceRef: payment.reference?.trim() || payment.documentNumber, sortId: payment.id,
         entry: (entryNumber) => assertBalanced({
-          journalCode: FEC_JOURNALS.bank.code, journalLabel: FEC_JOURNALS.bank.label, entryNumber, entryDate: payment.paidAt,
+          journalCode: bank.journalCode, journalLabel: bank.journalLabel, entryNumber, entryDate: payment.paidAt,
           pieceRef: payment.reference?.trim() || payment.documentNumber, pieceDate: payment.paidAt,
           lines: [
-            { account: FEC_ACCOUNTS.payable, accountLabel: "Fournisseurs", auxAccount: aux, auxLabel: payment.supplierName, label, debit: refund ? none : amount, credit: refund ? amount : none, ...foreign },
-            { account: FEC_ACCOUNTS.bank, accountLabel: "Banque", label, debit: refund ? amount : none, credit: refund ? none : amount, ...foreign },
+            { account: roles.payable.code, accountLabel: roles.payable.label, auxAccount: aux, auxLabel: payment.supplierName, label, debit: refund ? none : amount, credit: refund ? amount : none, ...foreign, ...lettering },
+            { account: bank.account, accountLabel: bank.accountLabel, label, debit: refund ? amount : none, credit: refund ? none : amount, ...foreign },
           ],
         }),
       });
@@ -294,25 +367,45 @@ export const buildFecEntries = (input: {
       const none = money(0);
       const label = `${refund ? "Remboursement" : "Règlement"} ${payment.documentNumber} ${payment.customerName}`;
       const aux = customerAuxAccount(payment.customerName, payment.customerVatNumber);
+      const bank = bankOf(payment.bankAccount);
+      const lettering = letter && payment.lettering ? { lettering: payment.lettering.code, letteringDate: payment.lettering.date } : {};
       drafts.push({
-        journal: "BQ", date: payment.paidAt, pieceRef: payment.reference?.trim() || payment.documentNumber, sortId: payment.id,
+        journal: bank.journalCode, rank: 2, date: payment.paidAt, pieceRef: payment.reference?.trim() || payment.documentNumber, sortId: payment.id,
         entry: (entryNumber) => assertBalanced({
-          journalCode: FEC_JOURNALS.bank.code, journalLabel: FEC_JOURNALS.bank.label, entryNumber, entryDate: payment.paidAt,
+          journalCode: bank.journalCode, journalLabel: bank.journalLabel, entryNumber, entryDate: payment.paidAt,
           pieceRef: payment.reference?.trim() || payment.documentNumber, pieceDate: payment.paidAt,
           lines: [
-            { account: FEC_ACCOUNTS.bank, accountLabel: "Banque", label, debit: refund ? none : amount, credit: refund ? amount : none, ...foreign },
-            { account: FEC_ACCOUNTS.receivable, accountLabel: "Clients", auxAccount: aux, auxLabel: payment.customerName, label, debit: refund ? amount : none, credit: refund ? none : amount, ...foreign },
+            { account: bank.account, accountLabel: bank.accountLabel, label, debit: refund ? none : amount, credit: refund ? amount : none, ...foreign },
+            { account: roles.receivable.code, accountLabel: roles.receivable.label, auxAccount: aux, auxLabel: payment.customerName, label, debit: refund ? amount : none, credit: refund ? none : amount, ...foreign, ...lettering },
           ],
         }),
       });
     }
+    for (const ledger of input.ledgerEntries ?? []) {
+      if (!inPeriod(ledger.date)) continue;
+      const eur = (amountMinor: number) => money(amountMinor);
+      drafts.push({
+        journal: ledger.journalCode, rank: ledger.journalCode === journals.misc.code ? 3 : 2, date: ledger.date, pieceRef: ledger.pieceRef, sortId: ledger.id,
+        entry: (entryNumber) => assertBalanced({
+          journalCode: ledger.journalCode, journalLabel: ledger.journalLabel, entryNumber, entryDate: ledger.date, pieceRef: ledger.pieceRef, pieceDate: ledger.date,
+          lines: ledger.lines.map((line): JournalLine => ({
+            account: line.account, accountLabel: line.accountLabel,
+            ...(line.auxAccount ? { auxAccount: line.auxAccount, auxLabel: line.auxLabel ?? "" } : {}),
+            label: line.label, debit: eur(line.debitMinor), credit: eur(line.creditMinor),
+            ...(line.foreignMinor && line.foreignCurrency && line.foreignCurrency !== "EUR" ? { foreign: money(Math.abs(line.foreignMinor), line.foreignCurrency as CurrencyCode) } : {}),
+            ...(letter && line.lettering ? { lettering: line.lettering, ...(line.letteringDate ? { letteringDate: line.letteringDate } : {}) } : {}),
+          })),
+        }),
+      });
+    }
     drafts.sort(compareFecEntries);
-    const sequence = { VE: 0, HA: 0, BQ: 0 };
+    const sequence = new Map<string, number>();
     const compact = input.period.period.replace("-", "");
     const entries: JournalEntry[] = [];
     for (const draft of drafts) {
-      sequence[draft.journal] += 1;
-      entries.push(yield* draft.entry(`${draft.journal}${compact}${pad(sequence[draft.journal], 5)}`));
+      const next = (sequence.get(draft.journal) ?? 0) + 1;
+      sequence.set(draft.journal, next);
+      entries.push(yield* draft.entry(`${draft.journal}${compact}${pad(next, 5)}`));
     }
     const lines = entries.flatMap((entry) => entry.lines);
     const summary: FecSummary = {

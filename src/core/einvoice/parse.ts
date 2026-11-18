@@ -3,6 +3,7 @@
  * ou UBL Invoice. Aucune dépendance, DTD / entités externes refusés (prévention XXE).
  */
 import { Data, Effect } from "effect";
+import { assertSafeXml, decodeXmlEntities } from "@/core/xml";
 
 export class EInvoiceParseError extends Data.TaggedError("EInvoiceParseError")<{
   readonly reason: "empty" | "doctype" | "format" | "amount" | "lines";
@@ -38,8 +39,8 @@ export interface IncomingInvoice {
   readonly lines: readonly IncomingInvoiceLine[];
 }
 
-const decode = (value: string) =>
-  value.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, "&").trim();
+/** Entités prédéfinies et numériques (core/xml) ; une entité inconnue est laissée telle quelle. */
+const decode = (value: string) => (decodeXmlEntities(value) ?? value).trim();
 
 const texts = (xml: string, name: string): string[] => {
   const re = new RegExp(`<(?:[\\w.-]+:)?${name}(?:\\s[^>]*)?>([\\s\\S]*?)</(?:[\\w.-]+:)?${name}>`, "gi");
@@ -163,9 +164,13 @@ const parseUbl = (xml: string): IncomingInvoice | EInvoiceParseError => {
 export const parseIncomingInvoiceXml = (xml: string): Effect.Effect<IncomingInvoice, EInvoiceParseError> => {
   const raw = xml?.trim() ?? "";
   if (!raw) return Effect.fail(new EInvoiceParseError({ reason: "empty", detail: "document vide" }));
-  if (/<!DOCTYPE|<!ENTITY/i.test(raw)) return Effect.fail(new EInvoiceParseError({ reason: "doctype", detail: "DTD ou entité interdite" }));
-  const format = detect(raw);
-  if (!format) return Effect.fail(new EInvoiceParseError({ reason: "format", detail: "ni CII ni UBL" }));
-  const parsed = format === "cii" ? parseCii(raw) : parseUbl(raw);
-  return parsed instanceof EInvoiceParseError ? Effect.fail(parsed) : Effect.succeed(parsed);
+  return assertSafeXml(raw).pipe(
+    Effect.mapError(() => new EInvoiceParseError({ reason: "doctype", detail: "DTD ou entité interdite" })),
+    Effect.flatMap((safe) => {
+      const format = detect(safe);
+      if (!format) return Effect.fail(new EInvoiceParseError({ reason: "format", detail: "ni CII ni UBL" }));
+      const parsed = format === "cii" ? parseCii(safe) : parseUbl(safe);
+      return parsed instanceof EInvoiceParseError ? Effect.fail(parsed) : Effect.succeed(parsed);
+    }),
+  );
 };
