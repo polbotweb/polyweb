@@ -58,7 +58,7 @@ const translations: Record<Locale, LogisticsTranslations> = {
     actions: { moveTo: "Passer à", updateTracking: "Mettre à jour le suivi" },
     statuses: { DRAFT: "Brouillon", READY: "Prête", SHIPPED: "Expédiée", DELIVERED: "Livrée", RETURNED: "Retournée", CANCELLED: "Annulée" },
     movementKinds: { receipt: "Réception", issue: "Sortie", adjustment: "Ajustement", transfer_in: "Transfert entrant", transfer_out: "Transfert sortant", shipment: "Expédition", return: "Retour" },
-    movementSources: { manual: "Saisie manuelle", transfer: "Transfert", shipment: "Expédition", inventory: "Inventaire", purchase: "Réception d'achat", order: "Commande boutique", return: "Retour client" },
+    movementSources: { manual: "Saisie manuelle", transfer: "Transfert", shipment: "Expédition", inventory: "Inventaire", purchase: "Réception d'achat", purchase_return: "Retour fournisseur", order: "Commande boutique", return: "Retour client" },
     inventoryStatuses: { OPEN: "En cours", VALIDATED: "Validé", CANCELLED: "Annulé" },
     inventory: {
       title: "Inventaires", ledger: "Grand livre de stock", open: "Ouvrir un inventaire", none: "Aucun inventaire.", noItems: "Aucun article à inventorier.", listLabel: "Liste des inventaires", back: "Stock", backToList: "Tous les inventaires",
@@ -91,7 +91,7 @@ const translations: Record<Locale, LogisticsTranslations> = {
     actions: { moveTo: "Move to", updateTracking: "Update tracking" },
     statuses: { DRAFT: "Draft", READY: "Ready", SHIPPED: "Shipped", DELIVERED: "Delivered", RETURNED: "Returned", CANCELLED: "Cancelled" },
     movementKinds: { receipt: "Receipt", issue: "Issue", adjustment: "Adjustment", transfer_in: "Transfer in", transfer_out: "Transfer out", shipment: "Shipment", return: "Return" },
-    movementSources: { manual: "Manual entry", transfer: "Transfer", shipment: "Shipment", inventory: "Stock count", purchase: "Purchase receipt", order: "Shop order", return: "Customer return" },
+    movementSources: { manual: "Manual entry", transfer: "Transfer", shipment: "Shipment", inventory: "Stock count", purchase: "Purchase receipt", purchase_return: "Supplier return", order: "Shop order", return: "Customer return" },
     inventoryStatuses: { OPEN: "In progress", VALIDATED: "Validated", CANCELLED: "Cancelled" },
     inventory: {
       title: "Stock counts", ledger: "Stock ledger", open: "Start a stock count", none: "No stock counts.", noItems: "No items to count.", listLabel: "Stock count list", back: "Stock", backToList: "All stock counts",
@@ -124,7 +124,7 @@ const translations: Record<Locale, LogisticsTranslations> = {
     actions: { moveTo: "Pasar a", updateTracking: "Actualizar seguimiento" },
     statuses: { DRAFT: "Borrador", READY: "Listo", SHIPPED: "Enviado", DELIVERED: "Entregado", RETURNED: "Devuelto", CANCELLED: "Cancelado" },
     movementKinds: { receipt: "Recepción", issue: "Salida", adjustment: "Ajuste", transfer_in: "Transferencia entrante", transfer_out: "Transferencia saliente", shipment: "Envío", return: "Devolución" },
-    movementSources: { manual: "Entrada manual", transfer: "Transferencia", shipment: "Envío", inventory: "Inventario", purchase: "Recepción de compra", order: "Pedido de tienda", return: "Devolución de cliente" },
+    movementSources: { manual: "Entrada manual", transfer: "Transferencia", shipment: "Envío", inventory: "Inventario", purchase: "Recepción de compra", purchase_return: "Devolución a proveedor", order: "Pedido de tienda", return: "Devolución de cliente" },
     inventoryStatuses: { OPEN: "En curso", VALIDATED: "Validado", CANCELLED: "Cancelado" },
     inventory: {
       title: "Inventarios", ledger: "Libro de existencias", open: "Abrir un inventario", none: "Sin inventarios.", noItems: "Sin artículos que inventariar.", listLabel: "Lista de inventarios", back: "Existencias", backToList: "Todos los inventarios",
@@ -157,7 +157,7 @@ const translations: Record<Locale, LogisticsTranslations> = {
     actions: { moveTo: "نقل إلى", updateTracking: "تحديث التتبع" },
     statuses: { DRAFT: "مسودة", READY: "جاهزة", SHIPPED: "مشحونة", DELIVERED: "مسلَّمة", RETURNED: "مرتجعة", CANCELLED: "ملغاة" },
     movementKinds: { receipt: "استلام", issue: "صرف", adjustment: "تسوية", transfer_in: "تحويل وارد", transfer_out: "تحويل صادر", shipment: "شحن", return: "إرجاع" },
-    movementSources: { manual: "إدخال يدوي", transfer: "تحويل", shipment: "شحن", inventory: "جرد", purchase: "استلام مشتريات", order: "طلب المتجر", return: "إرجاع العميل" },
+    movementSources: { manual: "إدخال يدوي", transfer: "تحويل", shipment: "شحن", inventory: "جرد", purchase: "استلام مشتريات", purchase_return: "مرتجع مورد", order: "طلب المتجر", return: "إرجاع العميل" },
     inventoryStatuses: { OPEN: "قيد التنفيذ", VALIDATED: "معتمد", CANCELLED: "ملغى" },
     inventory: {
       title: "عمليات الجرد", ledger: "سجل حركات المخزون", open: "بدء جرد", none: "لا توجد عمليات جرد.", noItems: "لا توجد أصناف للجرد.", listLabel: "قائمة عمليات الجرد", back: "المخزون", backToList: "كل عمليات الجرد",

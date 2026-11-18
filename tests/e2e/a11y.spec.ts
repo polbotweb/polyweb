@@ -185,7 +185,7 @@ test('axe: /fr/admin/purchasing (commandes, fournisseurs, réceptions) sans viol
   try {
     await signInAsAdmin(page);
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    const paths = ['/fr/admin/purchasing', '/fr/admin/purchasing/new', `/fr/admin/purchasing/${draft!.id}`, `/fr/admin/purchasing/${draft!.id}/edit`, `/fr/admin/purchasing/${sent!.id}`, '/fr/admin/purchasing/suppliers', `/fr/admin/purchasing/suppliers/${supplier!.id}`, '/fr/admin/purchasing/receipts', `/ar/admin/purchasing/${sent!.id}`];
+    const paths = ['/fr/admin/purchasing', '/fr/admin/purchasing/new', `/fr/admin/purchasing/${draft!.id}`, `/fr/admin/purchasing/${draft!.id}/edit`, `/fr/admin/purchasing/${sent!.id}`, '/fr/admin/purchasing/suppliers', `/fr/admin/purchasing/suppliers/${supplier!.id}`, '/fr/admin/purchasing/receipts', '/fr/admin/purchasing/settings', '/fr/admin/purchasing/invoices', '/fr/admin/purchasing/reorder', '/fr/admin/purchasing/returns', '/fr/admin/purchasing/sepa', '/fr/admin/purchasing/imports', `/ar/admin/purchasing/${sent!.id}`];
     for (const path of paths) {
       await page.goto(path, { waitUntil: 'networkidle' });
       const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();

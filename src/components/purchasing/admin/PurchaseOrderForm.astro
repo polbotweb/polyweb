@@ -16,16 +16,23 @@ interface Props {
   suppliers: readonly { id: string; code: string; name: string; active: boolean }[];
   warehouses: readonly { id: string; code: string; name: string }[];
   items: readonly { sku: string; name: string }[];
+  allowServiceLines?: boolean;
+  allowMultiWarehouse?: boolean;
   order?: {
     id: string; title: string; supplierId: string; warehouseId: string; currency: string; expectedDate: string | null; notes: string | null;
-    lines: readonly { sku: string; description: string | null; quantity: number; unitPriceMinor: number }[];
+    lines: readonly { sku: string; description: string | null; quantity: number; unitPriceMinor: number; kind?: string; warehouseId?: string | null }[];
   };
 }
-const { locale, organizationId = null, viewBaseUrl, listUrl, suppliers, warehouses, items, order: o } = Astro.props as Props;
+const { locale, organizationId = null, viewBaseUrl, listUrl, suppliers, warehouses, items, allowServiceLines = true, allowMultiWarehouse = true, order: o } = Astro.props as Props;
 const t = getPurchasingTranslations(locale);
 const currency = o?.currency ?? "EUR";
 const price = (minor: number) => (isCurrencyCode(currency) ? toDecimalString({ amountMinor: minor, currency }) : String(minor));
-const lines = o?.lines.length ? o.lines.map((l) => ({ ...l, unitPrice: price(l.unitPriceMinor) })) : [{ sku: "", description: null, quantity: 1, unitPrice: "" }];
+const lines = o?.lines.length
+  ? o.lines.map((l) => ({ ...l, kind: l.kind === "service" ? "service" as const : "stock" as const, warehouseId: l.warehouseId ?? o.warehouseId, unitPrice: price(l.unitPriceMinor) }))
+  : [{ sku: "", description: null, quantity: 1, unitPrice: "", kind: "stock" as const, warehouseId: o?.warehouseId ?? warehouses[0]?.id ?? "" }];
+const lineCols = allowMultiWarehouse
+  ? (allowServiceLines ? "sm:grid-cols-[8rem_8rem_1fr_6rem_8rem_10rem_auto]" : "sm:grid-cols-[8rem_1fr_6rem_8rem_10rem_auto]")
+  : (allowServiceLines ? "sm:grid-cols-[8rem_8rem_1fr_6rem_8rem_auto]" : "sm:grid-cols-[8rem_1fr_6rem_8rem_auto]");
 const choosable = suppliers.filter((s) => s.active || s.id === o?.supplierId);
 ---
 <form class="flex max-w-4xl flex-col gap-6" data-purchasing-form="order" data-id={o?.id ?? ""} data-organization-id={organizationId ?? ""} data-view-base-url={viewBaseUrl} data-done={o ? t.admin.saved : t.admin.created} novalidate>
@@ -47,21 +54,51 @@ const choosable = suppliers.filter((s) => s.active || s.id === o?.supplierId);
     <legend class="text-lg font-semibold">{t.fields.lines}</legend>
     <div class="flex flex-col gap-3" data-lines>
       {lines.map((line, index) => (
-        <div class="grid gap-2 sm:grid-cols-[10rem_1fr_6rem_8rem_auto] sm:items-end" data-line>
+        <div class:list={["grid gap-2 sm:items-end", lineCols]} data-line>
+          {allowServiceLines && (
+            <div class="grid gap-1"><Label for={`po-kind-${index}`}>{t.fields.kind}</Label>
+              <select id={`po-kind-${index}`} name="kind" class="min-h-11 rounded-md border bg-background px-3">
+                <option value="stock" selected={line.kind !== "service"}>{t.fields.stock}</option>
+                <option value="service" selected={line.kind === "service"}>{t.fields.service}</option>
+              </select>
+            </div>
+          )}
           <div class="grid gap-1"><Label for={`po-sku-${index}`}>{t.fields.sku}</Label><Input id={`po-sku-${index}`} name="sku" maxlength={64} list="po-skus" value={line.sku} /></div>
           <div class="grid gap-1"><Label for={`po-desc-${index}`}>{t.fields.description}</Label><Input id={`po-desc-${index}`} name="description" maxlength={500} value={line.description ?? ""} /></div>
           <div class="grid gap-1"><Label for={`po-qty-${index}`}>{t.fields.quantity}</Label><Input id={`po-qty-${index}`} name="quantity" type="number" min={1} value={String(line.quantity)} /></div>
           <div class="grid gap-1"><Label for={`po-price-${index}`}>{t.fields.unitPrice}</Label><Input id={`po-price-${index}`} name="unitPrice" inputmode="decimal" maxlength={24} value={line.unitPrice} /></div>
+          {allowMultiWarehouse && (
+            <div class="grid gap-1"><Label for={`po-line-wh-${index}`}>{t.fields.lineWarehouse}</Label>
+              <select id={`po-line-wh-${index}`} name="warehouseId" class="min-h-11 rounded-md border bg-background px-3">
+                {warehouses.map((w) => <option value={w.id} selected={line.warehouseId === w.id}>{w.code}</option>)}
+              </select>
+            </div>
+          )}
           <Button type="button" variant="outline" data-remove-line>{t.admin.removeLine}</Button>
         </div>
       ))}
     </div>
     <template data-line-template>
-      <div class="grid gap-2 sm:grid-cols-[10rem_1fr_6rem_8rem_auto] sm:items-end" data-line>
+      <div class:list={["grid gap-2 sm:items-end", lineCols]} data-line>
+        {allowServiceLines && (
+          <label class="grid gap-1 text-sm font-medium">{t.fields.kind}
+            <select name="kind" class="min-h-11 rounded-md border bg-background px-3">
+              <option value="stock" selected>{t.fields.stock}</option>
+              <option value="service">{t.fields.service}</option>
+            </select>
+          </label>
+        )}
         <label class="grid gap-1 text-sm font-medium">{t.fields.sku}<Input name="sku" maxlength={64} list="po-skus" /></label>
         <label class="grid gap-1 text-sm font-medium">{t.fields.description}<Input name="description" maxlength={500} /></label>
         <label class="grid gap-1 text-sm font-medium">{t.fields.quantity}<Input name="quantity" type="number" min={1} value="1" /></label>
         <label class="grid gap-1 text-sm font-medium">{t.fields.unitPrice}<Input name="unitPrice" inputmode="decimal" maxlength={24} /></label>
+        {allowMultiWarehouse && (
+          <label class="grid gap-1 text-sm font-medium">{t.fields.lineWarehouse}
+            <select name="warehouseId" class="min-h-11 rounded-md border bg-background px-3">
+              {warehouses.map((w) => <option value={w.id}>{w.code}</option>)}
+            </select>
+          </label>
+        )}
         <Button type="button" variant="outline" data-remove-line>{t.admin.removeLine}</Button>
       </div>
     </template>

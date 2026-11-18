@@ -21,6 +21,7 @@ import type { DbTransaction } from "@/lib/effect/transaction";
 import { AppConfig } from "@/lib/effect/config";
 import { sendEmailEffect } from "@/smtp/send";
 import type { EmailPayload } from "@/smtp/types";
+import { privateStorage } from "@/lib/storage/private";
 import { asLocale, renderNotificationEmail } from "./email-templates";
 import { isTransactionalEmailTemplate } from "./registry";
 import { isChannelEnabled } from "./service";
@@ -42,6 +43,7 @@ export interface EnqueueEmailInput {
   readonly category: string;
   readonly data?: Record<string, unknown>;
   readonly notBefore?: Date;
+  readonly attachments?: readonly { filename: string; contentType: string; storageKey: string }[];
 }
 
 /** E-mail soumis aux préférences et désinscriptible : destinataire connu et gabarit non transactionnel. */
@@ -64,6 +66,7 @@ export const enqueueEmail = (input: EnqueueEmailInput, executor: Executor = getD
           template: input.template,
           category: input.category,
           data: input.data ?? {},
+          attachments: input.attachments ?? [],
           ...(input.notBefore ? { nextAttemptAt: input.notBefore } : {}),
         })
         .onConflictDoNothing({ target: emailOutbox.dedupeKey })
@@ -82,6 +85,20 @@ type Outcome = "sent" | "retry" | "failed" | "skipped";
 
 const errorCode = (error: { readonly _tag: string; readonly retryable?: boolean }) => error._tag.slice(0, 60);
 const permanent = (tag: string) => tag === "InvalidEmailPayload" || tag === "UnknownEmailTemplate" || tag === "InvalidEmailTemplateData";
+
+
+const loadOutboxAttachments = (refs: readonly { filename: string; contentType: string; storageKey: string }[]) =>
+  Effect.gen(function* () {
+    if (!refs.length) return [];
+    const storage = privateStorage();
+    const attachments = [];
+    for (const ref of refs) {
+      const bytes = yield* storage.get(ref.storageKey).pipe(Effect.catch(() => Effect.succeed(null)));
+      if (!bytes) continue;
+      attachments.push({ filename: ref.filename, contentType: ref.contentType, content: bytes });
+    }
+    return attachments;
+  });
 
 const deliverOne = (id: string, now: Date, send: EmailSender): Effect.Effect<Outcome, DbError, AppConfig> =>
   Effect.gen(function* () {
@@ -107,12 +124,14 @@ const deliverOne = (id: string, now: Date, send: EmailSender): Effect.Effect<Out
     const headers = token
       ? { "List-Unsubscribe": `<${oneClickUnsubscribeUrl(config.siteUrl, locale, token)}>`, "List-Unsubscribe-Post": ONE_CLICK_BODY }
       : undefined;
+    const attachments = yield* loadOutboxAttachments(row.attachments ?? []);
     const result = yield* renderNotificationEmail(row.template, row.data, { locale, siteUrl: config.siteUrl, unsubscribeUrl }).pipe(
       Effect.flatMap((email) =>
         send({
           to: row.toEmail,
           ...email,
           ...(headers ? { headers } : {}),
+          ...(attachments.length ? { attachments } : {}),
         }),
       ),
       Effect.result,

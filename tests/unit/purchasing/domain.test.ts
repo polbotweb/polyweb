@@ -9,11 +9,16 @@ const run = <A, E>(effect: Effect.Effect<A, E>) => Effect.runSyncExit(effect);
 
 describe("purchasing domain", () => {
   it("valide et normalise un fournisseur", () => {
-    const exit = run(validateSupplier({ code: " acme-1 ", name: " Acme ", email: "ACHATS@Acme.test", country: "fr", paymentTermDays: 30 }));
-    expect(Exit.isSuccess(exit) && exit.value).toEqual({ code: "ACME-1", name: "Acme", email: "achats@acme.test", country: "FR", paymentTermDays: 30 });
+    const exit = run(validateSupplier({ code: " acme-1 ", name: " Acme ", email: "ACHATS@Acme.test", country: "fr", paymentTermDays: 30, iban: "FR14 2004 1010 0505 0001 3M02 606", bic: "bnpafrppxxx" }));
+    expect(Exit.isSuccess(exit) && exit.value).toMatchObject({
+      code: "ACME-1", name: "Acme", email: "achats@acme.test", country: "FR", paymentTermDays: 30,
+      iban: "FR1420041010050500013M02606", bic: "BNPAFRPPXXX", trustedCatalogue: false, punchoutEnabled: false,
+    });
     expect(Exit.isFailure(run(validateSupplier({ code: "??", name: "x", email: null, country: null, paymentTermDays: 0 })))).toBe(true);
     expect(Exit.isFailure(run(validateSupplier({ code: "A", name: "x", email: "pas-un-email", country: null, paymentTermDays: 0 })))).toBe(true);
     expect(Exit.isFailure(run(validateSupplier({ code: "A", name: "x", email: null, country: null, paymentTermDays: 400 })))).toBe(true);
+    expect(Exit.isFailure(run(validateSupplier({ code: "A", name: "x", email: null, country: null, paymentTermDays: 0, iban: "FR00INVALID" })))).toBe(true);
+    expect(Exit.isFailure(run(validateSupplier({ code: "A", name: "x", email: null, country: null, paymentTermDays: 0, punchoutEnabled: true })))).toBe(true);
   });
 
   it("calcule lignes et total HT en unités mineures", () => {
@@ -37,6 +42,17 @@ describe("purchasing domain", () => {
     expect(Exit.isFailure(run(validatePurchaseOrder({ ...base, lines: [{ sku: "A", quantity: 0, unitPrice: "1" }] })))).toBe(true);
     expect(Exit.isFailure(run(validatePurchaseOrder({ ...base, lines: [{ sku: "A", quantity: 1, unitPrice: "abc" }] })))).toBe(true);
     expect(Exit.isFailure(run(validatePurchaseOrder({ ...base, lines: [{ sku: "A", quantity: 1, unitPrice: "-2" }] })))).toBe(true);
+  });
+
+  it("accepte une ligne de prestation sans SKU, refuse une prestation sans description", () => {
+    const ok = run(validatePurchaseOrder({ currency: "EUR", expectedDate: null, lines: [
+      { kind: "service", description: "Audit", quantity: 1, unitPrice: "100.00" },
+    ] }));
+    expect(Exit.isSuccess(ok) && ok.value.lines[0]).toMatchObject({ kind: "service", sku: "SVC-1", description: "Audit", netMinor: 10000 });
+    const bad = run(validatePurchaseOrder({ currency: "EUR", expectedDate: null, lines: [
+      { kind: "service", quantity: 1, unitPrice: "10" },
+    ] }));
+    expect(Exit.isFailure(bad)).toBe(true);
   });
 
   it("planifie une réception partielle puis complète, sans sur-réception", () => {

@@ -1,0 +1,56 @@
+---
+/** Création d'une facture fournisseur (brouillon). */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Button } from "@atoms/button";
+import { Effect } from "effect";
+import { requirePermission } from "@lib/auth-guards";
+import PurchasingAdminNav from "@/components/purchasing/admin/PurchasingAdminNav.astro";
+import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
+import { listSuppliersBrief } from "@/modules/purchasing/loaders";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { purchasing: ["invoice"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getPurchasingTranslations(locale);
+const suppliers = await Effect.runPromise(listSuppliersBrief(null));
+---
+<BaseLayout title={t.admin.newInvoice} description={t.meta.description}>
+  <AuthLayout title={t.admin.newInvoice}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="purchasing" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <h1 class="text-2xl font-semibold">{t.admin.newInvoice}</h1>
+      <PurchasingAdminNav locale={locale} active="invoices" />
+      <form class="flex max-w-3xl flex-col gap-4" data-purchasing-form="invoice" data-organization-id="" data-view-base-url={`/${locale}/admin/purchasing/invoices`} data-done={t.admin.created}>
+        <label class="flex min-h-11 flex-col gap-1"><span>{t.fields.supplier}</span>
+          <select class="min-h-11 rounded-md border bg-background px-3" name="supplierId" required>
+            {suppliers.map((s) => <option value={s.id}>{s.code} — {s.name}</option>)}
+          </select>
+        </label>
+        <label class="flex min-h-11 flex-col gap-1"><span>{t.fields.supplierInvoiceNumber}</span><input class="min-h-11 rounded-md border px-3" name="supplierInvoiceNumber" /></label>
+        <label class="flex min-h-11 flex-col gap-1"><span>{t.fields.currency}</span><input class="min-h-11 rounded-md border px-3" name="currency" value="EUR" maxlength="3" /></label>
+        <label class="flex min-h-11 flex-col gap-1"><span>{t.fields.paymentTermDays}</span><input class="min-h-11 rounded-md border px-3" type="number" name="paymentTermDays" value="30" min="0" /></label>
+        <fieldset class="flex flex-col gap-3 rounded-md border p-4">
+          <legend class="px-1 font-medium">{t.fields.lines}</legend>
+          <div data-invoice-line class="grid gap-2 sm:grid-cols-4">
+            <input class="min-h-11 rounded-md border px-3" name="description" placeholder={t.fields.description} />
+            <input class="min-h-11 rounded-md border px-3" type="number" name="quantity" value="1" min="1" />
+            <input class="min-h-11 rounded-md border px-3" name="unitPrice" placeholder={t.fields.unitPrice} />
+            <input class="min-h-11 rounded-md border px-3" name="ratePercent" value="20" />
+          </div>
+        </fieldset>
+        <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+        <Button type="submit">{t.admin.create}</Button>
+      </form>
+    </main>
+  </AuthLayout>
+</BaseLayout>
+
+<script>
+  import { initPurchasing } from "@/modules/purchasing/client/init";
+
+  initPurchasing();
+  document.addEventListener("astro:after-swap", initPurchasing);
+</script>

@@ -10,7 +10,7 @@
 import { appendFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Data, Duration, Effect, Exit, Schedule } from 'effect';
-import { EMAIL_HEADER_NAMES, type EmailPayload, type EmailFrom, type SmtpProvider } from './types';
+import { EMAIL_ATTACHMENT_MAX_BYTES, EMAIL_ATTACHMENT_MAX_COUNT, EMAIL_ATTACHMENT_TYPES, EMAIL_HEADER_NAMES, type EmailPayload, type EmailFrom, type SmtpProvider } from './types';
 import { getSmtpProvider, getSmtpFrom } from './env';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -54,6 +54,23 @@ export function isRetryable(err: unknown): boolean {
   return false;
 }
 
+const SAFE_FILENAME = /^[A-Za-z0-9._() -]{1,200}\.[A-Za-z0-9]{1,10}$/;
+
+const invalidAttachments = (payload: EmailPayload): string | null => {
+  const list = payload.attachments ?? [];
+  if (list.length === 0) return null;
+  if (list.length > EMAIL_ATTACHMENT_MAX_COUNT) return 'Too many attachments';
+  let total = 0;
+  for (const item of list) {
+    if (!SAFE_FILENAME.test(item.filename) || item.filename.includes('..')) return 'Invalid attachment filename';
+    if (!(EMAIL_ATTACHMENT_TYPES as readonly string[]).includes(item.contentType)) return 'Invalid attachment type';
+    if (!(item.content instanceof Uint8Array) || item.content.byteLength === 0) return 'Invalid attachment content';
+    total += item.content.byteLength;
+    if (total > EMAIL_ATTACHMENT_MAX_BYTES) return 'Attachments too large';
+  }
+  return null;
+};
+
 export const validatePayload = (payload: EmailPayload) =>
   !payload.to || !EMAIL_RE.test(payload.to) || payload.to.length > 254
     ? Effect.fail(new InvalidEmailPayload({ reason: 'Invalid recipient email address' }))
@@ -61,7 +78,9 @@ export const validatePayload = (payload: EmailPayload) =>
       ? Effect.fail(new InvalidEmailPayload({ reason: 'Invalid subject — contains line terminators' }))
       : Object.entries(payload.headers ?? {}).some(([name, value]) => !(EMAIL_HEADER_NAMES as readonly string[]).includes(name) || typeof value !== 'string' || /[\r\n]/.test(value) || value.length > 998)
         ? Effect.fail(new InvalidEmailPayload({ reason: 'Invalid header' }))
-        : Effect.void;
+        : invalidAttachments(payload)
+          ? Effect.fail(new InvalidEmailPayload({ reason: invalidAttachments(payload)! }))
+          : Effect.void;
 
 const deadLetter = (payload: EmailPayload, error: SmtpProviderError, attempts: number) =>
   Effect.tryPromise(async () => {

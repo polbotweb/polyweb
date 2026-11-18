@@ -5,3 +5,5 @@ export * from "./validate";
 export * from "./cii";
 export * from "./icc";
 export * from "./pdfa";
+export * from "./parse";
+export * from "./extract";

@@ -11,6 +11,7 @@
  * règlements datés de la période (domaine `fec.ts`). Fichier : `toFec` puis ISO 8859-15, stocké en
  * privé (`PrivateStorage`) avec empreinte SHA-256 et totaux ; tout échec est consigné (`FAILED`).
  */
+import { purchasingInvoices, purchasingInvoiceLines, purchasingPayments, purchasingSuppliers } from "@/modules/purchasing/schema";
 import { Effect } from "effect";
 import { and, asc, desc, eq, gte, inArray, isNull, lt, notInArray, sql, type SQL } from "drizzle-orm";
 import { getDrizzle } from "@database/drizzle";
@@ -33,7 +34,7 @@ export const FEC_STALE_PENDING_MINUTES = 15;
 /** Nombre maximal de tenants traités par appel du cron. */
 export const FEC_CRON_BATCH = 20;
 
-const tenantOf = (column: typeof sales.organizationId | typeof salesSellerProfiles.organizationId | typeof salesFecExports.organizationId, organizationId: string | null): SQL =>
+const tenantOf = (column: Parameters<typeof eq>[0], organizationId: string | null): SQL =>
   organizationId === null ? isNull(column) : eq(column, organizationId);
 
 /** Réserve (tenant, période) ; renvoie l'id de la ligne `PENDING`, ou null si rien à faire. */
@@ -54,6 +55,11 @@ const frozenColumns = {
   netBaseMinor: sales.netBaseMinor, taxBaseMinor: sales.taxBaseMinor, grossBaseMinor: sales.grossBaseMinor,
 };
 type FrozenRow = { [K in keyof typeof frozenColumns]: (typeof frozenColumns)[K]["_"]["data"] | null };
+const purchaseFrozenColumns = {
+  baseCurrency: purchasingInvoices.baseCurrency, exchangeRate: purchasingInvoices.exchangeRate,
+  netBaseMinor: purchasingInvoices.netBaseMinor, taxBaseMinor: purchasingInvoices.taxBaseMinor, grossBaseMinor: purchasingInvoices.grossBaseMinor,
+};
+
 const frozenOf = (row: FrozenRow): FecFrozen | null =>
   row.baseCurrency && row.exchangeRate && row.netBaseMinor !== null && row.taxBaseMinor !== null && row.grossBaseMinor !== null
     ? { baseCurrency: row.baseCurrency, exchangeRate: row.exchangeRate, netBaseMinor: row.netBaseMinor, taxBaseMinor: row.taxBaseMinor, grossBaseMinor: row.grossBaseMinor }
@@ -100,6 +106,64 @@ const loadPayments = (organizationId: string | null, range: FecPeriod) =>
     }))),
   );
 
+
+const loadPurchaseDocuments = (organizationId: string | null, range: FecPeriod) =>
+  Effect.gen(function* () {
+    const db = getDrizzle();
+    const docs = yield* dbTry("purchasing.fec.docs", () => db.select().from(purchasingInvoices).where(and(
+      tenantOf(purchasingInvoices.organizationId, organizationId),
+      inArray(purchasingInvoices.kind, ["invoice", "credit_note"]),
+      notInArray(purchasingInvoices.status, ["DRAFT", "CANCELLED"]),
+      sql`${purchasingInvoices.number} is not null`,
+      gte(purchasingInvoices.issueDate, range.start), lt(purchasingInvoices.issueDate, range.endExclusive),
+    )).orderBy(asc(purchasingInvoices.issueDate), asc(purchasingInvoices.number)));
+    const ids = docs.map((doc) => doc.id);
+    const lines = ids.length === 0 ? [] : yield* dbTry("purchasing.fec.lines", () => db.select({
+      invoiceId: purchasingInvoiceLines.invoiceId, netMinor: purchasingInvoiceLines.netMinor, ratePercent: purchasingInvoiceLines.ratePercent,
+    }).from(purchasingInvoiceLines).where(inArray(purchasingInvoiceLines.invoiceId, ids)));
+    const suppliers = docs.length === 0 ? [] : yield* dbTry("purchasing.fec.suppliers", () => db.select({
+      id: purchasingSuppliers.id, name: purchasingSuppliers.name, vatNumber: purchasingSuppliers.vatNumber,
+    }).from(purchasingSuppliers).where(inArray(purchasingSuppliers.id, [...new Set(docs.map((d) => d.supplierId))])));
+    const bySupplier = new Map(suppliers.map((s) => [s.id, s]));
+    const byDocument = Map.groupBy(lines, (line) => line.invoiceId);
+    return docs.map((doc) => {
+      const supplier = bySupplier.get(doc.supplierId);
+      return {
+        id: doc.id, kind: doc.kind as "invoice" | "credit_note", number: doc.number!, issueDate: doc.issueDate!, currency: doc.currency,
+        customerName: supplier?.name ?? "", customerVatNumber: supplier?.vatNumber ?? null,
+        supplierName: supplier?.name ?? "", supplierVatNumber: supplier?.vatNumber ?? null,
+        netMinor: doc.netMinor, taxMinor: doc.taxMinor, grossMinor: doc.grossMinor,
+        lines: (byDocument.get(doc.id) ?? []).map((line) => ({ netMinor: line.netMinor, ratePercent: String(line.ratePercent) })),
+        fx: frozenOf(doc),
+      };
+    });
+  });
+
+const loadPurchasePayments = (organizationId: string | null, range: FecPeriod) =>
+  dbTry("purchasing.fec.payments", () => getDrizzle().select({
+    id: purchasingPayments.id, paidAt: purchasingPayments.paidAt, amountMinor: purchasingPayments.amountMinor, currency: purchasingPayments.currency,
+    method: purchasingPayments.method, reference: purchasingPayments.reference, documentNumber: purchasingInvoices.number,
+    supplierId: purchasingInvoices.supplierId,
+    ...purchaseFrozenColumns,
+  }).from(purchasingPayments).innerJoin(purchasingInvoices, eq(purchasingInvoices.id, purchasingPayments.invoiceId)).where(and(
+    tenantOf(purchasingInvoices.organizationId, organizationId),
+    gte(purchasingPayments.paidAt, range.start), lt(purchasingPayments.paidAt, range.endExclusive),
+  ))).pipe(Effect.flatMap((rows) => Effect.gen(function* () {
+    const supplierIds = [...new Set(rows.map((r) => r.supplierId))];
+    const suppliers = supplierIds.length === 0 ? [] : yield* dbTry("purchasing.fec.pay.suppliers", () => getDrizzle().select({
+      id: purchasingSuppliers.id, name: purchasingSuppliers.name, vatNumber: purchasingSuppliers.vatNumber,
+    }).from(purchasingSuppliers).where(inArray(purchasingSuppliers.id, supplierIds)));
+    const bySupplier = new Map(suppliers.map((s) => [s.id, s]));
+    return rows.map((row) => {
+      const supplier = bySupplier.get(row.supplierId);
+      return {
+        id: row.id, paidAt: row.paidAt, amountMinor: row.amountMinor, currency: row.currency, method: row.method, reference: row.reference,
+        documentNumber: row.documentNumber ?? row.id, supplierName: supplier?.name ?? "", supplierVatNumber: supplier?.vatNumber ?? null,
+        fx: frozenOf(row),
+      };
+    });
+  })));
+
 const errorText = (error: unknown): string => {
   const base = error instanceof Error ? error.message : String(error);
   const cause = (error as { cause?: unknown } | null)?.cause;
@@ -115,7 +179,9 @@ const produce = (exportId: string, organizationId: string | null, range: FecPeri
     const siren = yield* fecSirenOf(profile);
     const documents = yield* loadDocuments(organizationId, range);
     const payments = yield* loadPayments(organizationId, range);
-    const { entries, summary } = yield* buildFecEntries({ period: range, documents, payments });
+    const purchaseDocuments = yield* loadPurchaseDocuments(organizationId, range);
+    const purchasePayments = yield* loadPurchasePayments(organizationId, range);
+    const { entries, summary } = yield* buildFecEntries({ period: range, documents, payments, purchaseDocuments, purchasePayments });
     const file = yield* toFec(entries, { siren, closingDate: range.lastDay });
     const bytes = encodeLatin9(file.content);
     const storageKey = fecStorageKey(organizationId, range.period, file.filename);

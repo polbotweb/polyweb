@@ -10,6 +10,7 @@ export interface OrderLineState {
   readonly sku: string;
   readonly quantity: number;
   readonly receivedQuantity: number;
+  readonly kind?: "stock" | "service";
 }
 
 export interface ReceiptLineInput {
@@ -17,9 +18,9 @@ export interface ReceiptLineInput {
   readonly quantity: number;
 }
 
-export const outstanding = (line: Pick<OrderLineState, "quantity" | "receivedQuantity">) => Math.max(0, line.quantity - line.receivedQuantity);
+export const outstanding = (line: Pick<OrderLineState, "quantity" | "receivedQuantity" | "kind">) => line.kind === "service" ? 0 : Math.max(0, line.quantity - line.receivedQuantity);
 
-export const isFullyReceived = (lines: readonly Pick<OrderLineState, "quantity" | "receivedQuantity">[]) => lines.every((l) => outstanding(l) === 0);
+export const isFullyReceived = (lines: readonly Pick<OrderLineState, "quantity" | "receivedQuantity" | "kind">[]) => lines.every((l) => outstanding(l) === 0);
 
 /** Lignes de réception validées (quantités nulles ignorées), cumuls mis à jour et statut résultant. */
 export const planReceipt = (orderLines: readonly OrderLineState[], requested: readonly ReceiptLineInput[]) =>
@@ -31,6 +32,7 @@ export const planReceipt = (orderLines: readonly OrderLineState[], requested: re
       if (entry.quantity === 0) continue;
       const line = byId.get(entry.lineId);
       if (!line) return yield* new InvalidReceiptError({ field: "line", value: entry.lineId });
+      if (line.kind === "service") continue;
       if (!Number.isSafeInteger(entry.quantity) || entry.quantity < 0) return yield* new InvalidReceiptError({ field: "quantity", value: String(entry.quantity) });
       const next = received.get(line.id)! + entry.quantity;
       if (next > line.quantity) return yield* new InvalidReceiptError({ field: "quantity", value: `${line.sku}: ${next}/${line.quantity}` });

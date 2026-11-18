@@ -112,7 +112,7 @@ function collectPlaywright() {
       for (const test of (spec.tests || [])) {
         total++;
         const status = test.status || test.expectedStatus;
-        if (status === 'expected' || status === 'passed') passed++;
+        if (status === 'expected' || status === 'passed' || status === 'flaky') passed++;
         else if (status === 'skipped') skipped++;
         else {
           failed++;

@@ -4,6 +4,7 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
 import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
 import { requirePermission } from "@lib/auth-guards";
+import PurchasingAdminNav from "@/components/purchasing/admin/PurchasingAdminNav.astro";
 import SupplierForm from "@/components/purchasing/admin/SupplierForm.astro";
 import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
 import { loadSuppliers } from "@/modules/purchasing/loaders";
@@ -25,6 +26,7 @@ const [suppliers, canCreate] = await Promise.all([loadSuppliers(null), hasPurcha
         <h1 class="text-2xl font-semibold">{t.admin.suppliers}</h1>
         <a class="inline-flex min-h-11 items-center px-3 underline" href={baseAdminUrl}>{t.admin.back}</a>
       </div>
+      <PurchasingAdminNav locale={locale} active="suppliers" />
       {suppliers.length === 0 ? <p class="text-sm text-muted-foreground">{t.admin.noSuppliers}</p> : (
         <ul class="flex flex-col gap-2" aria-label={t.admin.suppliers} data-testid="purchasing-supplier-list">
           {suppliers.map((s) => (

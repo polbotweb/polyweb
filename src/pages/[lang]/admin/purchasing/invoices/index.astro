@@ -1,0 +1,55 @@
+---
+/** Liste des factures et avoirs fournisseurs. */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import { Button } from "@atoms/button";
+import { Effect } from "effect";
+import { requirePermission } from "@lib/auth-guards";
+import PurchasingAdminNav from "@/components/purchasing/admin/PurchasingAdminNav.astro";
+import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
+import { listSupplierInvoices } from "@/modules/purchasing/loaders";
+import { hasPurchasingPermission } from "@/modules/purchasing/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { purchasing: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getPurchasingTranslations(locale);
+const rows = await Effect.runPromise(listSupplierInvoices(null));
+const canInvoice = await hasPurchasingPermission(Astro, ["invoice"]);
+---
+<BaseLayout title={t.admin.invoices} description={t.meta.description}>
+  <AuthLayout title={t.admin.invoices}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem="purchasing" />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{t.admin.invoices}</h1>
+        {canInvoice && <Button href={`/${locale}/admin/purchasing/invoices/new`}>{t.admin.newInvoice}</Button>}
+      </div>
+      <PurchasingAdminNav locale={locale} active="invoices" />
+      {rows.length === 0 ? <p>{t.admin.emptyInvoices}</p> : (
+        <table class="w-full text-left">
+          <thead>
+            <tr>
+              <th scope="col">{t.fields.number}</th>
+              <th scope="col">{t.fields.supplier}</th>
+              <th scope="col">{t.fields.status}</th>
+              <th scope="col">{t.fields.net}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr>
+                <td><a class="inline-flex min-h-11 items-center underline" href={`/${locale}/admin/purchasing/invoices/${row.invoice.id}`}>{row.invoice.number ?? t.statuses.DRAFT}</a></td>
+                <td>{row.supplierName}</td>
+                <td>{row.invoice.status}</td>
+                <td>{(row.invoice.netMinor / 100).toFixed(2)} {row.invoice.currency}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </main>
+  </AuthLayout>
+</BaseLayout>

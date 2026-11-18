@@ -4,6 +4,7 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
 import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
 import { requirePermission } from "@lib/auth-guards";
+import PurchasingAdminNav from "@/components/purchasing/admin/PurchasingAdminNav.astro";
 import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
 import { loadReceipts } from "@/modules/purchasing/loaders";
 import { ScrollRegion } from "@molecules/ScrollRegion";
@@ -25,6 +26,7 @@ const date = (value: Date) => new Intl.DateTimeFormat(locale, { dateStyle: "medi
         <h1 class="text-2xl font-semibold">{t.admin.receipts}</h1>
         <a class="inline-flex min-h-11 items-center px-3 underline" href={baseAdminUrl}>{t.admin.back}</a>
       </div>
+      <PurchasingAdminNav locale={locale} active="receipts" />
       {receipts.length === 0 ? <p class="text-sm text-muted-foreground">{t.admin.noReceipts}</p> : (
         <ScrollRegion label={t.admin.receipts}>
           <table class="w-full text-sm" data-testid="purchasing-receipt-list">

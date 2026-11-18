@@ -1,12 +1,12 @@
 
-> polyweb@0.0.1 check /workspace/b5-classifieds
+> polyweb@0.0.1 check /workspace/b5-purchasing
 > astro check
 
-07:17:37 [@astrojs/node] Enabling sessions with filesystem storage
-07:17:38 [content] Syncing content
-07:17:38 [content] Synced content
-07:17:38 [types] Generated 179ms
-07:17:38 [check] Getting diagnostics for Astro files in /workspace/b5-classifieds...
+13:34:38 [@astrojs/node] Enabling sessions with filesystem storage
+13:34:38 [content] Syncing content
+13:34:38 [content] Synced content
+13:34:38 [types] Generated 319ms
+13:34:38 [check] Getting diagnostics for Astro files in /workspace/b5-purchasing...
 [96msrc/actions/admin/pages.ts[0m:[93m4[0m:[93m38[0m - [93mwarning[0m[90m ts(6133): [0m'isNotNull' is declared but its value is never read.
 
 [7m4[0m import { eq, and, asc, desc, isNull, isNotNull, inArray, max } from "drizzle-orm";
@@ -176,6 +176,51 @@
 [7m8[0m import { CLASSIFIED_CONDITIONS, CLASSIFIED_KINDS, CLASSIFIED_PRICE_KINDS, type ClassifiedCondition, type ClassifiedKind, type ClassifiedPriceKind } from "../domain/workflow";
 [7m [0m [93m                                                                               ~~~~~~~~~~~~~~~~~~~[0m
 
+[96msrc/modules/purchasing/actions/index.ts[0m:[93m394[0m:[93m27[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { normalize?: boolean | undefined; hostname?: RegExp | undefined; protocol?: RegExp | undefined; abort?: boolean | undefined; pattern?: RegExp | undefined; error?: string | ... 1 more ... | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m394[0m       hookUrl: z.string().url(),
+[7m   [0m [93m                          ~~~[0m
+[96msrc/modules/purchasing/actions/index.ts[0m:[93m60[0m:[93m29[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m60[0m     warehouseId: z.string().uuid().nullable().default(null),
+[7m  [0m [93m                            ~~~~[0m
+[96msrc/modules/purchasing/actions/index.ts[0m:[93m41[0m:[93m28[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m41[0m   crmContactId: z.string().uuid().nullable().default(null),
+[7m  [0m [93m                           ~~~~[0m
+[96msrc/modules/purchasing/actions/index.ts[0m:[93m40[0m:[93m28[0m - [93mwarning[0m[90m ts(6385): [0m'(params?: string | { version?: "v8" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | undefined; abort?: boolean | undefined; error?: string | $ZodErrorMap<$ZodIssueInvalidStringFormat> | undefined; message?: string | undefined; } | undefined): ZodString' is deprecated.
+
+[7m40[0m   crmCompanyId: z.string().uuid().nullable().default(null),
+[7m  [0m [93m                           ~~~~[0m
+
+[96msrc/modules/purchasing/schema/extended.ts[0m:[93m11[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'approvalRequests' is declared but its value is never read.
+
+[7m11[0m import { approvalRequests } from "@/core/approvals/schema";
+[7m  [0m [93m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/purchasing/schema/extended.ts[0m:[93m9[0m:[93m10[0m - [93mwarning[0m[90m ts(6133): [0m'crmCompanies' is declared but its value is never read.
+
+[7m9[0m import { crmCompanies, crmContacts } from "@/modules/crm/schema";
+[7m [0m [93m         ~~~~~~~~~~~~[0m
+
+[96msrc/modules/purchasing/services/approvals.service.ts[0m:[93m4[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'getDrizzle' is declared but its value is never read.
+
+[7m4[0m import { getDrizzle } from "@database/drizzle";
+[7m [0m [93m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/modules/purchasing/services/invoices.service.ts[0m:[93m14[0m:[93m10[0m - [93mwarning[0m[90m ts(6133): [0m'purchasing' is declared but its value is never read.
+
+[7m14[0m import { purchasing, purchasingOrderLines, purchasingReceiptLines, purchasingReceipts, purchasingSuppliers } from "../schema";
+[7m  [0m [93m         ~~~~~~~~~~[0m
+[96msrc/modules/purchasing/services/invoices.service.ts[0m:[93m13[0m:[93m68[0m - [93mwarning[0m[90m ts(6133): [0m'CurrencyCode' is declared but its value is never read.
+
+[7m13[0m import { computeTaxTotals, fromDecimal, money, parseCurrency, type CurrencyCode } from "@/core/money";
+[7m  [0m [93m                                                                   ~~~~~~~~~~~~[0m
+
+[96msrc/modules/purchasing/services/settings.service.ts[0m:[93m11[0m:[93m75[0m - [93mwarning[0m[90m ts(6133): [0m'ApprovalMode' is declared but its value is never read.
+
+[7m11[0m import { DEFAULT_APPROVAL_POLICY, validatePolicy, type ApprovalBand, type ApprovalMode, type ApprovalPolicy } from "@/core/approvals";
+[7m  [0m [93m                                                                          ~~~~~~~~~~~~[0m
+
 [96msrc/modules/services/admin/loader.ts[0m:[93m42[0m:[93m24[0m - [93mwarning[0m[90m ts(6133): [0m'tagRows' is declared but its value is never read.
 
 [7m42[0m   const [categoryRows, tagRows, mediaRows] = await Promise.all([
@@ -276,6 +321,11 @@
 [7m19[0m import { orders } from "./schema/orders";
 [7m  [0m [93m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
 
+[96msrc/pages/[lang]/admin/purchasing/settings.astro[0m:[93m104[0m:[93m40[0m - [93mwarning[0m[90m ts(6133): [0m'index' is declared but its value is never read.
+
+[7m104[0m             {approval.bands.map((band, index) => (
+[7m   [0m [93m                                       ~~~~~[0m
+
 [96msrc/pages/[lang]/admin/sales/fx/index.astro[0m:[93m3[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'Effect' is declared but its value is never read.
 
 [7m3[0m import { Effect } from "effect";
@@ -323,8 +373,8 @@
 [7m23[0m import { bookings, bookingsResources } from '@/modules/bookings/schema';
 [7m  [0m [93m                   ~~~~~~~~~~~~~~~~~[0m
 
-Result (1980 files): 
+Result (2029 files): 
 - 0 errors
 - 0 warnings
-- 71 hints
+- 82 hints
 

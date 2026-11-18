@@ -7,6 +7,8 @@ import { requirePermission } from "@lib/auth-guards";
 import PurchaseOrderForm from "@/components/purchasing/admin/PurchaseOrderForm.astro";
 import { getPurchasingTranslations } from "@/modules/purchasing/i18n";
 import { loadPurchasingFormOptions, loadSuppliers } from "@/modules/purchasing/loaders";
+import { purchasingSettingsService } from "@/modules/purchasing/services/settings.service";
+import { Effect } from "effect";
 
 export const prerender = false;
 const result = await requirePermission(Astro, { purchasing: ["create"] });
@@ -14,7 +16,7 @@ if ("redirect" in result) return result.redirect;
 const { locale, authT } = result;
 const t = getPurchasingTranslations(locale);
 const baseAdminUrl = `/${locale}/admin/purchasing`;
-const [suppliers, options] = await Promise.all([loadSuppliers(null, { activeOnly: true }), loadPurchasingFormOptions(null)]);
+const [suppliers, options, { settings }] = await Promise.all([loadSuppliers(null, { activeOnly: true }), loadPurchasingFormOptions(null), Effect.runPromise(purchasingSettingsService.get(null))]);
 ---
 <BaseLayout title={t.admin.newOrder} description={t.meta.description}>
   <AuthLayout title={t.admin.newOrder}>
@@ -25,7 +27,7 @@ const [suppliers, options] = await Promise.all([loadSuppliers(null, { activeOnly
         ? <p>{t.admin.noSuppliers} <a class="underline" href={`${baseAdminUrl}/suppliers`}>{t.admin.newSupplier}</a></p>
         : options.warehouses.length === 0
           ? <p>{t.admin.noWarehouses} <a class="underline" href={`/${locale}/admin/logistics/warehouses`}>{t.fields.warehouse}</a></p>
-          : <PurchaseOrderForm locale={locale} viewBaseUrl={baseAdminUrl} listUrl={baseAdminUrl} suppliers={suppliers} warehouses={options.warehouses} items={options.items} />}
+          : <PurchaseOrderForm locale={locale} viewBaseUrl={baseAdminUrl} listUrl={baseAdminUrl} suppliers={suppliers} warehouses={options.warehouses} items={options.items} allowServiceLines={settings.allowServiceLines} allowMultiWarehouse={settings.allowMultiWarehouse} />}
     </main>
   </AuthLayout>
 </BaseLayout>

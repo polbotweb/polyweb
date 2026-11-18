@@ -10,6 +10,7 @@ import { servicesNotifications } from "@/modules/services/notifications/definiti
 import { salesNotifications } from "@/modules/sales/notifications/definitions";
 import { forumsNotifications } from "@/modules/forums/notifications/definitions";
 import { classifiedsNotifications } from "@/modules/classifieds/notifications/definitions";
+import { purchasingNotifications } from "@/modules/purchasing/notifications/definitions";
 // @module-notifications:imports
 
 export const MODULE_NOTIFICATIONS = [
@@ -20,6 +21,7 @@ export const MODULE_NOTIFICATIONS = [
   salesNotifications,
   forumsNotifications,
   classifiedsNotifications,
+  purchasingNotifications,
   // @module-notifications:list
 ] as const;
 

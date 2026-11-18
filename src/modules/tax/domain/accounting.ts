@@ -83,6 +83,36 @@ export const buildSaleEntry = (input: SaleEntryInput): Effect.Effect<JournalEntr
   return assertBalanced({ journalCode: input.journalCode ?? "VE", journalLabel: input.journalLabel ?? "Ventes", entryNumber: input.entryNumber, entryDate: input.date, pieceRef: input.pieceRef, pieceDate: input.date, lines });
 };
 
+export interface PurchaseEntryInput {
+  readonly entryNumber: string;
+  readonly date: string;
+  readonly pieceRef: string;
+  readonly supplierAccount: string;
+  readonly supplierName: string;
+  readonly totals: TaxTotals;
+  readonly creditNote?: boolean;
+  readonly journalCode?: string;
+  readonly journalLabel?: string;
+  readonly accounts?: { readonly payable?: string; readonly expense?: string; readonly vat?: string };
+}
+
+/** Écriture d'achat : débit 607 (HT par taux) et 44566 (TVA déductible) ; crédit 401 (TTC). Avoir = sens inversé. */
+export const buildPurchaseEntry = (input: PurchaseEntryInput): Effect.Effect<JournalEntry, UnbalancedEntryError | AccountingExportError> => {
+  const currency: CurrencyCode = input.totals.gross.currency;
+  const none = zero(currency);
+  const side = (amount: Money, debitSide: boolean) => (debitSide !== Boolean(input.creditNote) ? { debit: amount, credit: none } : { debit: none, credit: amount });
+  const payable = input.accounts?.payable ?? "401000";
+  const expense = input.accounts?.expense ?? "607000";
+  const vat = input.accounts?.vat ?? "445660";
+  const label = `${input.creditNote ? "Avoir fournisseur" : "Facture fournisseur"} ${input.pieceRef} ${input.supplierName}`;
+  const lines: JournalLine[] = [
+    ...input.totals.byRate.filter((row) => row.base.amountMinor !== 0).map((row) => ({ account: expense, accountLabel: `Achats ${row.ratePercent} %`, label, ...side(row.base, true) })),
+    ...input.totals.byRate.filter((row) => row.tax.amountMinor !== 0).map((row) => ({ account: vat, accountLabel: `TVA déductible ${row.ratePercent} %`, label, ...side(row.tax, true) })),
+    { account: payable, accountLabel: "Fournisseurs", auxAccount: input.supplierAccount, auxLabel: input.supplierName, label, ...side(input.totals.gross, false) },
+  ];
+  return assertBalanced({ journalCode: input.journalCode ?? "HA", journalLabel: input.journalLabel ?? "Achats", entryNumber: input.entryNumber, entryDate: input.date, pieceRef: input.pieceRef, pieceDate: input.date, lines });
+};
+
 /** Colonnes FEC (ordre réglementaire). */
 export const FEC_COLUMNS = ["JournalCode", "JournalLib", "EcritureNum", "EcritureDate", "CompteNum", "CompteLib", "CompAuxNum", "CompAuxLib", "PieceRef", "PieceDate", "EcritureLib", "Debit", "Credit", "EcritureLet", "DateLet", "ValidDate", "Montantdevise", "Idevise"] as const;
 

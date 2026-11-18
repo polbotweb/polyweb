@@ -67,6 +67,7 @@ export const emailOutbox = pgTable(
     template: varchar("template", { length: 120 }).notNull(),
     category: varchar("category", { length: 40 }).notNull(),
     data: jsonb("data").$type<Record<string, unknown>>().default({}).notNull(),
+    attachments: jsonb("attachments").$type<readonly { filename: string; contentType: string; storageKey: string }[]>().default([]).notNull(),
     status: varchar("status", { length: 12, enum: ["pending", "sent", "failed", "cancelled"] }).default("pending").notNull(),
     attempts: integer("attempts").default(0).notNull(),
     nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).defaultNow().notNull(),

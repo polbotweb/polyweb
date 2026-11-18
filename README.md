@@ -28,6 +28,7 @@ SSR multi-language web application with complete authentication, organisation ma
 - 🗄️ **Drizzle ORM** + **PostgreSQL 16** — Type-safe migrations, loaders, full-text search
 - 🎨 **Starwind** — 47+ accessible Astro UI components
 - 🌍 **i18n** — fr, en, es, ar (RTL) with localised routes
+- 🛒 **Purchasing** — suppliers, purchase orders, approvals, 3-way matching, SEPA, e-invoices, punch-out (see `docs/purchasing.md`)
 - 📋 **CMS** — Pages, typed JSON sections, navigation, scheduling, versioning, import/export
 - 📁 **Media** — Upload, Sharp image processing, folder organisation
 - 📧 **SMTP** — Brevo / Resend / Nodemailer + dead-letter queue
@@ -165,7 +166,6 @@ atoms/
   toggle/
   tooltip/
   video/
-attributes/
 auth/
   SecuritySettings.astro
   SignInAlternatives.astro
@@ -208,7 +208,6 @@ classifieds/
   ClassifiedsForm.astro
   ClassifiedsNotice.astro
   ClassifiedsPagination.astro
-  admin/
 content/
   ContentEditor.astro
   RichContent.astro
@@ -540,12 +539,14 @@ migrations/
   0054_messaging_core.sql
   0055_forums_core.sql
   0056_classifieds_core.sql
+  0057_purchasing_invoices_reorder.sql
   down/
     0052_notifications_core.down.sql
     0053_moderation_core.down.sql
     0054_messaging_core.down.sql
     0055_forums_core.down.sql
     0056_classifieds_core.down.sql
+    0057_purchasing_invoices_reorder.down.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -600,6 +601,7 @@ migrations/
     0054_snapshot.json
     0055_snapshot.json
     0056_snapshot.json
+    0057_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -762,7 +764,7 @@ schemas.ts
 **notifications.schema.ts**
 - `notifications`: `id`, `userId`, `organizationId`, `module`, `type`, `category`, `actorId`, `resourceType`, `resourceId`, `data`, `title`, `message`, `readAt`, `createdAt`, `dedupeKey`
 - `notification_preferences`: `userId`, `category`, `channel`, `enabled`, `updatedAt`
-- `email_outbox`: `id`, `dedupeKey`, `userId`, `organizationId`, `toEmail`, `locale`, `template`, `category`, `data`, `status`, `attempts`, `nextAttemptAt`, `lockedUntil`, `lastError`, `sentAt`, `createdAt`
+- `email_outbox`: `id`, `dedupeKey`, `userId`, `organizationId`, `toEmail`, `locale`, `template`, `category`, `data`, `attachments`, `status`, `attempts`, `nextAttemptAt`, `lockedUntil`, `lastError`, `sentAt`, `createdAt`
 
 **moderation.schema.ts**
 - `moderation_reports`: `id`, `module`, `targetType`, `targetId`, `organizationId`, `reporterId`, `reporterKey`, `reason`, `description`, `status`, `resolvedBy`, `resolvedAt`, `createdAt`, `legacy`
@@ -853,6 +855,7 @@ schemas.ts
 - `0054_messaging_core.sql`
 - `0055_forums_core.sql`
 - `0056_classifieds_core.sql`
+- `0057_purchasing_invoices_reorder.sql`
 
 ### Commands
 
@@ -982,6 +985,12 @@ api/
   idempotency.ts
   registry.ts
   table.ts
+approvals/
+  errors.ts
+  index.ts
+  policy.ts
+  schema.ts
+  types.ts
 attributes/
   index.ts
   kinds.ts
@@ -1025,9 +1034,11 @@ documents/
 einvoice/
   cii.ts
   errors.ts
+  extract.ts
   icc.ts
   index.ts
   model.ts
+  parse.ts
   pdfa.ts
   validate.ts
 engagement/
@@ -1145,6 +1156,11 @@ search/
   registry.ts
 seo/
   index.ts
+sepa/
+  errors.ts
+  iban.ts
+  index.ts
+  pain001.ts
 taxonomy/
   actions.ts
   categories.ts
@@ -1249,7 +1265,6 @@ bookings/
 classifieds/
   actions/
     index.ts
-  admin/
   api/
     public-api.ts
   capabilities.ts
@@ -1547,27 +1562,50 @@ purchasing/
     forms.ts
     init.ts
     record-actions.ts
+  documents/
+    index.ts
+    notify.ts
+    pdf.ts
+    template.ts
   domain/
     errors.ts
+    invoice.ts
+    landed-costs.ts
+    matching.ts
     numbering.ts
     order.ts
+    payments.ts
+    punchout.ts
     receipt.ts
+    reorder.ts
+    returns.ts
+    settings.ts
     workflow.ts
   i18n/
     index.ts
   loaders/
+    extended.loader.ts
     index.ts
     order-admin.loader.ts
     purchasing.loader.ts
   locks.ts
   module.ts
+  notifications/
+    definitions.ts
+    po-send-email.ts
   permissions/
     index.ts
     statements.ts
   schema/
+    extended.ts
     index.ts
   services/
+    approvals.service.ts
+    email-templates.service.ts
+    invoices.service.ts
+    ops.service.ts
     purchasing.service.ts
+    settings.service.ts
 sales/
   actions/
     bulk.ts
@@ -1937,6 +1975,7 @@ api/
     notifications.ts
     payments-expire.ts
     publish.ts
+    purchasing.ts
     reminders.ts
     search-reindex.ts
     webhooks.ts
@@ -1954,6 +1993,8 @@ api/
   payments/
     webhook.ts
   preview.ts
+  purchasing/
+    punchout/
   search.ts
   upload.ts
   v1/
@@ -2052,6 +2093,7 @@ public/
 favicon.ico
 favicon.svg
 uploads/
+  images/
 ```
 
 ### Upload & Processing
@@ -2127,6 +2169,7 @@ i18n email templates for: email verification, password reset, organisation invit
 ### Tests
 
 - `tests/unit/contact-form-template.test.ts`
+- `tests/unit/purchasing/po-send-email.test.ts`
 - `tests/unit/send-email.test.ts`
 - `tests/unit/smtp-env.test.ts`
 - `tests/unit/smtp-providers.test.ts`

@@ -1,4 +1,4 @@
 
-> polyweb@0.0.1 lint /workspace/b5-classifieds
+> polyweb@0.0.1 lint /workspace/b5-purchasing
 > eslint "src/**/*.{js,ts,astro}" --max-warnings 0
 
