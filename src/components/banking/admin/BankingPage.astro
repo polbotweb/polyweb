@@ -1,0 +1,45 @@
+---
+/**
+ * Gabarit commun des pages back-office banque / comptabilité : mise en page admin, barre latérale,
+ * titre, navigation du module, conteneur `data-organization-id` (plateforme = "") et script client.
+ */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AuthLayout from "@organisms/AuthLayout/AuthLayout.astro";
+import AdminSidebar from "@organisms/AdminSidebar/AdminSidebar.astro";
+import BankingAdminNav, { type BankingNavItem } from "./BankingAdminNav.astro";
+import { getBankingTranslations } from "@/modules/banking/i18n";
+import type { AuthTranslations, Locale } from "@i18n/config";
+
+interface Props {
+  locale: Locale;
+  authT: AuthTranslations;
+  title: string;
+  active: BankingNavItem | null;
+  sidebar?: "banking" | "accounting";
+  back?: { href: string; label: string };
+}
+
+const { locale, authT, title, active, sidebar = "banking", back } = Astro.props;
+const t = getBankingTranslations(locale);
+---
+<BaseLayout title={title} description={t.meta.description}>
+  <AuthLayout title={title}>
+    <AdminSidebar slot="sidebar" t={authT} locale={locale} activeItem={sidebar} />
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8" data-organization-id="">
+      {back && <a class="inline-flex min-h-11 w-fit items-center underline" href={back.href}>← {back.label}</a>}
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">{title}</h1>
+        <slot name="actions" />
+      </div>
+      {sidebar === "banking" && <BankingAdminNav locale={locale} active={active} />}
+      <slot />
+    </main>
+  </AuthLayout>
+</BaseLayout>
+
+<script>
+  import { initBanking } from "@/modules/banking/client/init";
+
+  initBanking();
+  document.addEventListener("astro:after-swap", initBanking);
+</script>

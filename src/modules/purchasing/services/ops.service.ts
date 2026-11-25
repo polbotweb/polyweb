@@ -20,7 +20,7 @@ import { purchasing, purchasingOrderLines, purchasingReceiptLines, purchasingRec
 import {
   purchasingEinvoiceImports, purchasingInvoices, purchasingLandedCostLines, purchasingLandedCosts,
   purchasingPunchoutSessions, purchasingQualityCheckLines, purchasingQualityChecks,
-  purchasingReorderRules, purchasingReorderSuggestions, purchasingReturnLines, purchasingReturns, purchasingSepaExports,
+  purchasingReorderRules, purchasingReorderSuggestions, purchasingReturnLines, purchasingReturns, purchasingSepaExports, purchasingSepaExportLines,
 } from "../schema/extended";
 import { canTransitionReturn, planSupplierReturn, qualityResultOf, returnAffectsStock, type ReturnReason } from "../domain/returns";
 import { allocateLandedCost, type LandedCostCategory, type LandedCostMethod } from "../domain/landed-costs";
@@ -228,6 +228,11 @@ export const purchasingOpsService = {
             totalMinor: transfers.reduce((sum, transfer) => sum + transfer.amountMinor, 0), currency: "EUR",
             storageKey, sha256: sha256(bytes), requestedExecutionDate: input.requestedExecutionDate, createdBy: authorId,
           }).returning());
+          // Un ordre par facture : rapprochement du débit global du lot et des retours (module banking).
+          yield* dbTry("purchasing.sepa.lines", () => tx.insert(purchasingSepaExportLines).values(transfers.map((transfer) => ({
+            exportId: row!.id, organizationId: input.organizationId, invoiceId: transfer.invoiceId, endToEndId: transfer.endToEndId,
+            amountMinor: transfer.amountMinor, currency: transfer.currency,
+          }))));
           return { export: row!, xml };
         }));
     }),

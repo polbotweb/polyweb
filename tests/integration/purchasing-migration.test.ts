@@ -10,7 +10,7 @@
  * documentée dans `down/0057_purchasing_invoices_reorder.down.sql`.
  */
 import { afterAll, beforeAll, describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import pg from "pg";
 import { sql } from "drizzle-orm";
@@ -22,6 +22,10 @@ import "dotenv/config";
 const dir = resolve(process.cwd(), "src/database/migrations");
 const up = splitSqlStatements(readFileSync(resolve(dir, "0057_purchasing_invoices_reorder.sql"), "utf8"));
 const down = splitSqlStatements(readFileSync(resolve(dir, "down/0057_purchasing_invoices_reorder.down.sql"), "utf8"));
+/** Migrations postérieures (0058+) : descendues avant 0057 puis remontées après (dépendances FK). */
+const later = readdirSync(dir).filter((f) => /^\d{4}_.*\.sql$/.test(f) && Number(f.slice(0, 4)) > 57).sort();
+const laterUp = later.map((f) => splitSqlStatements(readFileSync(resolve(dir, f), "utf8")));
+const laterDown = later.map((f) => splitSqlStatements(readFileSync(resolve(dir, "down", f.replace(/\.sql$/, ".down.sql")), "utf8"))).reverse();
 const journal = JSON.parse(readFileSync(resolve(dir, "meta/_journal.json"), "utf8")) as { entries: { idx: number; tag: string; when: number }[] };
 
 const expected = [
@@ -94,10 +98,12 @@ describe("migration 0057 purchasing", () => {
 
         await c.query("BEGIN");
         try {
+          for (const statements of laterDown) for (const statement of statements) await c.query(statement);
           for (const statement of down) await c.query(statement);
           expect((await c.query(tablesSql)).rows).toEqual([]);
           expect((await c.query("select id from purchasing_order_lines where id = $1", [lineId])).rows).toEqual([]);
           for (const statement of up) await c.query(statement);
+          for (const statements of laterUp) for (const statement of statements) await c.query(statement);
           expect((await c.query(tablesSql)).rows.map((row) => row.table_name)).toEqual(before);
         } finally {
           await c.query("ROLLBACK");

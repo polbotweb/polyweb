@@ -17,6 +17,7 @@ pagination, idempotence et spécification OpenAPI sont générés à partir du r
 | crm | `companies` | `crm:read` | `crm:write` | q, country | + création, modification |
 | bookings | `bookings` | `bookings:read` | `bookings:write` | status, resourceId, from, to | + création, action `cancel` |
 | subscriptions | `subscriptions` | `subscriptions:read` | — | status, planId, customerEmail | liste, fiche |
+| banking | `bank-imports` | `banking:read` | `banking:write` | status, bankAccountId | + dépôt d'un relevé (`{ bankAccountId, fileName, contentBase64, format? }`, fichier déjà importé sans effet) — voir [banque](./banking.md) |
 
 `<module>:write` implique la lecture. Les scopes « cœur » (`content:read`, `content:write`, …)
 restent inchangés.
@@ -69,6 +70,7 @@ schémas et scopes requis.
 | crm | `contact.created`, `contact.updated` |
 | bookings | `booking.created`, `booking.canceled` |
 | subscriptions | `subscription.created`, `subscription.updated`, `subscription.canceled` |
+| banking | `banking.imported`, `banking.reconciled`, `banking.unreconciled` |
 
 Chaque livraison est un `POST` JSON signé :
 `Polyweb-Signature: t=<unix>,v1=<hex>` avec `v1 = HMAC-SHA256(secret, "<t>.<corps>")`,

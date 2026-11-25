@@ -1,0 +1,167 @@
+---
+/** Comptes bancaires : création / modification, archivage, flux GoCardless (opt-in), versements Stripe. */
+import { Effect } from "effect";
+import { requirePermission } from "@lib/auth-guards";
+import { Button } from "@atoms/button";
+import BankingPage from "@/components/banking/admin/BankingPage.astro";
+import StatusBadge from "@/components/banking/admin/StatusBadge.astro";
+import { AUTOMATION_MODES, STATEMENT_FORMATS } from "@/modules/banking/domain/constants";
+import { getBankingTranslations } from "@/modules/banking/i18n";
+import { hasBankingPermission } from "@/modules/banking/permissions";
+import { bankAccountsService, csvProfilesService } from "@/modules/banking/services/accounts.service";
+import { bankFeedsService } from "@/modules/banking/services/feeds.service";
+import { bankPayoutsService } from "@/modules/banking/services/payouts.service";
+import { bankingSettingsService } from "@/modules/banking/services/settings.service";
+import { formatDate, formatMinor, minorToInput } from "@/modules/banking/ui/format";
+import { statusTone } from "@/modules/banking/ui/tones";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { banking: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getBankingTranslations(locale);
+const [accounts, profiles, feeds, payouts, settings, canManage, canImport] = await Promise.all([
+  Effect.runPromise(bankAccountsService.list(null, true)),
+  Effect.runPromise(csvProfilesService.list(null)),
+  Effect.runPromise(bankFeedsService.list(null)),
+  Effect.runPromise(bankPayoutsService.list(null, 20)),
+  Effect.runPromise(bankingSettingsService.get(null)),
+  hasBankingPermission(Astro, { banking: ["accounts"] }),
+  hasBankingPermission(Astro, { banking: ["import"] }),
+]);
+const editId = Astro.url.searchParams.get("edit");
+const editing = accounts.find((account) => account.id === editId) ?? null;
+const feedOf = (accountId: string) => feeds.find((feed) => feed.bankAccountId === accountId) ?? null;
+const base = `/${locale}/admin/banking`;
+const input = "min-h-11 rounded-md border px-3";
+---
+<BankingPage locale={locale} authT={authT} title={t.accounts.title} active="accounts">
+  <section class="flex flex-col gap-3" aria-labelledby="accounts-list">
+    <h2 id="accounts-list" class="text-xl font-semibold">{t.accounts.list}</h2>
+    {accounts.length === 0 ? <p>{t.dashboard.noAccounts}</p> : (
+      <ul class="flex flex-col gap-3">
+        {accounts.map((account) => {
+          const feed = feedOf(account.id);
+          return (
+            <li class="flex flex-col gap-3 rounded-md border p-4">
+              <div class="flex flex-wrap items-center gap-3">
+                <span class="font-medium">{account.label}</span>
+                <span class="text-sm text-muted-foreground" dir="ltr">{account.iban ?? account.accountNumber ?? ""}</span>
+                <span class="text-sm">{account.currency} · {account.ledgerAccount} · {account.journalCode}</span>
+                {account.status === "archived" && <StatusBadge label={t.accounts.archived} />}
+                <StatusBadge label={t.continuity[account.continuityStatus]} tone={statusTone(account.continuityStatus)} />
+                <span class="ms-auto">{formatMinor(account.lastClosingBalanceMinor, account.currency, locale)}</span>
+              </div>
+              {canManage && (
+                <div class="flex flex-wrap gap-2">
+                  <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={`?edit=${account.id}#account-form`}>{t.accounts.edit}</a>
+                  <button class="min-h-11 rounded-md border px-4" type="button" data-banking-action="setAccountStatus" data-payload={JSON.stringify({ id: account.id, status: account.status === "active" ? "archived" : "active" })} data-confirm={t.common.confirm} data-done={t.common.saved}>
+                    {account.status === "active" ? t.accounts.archive : t.accounts.restore}
+                  </button>
+                </div>
+              )}
+              {canManage && settings.feedsEnabled && account.status === "active" && (
+                <details class="rounded-md border p-3">
+                  <summary class="min-h-11 cursor-pointer content-center font-medium">{t.accounts.feeds}{feed && <span class="ms-2"><StatusBadge label={t.accounts.feedStatuses[feed.status]} tone={statusTone(feed.status)} /></span>}</summary>
+                  <div class="mt-3 flex flex-col gap-4">
+                    <p class="text-sm text-muted-foreground">{t.accounts.gocardlessNote}</p>
+                    {feed && (
+                      <dl class="grid gap-2 text-sm sm:grid-cols-3">
+                        <div><dt class="text-muted-foreground">{t.accounts.credentialsHint}</dt><dd dir="ltr">{feed.credentialsHint ?? t.common.none}</dd></div>
+                        <div><dt class="text-muted-foreground">{t.accounts.lastSync}</dt><dd>{formatDate(feed.lastSyncAt, locale)}</dd></div>
+                        <div><dt class="text-muted-foreground">{t.fields.status}</dt><dd>{feed.lastError ?? t.accounts.feedStatuses[feed.status]}</dd></div>
+                      </dl>
+                    )}
+                    <form class="flex flex-col gap-3" data-banking-form="saveFeedCredentials" data-done={t.common.saved}>
+                      <input type="hidden" name="bankAccountId" value={account.id} />
+                      <input type="hidden" name="connectionId" data-type="nullable" value={feed?.id ?? ""} />
+                      <p class="text-sm">{t.accounts.secretHelp}</p>
+                      <label class="flex flex-col gap-1"><span>{t.accounts.secretId}</span><input class={input} name="secretId" autocomplete="off" required minlength="8" maxlength="200" /></label>
+                      <label class="flex flex-col gap-1"><span>{t.accounts.secretKey}</span><input class={input} type="password" name="secretKey" autocomplete="new-password" required minlength="16" maxlength="500" /></label>
+                      <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+                      <Button type="submit" variant="outline">{t.accounts.saveCredentials}</Button>
+                    </form>
+                    {feed?.hasCredentials && (
+                      <form class="flex flex-wrap items-end gap-3" data-banking-form="startFeedLink">
+                        <input type="hidden" name="connectionId" value={feed.id} />
+                        <input type="hidden" name="language" value={locale} />
+                        <label class="flex flex-col gap-1"><span>{t.accounts.country}</span><input class={`${input} w-24 uppercase`} name="country" value="FR" maxlength="2" required /></label>
+                        <button class="min-h-11 rounded-md border px-4" type="button" data-feed-institutions={feed.id}>{t.accounts.institutions}</button>
+                        <label class="flex flex-col gap-1"><span>{t.accounts.chooseBank}</span><select class={input} name="institutionId" required disabled><option value="">{t.common.none}</option></select></label>
+                        <Button type="submit">{t.accounts.startLink}</Button>
+                        <p class="w-full text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+                      </form>
+                    )}
+                    {feed && (
+                      <div class="flex flex-wrap gap-2">
+                        <button class="min-h-11 rounded-md border px-4" type="button" data-banking-action="refreshFeed" data-payload={JSON.stringify({ connectionId: feed.id })} data-done={t.common.done}>{t.accounts.refresh}</button>
+                        {canImport && feed.status === "linked" && <button class="min-h-11 rounded-md border px-4" type="button" data-banking-action="syncFeed" data-payload={JSON.stringify({ connectionId: feed.id })} data-done={t.common.done}>{t.accounts.sync}</button>}
+                        <button class="min-h-11 rounded-md border px-4" type="button" data-banking-action="disconnectFeed" data-payload={JSON.stringify({ connectionId: feed.id })} data-confirm={t.common.confirm} data-done={t.common.done}>{t.accounts.disconnect}</button>
+                      </div>
+                    )}
+                  </div>
+                </details>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    )}
+    {canManage && !settings.feedsEnabled && <p class="text-sm text-muted-foreground">{t.accounts.feedsDisabled} {t.accounts.gocardlessNote}</p>}
+  </section>
+
+  {canManage && (
+    <section class="flex flex-col gap-3" aria-labelledby="account-form">
+      <h2 id="account-form" class="text-xl font-semibold">{editing ? `${t.accounts.edit} — ${editing.label}` : t.accounts.new}</h2>
+      {editing && <a class="w-fit underline" href={`${base}/accounts`}>{t.accounts.new}</a>}
+      <form class="grid max-w-4xl gap-4 sm:grid-cols-2" data-banking-form="saveAccount" data-done={t.common.saved} data-redirect={`${base}/accounts`} data-currency={editing?.currency ?? "EUR"}>
+        <input type="hidden" name="id" data-type="nullable" value={editing?.id ?? ""} />
+        <label class="flex flex-col gap-1"><span>{t.fields.label}</span><input class={input} name="label" required maxlength="120" value={editing?.label ?? ""} /></label>
+        <label class="flex flex-col gap-1"><span>{t.fields.bankName} <span class="text-muted-foreground">({t.common.optional})</span></span><input class={input} name="bankName" data-type="nullable" maxlength="120" value={editing?.bankName ?? ""} /></label>
+        <label class="flex flex-col gap-1"><span>{t.fields.iban}</span><input class={input} name="iban" data-type="nullable" maxlength="34" dir="ltr" autocomplete="off" value={editing?.iban ?? ""} /></label>
+        <label class="flex flex-col gap-1"><span>{t.fields.bic}</span><input class={input} name="bic" data-type="nullable" maxlength="11" dir="ltr" value={editing?.bic ?? ""} /></label>
+        <label class="flex flex-col gap-1"><span>{t.fields.accountNumber} <span class="text-muted-foreground">({t.common.optional})</span></span><input class={input} name="accountNumber" data-type="nullable" maxlength="34" dir="ltr" value={editing?.accountNumber ?? ""} /></label>
+        <label class="flex flex-col gap-1"><span>{t.fields.currency}</span><input class={`${input} uppercase`} name="currency" required minlength="3" maxlength="3" value={editing?.currency ?? "EUR"} /></label>
+        <label class="flex flex-col gap-1"><span>{t.fields.ledgerAccount}</span><input class={input} name="ledgerAccount" required minlength="3" maxlength="20" value={editing?.ledgerAccount ?? "512000"} /></label>
+        <label class="flex flex-col gap-1"><span>{t.fields.journalCode}</span><input class={input} name="journalCode" required maxlength="6" value={editing?.journalCode ?? "BQ"} /></label>
+        <label class="flex flex-col gap-1"><span>{t.fields.journalLabel}</span><input class={input} name="journalLabel" required maxlength="60" value={editing?.journalLabel ?? t.nav.title} /></label>
+        <label class="flex flex-col gap-1"><span>{t.fields.openingBalance}</span><input class={input} name="openingBalanceMinor" data-type="money" inputmode="decimal" value={minorToInput(editing?.openingBalanceMinor, editing?.currency ?? "EUR")} /></label>
+        <label class="flex flex-col gap-1"><span>{t.fields.openingDate}</span><input class={input} type="date" name="openingBalanceDate" data-type="nullable" value={editing?.openingBalanceDate ?? ""} /></label>
+        <label class="flex flex-col gap-1"><span>{t.fields.defaultFormat}</span>
+          <select class={input} name="defaultFormat" data-type="nullable"><option value="">{t.fields.detectFormat}</option>{STATEMENT_FORMATS.map((format) => <option value={format} selected={editing?.defaultFormat === format}>{format.toUpperCase()}</option>)}</select>
+        </label>
+        <label class="flex flex-col gap-1"><span>{t.fields.csvProfile}</span>
+          <select class={input} name="csvProfileId" data-type="nullable"><option value="">{t.common.none}</option>{profiles.map((profile) => <option value={profile.id} selected={editing?.csvProfileId === profile.id}>{profile.name}</option>)}</select>
+        </label>
+        <label class="flex flex-col gap-1"><span>{t.fields.automationMode}</span>
+          <select class={input} name="automationMode" data-type="nullable"><option value="">{t.automation.inherit}</option>{AUTOMATION_MODES.map((mode) => <option value={mode} selected={editing?.automationMode === mode}>{t.automation[mode]}</option>)}</select>
+        </label>
+        <p class="text-sm text-destructive sm:col-span-2" role="alert" tabindex="-1" data-form-error hidden></p>
+        <div class="sm:col-span-2"><Button type="submit">{t.common.save}</Button></div>
+      </form>
+    </section>
+  )}
+
+  <section class="flex flex-col gap-3" aria-labelledby="payouts">
+    <h2 id="payouts" class="text-xl font-semibold">{t.accounts.payouts}</h2>
+    {!settings.stripePayoutsEnabled ? <p class="text-sm text-muted-foreground">{t.accounts.payoutsDisabled}</p> : (
+      <>
+        {canImport && <div><button class="min-h-11 rounded-md border px-4" type="button" data-banking-action="syncPayouts" data-payload="{}" data-done={t.common.done}>{t.accounts.syncPayouts}</button></div>}
+        {payouts.length === 0 ? <p>{t.accounts.payoutsEmpty}</p> : (
+          <ul class="flex flex-col gap-2">
+            {payouts.map((payout) => (
+              <li class="flex flex-wrap items-center gap-3 rounded-md border p-3">
+                <span dir="ltr">{payout.externalId}</span>
+                <span>{t.accounts.arrival} {formatDate(payout.arrivalDate, locale)}</span>
+                <span>{t.accounts.gross} {formatMinor(payout.grossMinor, payout.currency, locale)}</span>
+                <span>{t.accounts.fees} {formatMinor(payout.feeMinor, payout.currency, locale)}</span>
+                <span class="font-medium">{t.accounts.net} {formatMinor(payout.amountMinor, payout.currency, locale)}</span>
+                <StatusBadge label={t.accounts.payoutStatuses[payout.status]} tone={payout.status === "reconciled" || payout.status === "paid" ? "success" : payout.status === "failed" || payout.status === "canceled" ? "danger" : "info"} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </>
+    )}
+  </section>
+</BankingPage>

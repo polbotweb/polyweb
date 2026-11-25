@@ -5,6 +5,8 @@ import type { AdminSubpage } from '@i18n/utils';
 import { getModuleLabel } from '@/core/localization/module-labels';
 import { PLATFORM_SECTIONS, getPlatformLabel, getPlatformAdminUrl, type PlatformSection } from '@/core/localization/platform-labels';
 import RepeatIcon from '@tabler/icons/outline/repeat.svg';
+import BuildingBankIcon from '@tabler/icons/outline/building-bank.svg';
+import CalculatorIcon from '@tabler/icons/outline/calculator.svg';
 import PuzzleIcon from '@tabler/icons/outline/puzzle.svg';
 import ArrowBackUpIcon from '@tabler/icons/outline/arrow-back-up.svg';
 import ArrowLeftIcon from '@tabler/icons/outline/arrow-left.svg';
@@ -61,6 +63,8 @@ const cmsItems: { id: AdminSubpage; title: string; url: string; icon: typeof Set
   { id: 'crm', title: getModuleLabel('crm', locale), url: getAdminUrl(locale, 'crm'), icon: AddressBookIcon },
   { id: 'logistics', title: getModuleLabel('logistics', locale), url: getAdminUrl(locale, 'logistics'), icon: TruckDeliveryIcon },
   { id: 'purchasing', title: getModuleLabel('purchasing', locale), url: getAdminUrl(locale, 'purchasing'), icon: ShoppingCartIcon },
+  { id: 'banking', title: getModuleLabel('banking', locale), url: getAdminUrl(locale, 'banking'), icon: BuildingBankIcon },
+  { id: 'accounting', title: getModuleLabel('accounting', locale), url: getAdminUrl(locale, 'accounting'), icon: CalculatorIcon },
   { id: 'subscriptions', title: getModuleLabel('subscriptions', locale), url: getAdminUrl(locale, 'subscriptions'), icon: RepeatIcon },
   { id: 'bookings', title: getModuleLabel('bookings', locale), url: getAdminUrl(locale, 'bookings'), icon: CalendarEventIcon },
   { id: 'forums', title: getModuleLabel('forums', locale), url: getAdminUrl(locale, 'forums'), icon: MessagesIcon },

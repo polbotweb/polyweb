@@ -1,0 +1,36 @@
+---
+/**
+ * Navigation interne du module banque (back-office uniquement), même motif de liens que les
+ * autres modules (achats, ventes).
+ */
+import { getBankingTranslations } from "@/modules/banking/i18n";
+import type { Locale } from "@i18n/config";
+
+export type BankingNavItem = "dashboard" | "accounts" | "imports" | "reconciliations" | "rules" | "ledger" | "settings";
+interface Props {
+  locale: Locale;
+  active: BankingNavItem | null;
+}
+
+const { locale, active } = Astro.props;
+const t = getBankingTranslations(locale);
+const base = `/${locale}/admin/banking`;
+const items: readonly { id: BankingNavItem; href: string; label: string }[] = [
+  { id: "dashboard", href: base, label: t.nav.dashboard },
+  { id: "accounts", href: `${base}/accounts`, label: t.nav.accounts },
+  { id: "imports", href: `${base}/imports`, label: t.nav.imports },
+  { id: "reconciliations", href: `${base}/reconciliations`, label: t.nav.reconciliations },
+  { id: "rules", href: `${base}/rules`, label: t.nav.rules },
+  { id: "ledger", href: `${base}/ledger`, label: t.nav.ledger },
+  { id: "settings", href: `${base}/settings`, label: t.nav.settings },
+];
+---
+<nav class="flex flex-wrap gap-2" aria-label={t.nav.title}>
+  {items.map((item) => (
+    <a
+      class:list={["inline-flex min-h-11 items-center rounded-md border px-4", item.id === active && "bg-muted font-medium"]}
+      href={item.href}
+      aria-current={item.id === active ? "page" : undefined}
+    >{item.label}</a>
+  ))}
+</nav>

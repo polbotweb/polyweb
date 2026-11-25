@@ -286,6 +286,20 @@
       "delete",
       "moderate",
       "configure"
+    ],
+    "banking": [
+      "read",
+      "import",
+      "reconcile",
+      "unreconcile",
+      "approve",
+      "rules",
+      "accounts",
+      "settings"
+    ],
+    "accounting": [
+      "read",
+      "manage"
     ]
   },
   "adminRole": {
@@ -550,6 +564,20 @@
       "delete",
       "moderate",
       "configure"
+    ],
+    "banking": [
+      "read",
+      "import",
+      "reconcile",
+      "unreconcile",
+      "approve",
+      "rules",
+      "accounts",
+      "settings"
+    ],
+    "accounting": [
+      "read",
+      "manage"
     ]
   },
   "editorRole": {
@@ -1049,6 +1077,20 @@
       "delete",
       "moderate",
       "configure"
+    ],
+    "banking": [
+      "read",
+      "import",
+      "reconcile",
+      "unreconcile",
+      "approve",
+      "rules",
+      "accounts",
+      "settings"
+    ],
+    "accounting": [
+      "read",
+      "manage"
     ]
   },
   "orgAdminRole": {
@@ -1291,6 +1333,20 @@
       "delete",
       "moderate",
       "configure"
+    ],
+    "banking": [
+      "read",
+      "import",
+      "reconcile",
+      "unreconcile",
+      "approve",
+      "rules",
+      "accounts",
+      "settings"
+    ],
+    "accounting": [
+      "read",
+      "manage"
     ]
   },
   "orgMemberRole": {
@@ -1404,6 +1460,12 @@
       "read"
     ],
     "classifieds": [
+      "read"
+    ],
+    "banking": [
+      "read"
+    ],
+    "accounting": [
       "read"
     ]
   }

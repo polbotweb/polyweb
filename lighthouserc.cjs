@@ -164,6 +164,9 @@ for (const lang of locales) {
   adminUrls.push(`${BASE}/${lang}/admin/purchasing/returns`);
   adminUrls.push(`${BASE}/${lang}/admin/purchasing/sepa`);
   adminUrls.push(`${BASE}/${lang}/admin/purchasing/imports`);
+  adminUrls.push(`${BASE}/${lang}/admin/banking`);
+  adminUrls.push(`${BASE}/${lang}/admin/banking/settings`);
+  adminUrls.push(`${BASE}/${lang}/admin/accounting`);
 
   adminUrls.push(`${BASE}/${lang}/admin/subscriptions`);
   if (subscriptionsSeed) {

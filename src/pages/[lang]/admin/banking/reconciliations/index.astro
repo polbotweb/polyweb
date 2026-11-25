@@ -1,0 +1,64 @@
+---
+/** Rapprochements : en attente d'approbation d'abord, filtre par statut. */
+import { Effect } from "effect";
+import { requirePermission } from "@lib/auth-guards";
+import BankingPage from "@/components/banking/admin/BankingPage.astro";
+import StatusBadge from "@/components/banking/admin/StatusBadge.astro";
+import { RECONCILIATION_STATUSES } from "@/modules/banking/domain/constants";
+import { getBankingTranslations } from "@/modules/banking/i18n";
+import { bankingQueries } from "@/modules/banking/services/queries.service";
+import { formatDate, formatMinor } from "@/modules/banking/ui/format";
+import { statusTone } from "@/modules/banking/ui/tones";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { banking: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getBankingTranslations(locale);
+const base = `/${locale}/admin/banking`;
+const status = Astro.url.searchParams.get("status") || null;
+const [pending, rows] = await Promise.all([
+  Effect.runPromise(bankingQueries.reconciliations(null, "pending_approval", 100)),
+  Effect.runPromise(bankingQueries.reconciliations(null, status, 100)),
+]);
+---
+<BankingPage locale={locale} authT={authT} title={t.reconciliations.title} active="reconciliations">
+  {pending.length > 0 && (
+    <section class="flex flex-col gap-3" aria-labelledby="recon-pending">
+      <h2 id="recon-pending" class="text-xl font-semibold">{t.reconciliations.pending} ({pending.length})</h2>
+      <ul class="flex flex-col gap-2">
+        {pending.map((row) => (
+          <li class="flex flex-wrap items-center gap-3 rounded-md border p-3">
+            <a class="underline" href={`${base}/reconciliations/${row.id}`}>{formatDate(row.date, locale)} — {formatMinor(row.bankTotalMinor, row.currency, locale)}</a>
+            <span>{t.reconcile.adjustments} {formatMinor(row.adjustmentMinor, row.currency, locale)}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+  <section class="flex flex-col gap-3" aria-labelledby="recon-all">
+    <h2 id="recon-all" class="text-xl font-semibold">{t.reconciliations.history}</h2>
+    <form class="flex flex-wrap items-end gap-3" method="get">
+      <label class="flex flex-col gap-1"><span>{t.fields.status}</span>
+        <select class="min-h-11 rounded-md border px-3" name="status">
+          <option value="">{t.common.all}</option>
+          {RECONCILIATION_STATUSES.map((value) => <option value={value} selected={status === value}>{t.reconStatuses[value]}</option>)}
+        </select>
+      </label>
+      <button class="min-h-11 rounded-md border px-4" type="submit">{t.common.filter}</button>
+    </form>
+    {rows.length === 0 ? <p>{t.common.empty}</p> : (
+      <ul class="flex flex-col gap-2">
+        {rows.map((row) => (
+          <li class="flex flex-wrap items-center gap-3 rounded-md border p-3">
+            <a class="underline" href={`${base}/reconciliations/${row.id}`}>{formatDate(row.date, locale)} — {formatMinor(row.bankTotalMinor, row.currency, locale)}</a>
+            <span>{t.reconModes[row.mode]}</span>
+            {row.score !== null && <span>{t.fields.score} {row.score}</span>}
+            {row.letteringCode && <span>{t.fields.lettering} {row.letteringCode}</span>}
+            <StatusBadge label={t.reconStatuses[row.status]} tone={statusTone(row.status)} />
+          </li>
+        ))}
+      </ul>
+    )}
+  </section>
+</BankingPage>

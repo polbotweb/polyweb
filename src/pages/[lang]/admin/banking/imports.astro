@@ -1,0 +1,154 @@
+---
+/** Import de relevés (fichier → base64 → action), historique, relevés, profils CSV (préréglages modifiables). */
+import { Effect } from "effect";
+import { requirePermission } from "@lib/auth-guards";
+import { Button } from "@atoms/button";
+import ScrollRegion from "@molecules/ScrollRegion/ScrollRegion.astro";
+import BankingPage from "@/components/banking/admin/BankingPage.astro";
+import StatusBadge from "@/components/banking/admin/StatusBadge.astro";
+import { CSV_AMOUNT_MODES, CSV_DATE_FORMATS, CSV_DELIMITERS, CSV_ENCODINGS, CSV_FIELDS } from "@/modules/banking/domain/constants";
+import { CSV_PRESETS, DEFAULT_CSV_PROFILE, type CsvProfile } from "@/modules/banking/domain/parsers";
+import { getBankingTranslations } from "@/modules/banking/i18n";
+import { hasBankingPermission } from "@/modules/banking/permissions";
+import { bankAccountsService, csvProfilesService } from "@/modules/banking/services/accounts.service";
+import { listImports } from "@/modules/banking/services/import.service";
+import { bankingQueries } from "@/modules/banking/services/queries.service";
+import { bankingSettingsService } from "@/modules/banking/services/settings.service";
+import { formatDate, formatMinor } from "@/modules/banking/ui/format";
+import { statusTone } from "@/modules/banking/ui/tones";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { banking: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getBankingTranslations(locale);
+const [accounts, profiles, imports, statements, settings, canImport] = await Promise.all([
+  Effect.runPromise(bankAccountsService.list(null)),
+  Effect.runPromise(csvProfilesService.list(null)),
+  Effect.runPromise(listImports(null, null, 30)),
+  Effect.runPromise(bankingQueries.statements(null, null, 30)),
+  Effect.runPromise(bankingSettingsService.get(null)),
+  hasBankingPermission(Astro, { banking: ["import"] }),
+]);
+const params = Astro.url.searchParams;
+const editingProfile = profiles.find((profile) => profile.id === params.get("profile")) ?? null;
+const preset = CSV_PRESETS[params.get("preset") ?? ""];
+const profile: CsvProfile = editingProfile?.profile ?? preset?.profile ?? DEFAULT_CSV_PROFILE;
+const base = `/${locale}/admin/banking`;
+const input = "min-h-11 rounded-md border px-3";
+const delimiterLabel = (value: string) => (value === "\t" ? "Tab" : value);
+---
+<BankingPage locale={locale} authT={authT} title={t.imports.title} active="imports">
+  {canImport && (
+    <section class="flex flex-col gap-3" aria-labelledby="import-upload">
+      <h2 id="import-upload" class="text-xl font-semibold">{t.imports.upload}</h2>
+      <p class="text-sm text-muted-foreground">{t.imports.uploadHelp}</p>
+      {accounts.length === 0 ? <p><a class="underline" href={`${base}/accounts`}>{t.dashboard.noAccounts}</a></p> : (
+        <form class="grid max-w-4xl gap-4 sm:grid-cols-2" data-banking-form="importStatement" data-result="message" data-message={t.imports.success} data-max-bytes={settings.maxFileBytes} data-too-large={t.imports.tooLarge}>
+          <label class="flex flex-col gap-1"><span>{t.fields.account}</span>
+            <select class={input} name="bankAccountId" required>{accounts.map((account) => <option value={account.id}>{account.label} ({account.currency})</option>)}</select>
+          </label>
+          <label class="flex flex-col gap-1"><span>{t.fields.file}</span><input class={`${input} py-2`} type="file" name="file" required accept=".xml,.sta,.mt940,.txt,.940,.942,.cfonb,.ofx,.qfx,.qif,.csv" /></label>
+          <label class="flex flex-col gap-1"><span>{t.fields.format}</span>
+            <select class={input} name="format" data-type="nullable"><option value="">{t.fields.detectFormat}</option>{settings.allowedFormats.map((format) => <option value={format}>{format.toUpperCase()}</option>)}</select>
+          </label>
+          <label class="flex flex-col gap-1"><span>{t.fields.csvProfile}</span>
+            <select class={input} name="csvProfileId" data-type="nullable"><option value="">{t.common.none}</option>{profiles.map((row) => <option value={row.id}>{row.name}</option>)}</select>
+          </label>
+          <output class="block text-sm sm:col-span-2" data-result-output hidden></output>
+          <p class="text-sm text-destructive sm:col-span-2" role="alert" tabindex="-1" data-form-error hidden></p>
+          <div class="sm:col-span-2"><Button type="submit">{t.imports.submit}</Button></div>
+        </form>
+      )}
+    </section>
+  )}
+
+  <section class="flex flex-col gap-3" aria-labelledby="import-history">
+    <h2 id="import-history" class="text-xl font-semibold">{t.imports.history}</h2>
+    {imports.length === 0 ? <p>{t.common.empty}</p> : (
+      <ScrollRegion labelledby="import-history">
+        <table class="w-full text-sm">
+          <thead><tr class="border-b">
+            <th scope="col" class="p-2 text-start">{t.fields.date}</th><th scope="col" class="p-2 text-start">{t.fields.account}</th><th scope="col" class="p-2 text-start">{t.fields.file}</th>
+            <th scope="col" class="p-2 text-start">{t.fields.format}</th><th scope="col" class="p-2 text-end">{t.fields.inserted}</th><th scope="col" class="p-2 text-end">{t.fields.duplicates}</th>
+            <th scope="col" class="p-2 text-end">{t.fields.merged}</th><th scope="col" class="p-2 text-end">{t.fields.autoMatched}</th><th scope="col" class="p-2 text-start">{t.fields.status}</th>
+          </tr></thead>
+          <tbody>
+            {imports.map(({ import: row, accountLabel }) => (
+              <tr class="border-b">
+                <td class="p-2 whitespace-nowrap">{formatDate(row.createdAt, locale)}</td><td class="p-2">{accountLabel}</td><td class="p-2">{row.fileName ?? row.source}</td>
+                <td class="p-2">{row.format.toUpperCase()}</td><td class="p-2 text-end">{row.insertedCount}</td><td class="p-2 text-end">{row.duplicateCount}</td>
+                <td class="p-2 text-end">{row.mergedCount}</td><td class="p-2 text-end">{row.autoMatchedCount}</td>
+                <td class="p-2"><StatusBadge label={row.status === "FAILED" ? t.imports.failed : t.imports.processed} tone={statusTone(row.status)} />{row.error && <span class="ms-2 text-xs">{row.error}</span>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </ScrollRegion>
+    )}
+  </section>
+
+  <section class="flex flex-col gap-3" aria-labelledby="statements">
+    <h2 id="statements" class="text-xl font-semibold">{t.imports.statements}</h2>
+    {statements.length === 0 ? <p>{t.common.empty}</p> : (
+      <ul class="flex flex-col gap-2">
+        {statements.map(({ statement, accountLabel }) => (
+          <li class="flex flex-wrap items-center gap-3 rounded-md border p-3">
+            <a class="underline" href={`${base}/statements/${statement.id}`}>{accountLabel} — {formatDate(statement.fromDate, locale)} → {formatDate(statement.toDate, locale)}</a>
+            <span>{statement.lineCount} {t.fields.lines}</span>
+            <span>{formatMinor(statement.closingBalanceMinor, statement.currency, locale)}</span>
+            <StatusBadge label={t.continuity[statement.continuityStatus]} tone={statusTone(statement.continuityStatus)} />
+          </li>
+        ))}
+      </ul>
+    )}
+  </section>
+
+  <section class="flex flex-col gap-3" aria-labelledby="csv-profiles">
+    <h2 id="csv-profiles" class="text-xl font-semibold">{t.imports.profiles}</h2>
+    {profiles.length > 0 && (
+      <ul class="flex flex-col gap-2">
+        {profiles.map((row) => (
+          <li class="flex flex-wrap items-center gap-3">
+            <span class="font-medium">{row.name}</span>
+            {canImport && <a class="inline-flex min-h-11 items-center underline" href={`?profile=${row.id}#csv-form`}>{t.rules.edit}</a>}
+            {canImport && <button class="min-h-11 rounded-md border px-3" type="button" data-banking-action="removeCsvProfile" data-payload={JSON.stringify({ id: row.id })} data-confirm={t.common.confirm} data-done={t.common.deleted}>{t.common.delete}</button>}
+          </li>
+        ))}
+      </ul>
+    )}
+    {canImport && (
+      <>
+        <form class="flex flex-wrap items-end gap-3" method="get">
+          <label class="flex flex-col gap-1"><span>{t.imports.preset}</span>
+            <select class={input} name="preset">{Object.entries(CSV_PRESETS).map(([key, value]) => <option value={key} selected={params.get("preset") === key}>{value.label}</option>)}</select>
+          </label>
+          <button class="min-h-11 rounded-md border px-4" type="submit">{t.common.open}</button>
+        </form>
+        <form id="csv-form" class="grid max-w-4xl gap-4 sm:grid-cols-3" data-banking-form="saveCsvProfile" data-done={t.common.saved} data-redirect={`${base}/imports#csv-profiles`}>
+          <h3 class="font-medium sm:col-span-3">{editingProfile ? `${t.rules.edit} — ${editingProfile.name}` : t.imports.newProfile}</h3>
+          <input type="hidden" name="id" data-type="nullable" value={editingProfile?.id ?? ""} />
+          <label class="flex flex-col gap-1 sm:col-span-3"><span>{t.imports.profileName}</span><input class={input} name="name" required maxlength="80" value={editingProfile?.name ?? preset?.label ?? ""} /></label>
+          <label class="flex flex-col gap-1"><span>{t.imports.delimiter}</span><select class={input} name="profile.delimiter">{CSV_DELIMITERS.map((value) => <option value={value} selected={profile.delimiter === value}>{delimiterLabel(value)}</option>)}</select></label>
+          <label class="flex flex-col gap-1"><span>{t.imports.decimal}</span><select class={input} name="profile.decimal">{[",", "."].map((value) => <option value={value} selected={profile.decimal === value}>{value}</option>)}</select></label>
+          <label class="flex flex-col gap-1"><span>{t.imports.dateFormat}</span><select class={input} name="profile.dateFormat">{CSV_DATE_FORMATS.map((value) => <option value={value} selected={profile.dateFormat === value}>{value}</option>)}</select></label>
+          <label class="flex flex-col gap-1"><span>{t.imports.encoding}</span><select class={input} name="profile.encoding">{CSV_ENCODINGS.map((value) => <option value={value} selected={profile.encoding === value}>{value}</option>)}</select></label>
+          <label class="flex flex-col gap-1"><span>{t.imports.amountMode}</span><select class={input} name="profile.amountMode">{CSV_AMOUNT_MODES.map((value) => <option value={value} selected={profile.amountMode === value}>{value === "signed" ? t.imports.signed : t.imports.debitCredit}</option>)}</select></label>
+          <label class="flex flex-col gap-1"><span>{t.imports.skipLines}</span><input class={input} type="number" min="0" max="50" name="profile.skipLines" data-type="int" value={profile.skipLines} /></label>
+          <label class="flex flex-col gap-1"><span>{t.fields.currency} <span class="text-muted-foreground">({t.common.optional})</span></span><input class={`${input} uppercase`} name="profile.currency" data-type="nullable" maxlength="3" value={profile.currency ?? ""} /></label>
+          <label class="flex min-h-11 items-center gap-2"><input type="checkbox" name="profile.hasHeader" data-type="bool" checked={profile.hasHeader} /><span>{t.imports.hasHeader}</span></label>
+          <label class="flex min-h-11 items-center gap-2"><input type="checkbox" name="profile.debitPositive" data-type="bool" checked={profile.debitPositive} /><span>{t.imports.debitPositive}</span></label>
+          <label class="flex min-h-11 items-center gap-2"><input type="checkbox" name="profile.invertSign" data-type="bool" checked={profile.invertSign} /><span>{t.imports.invertSign}</span></label>
+          <fieldset class="grid gap-3 rounded-md border p-4 sm:col-span-3 sm:grid-cols-3">
+            <legend class="px-1 font-medium">{t.imports.columns}</legend>
+            {CSV_FIELDS.map((field) => (
+              <label class="flex flex-col gap-1"><span>{t.imports.columnFields[field]}</span><input class={input} name={`profile.columns.${field}`} maxlength="80" value={profile.columns[field] ?? ""} /></label>
+            ))}
+          </fieldset>
+          <p class="text-sm text-destructive sm:col-span-3" role="alert" tabindex="-1" data-form-error hidden></p>
+          <div class="sm:col-span-3"><Button type="submit">{t.common.save}</Button></div>
+        </form>
+      </>
+    )}
+  </section>
+</BankingPage>

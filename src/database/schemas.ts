@@ -46,3 +46,5 @@ export * from "./schemas/badges.schema";
 export * from "../modules/forums/schema";
 export * from "../core/attributes/schema";
 export * from "../modules/classifieds/schema";
+export * from "../core/accounting/schema";
+export * from "../modules/banking/schema";

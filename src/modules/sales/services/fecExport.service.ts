@@ -19,10 +19,12 @@ import { organization, user } from "@database/schemas/auth.schema";
 import { dbTry, runOrThrow } from "@/lib/effect/run";
 import { PrivateStorage } from "@/lib/storage/private";
 import { toFec } from "@/modules/tax/domain/accounting";
+import { accountingConfig } from "@/core/accounting/service";
+import { bankAccounts, bankLedgerEntries, bankLedgerLines } from "@/modules/banking/schema";
 import { sales, salesDocumentLines, salesFecExports, salesPayments, salesSellerProfiles } from "../schema";
 import {
   buildFecEntries, encodeLatin9, FEC_CONTENT_TYPE, fecSirenOf, fecStorageKey, parseFecPeriod, previousFecPeriod, sha256Hex,
-  type FecDocument, type FecFrozen, type FecPayment, type FecPeriod,
+  type FecBankAccount, type FecDocument, type FecFrozen, type FecLedgerEntry, type FecLettering, type FecPayment, type FecPeriod,
 } from "../domain/fec";
 
 export type FecExportRow = typeof salesFecExports.$inferSelect;
@@ -65,12 +67,42 @@ const frozenOf = (row: FrozenRow): FecFrozen | null =>
     ? { baseCurrency: row.baseCurrency, exchangeRate: row.exchangeRate, netBaseMinor: row.netBaseMinor, taxBaseMinor: row.taxBaseMinor, grossBaseMinor: row.grossBaseMinor }
     : null;
 
+const letteringOf = (code: string | null, date: string | null): FecLettering | null => (code && date ? { code, date } : null);
+
+/** Comptes bancaires du tenant (compte 512xxx et journal propres), par id. */
+const loadBankAccounts = (organizationId: string | null) =>
+  dbTry("sales.fec.bankAccounts", () => getDrizzle().select({
+    id: bankAccounts.id, account: bankAccounts.ledgerAccount, accountLabel: bankAccounts.label, journalCode: bankAccounts.journalCode, journalLabel: bankAccounts.journalLabel,
+  }).from(bankAccounts).where(tenantOf(bankAccounts.organizationId, organizationId))).pipe(
+    Effect.map((rows) => new Map<string, FecBankAccount>(rows.map((row) => [row.id, { account: row.account, accountLabel: row.accountLabel, journalCode: row.journalCode, journalLabel: row.journalLabel }]))),
+  );
+
+/** Écritures du grand livre banque datées de la période (frais, écarts, change, virements, règles). */
+const loadLedgerEntries = (organizationId: string | null, range: FecPeriod) =>
+  Effect.gen(function* () {
+    const entries = yield* dbTry("sales.fec.ledger", () => getDrizzle().select().from(bankLedgerEntries).where(and(
+      tenantOf(bankLedgerEntries.organizationId, organizationId), gte(bankLedgerEntries.date, range.start), lt(bankLedgerEntries.date, range.endExclusive),
+    )).orderBy(asc(bankLedgerEntries.date), asc(bankLedgerEntries.createdAt), asc(bankLedgerEntries.id)));
+    if (entries.length === 0) return [];
+    const lines = yield* dbTry("sales.fec.ledger.lines", () => getDrizzle().select().from(bankLedgerLines)
+      .where(inArray(bankLedgerLines.entryId, entries.map((entry) => entry.id))).orderBy(asc(bankLedgerLines.entryId), asc(bankLedgerLines.position)));
+    const byEntry = Map.groupBy(lines, (line) => line.entryId);
+    return entries.map((entry): FecLedgerEntry => ({
+      id: entry.id, date: entry.date, journalCode: entry.journalCode, journalLabel: entry.journalLabel, pieceRef: entry.pieceRef,
+      lines: (byEntry.get(entry.id) ?? []).map((line) => ({
+        account: line.account, accountLabel: line.accountLabel, auxAccount: line.auxAccount, auxLabel: line.auxLabel, label: line.label,
+        debitMinor: line.debitMinor, creditMinor: line.creditMinor, foreignMinor: line.foreignMinor, foreignCurrency: line.foreignCurrency, lettering: line.lettering, letteringDate: line.letteringDate,
+      })),
+    }));
+  });
+
 const loadDocuments = (organizationId: string | null, range: FecPeriod) =>
   Effect.gen(function* () {
     const db = getDrizzle();
     const docs = yield* dbTry("sales.fec.documents", () => db.select({
       id: sales.id, kind: sales.kind, number: sales.number, issueDate: sales.issueDate, currency: sales.currency,
       customerName: sales.customerName, customerVatNumber: sales.customerVatNumber, netMinor: sales.netMinor, taxMinor: sales.taxMinor, grossMinor: sales.grossMinor,
+      letteringCode: sales.letteringCode, letteringDate: sales.letteringDate,
       ...frozenColumns,
     }).from(sales).where(and(
       tenantOf(sales.organizationId, organizationId),
@@ -87,13 +119,14 @@ const loadDocuments = (organizationId: string | null, range: FecPeriod) =>
       id: doc.id, kind: doc.kind as FecDocument["kind"], number: doc.number!, issueDate: doc.issueDate!, currency: doc.currency,
       customerName: doc.customerName, customerVatNumber: doc.customerVatNumber, netMinor: doc.netMinor, taxMinor: doc.taxMinor, grossMinor: doc.grossMinor,
       lines: (byDocument.get(doc.id) ?? []).map((line) => ({ netMinor: line.netMinor, ratePercent: line.ratePercent })),
-      fx: frozenOf(doc),
+      fx: frozenOf(doc), lettering: letteringOf(doc.letteringCode, doc.letteringDate),
     }));
   });
 
-const loadPayments = (organizationId: string | null, range: FecPeriod) =>
+const loadPayments = (organizationId: string | null, range: FecPeriod, banks: ReadonlyMap<string, FecBankAccount>) =>
   dbTry("sales.fec.payments", () => getDrizzle().select({
     id: salesPayments.id, paidAt: salesPayments.paidAt, amountMinor: salesPayments.amountMinor, currency: salesPayments.currency, method: salesPayments.method,
+    bankAccountId: salesPayments.bankAccountId, letteringCode: salesPayments.letteringCode, letteringDate: salesPayments.letteringDate,
     reference: salesPayments.reference, documentNumber: sales.number, customerName: sales.customerName, customerVatNumber: sales.customerVatNumber,
     ...frozenColumns,
   }).from(salesPayments).innerJoin(sales, eq(sales.id, salesPayments.documentId)).where(and(
@@ -103,6 +136,7 @@ const loadPayments = (organizationId: string | null, range: FecPeriod) =>
     Effect.map((rows) => rows.map((row): FecPayment => ({
       id: row.id, paidAt: row.paidAt, amountMinor: row.amountMinor, currency: row.currency, method: row.method, reference: row.reference,
       documentNumber: row.documentNumber ?? row.id, customerName: row.customerName, customerVatNumber: row.customerVatNumber, fx: frozenOf(row),
+      bankAccount: row.bankAccountId ? banks.get(row.bankAccountId) ?? null : null, lettering: letteringOf(row.letteringCode, row.letteringDate),
     }))),
   );
 
@@ -134,15 +168,16 @@ const loadPurchaseDocuments = (organizationId: string | null, range: FecPeriod) 
         supplierName: supplier?.name ?? "", supplierVatNumber: supplier?.vatNumber ?? null,
         netMinor: doc.netMinor, taxMinor: doc.taxMinor, grossMinor: doc.grossMinor,
         lines: (byDocument.get(doc.id) ?? []).map((line) => ({ netMinor: line.netMinor, ratePercent: String(line.ratePercent) })),
-        fx: frozenOf(doc),
+        fx: frozenOf(doc), lettering: letteringOf(doc.letteringCode, doc.letteringDate),
       };
     });
   });
 
-const loadPurchasePayments = (organizationId: string | null, range: FecPeriod) =>
+const loadPurchasePayments = (organizationId: string | null, range: FecPeriod, banks: ReadonlyMap<string, FecBankAccount>) =>
   dbTry("purchasing.fec.payments", () => getDrizzle().select({
     id: purchasingPayments.id, paidAt: purchasingPayments.paidAt, amountMinor: purchasingPayments.amountMinor, currency: purchasingPayments.currency,
     method: purchasingPayments.method, reference: purchasingPayments.reference, documentNumber: purchasingInvoices.number,
+    bankAccountId: purchasingPayments.bankAccountId, letteringCode: purchasingPayments.letteringCode, letteringDate: purchasingPayments.letteringDate,
     supplierId: purchasingInvoices.supplierId,
     ...purchaseFrozenColumns,
   }).from(purchasingPayments).innerJoin(purchasingInvoices, eq(purchasingInvoices.id, purchasingPayments.invoiceId)).where(and(
@@ -159,7 +194,7 @@ const loadPurchasePayments = (organizationId: string | null, range: FecPeriod) =
       return {
         id: row.id, paidAt: row.paidAt, amountMinor: row.amountMinor, currency: row.currency, method: row.method, reference: row.reference,
         documentNumber: row.documentNumber ?? row.id, supplierName: supplier?.name ?? "", supplierVatNumber: supplier?.vatNumber ?? null,
-        fx: frozenOf(row),
+        fx: frozenOf(row), bankAccount: row.bankAccountId ? banks.get(row.bankAccountId) ?? null : null, lettering: letteringOf(row.letteringCode, row.letteringDate),
       };
     });
   })));
@@ -177,11 +212,14 @@ const produce = (exportId: string, organizationId: string | null, range: FecPeri
     const profile = yield* dbTry("sales.fec.profile", () => getDrizzle().select({ legalId: salesSellerProfiles.legalId, legalIdScheme: salesSellerProfiles.legalIdScheme })
       .from(salesSellerProfiles).where(tenantOf(salesSellerProfiles.organizationId, organizationId)).limit(1)).pipe(Effect.map(([row]) => row ?? null));
     const siren = yield* fecSirenOf(profile);
+    const chart = yield* accountingConfig(organizationId);
+    const banks = yield* loadBankAccounts(organizationId);
     const documents = yield* loadDocuments(organizationId, range);
-    const payments = yield* loadPayments(organizationId, range);
+    const payments = yield* loadPayments(organizationId, range, banks);
     const purchaseDocuments = yield* loadPurchaseDocuments(organizationId, range);
-    const purchasePayments = yield* loadPurchasePayments(organizationId, range);
-    const { entries, summary } = yield* buildFecEntries({ period: range, documents, payments, purchaseDocuments, purchasePayments });
+    const purchasePayments = yield* loadPurchasePayments(organizationId, range, banks);
+    const ledgerEntries = yield* loadLedgerEntries(organizationId, range);
+    const { entries, summary } = yield* buildFecEntries({ period: range, documents, payments, purchaseDocuments, purchasePayments, chart, ledgerEntries });
     const file = yield* toFec(entries, { siren, closingDate: range.lastDay });
     const bytes = encodeLatin9(file.content);
     const storageKey = fecStorageKey(organizationId, range.period, file.filename);

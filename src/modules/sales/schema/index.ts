@@ -71,6 +71,9 @@ export const sales = pgTable("sales_documents", {
   /** Facture du fournisseur de paiement (ex. Stripe `in_…`) dont ce document est la contrepartie (abonnements). */
   providerInvoiceId: text("provider_invoice_id"),
   notes: text("notes"),
+  /** Lettrage du compte client (core/accounting, posé par le rapprochement bancaire). */
+  letteringCode: text("lettering_code"),
+  letteringDate: date("lettering_date", { mode: "string" }),
   createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
@@ -106,9 +109,14 @@ export const salesPayments = pgTable("sales_payments", {
   method: text("method", { enum: PAYMENT_METHODS }).default("bank_transfer").notNull(),
   paidAt: date("paid_at", { mode: "string" }).notNull(),
   reference: text("reference"),
+  /** Rapprochement bancaire (module banking, migration 0058) : compte, rapprochement, lettrage. */
+  bankAccountId: text("bank_account_id"),
+  reconciliationId: text("reconciliation_id"),
+  letteringCode: text("lettering_code"),
+  letteringDate: date("lettering_date", { mode: "string" }),
   createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => [index("sales_payments_document_idx").on(table.documentId)]);
+}, (table) => [index("sales_payments_document_idx").on(table.documentId), index("sales_payments_reconciliation_idx").on(table.reconciliationId)]);
 
 export const salesReminders = pgTable("sales_reminders", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),

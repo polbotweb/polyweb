@@ -1,0 +1,125 @@
+---
+/** Tableau de bord banque : soldes, indicateurs, lignes à traiter (filtres, pagination). */
+import { Effect } from "effect";
+import { requirePermission } from "@lib/auth-guards";
+import ScrollRegion from "@molecules/ScrollRegion/ScrollRegion.astro";
+import BankingPage from "@/components/banking/admin/BankingPage.astro";
+import StatusBadge from "@/components/banking/admin/StatusBadge.astro";
+import { fill, getBankingTranslations } from "@/modules/banking/i18n";
+import { bankingQueries } from "@/modules/banking/services/queries.service";
+import { bankingSettingsService } from "@/modules/banking/services/settings.service";
+import { formatDate, formatMinor } from "@/modules/banking/ui/format";
+import { statusTone } from "@/modules/banking/ui/tones";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { banking: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getBankingTranslations(locale);
+const params = Astro.url.searchParams;
+const PAGE = 50;
+const page = Math.max(Number.parseInt(params.get("page") ?? "1", 10) || 1, 1);
+const filters = {
+  bankAccountId: params.get("account") || null, status: params.get("status") || "open", q: params.get("q") || null,
+  from: params.get("from") || null, to: params.get("to") || null, direction: (params.get("direction") === "in" || params.get("direction") === "out" ? params.get("direction") : null) as "in" | "out" | null,
+};
+const settings = await Effect.runPromise(bankingSettingsService.get(null));
+const [dashboard, list] = await Promise.all([
+  Effect.runPromise(bankingQueries.dashboard(null, settings.agingDays)),
+  Effect.runPromise(bankingQueries.transactions(null, { ...filters, limit: PAGE, offset: (page - 1) * PAGE })),
+]);
+const pages = Math.max(Math.ceil(list.total / PAGE), 1);
+const link = (next: number) => { const query = new URLSearchParams(params); query.set("page", String(next)); return `?${query.toString()}`; };
+const statusOptions = ["open", "unmatched", "suggested", "partial", "pending_approval", "reconciled", "ignored", ""] as const;
+const base = `/${locale}/admin/banking`;
+const cards = [
+  { label: t.dashboard.open, value: String(dashboard.open) },
+  { label: t.dashboard.suggested, value: String(dashboard.suggested) },
+  { label: t.dashboard.pendingApproval, value: String(dashboard.pendingApproval) },
+  { label: fill(t.dashboard.aged, { n: settings.agingDays }), value: String(dashboard.aged) },
+  { label: t.dashboard.automationRate, value: dashboard.automationRate === null ? t.dashboard.noRate : `${dashboard.automationRate} %` },
+];
+---
+<BankingPage locale={locale} authT={authT} title={t.dashboard.title} active="dashboard">
+  {dashboard.accounts.length === 0 ? (
+    <p><a class="underline" href={`${base}/accounts`}>{t.dashboard.noAccounts}</a></p>
+  ) : (
+    <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label={t.nav.accounts}>
+      {dashboard.accounts.map((account) => (
+        <li class="flex flex-col gap-2 rounded-md border p-4">
+          <span class="font-medium">{account.label}</span>
+          <span class="text-xl font-semibold">{formatMinor(account.balance, account.currency, locale)}</span>
+          <span class="text-sm text-muted-foreground">{account.balanceDate ? fill(t.dashboard.balanceAt, { date: formatDate(account.balanceDate, locale) }) : t.common.none}</span>
+          <span class="flex flex-wrap items-center gap-2">
+            <StatusBadge label={t.continuity[account.continuity]} tone={account.continuity === "ok" ? "success" : account.continuity === "unknown" ? "neutral" : "danger"} />
+            <a class="underline" href={`${base}?account=${account.id}&status=open`}>{fill(t.dashboard.openLines, { n: account.open })}</a>
+          </span>
+        </li>
+      ))}
+    </ul>
+  )}
+
+  <dl class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+    {cards.map((card) => (
+      <div class="rounded-md border p-4"><dt class="text-sm text-muted-foreground">{card.label}</dt><dd class="text-xl font-semibold">{card.value}</dd></div>
+    ))}
+  </dl>
+
+  <section class="flex flex-col gap-4" aria-labelledby="banking-lines">
+    <h2 id="banking-lines" class="text-xl font-semibold">{t.dashboard.toReconcile}</h2>
+    <form class="flex flex-wrap items-end gap-3" method="get" role="search">
+      <label class="flex flex-col gap-1"><span>{t.fields.account}</span>
+        <select class="min-h-11 rounded-md border px-3" name="account">
+          <option value="">{t.common.all}</option>
+          {dashboard.accounts.map((account) => <option value={account.id} selected={filters.bankAccountId === account.id}>{account.label}</option>)}
+        </select>
+      </label>
+      <label class="flex flex-col gap-1"><span>{t.fields.status}</span>
+        <select class="min-h-11 rounded-md border px-3" name="status">
+          {statusOptions.map((status) => <option value={status} selected={(filters.status ?? "") === status}>{status === "" ? t.common.all : t.statuses[status]}</option>)}
+        </select>
+      </label>
+      <label class="flex flex-col gap-1"><span>{t.fields.direction}</span>
+        <select class="min-h-11 rounded-md border px-3" name="direction">
+          <option value="">{t.common.all}</option>
+          <option value="in" selected={filters.direction === "in"}>{t.fields.in}</option>
+          <option value="out" selected={filters.direction === "out"}>{t.fields.out}</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1"><span>{t.fields.from}</span><input class="min-h-11 rounded-md border px-3" type="date" name="from" value={filters.from ?? ""} /></label>
+      <label class="flex flex-col gap-1"><span>{t.fields.to}</span><input class="min-h-11 rounded-md border px-3" type="date" name="to" value={filters.to ?? ""} /></label>
+      <label class="flex flex-col gap-1"><span>{t.common.search}</span><input class="min-h-11 rounded-md border px-3" type="search" name="q" value={filters.q ?? ""} maxlength="100" /></label>
+      <button class="min-h-11 rounded-md border px-4" type="submit">{t.common.filter}</button>
+    </form>
+    <p class="text-sm text-muted-foreground" aria-live="polite">{fill(t.common.total, { n: list.total })}</p>
+    {list.rows.length === 0 ? <p>{filters.status === "open" ? t.dashboard.noLines : t.common.empty}</p> : (
+      <ScrollRegion labelledby="banking-lines">
+        <table class="w-full text-sm">
+          <thead><tr class="border-b text-start">
+            <th scope="col" class="p-2 text-start">{t.fields.date}</th><th scope="col" class="p-2 text-start">{t.fields.account}</th><th scope="col" class="p-2 text-start">{t.fields.label}</th>
+            <th scope="col" class="p-2 text-start">{t.fields.counterparty}</th><th scope="col" class="p-2 text-end">{t.fields.amount}</th><th scope="col" class="p-2 text-start">{t.fields.status}</th>
+          </tr></thead>
+          <tbody>
+            {list.rows.map(({ transaction, accountLabel }) => (
+              <tr class="border-b">
+                <td class="p-2 whitespace-nowrap">{formatDate(transaction.bookingDate, locale)}</td>
+                <td class="p-2">{accountLabel}</td>
+                <td class="p-2"><a class="underline" href={`${base}/transactions/${transaction.id}`}>{transaction.label}</a>{transaction.suggestion && <span class="ms-2 text-xs text-muted-foreground">({t.fields.score} {transaction.suggestion.score})</span>}</td>
+                <td class="p-2">{transaction.counterpartyName ?? t.common.none}</td>
+                <td class="p-2 text-end whitespace-nowrap" dir="ltr">{formatMinor(transaction.amountMinor, transaction.currency, locale)}</td>
+                <td class="p-2"><StatusBadge label={t.statuses[transaction.status]} tone={statusTone(transaction.status)} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </ScrollRegion>
+    )}
+    {pages > 1 && (
+      <nav class="flex items-center gap-3" aria-label={t.dashboard.toReconcile}>
+        {page > 1 && <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={link(page - 1)}>{t.common.previous}</a>}
+        <span>{page} / {pages}</span>
+        {page < pages && <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={link(page + 1)}>{t.common.next}</a>}
+      </nav>
+    )}
+  </section>
+</BankingPage>

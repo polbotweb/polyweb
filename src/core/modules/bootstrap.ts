@@ -16,6 +16,11 @@ import { bookingsModule } from "@/modules/bookings/module";
 import { coursesModule } from "@/modules/courses/module";
 import { formationsModule } from "@/modules/formations/module";
 import { classifiedsModule } from "@/modules/classifieds/module";
+import { bankingModule } from "@/modules/banking/module";
+import { bankingApi } from "@/modules/banking/api/public-api";
+import { registerBankingReconciliation } from "@/modules/banking/reconciliation";
+import { registerSalesReconciliation } from "@/modules/sales/reconciliation";
+import { registerPurchasingReconciliation } from "@/modules/purchasing/reconciliation";
 import { registerInternalLinkResolver } from "@/lib/content/internal-link-resolver";
 import { blogInternalLinkResolver } from "@/lib/blog/blog-internal-link";
 import { serviceInternalLinkResolver } from "@/lib/services/services-internal-link";
@@ -59,6 +64,7 @@ export function bootstrapModules(): void {
   registerModule(coursesModule);
   registerModule(formationsModule);
   registerModule(classifiedsModule);
+  registerModule(bankingModule);
   // Modules optionnels, activés par variable d'environnement
   if (process.env.PAYMENTS_ENABLED === "true") registerModule(paymentsModule);
   if (blogModule.searchDefinition) registerSearchResource(blogModule.searchDefinition);
@@ -67,7 +73,11 @@ export function bootstrapModules(): void {
   registerInternalLinkResolver(blogInternalLinkResolver);
   registerInternalLinkResolver(serviceInternalLinkResolver);
   // API publique v1 + événements webhooks : chaque module déclare ses ressources, scopes et événements.
-  for (const api of [salesApi, shopApi, logisticsApi, crmApi, bookingsApi, subscriptionsApi]) registerModuleApi(api);
+  for (const api of [salesApi, shopApi, logisticsApi, crmApi, bookingsApi, subscriptionsApi, bankingApi]) registerModuleApi(api);
+  // Rapprochement bancaire : sources de pièces déclarées par chaque module propriétaire (core/reconciliation).
+  registerSalesReconciliation();
+  registerPurchasingReconciliation();
+  registerBankingReconciliation();
   registerWebhookDispatcher();
   // Notifications : types déclarés par module + abonné du bus (event_outbox → notifications).
   // Modération générique : cibles déclarées par module (registre core/moderation).
