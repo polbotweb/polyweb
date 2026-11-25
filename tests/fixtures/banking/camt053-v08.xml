@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ns:Document xmlns:ns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">
+  <ns:BkToCstmrStmt>
+    <ns:GrpHdr><ns:MsgId>X1</ns:MsgId><ns:CreDtTm>2026-04-01T06:00:00+02:00</ns:CreDtTm></ns:GrpHdr>
+    <ns:Stmt>
+      <ns:Id>S-43</ns:Id><ns:ElctrncSeqNb>43</ns:ElctrncSeqNb>
+      <ns:Acct><ns:Id><ns:IBAN>FR7630006000011234567890189</ns:IBAN></ns:Id><ns:Ccy>EUR</ns:Ccy></ns:Acct>
+      <ns:Bal><ns:Tp><ns:CdOrPrtry><ns:Cd>PRCD</ns:Cd></ns:CdOrPrtry></ns:Tp><ns:Amt Ccy="EUR">2188.30</ns:Amt><ns:CdtDbtInd>CRDT</ns:CdtDbtInd><ns:Dt><ns:Dt>2026-03-31</ns:Dt></ns:Dt></ns:Bal>
+      <ns:Bal><ns:Tp><ns:CdOrPrtry><ns:Cd>CLBD</ns:Cd></ns:CdOrPrtry></ns:Tp><ns:Amt Ccy="EUR">2176.30</ns:Amt><ns:CdtDbtInd>CRDT</ns:CdtDbtInd><ns:Dt><ns:Dt>2026-04-01</ns:Dt></ns:Dt></ns:Bal>
+      <ns:Ntry>
+        <ns:Amt Ccy="EUR">12.00</ns:Amt><ns:CdtDbtInd>DBIT</ns:CdtDbtInd><ns:Sts><ns:Cd>BOOK</ns:Cd></ns:Sts>
+        <ns:BookgDt><ns:DtTm>2026-04-01T09:30:00+02:00</ns:DtTm></ns:BookgDt>
+        <ns:AcctSvcrRef>BQ-0004</ns:AcctSvcrRef>
+        <ns:BkTxCd><ns:Domn><ns:Cd>ACMT</ns:Cd><ns:Fmly><ns:Cd>MDOP</ns:Cd><ns:SubFmlyCd>CHRG</ns:SubFmlyCd></ns:Fmly></ns:Domn></ns:BkTxCd>
+        <ns:NtryDtls><ns:TxDtls><ns:RltdPties><ns:Cdtr><ns:Pty><ns:Nm>Banque Exemple</ns:Nm></ns:Pty></ns:Cdtr></ns:RltdPties><ns:RmtInf><ns:Ustrd>FRAIS TENUE DE COMPTE</ns:Ustrd></ns:RmtInf></ns:TxDtls></ns:NtryDtls>
+      </ns:Ntry>
+    </ns:Stmt>
+  </ns:BkToCstmrStmt>
+</ns:Document>

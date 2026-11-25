@@ -1,0 +1,3 @@
+date,label,amount,currency
+2026-03-31,"Invoice ""FA-2026-0042""",1200.00,EUR
+2026-03-31,=HYPERLINK("x"),-12.00,EUR

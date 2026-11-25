@@ -187,9 +187,12 @@ export const resolveBankingSettings = (input: unknown): Effect.Effect<BankingSet
     };
   });
 
-/** Tolérance de passage automatique en perte / profit pour un montant attendu. */
+/**
+ * Tolérance de passage automatique en perte / profit pour un montant attendu : les deux plafonds
+ * s'appliquent (le plus petit l'emporte), pour qu'une grosse facture n'autorise jamais un gros écart.
+ */
 export const writeOffToleranceFor = (expectedMinor: number, settings: Pick<BankingSettings, "writeOffAbsoluteMinor" | "writeOffPercent">) =>
-  Math.max(settings.writeOffAbsoluteMinor, Math.floor((Math.abs(expectedMinor) * settings.writeOffPercent) / 100));
+  Math.min(settings.writeOffAbsoluteMinor, Math.floor((Math.abs(expectedMinor) * settings.writeOffPercent) / 100));
 
 /** Mode effectif d'un compte : surcharge du compte, sinon celui de l'organisation. */
 export const effectiveAutomationMode = (settings: Pick<BankingSettings, "automationMode">, accountOverride: AutomationMode | null | undefined): AutomationMode =>

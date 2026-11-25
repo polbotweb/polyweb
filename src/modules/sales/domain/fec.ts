@@ -367,7 +367,9 @@ export const buildFecEntries = (input: {
       const none = money(0);
       const label = `${refund ? "Remboursement" : "Règlement"} ${payment.documentNumber} ${payment.customerName}`;
       const aux = customerAuxAccount(payment.customerName, payment.customerVatNumber);
-      const bank = bankOf(payment.bankAccount);
+      // Carte (prestataire de paiement) : compte d'encaissement, soldé au versement (défaut = banque).
+      const bank = payment.bankAccount || payment.method !== "card" ? bankOf(payment.bankAccount)
+        : { account: roles.paymentClearing.code, accountLabel: roles.paymentClearing.label, journalCode: journals.bank.code, journalLabel: journals.bank.label };
       const lettering = letter && payment.lettering ? { lettering: payment.lettering.code, letteringDate: payment.lettering.date } : {};
       drafts.push({
         journal: bank.journalCode, rank: 2, date: payment.paidAt, pieceRef: payment.reference?.trim() || payment.documentNumber, sortId: payment.id,

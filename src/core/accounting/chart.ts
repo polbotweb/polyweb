@@ -16,7 +16,7 @@ export type AccountKind = (typeof ACCOUNT_KINDS)[number];
 export const ACCOUNT_ROLES = [
   "receivable", "payable", "revenue", "expense", "vatCollected", "vatDeductible", "bank",
   "bankFees", "writeOffLoss", "writeOffGain", "fxLoss", "fxGain", "discountGiven", "discountReceived",
-  "suspense", "internalTransfer", "customerAdvance", "supplierAdvance",
+  "suspense", "internalTransfer", "customerAdvance", "supplierAdvance", "paymentClearing",
 ] as const;
 export type AccountRole = (typeof ACCOUNT_ROLES)[number];
 
@@ -64,6 +64,12 @@ export const DEFAULT_ROLE_ACCOUNTS: Readonly<Record<AccountRole, ChartAccount>> 
   internalTransfer: { code: "580000", label: "Virements internes", kind: "asset" },
   customerAdvance: { code: "419100", label: "Clients - avances et acomptes reçus", kind: "liability" },
   supplierAdvance: { code: "409100", label: "Fournisseurs - avances et acomptes versés", kind: "asset" },
+  /**
+   * Encaissements par carte (prestataire de paiement) en attente de versement. Par défaut le compte
+   * banque lui-même (FEC inchangé) ; un compte dédié (ex. 511500) isole les fonds chez Stripe jusqu'au
+   * versement, rapproché ensuite net des commissions.
+   */
+  paymentClearing: { code: "512000", label: "Banque", kind: "asset" },
 };
 
 export const DEFAULT_JOURNALS: Readonly<Record<JournalKind, Journal>> = {

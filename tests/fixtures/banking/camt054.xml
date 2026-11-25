@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.054.001.04">
+  <BkToCstmrDbtCdtNtfctn>
+    <GrpHdr><MsgId>N1</MsgId><CreDtTm>2026-03-31T11:00:00</CreDtTm></GrpHdr>
+    <Ntfctn>
+      <Id>N1-1</Id>
+      <Acct><Id><IBAN>FR7630006000011234567890189</IBAN></Id><Ccy>EUR</Ccy></Acct>
+      <Ntry>
+        <Amt Ccy="EUR">1200.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-03-31</Dt></BookgDt>
+        <NtryDtls><TxDtls><Refs><EndToEndId>FA-2026-0042</EndToEndId></Refs><RmtInf><Ustrd>Facture FA-2026-0042</Ustrd></RmtInf></TxDtls></NtryDtls>
+      </Ntry>
+    </Ntfctn>
+  </BkToCstmrDbtCdtNtfctn>
+</Document>
