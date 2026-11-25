@@ -29,6 +29,7 @@ SSR multi-language web application with complete authentication, organisation ma
 - 🎨 **Starwind** — 47+ accessible Astro UI components
 - 🌍 **i18n** — fr, en, es, ar (RTL) with localised routes
 - 🛒 **Purchasing** — suppliers, purchase orders, approvals, 3-way matching, SEPA, e-invoices, punch-out (see `docs/purchasing.md`)
+- 🏦 **Banking** — bank statement imports (CAMT.053, OFX, MT940, CSV), matching rules, reconciliation with lettering, bank ledger feeding the FEC, Stripe payouts, optional GoCardless feeds (see `docs/banking.md`, `docs/accounting.md`)
 - 📋 **CMS** — Pages, typed JSON sections, navigation, scheduling, versioning, import/export
 - 📁 **Media** — Upload, Sharp image processing, folder organisation
 - 📧 **SMTP** — Brevo / Resend / Nodemailer + dead-letter queue
@@ -169,6 +170,8 @@ atoms/
 auth/
   SecuritySettings.astro
   SignInAlternatives.astro
+banking/
+  admin/
 blocks/
   BlockEditor.astro
   BlockRenderer.astro
@@ -540,6 +543,7 @@ migrations/
   0055_forums_core.sql
   0056_classifieds_core.sql
   0057_purchasing_invoices_reorder.sql
+  0058_banking_reconciliation.sql
   down/
     0052_notifications_core.down.sql
     0053_moderation_core.down.sql
@@ -547,6 +551,7 @@ migrations/
     0055_forums_core.down.sql
     0056_classifieds_core.down.sql
     0057_purchasing_invoices_reorder.down.sql
+    0058_banking_reconciliation.down.sql
   meta/
     0000_snapshot.json
     0001_snapshot.json
@@ -602,6 +607,7 @@ migrations/
     0055_snapshot.json
     0056_snapshot.json
     0057_snapshot.json
+    0058_snapshot.json
     _journal.json
 schemas/
   api.schema.ts
@@ -856,6 +862,7 @@ schemas.ts
 - `0055_forums_core.sql`
 - `0056_classifieds_core.sql`
 - `0057_purchasing_invoices_reorder.sql`
+- `0058_banking_reconciliation.sql`
 
 ### Commands
 
@@ -974,6 +981,11 @@ src/middleware.ts
 
 ```
 src/core/
+accounting/
+  chart.ts
+  index.ts
+  schema.ts
+  service.ts
 admin/
   confirmation.ts
   filter-contract.ts
@@ -1137,6 +1149,14 @@ presentation/
 preview/
   draft-preview.ts
   index.ts
+reconciliation/
+  candidates.ts
+  index.ts
+  normalize.ts
+  registry.ts
+  rf.ts
+  scoring.ts
+  types.ts
 refunds/
   admin.ts
   errors.ts
@@ -1154,6 +1174,8 @@ search/
   index.ts
   postgres.ts
   registry.ts
+secrets/
+  index.ts
 seo/
   index.ts
 sepa/
@@ -1167,6 +1189,8 @@ taxonomy/
   index.ts
 workflow/
   index.ts
+xml/
+  index.ts
 src/modules/
 api/
   domain/
@@ -1174,6 +1198,70 @@ api/
     resources.ts
     tokens.ts
     v1.ts
+banking/
+  actions/
+    index.ts
+  api/
+    public-api.ts
+  capabilities.ts
+  client/
+    admin.ts
+    init.ts
+  domain/
+    accounts.ts
+    constants.ts
+    errors.ts
+    export.ts
+    feeds.ts
+    import.ts
+    ledger.ts
+    parsers/
+      camt.ts
+      cfonb.ts
+      csv.ts
+      index.ts
+      mt940.ts
+      ofx.ts
+      qif.ts
+      types.ts
+      values.ts
+    payouts.ts
+    rules.ts
+    settings.ts
+  i18n/
+    ar.ts
+    en.ts
+    es.ts
+    fr.ts
+    index.ts
+  module.ts
+  notifications/
+    definitions.ts
+  permissions/
+    index.ts
+    statements.ts
+  reconciliation.ts
+  schema/
+    index.ts
+  services/
+    accounts.service.ts
+    context.ts
+    cron.service.ts
+    feeds.provider.ts
+    feeds.service.ts
+    import.service.ts
+    ledger.service.ts
+    matching.service.ts
+    notify.service.ts
+    payouts.service.ts
+    queries.service.ts
+    reconcile.service.ts
+    rules.service.ts
+    settings.service.ts
+    shared.ts
+  ui/
+    format.ts
+    tones.ts
 blog/
   actions/
     index.ts
@@ -1596,6 +1684,7 @@ purchasing/
   permissions/
     index.ts
     statements.ts
+  reconciliation.ts
   schema/
     extended.ts
     index.ts
@@ -1658,6 +1747,7 @@ sales/
     statements.ts
   public/
     pay-page.ts
+  reconciliation.ts
   refunds.ts
   schema/
     index.ts
@@ -1865,7 +1955,9 @@ src/pages/
     orders/
     subscriptions/
   admin/
+    accounting/
     audit.astro
+    banking/
     blog/
     bookings/
     classifieds/
@@ -1970,6 +2062,7 @@ api/
   content-import.ts
   cron/
     audit-retention.ts
+    banking.ts
     classifieds.ts
     fx-rates.ts
     notifications.ts

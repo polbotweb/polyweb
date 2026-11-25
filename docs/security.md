@@ -422,3 +422,11 @@ Le contrôle CSRF par Origin (`src/lib/security/origin-check.ts`) accepte une re
 servi sur un hôte non listé reste utilisable, et une requête forgée depuis un autre site (Origin de
 l'attaquant, Host de la cible) reste refusée. Lister les domaines dans `ALLOWED_HOSTS` reste
 recommandé pour que `Astro.url` reflète le domaine réellement servi.
+
+## 13. Banque : identifiants d'agrégateur, fichiers et exports
+
+- **Identifiants GoCardless par organisation** : scellés par `core/secrets` (chiffrement authentifié, finalité `banking.feed.gocardless`), jamais renvoyés au navigateur (`publicFeedView` n'expose qu'un indice masqué et `hasCredentials`), jamais journalisés ni audités en clair. Flux désactivés par défaut. GoCardless n'accepte plus de nouvelles inscriptions Bank Account Data depuis juillet 2025 (comptes existants seulement).
+- **Fichiers de relevé** : taille et nombre de lignes plafonnés par organisation, XML sans DTD ni entité (XXE, « billion laughs »), stockage privé `banking/{org}/imports/…` (`cache-control: private, no-store`), purge après la durée de conservation.
+- **Export CSV du grand livre** : cellules commençant par `=`, `+`, `-`, `@`, tabulation ou retour chariot préfixées d'une apostrophe (injection de formules, OWASP).
+- **Cloisonnement** : chaque action vérifie la permission `banking:*` / `accounting:*` **et** l'organisation ; toutes les requêtes filtrent par `organization_id`. Séparation des tâches : l'auteur d'un rapprochement avec perte/profit soumis à approbation ne peut pas l'approuver (sauf administrateur plateforme). Voir [banque](./banking.md).
+

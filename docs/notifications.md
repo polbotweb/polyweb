@@ -21,6 +21,13 @@ export const salesNotifications = defineModuleNotifications(
 Libellés : `types["<module>:<TYPE>"]` dans `src/core/notifications/i18n.ts` (fr/en/es/ar, clés
 identiques vérifiées par test). Sans libellé, la liste affiche le titre stocké, puis la catégorie.
 
+### Module banque
+
+Types `banking:IMPORT_DONE`, `IMPORT_FAILED`, `CONTINUITY_BREAK`, `DAILY_DIGEST`, `AGING`,
+`WRITE_OFF_APPROVAL`, `SEPA_RETURN`, `FEED_ERROR` (catégorie `banking`, in-app). Chaque type est
+activable par organisation (réglages banque) ; destinataires = rôles réglés (propriétaires et
+administrateurs par défaut) ; déduplication par jour et par ressource. Voir [banque](./banking.md).
+
 ## API
 
 | Fonction | Rôle |
@@ -42,6 +49,7 @@ déclarent un `event` (ex. catégorie `moderation` : `CONTENT_HIDDEN` / `CONTENT
 | --- | --- | --- |
 | `POST /api/cron/notifications` | chaque minute | envoie l'outbox e-mail |
 | `POST /api/cron/reminders` | quotidienne | relances (`sales.invoices` : factures échues, une relance par niveau, idempotente) |
+| `POST /api/cron/banking` | toutes les heures | banque : chaque organisation à son heure (`cronHour`, Europe/Paris), une fois par jour — flux et versements si activés, rapprochement automatique, ancienneté, résumé quotidien, purge des fichiers bruts ([banque](./banking.md)) |
 
 ## Pages
 

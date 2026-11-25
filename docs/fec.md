@@ -10,6 +10,8 @@ des documents de vente et des règlements. Domaine pur : `domain/fec.ts` ; orche
   411 client, 706 produits HT et 44571 TVA collectée par taux ; avoir = sens inversé.
 - **HA** (achats) : une écriture par facture / avoir fournisseur émis dans la période (`buildPurchaseEntry`, comptes 401 / 607 / 44566) et les règlements fournisseurs (401 / 512). Voir le module achats (`docs/purchasing.md`, section « Pour les comptables »).
 - **BQ** (banque) : une écriture par encaissement (512 / 411) ou remboursement (sens inversé) daté du mois.
+- **Plan comptable par organisation** (`core/accounting`, [comptabilité](./accounting.md)) : comptes par rôle et journaux réglables ; **sans réglage, le fichier est identique à l'historique** (mêmes comptes 411/706/44571/401/607/44566/512, journaux VE/HA/BQ).
+- **Rapprochement bancaire** ([banque](./banking.md)) : un règlement rapproché utilise le compte et le journal de **son compte bancaire** ; les écritures du **grand livre banque** (frais, escompte, perte/profit, change, virements internes, règles, contre-passations) sont ajoutées, équilibrées et vérifiées ; les lignes de comptes de tiers portent `EcritureLet` / `DateLet` si le lettrage est activé.
 - Tri déterministe (date, journal VE puis HA puis BQ, pièce, identifiant) ; `EcritureNum` = `<journal><AAAAMM><seq:5>`.
 - Chaque écriture est équilibrée, totaux débit = crédit vérifiés ; documents en devise exportés en contre-valeur EUR figée avec `Montantdevise`/`Idevise` (voir [multi-devises](./multi-currency.md)) ; devise de tenue autre que EUR → échec motivé.
 - Fichier `<SIREN>FEC<AAAAMMJJ>.txt` (date de clôture de la période), 18 colonnes, séparateur `|`, fins de ligne
