@@ -200,6 +200,14 @@ for (const lang of locales) {
   adminUrls.push({ url: `${BASE}/${lang}/admin/purchasing/returns`, headers: { Cookie: adminCookie } });
   adminUrls.push({ url: `${BASE}/${lang}/admin/purchasing/sepa`, headers: { Cookie: adminCookie } });
   adminUrls.push({ url: `${BASE}/${lang}/admin/purchasing/imports`, headers: { Cookie: adminCookie } });
+  adminUrls.push({ url: `${BASE}/${lang}/admin/banking`, headers: { Cookie: adminCookie } });
+  adminUrls.push({ url: `${BASE}/${lang}/admin/banking/accounts`, headers: { Cookie: adminCookie } });
+  adminUrls.push({ url: `${BASE}/${lang}/admin/banking/imports`, headers: { Cookie: adminCookie } });
+  adminUrls.push({ url: `${BASE}/${lang}/admin/banking/reconciliations`, headers: { Cookie: adminCookie } });
+  adminUrls.push({ url: `${BASE}/${lang}/admin/banking/rules`, headers: { Cookie: adminCookie } });
+  adminUrls.push({ url: `${BASE}/${lang}/admin/banking/ledger`, headers: { Cookie: adminCookie } });
+  adminUrls.push({ url: `${BASE}/${lang}/admin/banking/settings`, headers: { Cookie: adminCookie } });
+  adminUrls.push({ url: `${BASE}/${lang}/admin/accounting`, headers: { Cookie: adminCookie } });
 
   // Abonnements : liste (formules + abonnements), fiche formule (tarifs) et fiche abonnement.
   adminUrls.push({ url: `${BASE}/${lang}/admin/subscriptions`, headers: { Cookie: adminCookie } });
