@@ -1,0 +1,56 @@
+---
+/** Détail d'un relevé : soldes, continuité, lignes. */
+import { Effect, Result } from "effect";
+import { requirePermission } from "@lib/auth-guards";
+import ScrollRegion from "@molecules/ScrollRegion/ScrollRegion.astro";
+import BankingPage from "@/components/banking/admin/BankingPage.astro";
+import StatusBadge from "@/components/banking/admin/StatusBadge.astro";
+import { getBankingTranslations } from "@/modules/banking/i18n";
+import { bankingQueries } from "@/modules/banking/services/queries.service";
+import { formatDate, formatMinor } from "@/modules/banking/ui/format";
+import { statusTone } from "@/modules/banking/ui/tones";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { banking: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getBankingTranslations(locale);
+const base = `/${locale}/admin/banking`;
+const found = await Effect.runPromise(Effect.result(bankingQueries.statement(null, Astro.params.id ?? "")));
+if (Result.isFailure(found)) return Astro.redirect(`${base}/imports`);
+const { statement, accountLabel, fileName, format, lines } = found.success;
+const facts: readonly [string, string][] = [
+  [t.fields.account, accountLabel], [t.fields.file, `${fileName ?? t.common.none} (${format.toUpperCase()})`],
+  [t.fields.from, formatDate(statement.fromDate, locale)], [t.fields.to, formatDate(statement.toDate, locale)],
+  [t.imports.opening, formatMinor(statement.openingBalanceMinor, statement.currency, locale)], [t.imports.closing, formatMinor(statement.closingBalanceMinor, statement.currency, locale)],
+  [t.imports.continuityDelta, formatMinor(statement.continuityDeltaMinor, statement.currency, locale)], [t.fields.lines, String(statement.lineCount)],
+];
+---
+<BankingPage locale={locale} authT={authT} title={`${t.imports.statement} — ${accountLabel}`} active="imports" back={{ href: `${base}/imports`, label: t.nav.imports }}>
+  <div class="flex flex-wrap items-center gap-3"><StatusBadge label={t.continuity[statement.continuityStatus]} tone={statusTone(statement.continuityStatus)} /></div>
+  <dl class="grid gap-3 text-sm sm:grid-cols-4">
+    {facts.map(([label, value]) => <div class="rounded-md border p-3"><dt class="text-muted-foreground">{label}</dt><dd class="font-medium">{value}</dd></div>)}
+  </dl>
+  <h2 id="statement-lines" class="text-xl font-semibold">{t.fields.lines}</h2>
+  {lines.length === 0 ? <p>{t.common.empty}</p> : (
+    <ScrollRegion labelledby="statement-lines">
+      <table class="w-full text-sm">
+        <thead><tr class="border-b">
+          <th scope="col" class="p-2 text-start">{t.fields.date}</th><th scope="col" class="p-2 text-start">{t.fields.label}</th><th scope="col" class="p-2 text-start">{t.fields.counterparty}</th>
+          <th scope="col" class="p-2 text-end">{t.fields.amount}</th><th scope="col" class="p-2 text-start">{t.fields.status}</th>
+        </tr></thead>
+        <tbody>
+          {lines.map((line) => (
+            <tr class="border-b">
+              <td class="p-2 whitespace-nowrap">{formatDate(line.bookingDate, locale)}</td>
+              <td class="p-2"><a class="underline" href={`${base}/transactions/${line.id}`}>{line.label}</a></td>
+              <td class="p-2">{line.counterpartyName ?? t.common.none}</td>
+              <td class="p-2 text-end whitespace-nowrap" dir="ltr">{formatMinor(line.amountMinor, line.currency, locale)}</td>
+              <td class="p-2"><StatusBadge label={t.statuses[line.status]} tone={statusTone(line.status)} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </ScrollRegion>
+  )}
+</BankingPage>

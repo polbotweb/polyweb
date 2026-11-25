@@ -176,7 +176,7 @@ const storedPlan = (request: ReconcileRequest & { readonly note: string | null }
   transactionIds: [...request.transactionIds],
   allocations: request.allocations.map((a) => ({ source: a.source, targetId: a.targetId, amountMinor: a.amountMinor })),
   // Écarts explicites seulement : le change est recalculé à l'approbation.
-  adjustments: plan.adjustments.filter((a, index) => index < request.adjustments.length).map((a) => ({ kind: a.kind, bankEffectMinor: a.bankEffectMinor })),
+  adjustments: plan.adjustments.filter((_adjustment, index) => index < request.adjustments.length).map((a) => ({ kind: a.kind, bankEffectMinor: a.bankEffectMinor })),
   note: request.note,
 });
 

@@ -1,0 +1,89 @@
+---
+/** Comptabilité : comptes par rôle, journaux, lettrage FEC, plan comptable de l'organisation. */
+import { Effect } from "effect";
+import { requirePermission } from "@lib/auth-guards";
+import { Button } from "@atoms/button";
+import BankingPage from "@/components/banking/admin/BankingPage.astro";
+import StatusBadge from "@/components/banking/admin/StatusBadge.astro";
+import { ACCOUNT_KINDS, ACCOUNT_ROLES, DEFAULT_JOURNALS, DEFAULT_ROLE_ACCOUNTS, JOURNAL_KINDS } from "@/core/accounting/chart";
+import { accountingConfig, listTenantAccounts } from "@/core/accounting/service";
+import { fill, getBankingTranslations } from "@/modules/banking/i18n";
+import { hasBankingPermission } from "@/modules/banking/permissions";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { accounting: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getBankingTranslations(locale);
+const [config, tenantAccounts, canManage] = await Promise.all([
+  Effect.runPromise(accountingConfig(null)),
+  Effect.runPromise(listTenantAccounts(null)),
+  hasBankingPermission(Astro, { accounting: ["manage"] }),
+]);
+const tenantCodes = new Map(tenantAccounts.map((row) => [row.code, row]));
+const input = "min-h-11 rounded-md border px-3";
+---
+<BankingPage locale={locale} authT={authT} title={t.accounting.title} active={null} sidebar="accounting">
+  <p class="text-sm text-muted-foreground">{t.accounting.help}</p>
+  <form class="flex max-w-4xl flex-col gap-6" data-banking-form="saveAccountingSettings" data-done={t.common.saved}>
+    <fieldset class="grid gap-3 rounded-md border p-4 sm:grid-cols-2" disabled={!canManage}>
+      <legend class="px-1 font-medium">{t.accounting.roles}</legend>
+      {ACCOUNT_ROLES.map((role) => (
+        <label class="flex flex-col gap-1">
+          <span>{t.accounting.roleLabels[role]}</span>
+          <select class={input} name={`roleCodes.${role}`}>
+            {config.accounts.map((account) => <option value={account.code} selected={config.roles[role].code === account.code}>{account.code} — {account.label}</option>)}
+          </select>
+          <span class="text-xs text-muted-foreground">{fill(t.accounting.defaultValue, { value: `${DEFAULT_ROLE_ACCOUNTS[role].code} — ${DEFAULT_ROLE_ACCOUNTS[role].label}` })}</span>
+        </label>
+      ))}
+    </fieldset>
+    <fieldset class="grid gap-3 rounded-md border p-4 sm:grid-cols-2" disabled={!canManage}>
+      <legend class="px-1 font-medium">{t.accounting.journals}</legend>
+      {JOURNAL_KINDS.map((kind) => (
+        <div class="grid grid-cols-3 gap-2">
+          <span class="col-span-3 font-medium">{t.accounting.journalKinds[kind]}</span>
+          <label class="flex flex-col gap-1"><span>{t.accounting.code}</span><input class={input} name={`journals.${kind}.code`} required maxlength="10" value={config.journals[kind].code} /></label>
+          <label class="col-span-2 flex flex-col gap-1"><span>{t.accounting.label}</span><input class={input} name={`journals.${kind}.label`} required maxlength="60" value={config.journals[kind].label} /></label>
+          <span class="col-span-3 text-xs text-muted-foreground">{fill(t.accounting.defaultValue, { value: `${DEFAULT_JOURNALS[kind].code} — ${DEFAULT_JOURNALS[kind].label}` })}</span>
+        </div>
+      ))}
+    </fieldset>
+    <label class="flex min-h-11 items-center gap-2"><input type="checkbox" name="letteringEnabled" data-type="bool" checked={config.letteringEnabled} disabled={!canManage} /><span>{t.accounting.lettering}</span></label>
+    <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+    {canManage && <div><Button type="submit">{t.common.save}</Button></div>}
+  </form>
+
+  <section class="flex flex-col gap-3" aria-labelledby="chart">
+    <h2 id="chart" class="text-xl font-semibold">{t.accounting.accounts}</h2>
+    <ul class="flex flex-col gap-1">
+      {[...config.accounts, ...tenantAccounts.filter((row) => !row.active).map((row) => ({ code: row.code, label: row.label, kind: row.kind }))].sort((a, b) => a.code.localeCompare(b.code)).map((account) => {
+        const own = tenantCodes.get(account.code);
+        const active = own ? own.active : true;
+        return (
+          <li class="flex flex-wrap items-center gap-3 border-b py-1">
+            <span class="w-24 font-mono" dir="ltr">{account.code}</span>
+            <span class="flex-1">{account.label}</span>
+            <span class="text-sm text-muted-foreground">{t.accounting.kinds[account.kind]}</span>
+            {!active && <StatusBadge label={t.accounting.inactive} />}
+            {canManage && own && (
+              <button class="min-h-11 rounded-md border px-3" type="button" data-banking-action="setChartAccountActive" data-payload={JSON.stringify({ code: account.code, active: !active })} data-done={t.common.saved}>
+                {active ? t.accounting.deactivate : t.accounting.activate}
+              </button>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+    {canManage && (
+      <form class="grid max-w-4xl gap-3 sm:grid-cols-4" data-banking-form="upsertChartAccount" data-done={t.common.saved}>
+        <h3 class="font-medium sm:col-span-4">{t.accounting.addAccount}</h3>
+        <label class="flex flex-col gap-1"><span>{t.accounting.code}</span><input class={input} name="code" required minlength="3" maxlength="20" pattern="[0-9A-Za-z]+" /></label>
+        <label class="flex flex-col gap-1 sm:col-span-2"><span>{t.accounting.label}</span><input class={input} name="label" required maxlength="120" /></label>
+        <label class="flex flex-col gap-1"><span>{t.accounting.kind}</span><select class={input} name="kind">{ACCOUNT_KINDS.map((kind) => <option value={kind}>{t.accounting.kinds[kind]}</option>)}</select></label>
+        <p class="text-sm text-destructive sm:col-span-4" role="alert" tabindex="-1" data-form-error hidden></p>
+        <div class="sm:col-span-4"><Button type="submit">{t.common.save}</Button></div>
+      </form>
+    )}
+  </section>
+</BankingPage>

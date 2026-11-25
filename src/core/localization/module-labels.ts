@@ -1,6 +1,6 @@
 import type { Locale } from "@i18n/config";
 
-export type ModuleId = "blog" | "services" | "tax" | "sales" | "crm" | "logistics" | "purchasing" | "subscriptions" | "bookings" | "events" | "formations" | "courses" | "shop" | "forums" | "classifieds";
+export type ModuleId = "blog" | "services" | "tax" | "sales" | "crm" | "logistics" | "purchasing" | "banking" | "accounting" | "subscriptions" | "bookings" | "events" | "formations" | "courses" | "shop" | "forums" | "classifieds";
 
 const labels: Record<ModuleId, Record<Locale, string>> = {
   blog: { fr: "Blog", en: "Blog", es: "Blog", ar: "المدونة" },
@@ -10,6 +10,8 @@ const labels: Record<ModuleId, Record<Locale, string>> = {
   crm: { fr: "CRM", en: "CRM", es: "CRM", ar: "إدارة العملاء" },
   logistics: { fr: "Logistique", en: "Logistics", es: "Logística", ar: "الخدمات اللوجستية" },
   purchasing: { fr: "Achats", en: "Purchasing", es: "Compras", ar: "المشتريات" },
+  banking: { fr: "Banque", en: "Banking", es: "Banca", ar: "البنوك" },
+  accounting: { fr: "Comptabilité", en: "Accounting", es: "Contabilidad", ar: "المحاسبة" },
   subscriptions: { fr: "Abonnements", en: "Subscriptions", es: "Suscripciones", ar: "الاشتراكات" },
   bookings: { fr: "Réservations", en: "Bookings", es: "Reservas", ar: "الحجوزات" },
   events: { fr: "Événements", en: "Events", es: "Eventos", ar: "الفعاليات" },

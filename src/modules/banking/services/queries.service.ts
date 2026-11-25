@@ -9,7 +9,7 @@ import { getDrizzle } from "@database/drizzle";
 import { fail } from "@/lib/effect/failure";
 import { dbTry } from "@/lib/effect/run";
 import { TRANSACTION_STATUSES, type TransactionStatus } from "../domain/constants";
-import { bankAccounts, bankImports, bankReconciliations, bankStatements, bankTransactions } from "../schema";
+import { bankAccounts, bankImports, bankReconciliationLines, bankReconciliations, bankStatements, bankTransactions } from "../schema";
 import { bankingToday, tenant } from "./shared";
 
 export interface TransactionFilters {
@@ -77,6 +77,13 @@ export const bankingQueries = {
     dbTry("banking.reconciliations.list", () => getDrizzle().select().from(bankReconciliations)
       .where(and(tenant(bankReconciliations.organizationId, organizationId), status === "applied" || status === "pending_approval" || status === "rejected" || status === "reversed" ? eq(bankReconciliations.status, status) : undefined))
       .orderBy(desc(bankReconciliations.createdAt)).limit(Math.min(Math.max(limit, 1), 200))),
+
+  /** Rapprochements (tous statuts) touchant une ligne de relevé, du plus récent au plus ancien. */
+  reconciliationsOfTransaction: (organizationId: string | null, transactionId: string) =>
+    dbTry("banking.tx.reconciliations", () => getDrizzle().select({ reconciliation: bankReconciliations, amountMinor: bankReconciliationLines.amountMinor }).from(bankReconciliationLines)
+      .innerJoin(bankReconciliations, eq(bankReconciliations.id, bankReconciliationLines.reconciliationId))
+      .where(and(eq(bankReconciliationLines.transactionId, transactionId), tenant(bankReconciliations.organizationId, organizationId)))
+      .orderBy(desc(bankReconciliations.createdAt)).limit(50)),
 
   /** Indicateurs du tableau de bord (une requête agrégée par bloc). */
   dashboard: (organizationId: string | null, agingDays: number) =>

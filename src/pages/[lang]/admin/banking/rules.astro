@@ -1,0 +1,111 @@
+---
+/** Règles de rapprochement : liste ordonnée, création / modification, simulation, réordonnancement. */
+import { Effect } from "effect";
+import { requirePermission } from "@lib/auth-guards";
+import { Button } from "@atoms/button";
+import BankingPage from "@/components/banking/admin/BankingPage.astro";
+import StatusBadge from "@/components/banking/admin/StatusBadge.astro";
+import { LABEL_OPERATORS, RULE_ACTIONS, RULE_DIRECTIONS } from "@/modules/banking/domain/constants";
+import { getBankingTranslations } from "@/modules/banking/i18n";
+import { hasBankingPermission } from "@/modules/banking/permissions";
+import { bankAccountsService } from "@/modules/banking/services/accounts.service";
+import { bankRulesService } from "@/modules/banking/services/rules.service";
+import { formatDate } from "@/modules/banking/ui/format";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { banking: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getBankingTranslations(locale);
+const base = `/${locale}/admin/banking`;
+const [rules, accounts, canEdit] = await Promise.all([
+  Effect.runPromise(bankRulesService.list(null)),
+  Effect.runPromise(bankAccountsService.list(null)),
+  hasBankingPermission(Astro, { banking: ["rules"] }),
+]);
+const editing = rules.find((rule) => rule.id === Astro.url.searchParams.get("edit")) ?? null;
+const c = editing?.conditions;
+const a = editing?.actions;
+const ids = rules.map((rule) => rule.id);
+const moved = (index: number, delta: number) => { const next = [...ids]; const [item] = next.splice(index, 1); next.splice(index + delta, 0, item!); return next; };
+const accountLabel = (id: string | null) => accounts.find((account) => account.id === id)?.label ?? t.rules.anyAccount;
+const input = "min-h-11 rounded-md border px-3";
+---
+<BankingPage locale={locale} authT={authT} title={t.rules.title} active="rules">
+  <section class="flex flex-col gap-3" aria-labelledby="rules-list">
+    <h2 id="rules-list" class="text-xl font-semibold">{t.rules.title}</h2>
+    {rules.length === 0 ? <p>{t.rules.empty}</p> : (
+      <ol class="flex flex-col gap-2">
+        {rules.map((rule, index) => (
+          <li class="flex flex-wrap items-center gap-3 rounded-md border p-3">
+            <span class="font-medium">{index + 1}. {rule.name}</span>
+            {!rule.active && <StatusBadge label={t.accounting.inactive} />}
+            <span class="text-sm">{accountLabel(rule.conditions.bankAccountId)} · {rule.conditions.direction === "any" ? t.rules.any : rule.conditions.direction === "in" ? t.fields.in : t.fields.out}{rule.conditions.label && ` · ${t.rules.operators[rule.conditions.label.operator]} « ${rule.conditions.label.value} »`}</span>
+            <span class="text-sm">→ {t.rules.kinds[rule.actions.kind]}{rule.actions.accountCode && ` ${rule.actions.accountCode}`}</span>
+            <span class="text-sm text-muted-foreground">{t.rules.hits} : {rule.hitCount}{rule.lastHitAt && ` (${formatDate(rule.lastHitAt, locale)})`}</span>
+            {canEdit && (
+              <span class="ms-auto flex flex-wrap gap-2">
+                {index > 0 && <button class="min-h-11 rounded-md border px-3" type="button" data-banking-action="reorderRules" data-payload={JSON.stringify({ ids: moved(index, -1) })} aria-label={`${t.rules.moveUp} — ${rule.name}`}>↑</button>}
+                {index < rules.length - 1 && <button class="min-h-11 rounded-md border px-3" type="button" data-banking-action="reorderRules" data-payload={JSON.stringify({ ids: moved(index, 1) })} aria-label={`${t.rules.moveDown} — ${rule.name}`}>↓</button>}
+                <a class="inline-flex min-h-11 items-center rounded-md border px-3" href={`?edit=${rule.id}#rule-form`}>{t.rules.edit}</a>
+                <button class="min-h-11 rounded-md border px-3" type="button" data-banking-action="removeRule" data-payload={JSON.stringify({ id: rule.id })} data-confirm={t.common.confirm} data-done={t.common.deleted}>{t.common.delete}</button>
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+    )}
+  </section>
+
+  {canEdit && (
+    <section class="flex flex-col gap-3" aria-labelledby="rule-form">
+      <h2 id="rule-form" class="text-xl font-semibold">{editing ? `${t.rules.edit} — ${editing.name}` : t.rules.new}</h2>
+      {editing && <a class="w-fit underline" href={`${base}/rules`}>{t.rules.new}</a>}
+      <form class="grid max-w-4xl gap-4 sm:grid-cols-2" data-banking-form="saveRule" data-done={t.common.saved} data-redirect={`${base}/rules`}>
+        <input type="hidden" name="rule.id" data-type="nullable" value={editing?.id ?? ""} />
+        <label class="flex flex-col gap-1"><span>{t.rules.name}</span><input class={input} name="rule.name" required maxlength="120" value={editing?.name ?? ""} /></label>
+        <label class="flex flex-col gap-1"><span>{t.rules.position}</span><input class={input} type="number" min="0" max="100000" name="rule.position" data-type="int" value={editing?.position ?? (rules.length + 1) * 10} /></label>
+        <label class="flex min-h-11 items-center gap-2 sm:col-span-2"><input type="checkbox" name="rule.active" data-type="bool" checked={editing?.active ?? true} /><span>{t.rules.active}</span></label>
+        <fieldset class="grid gap-3 rounded-md border p-4 sm:col-span-2 sm:grid-cols-2">
+          <legend class="px-1 font-medium">{t.rules.conditions}</legend>
+          <label class="flex flex-col gap-1"><span>{t.fields.account}</span>
+            <select class={input} name="rule.conditions.bankAccountId" data-type="nullable"><option value="">{t.rules.anyAccount}</option>{accounts.map((account) => <option value={account.id} selected={c?.bankAccountId === account.id}>{account.label}</option>)}</select>
+          </label>
+          <label class="flex flex-col gap-1"><span>{t.fields.direction}</span>
+            <select class={input} name="rule.conditions.direction">{RULE_DIRECTIONS.map((value) => <option value={value} selected={(c?.direction ?? "any") === value}>{value === "any" ? t.rules.any : value === "in" ? t.fields.in : t.fields.out}</option>)}</select>
+          </label>
+          <label class="flex flex-col gap-1"><span>{t.rules.labelOperator}</span>
+            <select class={input} name="rule.conditions.label.operator">{LABEL_OPERATORS.map((value) => <option value={value} selected={c?.label?.operator === value}>{t.rules.operators[value]}</option>)}</select>
+          </label>
+          <label class="flex flex-col gap-1"><span>{t.rules.labelValue}</span><input class={input} name="rule.conditions.label.value" maxlength="200" value={c?.label?.value ?? ""} /></label>
+          <label class="flex flex-col gap-1"><span>{t.rules.amountMin}</span><input class={input} type="number" min="0" name="rule.conditions.amountMinMinor" data-type="int" value={c?.amountMinMinor ?? ""} /></label>
+          <label class="flex flex-col gap-1"><span>{t.rules.amountMax}</span><input class={input} type="number" min="0" name="rule.conditions.amountMaxMinor" data-type="int" value={c?.amountMaxMinor ?? ""} /></label>
+          <label class="flex flex-col gap-1"><span>{t.rules.counterpartyIban}</span><input class={input} name="rule.conditions.counterpartyIban" data-type="nullable" maxlength="34" dir="ltr" value={c?.counterpartyIban ?? ""} /></label>
+          <label class="flex flex-col gap-1"><span>{t.rules.counterpartyName}</span><input class={input} name="rule.conditions.counterpartyName" data-type="nullable" maxlength="140" value={c?.counterpartyName ?? ""} /></label>
+          <label class="flex flex-col gap-1"><span>{t.rules.bankCode}</span><input class={input} name="rule.conditions.bankCode" data-type="nullable" maxlength="35" value={c?.bankCode ?? ""} /></label>
+        </fieldset>
+        <fieldset class="grid gap-3 rounded-md border p-4 sm:col-span-2 sm:grid-cols-2">
+          <legend class="px-1 font-medium">{t.rules.actions}</legend>
+          <label class="flex flex-col gap-1"><span>{t.fields.kind}</span>
+            <select class={input} name="rule.actions.kind">{RULE_ACTIONS.map((value) => <option value={value} selected={(a?.kind ?? "ledger") === value}>{t.rules.kinds[value]}</option>)}</select>
+          </label>
+          <label class="flex flex-col gap-1"><span>{t.rules.accountCode}</span><input class={input} name="rule.actions.accountCode" data-type="nullable" maxlength="20" value={a?.accountCode ?? ""} /></label>
+          <label class="flex flex-col gap-1"><span>{t.rules.vatRate}</span><input class={input} name="rule.actions.vatRate" data-type="nullable" maxlength="6" inputmode="decimal" value={a?.vatRate ?? ""} /></label>
+          <label class="flex flex-col gap-1"><span>{t.rules.ruleLabel}</span><input class={input} name="rule.actions.label" data-type="nullable" maxlength="200" value={a?.label ?? ""} /></label>
+          <label class="flex flex-col gap-1"><span>{t.rules.auxAccount}</span><input class={input} name="rule.actions.auxAccount" data-type="nullable" maxlength="20" value={a?.auxAccount ?? ""} /></label>
+          <label class="flex flex-col gap-1"><span>{t.fields.label} ({t.rules.auxAccount})</span><input class={input} name="rule.actions.auxLabel" data-type="nullable" maxlength="120" value={a?.auxLabel ?? ""} /></label>
+          <label class="flex flex-col gap-1"><span>{t.rules.targetAccount}</span>
+            <select class={input} name="rule.actions.targetBankAccountId" data-type="nullable"><option value="">{t.common.none}</option>{accounts.map((account) => <option value={account.id} selected={a?.targetBankAccountId === account.id}>{account.label}</option>)}</select>
+          </label>
+          <label class="flex min-h-11 items-center gap-2"><input type="checkbox" name="rule.actions.autoValidate" data-type="bool" checked={a?.autoValidate ?? false} /><span>{t.rules.autoValidate}</span></label>
+        </fieldset>
+        <output class="block text-sm sm:col-span-2" data-result-output hidden></output>
+        <p class="text-sm text-destructive sm:col-span-2" role="alert" tabindex="-1" data-form-error hidden></p>
+        <div class="flex flex-wrap gap-2 sm:col-span-2">
+          <Button type="submit">{t.common.save}</Button>
+          <button class="min-h-11 rounded-md border px-4" type="submit" data-form-action="dryRunRule" data-result="message" data-message={t.rules.dryRunResult}>{t.rules.dryRun}</button>
+        </div>
+      </form>
+    </section>
+  )}
+</BankingPage>

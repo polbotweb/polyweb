@@ -1,0 +1,128 @@
+---
+/** Réglages banque de l'organisation (import, rapprochement, écarts, approbation, verrouillage, notifications, intégrations). */
+import { Effect } from "effect";
+import { requirePermission } from "@lib/auth-guards";
+import { Button } from "@atoms/button";
+import BankingPage from "@/components/banking/admin/BankingPage.astro";
+import { APPROVAL_MODES, APPROVAL_ROLES } from "@/core/approvals";
+import {
+  AUTOMATION_MODES, BANKING_NOTIFICATION_KINDS, LOCKED_PERIOD_POLICIES, NOTIFY_ROLES, OVERPAYMENT_TREATMENTS, QIF_DATE_ORDERS, STATEMENT_FORMATS,
+} from "@/modules/banking/domain/constants";
+import { getBankingTranslations } from "@/modules/banking/i18n";
+import { hasBankingPermission } from "@/modules/banking/permissions";
+import { bankingSettingsService } from "@/modules/banking/services/settings.service";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { banking: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getBankingTranslations(locale);
+const [{ settings: s, approval }, canEdit] = await Promise.all([
+  Effect.runPromise(bankingSettingsService.getWithPolicy(null)),
+  hasBankingPermission(Astro, { banking: ["settings"] }),
+]);
+const input = "min-h-11 rounded-md border px-3";
+const weightKeys = ["reference", "amount", "iban", "name", "date"] as const;
+---
+<BankingPage locale={locale} authT={authT} title={t.settings.title} active="settings">
+  <p class="text-sm text-muted-foreground">{t.meta.description}</p>
+  <form class="flex max-w-4xl flex-col gap-6" data-banking-form="saveSettings" data-done={t.common.saved}>
+    <fieldset class="grid gap-3 rounded-md border p-4 sm:grid-cols-2" disabled={!canEdit}>
+      <legend class="px-1 font-medium">{t.settings.sections.import}</legend>
+      <div class="flex flex-col gap-1 sm:col-span-2"><span>{t.settings.allowedFormats}</span>
+        <div class="flex flex-wrap gap-3">{STATEMENT_FORMATS.map((format) => <label class="flex min-h-11 items-center gap-2"><input type="checkbox" name="settings.allowedFormats" data-type="list" value={format} checked={s.allowedFormats.includes(format)} />{format.toUpperCase()}</label>)}</div>
+      </div>
+      <label class="flex flex-col gap-1"><span>{t.settings.maxFileBytes}</span><input class={input} type="number" min="1024" max="52428800" name="settings.maxFileBytes" data-type="int" value={s.maxFileBytes} /></label>
+      <label class="flex flex-col gap-1"><span>{t.settings.maxLines}</span><input class={input} type="number" min="1" max="500000" name="settings.maxLines" data-type="int" value={s.maxLines} /></label>
+      <label class="flex flex-col gap-1"><span>{t.settings.retentionDays}</span><input class={input} type="number" min="1" max="36500" name="settings.retentionDays" data-type="int" value={s.retentionDays} /></label>
+      <label class="flex flex-col gap-1"><span>{t.settings.qifDateOrder}</span><select class={input} name="settings.qifDateOrder">{QIF_DATE_ORDERS.map((value) => <option value={value} selected={s.qifDateOrder === value}>{value}</option>)}</select></label>
+    </fieldset>
+
+    <fieldset class="grid gap-3 rounded-md border p-4 sm:grid-cols-2" disabled={!canEdit}>
+      <legend class="px-1 font-medium">{t.settings.sections.matching}</legend>
+      <label class="flex flex-col gap-1"><span>{t.settings.automationMode}</span><select class={input} name="settings.automationMode">{AUTOMATION_MODES.map((mode) => <option value={mode} selected={s.automationMode === mode}>{t.automation[mode]}</option>)}</select></label>
+      <label class="flex flex-col gap-1"><span>{t.settings.autoThreshold}</span><input class={input} type="number" min="0" max="100" name="settings.autoThreshold" data-type="int" value={s.autoThreshold} /></label>
+      <label class="flex flex-col gap-1"><span>{t.settings.dateWindowDays}</span><input class={input} type="number" min="0" max="120" name="settings.match.dateWindowDays" data-type="int" value={s.match.dateWindowDays} /></label>
+      <label class="flex flex-col gap-1"><span>{t.settings.toleranceAbs}</span><input class={input} type="number" min="0" name="settings.match.toleranceAbsoluteMinor" data-type="int" value={s.match.toleranceAbsoluteMinor} /></label>
+      <label class="flex flex-col gap-1"><span>{t.settings.tolerancePct}</span><input class={input} type="number" min="0" max="100" step="0.01" name="settings.match.tolerancePercent" data-type="number" value={s.match.tolerancePercent} /></label>
+      <label class="flex flex-col gap-1"><span>{t.settings.maxCombination}</span><input class={input} type="number" min="1" max="12" name="settings.match.maxCombination" data-type="int" value={s.match.maxCombination} /></label>
+      <input type="hidden" name="settings.match.combinationTimeMs" data-type="int" value={s.match.combinationTimeMs} />
+      <input type="hidden" name="settings.match.maxProposals" data-type="int" value={s.match.maxProposals} />
+      <label class="flex flex-col gap-1"><span>{t.settings.transferWindow}</span><input class={input} type="number" min="0" max="60" name="settings.transferWindowDays" data-type="int" value={s.transferWindowDays} /></label>
+      <label class="flex min-h-11 items-center gap-2"><input type="checkbox" name="settings.blockAutoOnContinuityBreak" data-type="bool" checked={s.blockAutoOnContinuityBreak} /><span>{t.settings.blockAuto}</span></label>
+      <fieldset class="grid gap-3 rounded-md border p-3 sm:col-span-2 sm:grid-cols-5">
+        <legend class="px-1">{t.settings.weights}</legend>
+        {weightKeys.map((key) => <label class="flex flex-col gap-1"><span>{t.settings.weightLabels[key]}</span><input class={input} type="number" min="0" max="100" name={`settings.match.weights.${key}`} data-type="int" value={s.match.weights[key]} /></label>)}
+      </fieldset>
+    </fieldset>
+
+    <fieldset class="grid gap-3 rounded-md border p-4 sm:grid-cols-2" disabled={!canEdit}>
+      <legend class="px-1 font-medium">{t.settings.sections.writeOff}</legend>
+      <label class="flex flex-col gap-1"><span>{t.settings.writeOffAbs}</span><input class={input} type="number" min="0" name="settings.writeOffAbsoluteMinor" data-type="int" value={s.writeOffAbsoluteMinor} /></label>
+      <label class="flex flex-col gap-1"><span>{t.settings.writeOffPct}</span><input class={input} type="number" min="0" max="100" step="0.01" name="settings.writeOffPercent" data-type="number" value={s.writeOffPercent} /></label>
+      <label class="flex flex-col gap-1"><span>{t.settings.overpayment}</span><select class={input} name="settings.overpaymentTreatment">{OVERPAYMENT_TREATMENTS.map((value) => <option value={value} selected={s.overpaymentTreatment === value}>{t.settings.overpaymentOptions[value]}</option>)}</select></label>
+      <label class="flex min-h-11 items-center gap-2"><input type="checkbox" name="settings.fxAutoPost" data-type="bool" checked={s.fxAutoPost} /><span>{t.settings.fxAutoPost}</span></label>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-3 rounded-md border p-4" disabled={!canEdit}>
+      <legend class="px-1 font-medium">{t.settings.sections.approval}</legend>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <label class="flex flex-col gap-1"><span>{t.settings.approvalMode}</span><select class={input} name="approvalMode">{APPROVAL_MODES.map((mode) => <option value={mode} selected={approval.mode === mode}>{t.settings.approvalModes[mode]}</option>)}</select></label>
+        <label class="flex flex-col gap-1"><span>{t.settings.threshold}</span><input class={input} type="number" min="0" name="approvalThresholdMinor" data-type="int" value={approval.thresholdMinor} /></label>
+      </div>
+      <div class="flex flex-col gap-2" data-array="approvalBands">
+        <ul class="flex flex-col gap-2" data-rows>
+          {approval.bands.map((band) => (
+            <li class="grid gap-2 sm:grid-cols-5" data-row>
+              <label class="flex flex-col gap-1"><span>{t.settings.bandLevel}</span><input class={input} type="number" min="1" max="20" name="level" data-type="int" value={band.level} /></label>
+              <label class="flex flex-col gap-1"><span>{t.settings.bandMin}</span><input class={input} type="number" min="0" name="minMinor" data-type="int" value={band.minMinor} /></label>
+              <label class="flex flex-col gap-1"><span>{t.settings.bandMax}</span><input class={input} type="number" min="1" name="maxMinor" data-type="int" value={band.maxMinor ?? ""} /></label>
+              <label class="flex flex-col gap-1"><span>{t.settings.bandRole}</span><select class={input} name="requiredRole">{APPROVAL_ROLES.map((role) => <option value={role} selected={band.requiredRole === role}>{t.settings.approvalRoles[role]}</option>)}</select></label>
+              <input type="hidden" name="requiredPermission" data-type="nullable" value={band.requiredPermission ?? ""} />
+              <button class="min-h-11 self-end rounded-md border px-3" type="button" data-remove-row>{t.settings.removeBand}</button>
+            </li>
+          ))}
+        </ul>
+        <template>
+          <li class="grid gap-2 sm:grid-cols-5" data-row>
+            <label class="flex flex-col gap-1"><span>{t.settings.bandLevel}</span><input class={input} type="number" min="1" max="20" name="level" data-type="int" value={approval.bands.length + 1} /></label>
+            <label class="flex flex-col gap-1"><span>{t.settings.bandMin}</span><input class={input} type="number" min="0" name="minMinor" data-type="int" value="0" /></label>
+            <label class="flex flex-col gap-1"><span>{t.settings.bandMax}</span><input class={input} type="number" min="1" name="maxMinor" data-type="int" value="" /></label>
+            <label class="flex flex-col gap-1"><span>{t.settings.bandRole}</span><select class={input} name="requiredRole">{APPROVAL_ROLES.map((role) => <option value={role}>{t.settings.approvalRoles[role]}</option>)}</select></label>
+            <input type="hidden" name="requiredPermission" data-type="nullable" value="" />
+            <button class="min-h-11 self-end rounded-md border px-3" type="button" data-remove-row>{t.settings.removeBand}</button>
+          </li>
+        </template>
+        <button class="min-h-11 w-fit rounded-md border px-4" type="button" data-add-row>{t.settings.addBand}</button>
+      </div>
+    </fieldset>
+
+    <fieldset class="grid gap-3 rounded-md border p-4 sm:grid-cols-2" disabled={!canEdit}>
+      <legend class="px-1 font-medium">{t.settings.sections.lock}</legend>
+      <label class="flex flex-col gap-1"><span>{t.settings.lockDate}</span><input class={input} type="date" name="settings.lockDate" data-type="nullable" value={s.lockDate ?? ""} /></label>
+      <label class="flex flex-col gap-1"><span>{t.settings.lockedPolicy}</span><select class={input} name="settings.lockedPeriodPolicy">{LOCKED_PERIOD_POLICIES.map((value) => <option value={value} selected={s.lockedPeriodPolicy === value}>{t.settings.lockedPolicies[value]}</option>)}</select></label>
+      <label class="flex min-h-11 items-center gap-2 sm:col-span-2"><input type="checkbox" name="settings.lockAfterFec" data-type="bool" checked={s.lockAfterFec} /><span>{t.settings.lockAfterFec}</span></label>
+    </fieldset>
+
+    <fieldset class="grid gap-3 rounded-md border p-4 sm:grid-cols-2" disabled={!canEdit}>
+      <legend class="px-1 font-medium">{t.settings.sections.notifications}</legend>
+      <label class="flex flex-col gap-1"><span>{t.settings.cronHour}</span><input class={input} type="number" min="0" max="23" name="settings.cronHour" data-type="int" value={s.cronHour} /></label>
+      <label class="flex flex-col gap-1"><span>{t.settings.agingDays}</span><input class={input} type="number" min="1" max="365" name="settings.agingDays" data-type="int" value={s.agingDays} /></label>
+      <div class="flex flex-col gap-1 sm:col-span-2"><span>{t.settings.notifyRoles}</span>
+        <div class="flex flex-wrap gap-3">{NOTIFY_ROLES.map((role) => <label class="flex min-h-11 items-center gap-2"><input type="checkbox" name="settings.notifyRoles" data-type="list" value={role} checked={s.notifyRoles.includes(role)} />{t.settings.roles[role]}</label>)}</div>
+      </div>
+      {BANKING_NOTIFICATION_KINDS.map((kind) => <label class="flex min-h-11 items-center gap-2"><input type="checkbox" name={`settings.notifications.${kind}`} data-type="bool" checked={s.notifications[kind]} /><span>{t.settings.notifications[kind]}</span></label>)}
+    </fieldset>
+
+    <fieldset class="grid gap-3 rounded-md border p-4 sm:grid-cols-2" disabled={!canEdit}>
+      <legend class="px-1 font-medium">{t.settings.sections.integrations}</legend>
+      <label class="flex min-h-11 items-center gap-2 sm:col-span-2"><input type="checkbox" name="settings.feedsEnabled" data-type="bool" checked={s.feedsEnabled} /><span>{t.settings.feedsEnabled}</span></label>
+      <p class="text-sm text-muted-foreground sm:col-span-2">{t.accounts.gocardlessNote}</p>
+      <label class="flex flex-col gap-1"><span>{t.settings.feedHistoryDays}</span><input class={input} type="number" min="1" max="730" name="settings.feedHistoryDays" data-type="int" value={s.feedHistoryDays} /></label>
+      <label class="flex min-h-11 items-center gap-2"><input type="checkbox" name="settings.stripePayoutsEnabled" data-type="bool" checked={s.stripePayoutsEnabled} /><span>{t.settings.stripePayouts}</span></label>
+    </fieldset>
+
+    <p class="text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+    {canEdit && <div><Button type="submit">{t.common.save}</Button></div>}
+  </form>
+</BankingPage>

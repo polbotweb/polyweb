@@ -1,0 +1,80 @@
+---
+/** Grand livre banque : écritures (frais, écarts, change, virements, contre-passations…), filtres, export CSV. */
+import { Effect } from "effect";
+import { requirePermission } from "@lib/auth-guards";
+import ScrollRegion from "@molecules/ScrollRegion/ScrollRegion.astro";
+import BankingPage from "@/components/banking/admin/BankingPage.astro";
+import { LEDGER_KINDS } from "@/modules/banking/domain/constants";
+import { fill, getBankingTranslations } from "@/modules/banking/i18n";
+import { bankAccountsService } from "@/modules/banking/services/accounts.service";
+import { bankLedgerService } from "@/modules/banking/services/ledger.service";
+import { formatDate, formatMinor } from "@/modules/banking/ui/format";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { banking: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getBankingTranslations(locale);
+const params = Astro.url.searchParams;
+const PAGE = 50;
+const page = Math.max(Number.parseInt(params.get("page") ?? "1", 10) || 1, 1);
+const filters = { from: params.get("from") || null, to: params.get("to") || null, bankAccountId: params.get("account") || null, kind: params.get("kind") || null };
+const [accounts, ledger] = await Promise.all([
+  Effect.runPromise(bankAccountsService.list(null, true)),
+  Effect.runPromise(bankLedgerService.list(null, { ...filters, limit: PAGE, offset: (page - 1) * PAGE })),
+]);
+const pages = Math.max(Math.ceil(ledger.total / PAGE), 1);
+const link = (next: number) => { const query = new URLSearchParams(params); query.set("page", String(next)); return `?${query.toString()}`; };
+const input = "min-h-11 rounded-md border px-3";
+---
+<BankingPage locale={locale} authT={authT} title={t.ledger.title} active="ledger">
+  <form class="flex flex-wrap items-end gap-3" method="get" data-banking-form="exportLedger" data-result="download" data-download-name={`grand-livre-banque-${new Date().toISOString().slice(0, 10)}.csv`} data-done={t.common.done}>
+    <label class="flex flex-col gap-1"><span>{t.fields.from}</span><input class={input} type="date" name="from" data-type="nullable" value={filters.from ?? ""} /></label>
+    <label class="flex flex-col gap-1"><span>{t.fields.to}</span><input class={input} type="date" name="to" data-type="nullable" value={filters.to ?? ""} /></label>
+    <label class="flex flex-col gap-1"><span>{t.fields.account}</span>
+      <select class={input} name="account" data-type="nullable"><option value="">{t.common.all}</option>{accounts.map((account) => <option value={account.id} selected={filters.bankAccountId === account.id}>{account.label}</option>)}</select>
+    </label>
+    <label class="flex flex-col gap-1"><span>{t.fields.kind}</span>
+      <select class={input} name="kind" data-type="nullable"><option value="">{t.common.all}</option>{LEDGER_KINDS.map((kind) => <option value={kind} selected={filters.kind === kind}>{t.ledger.kinds[kind]}</option>)}</select>
+    </label>
+    <a class="inline-flex min-h-11 items-center rounded-md border px-4" href="?">{t.common.all}</a>
+    <button class="min-h-11 rounded-md border px-4" type="submit" formmethod="get" data-native-submit>{t.common.filter}</button>
+    <button class="min-h-11 rounded-md border px-4" type="submit">{t.ledger.export}</button>
+    <p class="w-full text-sm text-destructive" role="alert" tabindex="-1" data-form-error hidden></p>
+  </form>
+  <p class="text-sm text-muted-foreground" aria-live="polite">{fill(t.common.total, { n: ledger.total })}</p>
+  <h2 id="ledger-entries" class="sr-only">{t.ledger.title}</h2>
+  {ledger.entries.length === 0 ? <p>{t.ledger.empty}</p> : (
+    <ScrollRegion labelledby="ledger-entries">
+      <table class="w-full text-sm">
+        <thead><tr class="border-b">
+          <th scope="col" class="p-2 text-start">{t.fields.date}</th><th scope="col" class="p-2 text-start">{t.fields.journal}</th><th scope="col" class="p-2 text-start">{t.fields.piece}</th>
+          <th scope="col" class="p-2 text-start">{t.fields.kind}</th><th scope="col" class="p-2 text-start">{t.fields.account}</th><th scope="col" class="p-2 text-start">{t.fields.label}</th>
+          <th scope="col" class="p-2 text-end">{t.fields.debit}</th><th scope="col" class="p-2 text-end">{t.fields.credit}</th><th scope="col" class="p-2 text-start">{t.fields.lettering}</th>
+        </tr></thead>
+        <tbody>
+          {ledger.entries.flatMap((entry) => entry.lines.map((line, index) => (
+            <tr class:list={["border-b", index === 0 && "border-t-2"]}>
+              <td class="p-2 whitespace-nowrap">{index === 0 ? formatDate(entry.date, locale) : ""}</td>
+              <td class="p-2">{index === 0 ? entry.journalCode : ""}</td>
+              <td class="p-2">{index === 0 ? entry.pieceRef : ""}</td>
+              <td class="p-2">{index === 0 ? t.ledger.kinds[entry.kind] : ""}</td>
+              <td class="p-2" dir="ltr">{line.account}{line.auxAccount && ` / ${line.auxAccount}`}</td>
+              <td class="p-2">{line.label}</td>
+              <td class="p-2 text-end whitespace-nowrap" dir="ltr">{line.debitMinor ? formatMinor(line.debitMinor, "EUR", locale) : ""}</td>
+              <td class="p-2 text-end whitespace-nowrap" dir="ltr">{line.creditMinor ? formatMinor(line.creditMinor, "EUR", locale) : ""}</td>
+              <td class="p-2">{line.lettering ?? ""}</td>
+            </tr>
+          )))}
+        </tbody>
+      </table>
+    </ScrollRegion>
+  )}
+  {pages > 1 && (
+    <nav class="flex items-center gap-3" aria-label={t.ledger.title}>
+      {page > 1 && <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={link(page - 1)}>{t.common.previous}</a>}
+      <span>{page} / {pages}</span>
+      {page < pages && <a class="inline-flex min-h-11 items-center rounded-md border px-4" href={link(page + 1)}>{t.common.next}</a>}
+    </nav>
+  )}
+</BankingPage>

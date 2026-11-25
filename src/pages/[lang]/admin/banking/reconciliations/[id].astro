@@ -1,0 +1,73 @@
+---
+/** Détail d'un rapprochement : lignes, imputations, écritures ; approbation, rejet, annulation (contre-passation). */
+import { Effect, Result } from "effect";
+import { requirePermission } from "@lib/auth-guards";
+import BankingPage from "@/components/banking/admin/BankingPage.astro";
+import StatusBadge from "@/components/banking/admin/StatusBadge.astro";
+import { getBankingTranslations } from "@/modules/banking/i18n";
+import { hasBankingPermission } from "@/modules/banking/permissions";
+import { reconciliationDetail } from "@/modules/banking/services/reconcile.service";
+import { formatDate, formatMinor } from "@/modules/banking/ui/format";
+import { statusTone } from "@/modules/banking/ui/tones";
+
+export const prerender = false;
+const result = await requirePermission(Astro, { banking: ["read"] });
+if ("redirect" in result) return result.redirect;
+const { locale, authT } = result;
+const t = getBankingTranslations(locale);
+const base = `/${locale}/admin/banking`;
+const found = await Effect.runPromise(Effect.result(reconciliationDetail(null, Astro.params.id ?? "")));
+if (Result.isFailure(found)) return Astro.redirect(`${base}/reconciliations`);
+const { reconciliation, lines, allocations, entries } = found.success;
+const [canApprove, canReverse] = await Promise.all([
+  hasBankingPermission(Astro, { banking: ["approve"] }),
+  hasBankingPermission(Astro, { banking: ["unreconcile"] }),
+]);
+const sourceLabel = (source: string) => (t.reconcile.sources as Record<string, string>)[source] ?? source;
+const kindLabel = (kind: string) => (t.ledger.kinds as Record<string, string>)[kind] ?? kind;
+---
+<BankingPage locale={locale} authT={authT} title={`${t.reconciliations.details} — ${formatDate(reconciliation.date, locale)}`} active="reconciliations" back={{ href: `${base}/reconciliations`, label: t.nav.reconciliations }}>
+  <div class="flex flex-wrap items-center gap-3">
+    <StatusBadge label={t.reconStatuses[reconciliation.status]} tone={statusTone(reconciliation.status)} />
+    <span>{t.reconModes[reconciliation.mode]}</span>
+    {reconciliation.letteringCode && <span>{t.fields.lettering} {reconciliation.letteringCode}</span>}
+    <span>{formatMinor(reconciliation.bankTotalMinor, reconciliation.currency, locale)}</span>
+  </div>
+  {reconciliation.note && <p>{t.fields.note} : {reconciliation.note}</p>}
+  {reconciliation.reversalReason && <p>{t.reconciliations.reverseReason} : {reconciliation.reversalReason} ({formatDate(reconciliation.reversedAt, locale)})</p>}
+
+  {reconciliation.status === "pending_approval" && canApprove && (
+    <div class="flex flex-wrap gap-2">
+      <button class="min-h-11 rounded-md border px-4" type="button" data-banking-action="decideWriteOff" data-payload={JSON.stringify({ id: reconciliation.id, decision: "APPROVED", comment: null })} data-confirm={t.common.confirm} data-done={t.reconciliations.decided}>{t.reconciliations.approve}</button>
+      <button class="min-h-11 rounded-md border px-4" type="button" data-banking-action="decideWriteOff" data-payload={JSON.stringify({ id: reconciliation.id, decision: "REJECTED" })} data-prompt={t.reconciliations.comment} data-prompt-field="comment" data-done={t.reconciliations.decided}>{t.reconciliations.reject}</button>
+    </div>
+  )}
+  {reconciliation.status === "applied" && canReverse && (
+    <div><button class="min-h-11 rounded-md border px-4" type="button" data-banking-action="unreconcile" data-payload={JSON.stringify({ id: reconciliation.id })} data-prompt={t.reconciliations.reverseReason} data-prompt-field="reason" data-done={t.reconciliations.reversed}>{t.reconciliations.reverse}</button></div>
+  )}
+
+  <section class="flex flex-col gap-2" aria-labelledby="recon-lines">
+    <h2 id="recon-lines" class="text-xl font-semibold">{t.reconcile.line}</h2>
+    <ul class="flex flex-col gap-2">
+      {lines.map(({ line, transaction }) => (
+        <li class="rounded-md border p-3"><a class="underline" href={`${base}/transactions/${transaction.id}`}>{formatDate(transaction.bookingDate, locale)} — {transaction.label}</a> — {formatMinor(line.amountMinor, transaction.currency, locale)}</li>
+      ))}
+    </ul>
+  </section>
+  <section class="flex flex-col gap-2" aria-labelledby="recon-allocations">
+    <h2 id="recon-allocations" class="text-xl font-semibold">{t.reconciliations.allocations}</h2>
+    {allocations.length === 0 ? <p>{t.common.empty}</p> : (
+      <ul class="flex flex-col gap-2">
+        {allocations.map((allocation) => <li class="rounded-md border p-3">{sourceLabel(allocation.source)} — {allocation.reference ?? allocation.targetId} — {formatMinor(allocation.amountMinor, allocation.currency, locale)}</li>)}
+      </ul>
+    )}
+  </section>
+  <section class="flex flex-col gap-2" aria-labelledby="recon-entries">
+    <h2 id="recon-entries" class="text-xl font-semibold">{t.reconciliations.entries}</h2>
+    {entries.length === 0 ? <p>{t.common.empty}</p> : (
+      <ul class="flex flex-col gap-2">
+        {entries.map((entry) => <li class="rounded-md border p-3">{formatDate(entry.date, locale)} — {entry.journalCode} {entry.pieceRef} — {kindLabel(entry.kind)} — {entry.label}</li>)}
+      </ul>
+    )}
+  </section>
+</BankingPage>

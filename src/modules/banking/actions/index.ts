@@ -233,7 +233,7 @@ export const bankingActions = {
     input: z.object({ ...org, connectionId: id, institutionId: z.string().trim().min(2).max(100), language: z.enum(["fr", "en", "es", "ar"]).default("fr") }),
     handler: effectHandler((input, context) => Effect.gen(function* () {
       const user = yield* requireBankingPermission(context, ["accounts"], input.organizationId);
-      const redirectUrl = new URL(`/admin/banking/accounts?feed=${encodeURIComponent(input.connectionId)}`, context.url.origin).toString();
+      const redirectUrl = new URL(`/${input.language}/admin/banking/accounts?feed=${encodeURIComponent(input.connectionId)}`, context.url.origin).toString();
       return yield* bankFeedsService.startLink(input.organizationId, input.connectionId, { institutionId: input.institutionId, redirectUrl, language: input.language }, user.id);
     })),
   }),
