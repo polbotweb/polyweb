@@ -385,6 +385,25 @@ figeait esbuild 0.18.20). Résultat : `pnpm audit --prod` → aucune vulnérabil
   élargi à 4.3.x sans correctif, l'ignorer explicitement (`pnpm.auditConfig.ignoreGhsas`) avec la
   justification d'exposition ci-dessus, et le retirer dès qu'un correctif est publié.
 
+### picomatch — GHSA-fc5q-39xc-vjpf (exception documentée)
+
+- **Avis** : ReDoS de `picomatch` via un motif glob à branche unique (sévérité haute). Plage vulnérable
+  `<= 4.0.7`, **aucune version corrigée publiée** (4.0.7 est la dernière). L'avis a été retiré par GitHub
+  le 2026-11-18 à 16:38 (heure de Paris) peu après sa publication ; l'exception reste en place au cas où il serait republié.
+- **Exposition** : dépendance transitive d'Astro uniquement — `@astrojs/internal-helpers`
+  (`create-filter`, filtres include/exclude des intégrations), `@vercel/nft` / `@rollup/pluginutils`
+  (traçage des fichiers **au build**) et `unstorage > anymatch` (options `ignore` des pilotes). Dans tous
+  les cas, les **motifs sont définis dans le code ou la configuration**, jamais à partir d'une entrée
+  utilisateur : un ReDoS exigerait de pouvoir écrire le motif. Risque pratique nul pour Polyweb.
+- **Mécanisme** : `pnpm.auditConfig.ignoreGhsas: ["GHSA-fc5q-39xc-vjpf"]` dans `package.json`
+  (mécanisme officiel de pnpm, vérifié avec pnpm 10.34, version utilisée par la CI). Seul **cet** avis
+  est ignoré : tout autre avis `moderate` ou plus fait toujours échouer `pnpm audit --prod --audit-level=moderate`
+  et donc le job `Security Audit` (vérifié sur un projet témoin : l'avis ignoré disparaît, les autres
+  restent et le code de sortie vaut 1).
+- **Retrait** : supprimer l'entrée **dès qu'une version corrigée de picomatch est publiée** (mise à jour
+  par lockfile ou `pnpm.overrides`), ou dès qu'Astro ne l'utilise plus. Une routine quotidienne de veille
+  (jours ouvrés, ~9 h Paris) surveille la publication du correctif et l'état de l'avis.
+
 ---
 
 ## 12. Hôtes autorisés (`security.allowedDomains`, `ALLOWED_HOSTS`)
