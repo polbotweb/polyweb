@@ -18,13 +18,13 @@ export const CONTINUITY_STATUSES = ["ok", "gap", "mismatch", "unknown"] as const
 export type ContinuityStatus = (typeof CONTINUITY_STATUSES)[number];
 
 /** État d'une ligne de relevé. */
-export const TRANSACTION_STATUSES = ["unmatched", "suggested", "partial", "reconciled", "ignored"] as const;
+export const TRANSACTION_STATUSES = ["unmatched", "suggested", "partial", "pending_approval", "reconciled", "ignored"] as const;
 export type TransactionStatus = (typeof TRANSACTION_STATUSES)[number];
 
 export const AUTOMATION_MODES = ["off", "suggest", "auto_exact", "auto_threshold"] as const;
 export type AutomationMode = (typeof AUTOMATION_MODES)[number];
 
-export const OVERPAYMENT_TREATMENTS = ["suspense", "customer_advance", "refund_proposal"] as const;
+export const OVERPAYMENT_TREATMENTS = ["suspense", "advance", "refund_proposal"] as const;
 export type OverpaymentTreatment = (typeof OVERPAYMENT_TREATMENTS)[number];
 
 export const RECONCILIATION_STATUSES = ["applied", "pending_approval", "rejected", "reversed"] as const;
@@ -82,3 +82,19 @@ export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
 /** Rôles d'organisation destinataires des notifications (réglable). */
 export const NOTIFY_ROLES = ["owner", "admin", "member"] as const;
 export type NotifyRole = (typeof NOTIFY_ROLES)[number];
+
+/** Politique quand la date d'un rapprochement tombe dans une période verrouillée. */
+export const LOCKED_PERIOD_POLICIES = ["refuse", "next_open_day"] as const;
+export type LockedPeriodPolicy = (typeof LOCKED_PERIOD_POLICIES)[number];
+
+/** Ordre des dates d'un fichier QIF (format sans indication de l'ordre jour / mois). */
+export const QIF_DATE_ORDERS = ["DMY", "MDY", "YMD"] as const;
+export type QifDateOrder = (typeof QIF_DATE_ORDERS)[number];
+
+/** Notifications configurables (B15). */
+export const BANKING_NOTIFICATION_KINDS = ["importDone", "importFailed", "continuityBreak", "dailyDigest", "aging", "writeOffApproval", "sepaReturn", "feedError"] as const;
+export type BankingNotificationKind = (typeof BANKING_NOTIFICATION_KINDS)[number];
+
+/** Délimiteurs CSV acceptés. */
+export const CSV_DELIMITERS = [",", ";", "\t", "|"] as const;
+export type CsvDelimiter = (typeof CSV_DELIMITERS)[number];
