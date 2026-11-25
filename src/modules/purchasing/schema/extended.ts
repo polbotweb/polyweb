@@ -135,6 +135,9 @@ export const purchasingInvoices = pgTable("purchasing_invoices", {
   importId: text("import_id"),
   orderId: text("order_id").references(() => purchasing.id, { onDelete: "set null" }),
   notes: text("notes"),
+  /** Lettrage du compte fournisseur (core/accounting, posé par le rapprochement bancaire). */
+  letteringCode: text("lettering_code"),
+  letteringDate: text("lettering_date"),
   createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
@@ -199,9 +202,14 @@ export const purchasingPayments = pgTable("purchasing_payments", {
   paidAt: text("paid_at").notNull(),
   reference: text("reference"),
   sepaExportId: text("sepa_export_id"),
+  /** Rapprochement bancaire (module banking, migration 0058) : compte, rapprochement, lettrage. */
+  bankAccountId: text("bank_account_id"),
+  reconciliationId: text("reconciliation_id"),
+  letteringCode: text("lettering_code"),
+  letteringDate: text("lettering_date"),
   createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => [index("purchasing_payments_invoice_idx").on(table.invoiceId)]);
+}, (table) => [index("purchasing_payments_invoice_idx").on(table.invoiceId), index("purchasing_payments_reconciliation_idx").on(table.reconciliationId)]);
 
 export const purchasingReorderRules = pgTable("purchasing_reorder_rules", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -336,9 +344,28 @@ export const purchasingSepaExports = pgTable("purchasing_sepa_exports", {
   storageKey: text("storage_key").notNull(),
   sha256: text("sha256").notNull(),
   requestedExecutionDate: text("requested_execution_date").notNull(),
+  /** Exécution constatée sur le relevé (module banking) : EXECUTED / PARTIALLY_RETURNED. */
+  executedAt: timestamp("executed_at"),
+  bankAccountId: text("bank_account_id"),
   createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [uniqueIndex("purchasing_sepa_exports_org_number_uidx").on(sql`coalesce(${table.organizationId}, '')`, table.number)]);
+
+/** Ordres d'un lot SEPA (un par facture) : rapprochement du débit global et des retours (R-transactions). */
+export const SEPA_LINE_STATUSES = ["pending", "executed", "returned"] as const;
+export const purchasingSepaExportLines = pgTable("purchasing_sepa_export_lines", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  exportId: text("export_id").notNull().references(() => purchasingSepaExports.id, { onDelete: "cascade" }),
+  organizationId: text("organization_id").references(() => organization.id, { onDelete: "cascade" }),
+  invoiceId: text("invoice_id").notNull().references(() => purchasingInvoices.id, { onDelete: "restrict" }),
+  endToEndId: text("end_to_end_id").notNull(),
+  amountMinor: bigint("amount_minor", { mode: "number" }).notNull(),
+  currency: text("currency").default("EUR").notNull(),
+  status: text("status", { enum: SEPA_LINE_STATUSES }).default("pending").notNull(),
+  paymentId: text("payment_id"),
+  returnReason: text("return_reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [index("purchasing_sepa_export_lines_export_idx").on(table.exportId), index("purchasing_sepa_export_lines_e2e_idx").on(table.organizationId, table.endToEndId)]);
 
 export const purchasingPunchoutSessions = pgTable("purchasing_punchout_sessions", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),

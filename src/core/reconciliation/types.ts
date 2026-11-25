@@ -44,6 +44,11 @@ export interface ReconCandidate {
   readonly groupKey: string | null;
   /** Libellé lisible (affichage). */
   readonly label: string;
+  /** Cours figé de la pièce vers l'EUR (chaîne décimale exacte), si la pièce est en devise. */
+  readonly baseRate?: string | null;
+  /** Montant d'origine restant dû dans la devise de la pièce (sert à l'imputation). */
+  readonly documentOpenMinor?: number;
+  readonly documentCurrency?: string;
 }
 
 export interface MatchWeights {

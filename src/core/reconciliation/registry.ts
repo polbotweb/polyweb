@@ -31,7 +31,16 @@ export interface AllocationInput {
   readonly bankAccountId: string;
   readonly reference: string;
   readonly reconciliationId: string;
-  readonly letteringCode: string | null;
+  /**
+   * Code de lettrage du rapprochement, attribué à la première demande (une seule fois par
+   * rapprochement) : une source ne le réclame que si la pièce est soldée, si bien que la séquence
+   * sans trou n'est consommée que par un lettrage réel. `null` si le lettrage est désactivé.
+   */
+  readonly lettering: () => Effect.Effect<string | null, DbError>;
+  /** Contre-valeur EUR de l'imputation (devise de tenue), calculée par l'appelant. */
+  readonly baseAmountMinor: number | null;
+  /** Motif de retour ISO (R-transaction) porté par la ligne de relevé, le cas échéant. */
+  readonly returnReason?: string | null;
   readonly actorId: string | null;
 }
 
@@ -41,6 +50,10 @@ export interface AllocationResult {
   /** La pièce est-elle soldée après imputation (lettrage complet) ? */
   readonly settled: boolean;
   readonly documentNumber: string;
+  /** Effets écrits (table + id), conservés pour la contrepassation et l'audit. */
+  readonly effects: readonly { readonly table: string; readonly id: string }[];
+  /** Compte tiers (auxiliaire FEC) de la pièce, pour l'écriture d'écart (avance, trop-perçu). */
+  readonly aux: { readonly account: string; readonly label: string } | null;
 }
 
 export interface ReconciliationSource {
@@ -49,7 +62,7 @@ export interface ReconciliationSource {
   readonly findCandidates: (query: CandidateQuery) => Effect.Effect<readonly ReconCandidate[], DbError>;
   readonly apply: (tx: DbTransaction, input: AllocationInput) => Effect.Effect<AllocationResult, DbError | ActionFailure>;
   /** Annule l'imputation (contrepassation du règlement), jamais de suppression. */
-  readonly reverse: (tx: DbTransaction, input: { readonly paymentId: string; readonly candidateId: string; readonly reconciliationId: string; readonly actorId: string | null; readonly date: string }) => Effect.Effect<void, DbError | ActionFailure>;
+  readonly reverse: (tx: DbTransaction, input: { readonly effects: readonly { readonly table: string; readonly id: string }[]; readonly candidateId: string; readonly reconciliationId: string; readonly actorId: string | null; readonly date: string }) => Effect.Effect<void, DbError | ActionFailure>;
 }
 
 const SOURCE_KEY = /^[a-z][a-z0-9-]{1,39}$/;

@@ -1,53 +1,23 @@
-import type {
-  PolywebModuleCapabilityProviders,
-  PolywebModuleDefinition,
-} from "@/core/modules/module-contract";
-import {
-  assertModuleCapabilityProviders,
-  defineModuleCapabilities,
-  defineModuleCapabilityProviders,
-  defineModulePresentations,
-} from "@/core/modules/module-contract";
+import type { PolywebModuleCapabilityProviders, PolywebModuleDefinition } from "@/core/modules/module-contract";
+import { assertModuleCapabilityProviders, defineModuleCapabilities, defineModuleCapabilityProviders, defineModulePresentations } from "@/core/modules/module-contract";
 import { bankingCapabilityProviders } from "./capabilities";
 
 /**
- * Le contrat `PolywebModuleCapabilities` attend TOUTES les clés : une
- * capacité non listée est désactivée, donc il faut les écrire explicitement
- * plutôt que de ne mentionner que les actives.
- *
- * `assertModuleCapabilityProviders` refuse à l'exécution un module qui
- * active une capacité sans fournisseur, ou qui déclare une recherche sans
- * définition.
+ * Module banque : comptes bancaires, imports de relevés (CAMT, MT940/942, CFONB 120, OFX, QIF, CSV),
+ * flux bancaires (GoCardless, désactivés par défaut), rapprochement assisté (moteur core/reconciliation,
+ * règles, approbations), grand livre banque repris dans le FEC, versements Stripe.
+ * Documentation A–Z (tous profils) : `docs/banking.md` ; plan comptable : `docs/accounting.md`.
+ * Pages strictement admin `/{lang}/admin/banking` et `/{lang}/admin/accounting` ; aucune page publique.
  */
 export const bankingModule: PolywebModuleDefinition = {
   id: "banking",
-  entity: "statement",
+  entity: "bankTransaction",
   capabilities: defineModuleCapabilities({
-    content: true,
-    localization: true,
-    media: false,
-    seo: false,
-    taxonomy: false,
-    attributes: false,
-    search: false,
-    publication: true,
-    revisions: true,
-    locks: true,
-    engagement: false,
-    moderation: false,
-    notifications: false,
-    audit: false,
-    cache: false,
+    content: true, localization: false, media: false, seo: false, taxonomy: false, attributes: false, search: false,
+    publication: false, revisions: false, locks: false, engagement: false, moderation: false, notifications: true, audit: true, cache: false,
   }),
-  capabilityProviders: defineModuleCapabilityProviders(
-    bankingCapabilityProviders satisfies PolywebModuleCapabilityProviders,
-  ),
-  presentations: defineModulePresentations({
-    card: ["default"],
-    list: ["default"],
-    single: ["default"],
-    ui: [],
-  }),
+  capabilityProviders: defineModuleCapabilityProviders(bankingCapabilityProviders satisfies PolywebModuleCapabilityProviders),
+  presentations: defineModulePresentations({ card: [], list: ["default"], single: ["default"], ui: [] }),
 };
 
 assertModuleCapabilityProviders(bankingModule);

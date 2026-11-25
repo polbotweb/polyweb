@@ -1,16 +1,8 @@
 import type { PolywebModuleCapabilityProviders } from "@/core/modules/module-contract";
 
-/**
- * Une entrée par capacité ACTIVÉE dans `module.ts`.
- *
- * La valeur nomme la table ou l'action qui porte concrètement la capacité.
- * `assertModuleCapabilityProviders` refuse un module qui active une capacité
- * sans fournisseur : c'est le garde-fou qui empêche une déclaration fantaisiste.
- */
+/** Une entrée par capacité ACTIVÉE dans `module.ts` (table ou service qui la porte). */
 export const bankingCapabilityProviders = {
-  content: "banking",
-  localization: "bankingTranslations",
-  publication: "bankingWorkflow",
-  revisions: "statement_revisions",
-  locks: "statement_locks",
+  content: "bank_accounts / bank_imports / bank_statements / bank_transactions / bank_reconciliations / bank_ledger_entries",
+  notifications: "bankingNotifications (notifications/definitions.ts)",
+  audit: "audit_log (banking.*) via services/audit.ts",
 } as unknown as PolywebModuleCapabilityProviders;

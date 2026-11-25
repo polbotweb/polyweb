@@ -26,7 +26,7 @@ export interface BankingSettings {
   readonly autoThreshold: number;
   /** Scoring et recherche (pondérations, fenêtre, tolérance de rapprochement, combinaisons). */
   readonly match: MatchSettings;
-  /** Passage automatique en perte ou profit des petits écarts : max(absolu, %) ; 0 = jamais. */
+  /** Passage automatique en perte ou profit des petits écarts : min(absolu, %) ; 0 = jamais. */
   readonly writeOffAbsoluteMinor: number;
   readonly writeOffPercent: number;
   readonly overpaymentTreatment: OverpaymentTreatment;

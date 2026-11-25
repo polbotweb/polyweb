@@ -13,7 +13,6 @@ import { messagingModeration } from "@/modules/messaging/moderation/adapters";
 import { servicesModeration } from "@/modules/services/moderation/adapters";
 import { forumsModeration } from "@/modules/forums/moderation/adapters";
 import { classifiedsModeration } from "@/modules/classifieds/moderation/adapters";
-import { bankingModeration } from "@/modules/banking/moderation/adapters";
 // @module-moderation:imports
 
 export const MODULE_MODERATION = [
@@ -22,7 +21,6 @@ export const MODULE_MODERATION = [
   messagingModeration,
   forumsModeration,
   classifiedsModeration,
-  bankingModeration,
   // @module-moderation:list
 ] as const;
 
