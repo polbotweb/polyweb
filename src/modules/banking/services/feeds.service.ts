@@ -8,7 +8,7 @@ import { and, eq } from "drizzle-orm";
 import { Effect, Result } from "effect";
 import { getDrizzle } from "@database/drizzle";
 import { maskSecret, openSecret, sealSecret } from "@/core/secrets";
-import { fail } from "@/lib/effect/action";
+import { fail } from "@/lib/effect/failure";
 import { dbTry } from "@/lib/effect/run";
 import { dbTransaction } from "@/lib/effect/transaction";
 import { gocardlessTransaction, type BankFeedProvider, type FeedCredentials, type FeedProviderError } from "../domain/feeds";

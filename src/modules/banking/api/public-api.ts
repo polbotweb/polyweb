@@ -11,7 +11,7 @@ import { Effect, Schema } from "effect";
 import { getDrizzle } from "@database/drizzle";
 import type { ApiResourceDefinition, ApiTenant, ModuleApiDeclaration } from "@/core/api/contract";
 import { iso, tableReader } from "@/core/api/table";
-import { fail } from "@/lib/effect/action";
+import { fail } from "@/lib/effect/failure";
 import { decode } from "@/lib/effect/schema";
 import { IMPORT_STATUSES, STATEMENT_FORMATS, type StatementFormat } from "../domain/constants";
 import { bankImports } from "../schema";

@@ -12,7 +12,7 @@ import { recordEvent } from "@/core/events/outbox";
 import { convertAt, rateToDecimal } from "@/core/fx/rate";
 import { findRate } from "@/core/fx/service";
 import type { CurrencyCode } from "@/core/money";
-import { fail } from "@/lib/effect/action";
+import { fail } from "@/lib/effect/failure";
 import { dbTry } from "@/lib/effect/run";
 import { dbTransaction } from "@/lib/effect/transaction";
 import { privateStorage } from "@/lib/storage/private";

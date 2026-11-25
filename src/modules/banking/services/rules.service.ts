@@ -5,7 +5,7 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { Effect } from "effect";
 import { getDrizzle } from "@database/drizzle";
-import { fail } from "@/lib/effect/action";
+import { fail } from "@/lib/effect/failure";
 import { dbTry } from "@/lib/effect/run";
 import { dbTransaction, type DbTransaction } from "@/lib/effect/transaction";
 import { ruleEntry } from "../domain/ledger";

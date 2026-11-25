@@ -7,7 +7,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { Effect } from "effect";
 import { getDrizzle } from "@database/drizzle";
 import { maskIban } from "@/core/secrets";
-import { fail } from "@/lib/effect/action";
+import { fail } from "@/lib/effect/failure";
 import { dbTry } from "@/lib/effect/run";
 import { dbTransaction } from "@/lib/effect/transaction";
 import { validateBankAccount, type BankAccountInput } from "../domain/accounts";

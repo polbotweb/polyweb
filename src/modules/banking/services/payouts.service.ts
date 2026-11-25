@@ -9,7 +9,7 @@ import { Effect } from "effect";
 import Stripe from "stripe";
 import { getDrizzle } from "@database/drizzle";
 import { tenantPaymentSettings } from "@/core/payments/service";
-import { fail } from "@/lib/effect/action";
+import { fail } from "@/lib/effect/failure";
 import { dbTry } from "@/lib/effect/run";
 import { dbTransaction } from "@/lib/effect/transaction";
 import type { PayoutStatus } from "../domain/constants";

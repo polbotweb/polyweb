@@ -7,7 +7,7 @@ import { Effect } from "effect";
 import { getDrizzle } from "@database/drizzle";
 import { approvalBands, approvalPolicies } from "@/core/approvals/schema";
 import { validatePolicy, type ApprovalBand, type ApprovalPolicy } from "@/core/approvals";
-import { fail } from "@/lib/effect/action";
+import { fail } from "@/lib/effect/failure";
 import { dbTry } from "@/lib/effect/run";
 import { dbTransaction, type DbTransaction } from "@/lib/effect/transaction";
 import { resolveBankingSettings, type BankingSettings } from "../domain/settings";

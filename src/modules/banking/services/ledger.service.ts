@@ -5,7 +5,7 @@
 import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { Effect } from "effect";
 import { getDrizzle } from "@database/drizzle";
-import { fail } from "@/lib/effect/action";
+import { fail } from "@/lib/effect/failure";
 import { dbTry } from "@/lib/effect/run";
 import type { DbTransaction } from "@/lib/effect/transaction";
 import { minorToDecimal, toCsv } from "../domain/export";

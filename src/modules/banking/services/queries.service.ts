@@ -6,7 +6,7 @@
 import { and, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import { Effect } from "effect";
 import { getDrizzle } from "@database/drizzle";
-import { fail } from "@/lib/effect/action";
+import { fail } from "@/lib/effect/failure";
 import { dbTry } from "@/lib/effect/run";
 import { TRANSACTION_STATUSES, type TransactionStatus } from "../domain/constants";
 import { bankAccounts, bankImports, bankReconciliations, bankStatements, bankTransactions } from "../schema";

@@ -13,7 +13,7 @@ import { applyDecision, approvalRequired, requiredBands, type ApprovalActor } fr
 import { nextLetteringCode } from "@/core/accounting/service";
 import { recordEvent } from "@/core/events/outbox";
 import { baseValueOf, reconciliationSource, type ReconCandidate, type ReconLine } from "@/core/reconciliation";
-import { fail } from "@/lib/effect/action";
+import { fail } from "@/lib/effect/failure";
 import { dbTry } from "@/lib/effect/run";
 import { dbTransaction, type DbTransaction } from "@/lib/effect/transaction";
 import { ADJUSTMENT_KINDS, type AdjustmentKind, type ReconciliationMode } from "../domain/constants";

@@ -11,7 +11,7 @@ import type { PgColumn } from "drizzle-orm/pg-core";
 import { Effect } from "effect";
 import { getDrizzle } from "@database/drizzle";
 import { openInLineCurrency, referenceTokens, registerReconciliationSource, type CandidateQuery, type ReconCandidate, type ReconciliationSource } from "@/core/reconciliation";
-import { fail } from "@/lib/effect/action";
+import { fail } from "@/lib/effect/failure";
 import { dbTry } from "@/lib/effect/run";
 import type { DbTransaction } from "@/lib/effect/transaction";
 import { customerAuxAccount } from "./domain/fec";
