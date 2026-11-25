@@ -1,16 +1,10 @@
 /**
- * Point d'entrée navigateur du domaine banking.
- *
- * Un module client par feature, importé ici. Les composants n'importent QUE ce
- * fichier — jamais `astro:actions` directement — pour que sélecteurs et
- * actions restent regroupés et testables hors rendu.
+ * Point d'entrée navigateur du domaine banking (back-office) : les pages appellent `initBanking()`
+ * au premier rendu puis à chaque `astro:after-swap`. Les comportements sont regroupés dans
+ * `./admin.ts` (import de relevé, écran de rapprochement, règles, réglages).
  */
+import { initBankingAdmin } from "./admin";
 
-/**
- * Branche les comportements d'une page. Idempotent : appelé au premier rendu
- * puis à chaque `astro:after-swap`.
- */
 export function initBanking(): void {
-  // TODO: appeler les modules client du domaine, par exemple
-  //   initBankingEngagementBar();
+  initBankingAdmin();
 }
