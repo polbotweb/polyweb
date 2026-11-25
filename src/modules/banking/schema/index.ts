@@ -124,7 +124,7 @@ export const bankStatements = pgTable("bank_statements", {
 /** Suggestion stockée sur une ligne (meilleures propositions du moteur). */
 export interface StoredSuggestion {
   readonly score: number;
-  readonly candidates: readonly Pick<ReconCandidate, "source" | "id" | "reference" | "openMinor" | "currency">[];
+  readonly candidates: readonly Pick<ReconCandidate, "source" | "id" | "label" | "openMinor" | "currency">[];
   readonly reasons: readonly string[];
 }
 

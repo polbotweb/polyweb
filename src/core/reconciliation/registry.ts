@@ -59,6 +59,11 @@ export interface AllocationResult {
 export interface ReconciliationSource {
   readonly key: string;
   readonly direction: ReconDirection;
+  /**
+   * La source passe elle-même toute l'écriture côté banque (virement interne, versement d'un
+   * prestataire) : l'appelant ne calcule ni écart de change ni règlement pour cette imputation.
+   */
+  readonly postsBank?: boolean;
   readonly findCandidates: (query: CandidateQuery) => Effect.Effect<readonly ReconCandidate[], DbError>;
   readonly apply: (tx: DbTransaction, input: AllocationInput) => Effect.Effect<AllocationResult, DbError | ActionFailure>;
   /** Annule l'imputation (contrepassation du règlement), jamais de suppression. */

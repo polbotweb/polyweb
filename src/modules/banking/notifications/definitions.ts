@@ -1,11 +1,24 @@
 /**
  * Notifications du module banking (registre core `notifications/registry`, docs/notifications.md).
- * Types déclarés ici, libellés dans `core/notifications/i18n` (`types["banking:TYPE"]`, 4 locales).
- * Envoi : `notify` (in-app, préférences) / `enqueueEmail` (outbox) depuis les services du module.
- * 3e et 4e arguments optionnels : gabarits e-mail (`EmailTemplate`) et sources de relance (`ReminderSource`).
+ * Libellés dans `core/notifications/i18n` (`types["banking:TYPE"]`, 4 locales), catégorie « banking ».
+ * Destinataires : rôles réglés par organisation (propriétaires et administrateurs par défaut),
+ * chaque type activable dans les réglages banking ; préférences utilisateur respectées par `notify`.
  */
 import { defineModuleNotifications } from "@/core/notifications/registry";
+import type { BankingNotificationKind } from "../domain/constants";
 
-export const bankingNotifications = defineModuleNotifications("banking", [
-  { type: "BANKING_PUBLISHED", category: "publishing", channels: ["in_app"] },
-]);
+export const BANKING_NOTIFICATION_TYPES: Readonly<Record<BankingNotificationKind, string>> = {
+  importDone: "IMPORT_DONE",
+  importFailed: "IMPORT_FAILED",
+  continuityBreak: "CONTINUITY_BREAK",
+  dailyDigest: "DAILY_DIGEST",
+  aging: "AGING",
+  writeOffApproval: "WRITE_OFF_APPROVAL",
+  sepaReturn: "SEPA_RETURN",
+  feedError: "FEED_ERROR",
+};
+
+export const bankingNotifications = defineModuleNotifications(
+  "banking",
+  Object.values(BANKING_NOTIFICATION_TYPES).map((type) => ({ type, category: "banking", channels: ["in_app"] as const })),
+);
